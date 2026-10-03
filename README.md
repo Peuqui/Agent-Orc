@@ -1,8 +1,9 @@
-# AI-Ørc — Agent Orchestrator
+<p align="center"><img src="frontend/brand/logo.svg" alt="AI-Ørc — Agent Orchestrator" width="440"></p>
 
 [Deutsch](README.de.md)
 
-> **Status: early development.** Nothing here is usable yet.
+> **Status: early, but usable.** Tested on Linux with Claude Code; other agent profiles
+> (Codex, Aider) are prepared but untested.
 
 AI-Orc lets you start, watch and stop coding-agent CLI sessions
 (Claude Code, Codex, Aider, …) on your own Linux machine from a
@@ -27,6 +28,40 @@ in the Claude mobile app.
 - Python 3.12+
 - `tmux`
 - the agent CLIs you want to use
+
+## Installation
+
+AI-Orc is a Python package that ships the built web app. Until it is published, install it
+from the repository:
+
+```
+git clone https://github.com/Peuqui/AI-Orc.git && cd AI-Orc
+(cd frontend && npm ci && npm run build)    # build the web app first; pip packs it into the install
+python3 -m venv venv && venv/bin/pip install .
+venv/bin/ai-orc init            # writes ~/.config/ai-orc/config.yaml
+venv/bin/ai-orc set-password    # writes ~/.config/ai-orc/credentials.json
+venv/bin/ai-orc serve           # http://127.0.0.1:8770
+```
+
+Adapt `~/.config/ai-orc/config.yaml` before the first start, at least `files.base_dir`
+(the folder that holds your projects). For a first test on plain HTTP, set
+`server.cookie_secure: false`; behind HTTPS keep it `true`.
+
+### As a service
+
+`deploy/ai-orc@.service` runs AI-Orc for one user (`ai-orc` must be on that user's `PATH`):
+
+```
+sudo cp deploy/ai-orc@.service /etc/systemd/system/
+sudo systemctl enable --now ai-orc@$USER
+```
+
+Restarting the service keeps running agents alive; they are picked up again.
+
+### Behind nginx
+
+`deploy/nginx-location.conf` serves AI-Orc under `/orc/` inside an HTTPS server block,
+including the terminal WebSocket.
 
 ## Security
 
