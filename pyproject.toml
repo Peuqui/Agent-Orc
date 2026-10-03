@@ -21,7 +21,11 @@ dev = [
     "ruff",
     "mypy",
     "types-PyYAML",
+    "httpx2",
 ]
+
+[project.scripts]
+ai-orc = "ai_orc.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/ai_orc"]

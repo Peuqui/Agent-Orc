@@ -1,6 +1,29 @@
 # AI-Orc configuration.
 # This file is the single source of all default values; `ai-orc init` copies it to
 # ~/.config/ai-orc/config.yaml, where you adapt it.
+# The password lives separately in credentials.json, written by `ai-orc set-password`.
+
+server:
+  host: 127.0.0.1
+  port: 8770
+  # Send the login cookie over HTTPS only. Set to false only for plain-HTTP testing.
+  cookie_secure: true
+
+auth:
+  session_days: 30
+  # After this many failed logins in a row, logins are refused for lockout_minutes.
+  max_failed_logins: 5
+  lockout_minutes: 15
+
+files:
+  # The file manager and new agent folders stay inside this directory.
+  base_dir: ~/projects
+  # Allowed names for new or renamed files and folders.
+  name_pattern: '^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$'
+  # The safety switch widens access to the home directory for this long.
+  unlock_minutes: 10
+  # Larger files are not opened in the editor.
+  max_edit_bytes: 2097152
 
 tmux:
   # Dedicated tmux server socket, so AI-Orc never touches your own tmux sessions.
