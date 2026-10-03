@@ -56,12 +56,13 @@ tmux:
 
 # Agent profiles. Command arguments may contain the placeholder {name},
 # which is replaced by the name of the folder the agent runs in.
-# Claude reports model and context usage through `ai-orc statusline` as its status line.
+# Claude reports model and context usage through `ai-orc statusline` as its status line, and
+# whether it is working through hooks; both only for sessions started by AI-Orc.
 agents:
   claude:
     label: Claude Code
-    start: [claude, --settings, &claude_status '{"statusLine": {"type": "command", "command": "ai-orc statusline"}}', --remote-control, "{name}"]
-    resume: [claude, --settings, *claude_status, --continue, --remote-control, "{name}"]
+    start: [claude, --settings, &claude_settings '{"statusLine": {"type": "command", "command": "ai-orc statusline"}, "hooks": {"UserPromptSubmit": [{"hooks": [{"type": "command", "command": "ai-orc agent-busy"}]}], "Stop": [{"hooks": [{"type": "command", "command": "ai-orc agent-idle"}]}]}}', --remote-control, "{name}"]
+    resume: [claude, --settings, *claude_settings, --continue, --remote-control, "{name}"]
     # Starting an agent in a folder means trusting it: skip Claude's trust prompt.
     trust: claude
     # Reasoning effort per project folder (<folder>/.claude/settings.local.json); without a

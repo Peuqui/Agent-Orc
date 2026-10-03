@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { api, type AgentSession } from '../api'
 import AppIcon from '../components/AppIcon.vue'
+import BaseDialog from '../components/BaseDialog.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
 import ContextMeter from '../components/ContextMeter.vue'
 import { useSessions } from '../composables/useSessions'
@@ -26,10 +27,18 @@ function cancelEffort(): void {
   if (change) change.select.value = change.session.effort ?? ''
 }
 
-function confirmEffort(): void {
+function applyPendingNow(session: AgentSession): void {
+  void run(() => api.changeEffort(session.id, session.pending_effort, true))
+}
+
+function discardPending(session: AgentSession): void {
+  void run(() => api.cancelEffortChange(session.id))
+}
+
+function applyEffort(immediately: boolean): void {
   const change = effortChange.value
   effortChange.value = null
-  if (change) void run(() => api.changeEffort(change.session.id, change.effort))
+  if (change) void run(() => api.changeEffort(change.session.id, change.effort, immediately))
 }
 
 const labels = computed(() => new Map(profiles.value.map((p) => [p.name, p.label])))
@@ -79,6 +88,13 @@ function resume(session: AgentSession): void {
             </p>
           </div>
           <span
+            v-if="session.running && session.busy"
+            class="shrink-0 animate-pulse rounded-full bg-amber-900/40 px-2.5 py-1 text-xs font-medium text-amber-300"
+          >
+            {{ $t('sessions.working') }}
+          </span>
+          <span
+            v-else
             class="shrink-0 rounded-full px-2.5 py-1 text-xs font-medium"
             :class="session.running ? 'bg-red-900/40 text-red-300' : 'bg-slate-700 text-slate-300'"
           >
@@ -98,6 +114,7 @@ function resume(session: AgentSession): void {
           {{ $t('agent.effort') }}
           <select
             class="h-9 rounded-md border border-slate-600 bg-slate-900 px-2 text-slate-200"
+            :disabled="session.effort_pending"
             :value="session.effort ?? ''"
             @change="
               effortChange = {
@@ -113,6 +130,23 @@ function resume(session: AgentSession): void {
             </option>
           </select>
         </label>
+        <div
+          v-if="session.effort_pending"
+          class="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-amber-700 bg-amber-950/40 px-3 py-2 text-sm text-amber-200"
+        >
+          <span class="flex-1">
+            {{ $t('sessions.effortPending', { effort: session.pending_effort ?? $t('agent.effortDefault') }) }}
+          </span>
+          <button
+            class="btn-secondary min-h-9"
+            @click="applyPendingNow(session)"
+          >
+            {{ $t('sessions.applyNow') }}
+          </button>
+          <button class="btn min-h-9" @click="discardPending(session)">
+            {{ $t('sessions.discard') }}
+          </button>
+        </div>
         <div class="flex flex-wrap gap-2">
           <RouterLink v-if="session.running" :to="`/terminal/${session.id}`" class="btn-primary">
             <AppIcon name="agents" />{{ $t('sessions.terminal') }}
@@ -127,19 +161,24 @@ function resume(session: AgentSession): void {
       </li>
     </ul>
 
-    <ConfirmDialog
-      v-if="effortChange"
-      :title="$t('agent.effort')"
-      :message="
-        $t('sessions.confirmEffort', {
-          name: baseName(effortChange.session.path),
-          effort: effortChange.effort ?? $t('agent.effortDefault'),
-        })
-      "
-      :confirm-label="$t('sessions.changeEffort')"
-      @confirm="confirmEffort"
-      @close="cancelEffort"
-    />
+    <BaseDialog v-if="effortChange" :title="$t('agent.effort')" @close="cancelEffort">
+      <p class="mb-5 text-slate-300">
+        {{
+          $t(effortChange.session.busy ? 'sessions.confirmEffortBusy' : 'sessions.confirmEffort', {
+            name: baseName(effortChange.session.path),
+            effort: effortChange.effort ?? $t('agent.effortDefault'),
+          })
+        }}
+      </p>
+      <div class="flex flex-col gap-2">
+        <template v-if="effortChange.session.busy">
+          <button class="btn-primary" @click="applyEffort(false)">{{ $t('sessions.changeAfterAnswer') }}</button>
+          <button class="btn-danger" @click="applyEffort(true)">{{ $t('sessions.changeNow') }}</button>
+        </template>
+        <button v-else class="btn-primary" @click="applyEffort(false)">{{ $t('sessions.changeEffort') }}</button>
+        <button class="btn" @click="cancelEffort">{{ $t('common.cancel') }}</button>
+      </div>
+    </BaseDialog>
     <ConfirmDialog
       v-if="stopping"
       :title="$t('sessions.stop')"

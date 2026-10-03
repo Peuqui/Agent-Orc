@@ -1,6 +1,10 @@
 """HTTP API of AI-Orc."""
 
+import asyncio
+import logging
 import time
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any
@@ -14,7 +18,7 @@ from pydantic import BaseModel
 from ai_orc import files
 from ai_orc.auth import Clock, Credentials, LoginGuard, TokenSigner, verify_password
 from ai_orc.config import Config, TerminalConfig
-from ai_orc.context import session_status
+from ai_orc.context import session_busy, session_status
 from ai_orc.effort import EFFORT_STORES, InvalidEffortError
 from ai_orc.scope import AccessScope, OutsideScopeError
 from ai_orc.sessions import (
@@ -35,6 +39,10 @@ WS_CLOSE_FORBIDDEN_ORIGIN = 4403
 WS_CLOSE_SESSION_NOT_FOUND = 4404
 SECONDS_PER_DAY = 86400
 SECONDS_PER_MINUTE = 60
+# How often effort changes waiting for a busy agent are checked.
+PENDING_EFFORT_CHECK_SECONDS = 2
+
+logger = logging.getLogger(__name__)
 
 
 class FolderBusyError(RuntimeError):
@@ -97,6 +105,8 @@ class StartSessionRequest(BaseModel):
 
 class EffortRequest(BaseModel):
     effort: str | None
+    # False: wait until the agent has finished its current answer (no tokens wasted).
+    immediately: bool
 
 
 class TrashEntryRequest(BaseModel):
@@ -127,7 +137,46 @@ def create_app(
     name_pattern = config.files.name_pattern
     max_edit_bytes = config.files.max_edit_bytes
 
-    app = FastAPI(title="AI-Orc", docs_url=None, redoc_url=None, openapi_url=None)
+    # Effort changes waiting until their (busy) agent has finished its answer.
+    pending_effort: dict[str, str | None] = {}
+
+    def find_session(session_id: str) -> AgentSession | None:
+        return next((s for s in sessions.list() if s.id == session_id), None)
+
+    def apply_effort(session: AgentSession, effort: str | None) -> AgentSession:
+        """Store the folder's effort and resume the agent, which only reads it at start."""
+        pending_effort.pop(session.id, None)
+        store_effort(session.profile, session.path, effort)
+        sessions.stop(session.id)
+        return sessions.start(session.profile, session.path, resume=True)
+
+    def apply_pending_efforts() -> None:
+        for session_id, effort in list(pending_effort.items()):
+            session = find_session(session_id)
+            if session is None:
+                pending_effort.pop(session_id, None)
+            elif not session.running or not session_busy(session):
+                apply_effort(session, effort)
+
+    async def watch_pending_efforts() -> None:
+        while True:
+            await asyncio.sleep(PENDING_EFFORT_CHECK_SECONDS)
+            try:
+                apply_pending_efforts()
+            except Exception:
+                # Keep watching the other sessions; this one is dropped and logged.
+                logger.exception("applying a pending effort change failed")
+                pending_effort.clear()
+
+    @asynccontextmanager
+    async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+        watcher = asyncio.create_task(watch_pending_efforts())
+        yield
+        watcher.cancel()
+
+    app = FastAPI(
+        title="AI-Orc", docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan
+    )
 
     for error_type, status_code in ERROR_STATUS.items():
         app.add_exception_handler(error_type, _error_handler(status_code))
@@ -155,16 +204,18 @@ def create_app(
             if session.path.is_relative_to(path):
                 raise FolderBusyError(str(session.path))
 
-    def store_effort(profile_name: str, folder: Path, effort: str | None) -> None:
-        """Keep the effort for the folder; an agent without effort setting accepts only None."""
+    def validate_effort(profile_name: str, effort: str | None) -> None:
+        """An agent without effort setting accepts only None."""
         profile = config.agents.get(profile_name)
-        if profile is None or profile.effort is None:
-            if effort is not None:
-                raise InvalidEffortError(effort)
-            return
-        if effort is not None and effort not in profile.effort.levels:
+        allowed = profile.effort.levels if profile and profile.effort else []
+        if effort is not None and effort not in allowed:
             raise InvalidEffortError(effort)
-        EFFORT_STORES[profile.effort.store].write(folder, effort)
+
+    def store_effort(profile_name: str, folder: Path, effort: str | None) -> None:
+        validate_effort(profile_name, effort)
+        profile = config.agents.get(profile_name)
+        if profile and profile.effort:
+            EFFORT_STORES[profile.effort.store].write(folder, effort)
 
     def scope_state() -> dict[str, Any]:
         return {
@@ -225,7 +276,17 @@ def create_app(
     @app.get("/api/sessions", dependencies=authenticated)
     def list_sessions() -> list[dict[str, Any]]:
         empty = {"model": None, "effort": None, "context_tokens": None, "context_window": None}
-        return [{**asdict(s), **empty, **session_status(s)} for s in sessions.list()]
+        return [
+            {
+                **asdict(s),
+                **empty,
+                **session_status(s),
+                "busy": session_busy(s),
+                "effort_pending": s.id in pending_effort,
+                "pending_effort": pending_effort.get(s.id),
+            }
+            for s in sessions.list()
+        ]
 
     @app.post("/api/sessions", dependencies=authenticated)
     def start_session(body: StartSessionRequest) -> AgentSession:
@@ -239,14 +300,25 @@ def create_app(
         return sessions.start(body.profile, path, body.resume)
 
     @app.post("/api/sessions/{session_id}/effort", dependencies=authenticated)
-    def change_effort(session_id: str, body: EffortRequest) -> AgentSession:
-        """Store the folder's new effort and resume the agent, which only reads it at start."""
-        session = next((s for s in sessions.list() if s.id == session_id), None)
+    def change_effort(session_id: str, body: EffortRequest) -> dict[str, bool]:
+        """Change the effort now, or once the busy agent has finished its answer."""
+        session = find_session(session_id)
         if session is None:
             raise SessionNotFoundError(session_id)
-        store_effort(session.profile, session.path, body.effort)
-        sessions.stop(session.id)
-        return sessions.start(session.profile, session.path, resume=True)
+        validate_effort(session.profile, body.effort)
+        if body.immediately or not session.running or not session_busy(session):
+            apply_effort(session, body.effort)
+            return {"applied": True}
+        pending_effort[session_id] = body.effort
+        return {"applied": False}
+
+    @app.delete(
+        "/api/sessions/{session_id}/effort",
+        dependencies=authenticated,
+        status_code=status.HTTP_204_NO_CONTENT,
+    )
+    def cancel_effort_change(session_id: str) -> None:
+        pending_effort.pop(session_id, None)
 
     @app.get("/api/effort", dependencies=authenticated)
     def folder_effort(profile: str, path: str) -> dict[str, str | None]:

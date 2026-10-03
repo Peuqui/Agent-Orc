@@ -19,7 +19,7 @@ from ai_orc.config import (
     default_config_text,
     load_config,
 )
-from ai_orc.context import status_line, store_status
+from ai_orc.context import status_line, store_activity, store_status
 from ai_orc.sessions import SESSION_ENV
 
 
@@ -64,14 +64,23 @@ def statusline() -> None:
     print(status_line(status))
 
 
+def agent_busy() -> None:
+    """Hook command (Claude: UserPromptSubmit): the agent starts working."""
+    store_activity(os.environ[SESSION_ENV], busy=True)
+
+
+def agent_idle() -> None:
+    """Hook command (Claude: Stop): the agent finished its answer."""
+    store_activity(os.environ[SESSION_ENV], busy=False)
+
+
 COMMANDS = {
     "init": (init, "write the default config to ~/.config/ai-orc/"),
     "set-password": (set_password, "set the login password"),
     "serve": (serve, "run the web server"),
-    "statusline": (
-        statusline,
-        "status line command for Claude Code sessions (reads JSON on stdin)",
-    ),
+    "statusline": (statusline, "status line command for agent sessions (JSON on stdin)"),
+    "agent-busy": (agent_busy, "hook command: the agent started working"),
+    "agent-idle": (agent_idle, "hook command: the agent finished its answer"),
 }
 
 

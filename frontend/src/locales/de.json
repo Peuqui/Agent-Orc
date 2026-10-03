@@ -32,9 +32,16 @@
     "contextLabel": "Kontext",
     "context": "{used} von {total} · {percent} %",
     "startNew": "Neuen Agenten starten",
-    "confirmEffort": "Aufwand für „{name}“ auf „{effort}“ setzen? Er gilt für das Projekt; der Agent startet dafür kurz neu und setzt das Gespräch fort. Eine gerade laufende Antwort wird abgebrochen.",
+    "confirmEffort": "Aufwand für „{name}“ auf „{effort}“ setzen? Er gilt für das Projekt; der Agent startet dafür kurz neu und setzt das Gespräch fort.",
     "changeEffort": "Ändern und fortsetzen",
-    "confirmStop": "Agent in „{name}“ beenden? Das Gespräch bleibt gespeichert und lässt sich fortsetzen."
+    "confirmStop": "Agent in „{name}“ beenden? Das Gespräch bleibt gespeichert und lässt sich fortsetzen.",
+    "confirmEffortBusy": "„{name}“ arbeitet gerade an einer Antwort. Der Aufwand „{effort}“ kann übernommen werden, sobald sie fertig ist – oder sofort, dann wird die laufende Antwort abgebrochen.",
+    "changeAfterAnswer": "Nach der Antwort wechseln",
+    "changeNow": "Sofort wechseln (bricht ab)",
+    "working": "arbeitet …",
+    "effortPending": "Wechsel auf „{effort}“ vorgemerkt – nach der aktuellen Antwort",
+    "applyNow": "Sofort",
+    "discard": "Verwerfen"
   },
   "files": {
     "newFolder": "Neuer Ordner",

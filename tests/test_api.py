@@ -2,6 +2,7 @@
 
 import json
 import subprocess
+import time
 from pathlib import Path
 from typing import Any
 
@@ -14,7 +15,7 @@ from starlette.websockets import WebSocketDisconnect
 from ai_orc.api import create_app
 from ai_orc.auth import new_credentials
 from ai_orc.config import Config, default_config_text
-from ai_orc.context import store_status
+from ai_orc.context import store_activity, store_status
 from ai_orc.sessions import SESSION_ENV
 from tests.conftest import FakeClock
 
@@ -368,8 +369,10 @@ def test_changing_effort_resumes_the_agent(
     folder = home / "projects"
     start = {"profile": "sleeper", "path": str(folder), "resume": False, "effort": None}
     session_id = client.post("/api/sessions", json=start).json()["id"]
-    changed = client.post(f"/api/sessions/{session_id}/effort", json={"effort": "low"})
-    assert changed.status_code == 200
+    change = {"effort": "low", "immediately": False}
+    changed = client.post(f"/api/sessions/{session_id}/effort", json=change)
+    # The agent never reported to be busy, so the change applies at once.
+    assert changed.json() == {"applied": True}
     # Resumed with the profile's resume command ("true" exits at once for the test agent).
     command = subprocess.run(
         ["tmux", "-L", socket_name, "display-message", "-p", "-t", f"={session_id}:",
@@ -380,8 +383,10 @@ def test_changing_effort_resumes_the_agent(
     settings = json.loads((folder / ".claude" / "settings.local.json").read_text())
     assert settings == {"effortLevel": "low"}
 
-    back = client.post(f"/api/sessions/{session_id}/effort", json={"effort": None})
-    assert back.status_code == 200
+    back = client.post(
+        f"/api/sessions/{session_id}/effort", json={"effort": None, "immediately": False}
+    )
+    assert back.json() == {"applied": True}
     assert json.loads((folder / ".claude" / "settings.local.json").read_text()) == {}
 
 
@@ -389,3 +394,66 @@ def test_effort_for_agent_without_effort_setting(client: TestClient, home: Path)
     body = {"profile": "shell", "path": str(home / "projects"), "resume": False, "effort": "low"}
     assert client.post("/api/sessions", json=body).status_code == 422
     assert not (home / "projects" / ".claude").exists()
+
+
+def test_effort_change_waits_for_a_busy_agent(
+    client: TestClient, home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
+    folder = home / "projects"
+    start = {"profile": "sleeper", "path": str(folder), "resume": False, "effort": None}
+    session_id = client.post("/api/sessions", json=start).json()["id"]
+    store_activity(session_id, busy=True)
+    url = f"/api/sessions/{session_id}/effort"
+
+    assert client.post(url, json={"effort": "high", "immediately": False}).json() == {
+        "applied": False
+    }
+    listed = client.get("/api/sessions").json()[0]
+    assert listed["busy"] is True
+    assert (listed["effort_pending"], listed["pending_effort"]) == (True, "high")
+    assert not (folder / ".claude" / "settings.local.json").exists()
+
+    # A wrong level is refused right away, not only when the change would be applied.
+    wrong = client.post(url, json={"effort": "ultra", "immediately": False})
+    assert wrong.status_code == 422
+
+    assert client.delete(url).status_code == 204
+    assert client.get("/api/sessions").json()[0]["effort_pending"] is False
+
+    # "Immediately" ignores the busy state on purpose.
+    assert client.post(url, json={"effort": "high", "immediately": True}).json() == {
+        "applied": True
+    }
+    assert json.loads((folder / ".claude" / "settings.local.json").read_text()) == {
+        "effortLevel": "high"
+    }
+
+
+def test_pending_effort_applies_when_the_agent_is_done(
+    config: Config, clock: FakeClock, home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
+    monkeypatch.setattr("ai_orc.api.PENDING_EFFORT_CHECK_SECONDS", 0.1)
+    folder = home / "projects"
+    # The context manager runs the app's lifespan, i.e. the background watcher.
+    with TestClient(
+        create_app(config, new_credentials(PASSWORD), static_dir=None, clock=clock)
+    ) as client:
+        client.post("/api/login", json={"password": PASSWORD})
+        start = {"profile": "sleeper", "path": str(folder), "resume": False, "effort": None}
+        session_id = client.post("/api/sessions", json=start).json()["id"]
+        store_activity(session_id, busy=True)
+        url = f"/api/sessions/{session_id}/effort"
+        client.post(url, json={"effort": "low", "immediately": False})
+        time.sleep(0.5)
+        assert client.get("/api/sessions").json()[0]["effort_pending"] is True
+
+        store_activity(session_id, busy=False)
+        for _ in range(30):
+            if not client.get("/api/sessions").json()[0]["effort_pending"]:
+                break
+            time.sleep(0.1)
+        assert client.get("/api/sessions").json()[0]["effort_pending"] is False
+        settings = json.loads((folder / ".claude" / "settings.local.json").read_text())
+        assert settings == {"effortLevel": "low"}

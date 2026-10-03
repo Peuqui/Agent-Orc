@@ -1,10 +1,14 @@
-"""Live status of agent sessions (model, used context window), reported by the agent itself.
+"""Live status of agent sessions (model, used context window, busy or idle), reported by the
+agent itself.
 
 Claude Code passes a JSON document to its status line command on every update. Sessions
 started by AI-Orc use `ai-orc statusline` as that command (see the claude profile in
 default_config.yaml), which stores the document here, one file per session. The command
 learns its session from the environment variable AI-Orc sets for every agent.
 The window size thus always matches the model actually running, also after /model.
+
+Whether the agent is working comes from Claude's hooks: UserPromptSubmit runs
+`ai-orc agent-busy`, Stop runs `ai-orc agent-idle`.
 """
 
 import json
@@ -15,6 +19,9 @@ from typing import Any
 from ai_orc.sessions import AgentSession
 
 STATUS_SUFFIX = ".json"
+ACTIVITY_SUFFIX = ".activity"
+BUSY = "busy"
+IDLE = "idle"
 # The input side of the last request: what the model had to read, i.e. the occupied context.
 CONTEXT_FIELDS = ("input_tokens", "cache_creation_input_tokens", "cache_read_input_tokens")
 
@@ -28,15 +35,34 @@ def status_file(session_id: str) -> Path:
     return status_dir() / f"{session_id}{STATUS_SUFFIX}"
 
 
-def store_status(session_id: str, status: dict[str, Any]) -> Path:
-    """Store the latest status document of a session."""
-    target = status_file(session_id)
+def _write_atomically(target: Path, text: str) -> Path:
     target.parent.mkdir(parents=True, exist_ok=True)
     # Write to a temporary file and rename, so readers never see a half-written file.
     temporary = target.with_suffix(".tmp")
-    temporary.write_text(json.dumps(status), encoding="utf-8")
+    temporary.write_text(text, encoding="utf-8")
     temporary.replace(target)
     return target
+
+
+def activity_file(session_id: str) -> Path:
+    return status_dir() / f"{session_id}{ACTIVITY_SUFFIX}"
+
+
+def store_activity(session_id: str, busy: bool) -> Path:
+    return _write_atomically(activity_file(session_id), BUSY if busy else IDLE)
+
+
+def session_busy(session: AgentSession) -> bool:
+    """True while the agent works on a request (also while it waits for a permission)."""
+    path = activity_file(session.id)
+    if not path.is_file() or path.stat().st_mtime < session.created:
+        return False
+    return path.read_text(encoding="utf-8") == BUSY
+
+
+def store_status(session_id: str, status: dict[str, Any]) -> Path:
+    """Store the latest status document of a session."""
+    return _write_atomically(status_file(session_id), json.dumps(status))
 
 
 def status_line(status: dict[str, Any]) -> str:

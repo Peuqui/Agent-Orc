@@ -17,6 +17,11 @@ export interface AgentSession {
   /** Reported by the agent itself (Claude: via `ai-orc statusline`); null until it reports. */
   model: string | null
   effort: string | null
+  /** The agent is working on an answer (reported by its hooks). */
+  busy: boolean
+  /** An effort change waits until the current answer is finished. */
+  effort_pending: boolean
+  pending_effort: string | null
   /** Occupied context window in tokens; null when unknown. */
   context_tokens: number | null
   context_window: number | null
@@ -135,11 +140,16 @@ export const api = {
     request<AgentSession>('POST', 'sessions', { body: { profile, path, resume, effort } }),
   folderEffort: (profile: string, path: string) =>
     request<{ effort: string | null }>('GET', 'effort', { query: { profile, path } }),
-  /** Stores the folder's effort and resumes the agent (it reads the effort only at start). */
-  changeEffort: (sessionId: string, effort: string | null) =>
-    request<AgentSession>('POST', `sessions/${encodeURIComponent(sessionId)}/effort`, {
-      body: { effort },
+  /**
+   * Stores the folder's effort and resumes the agent (it reads the effort only at start).
+   * Without `immediately` a busy agent first finishes its answer; then applied is false.
+   */
+  changeEffort: (sessionId: string, effort: string | null, immediately: boolean) =>
+    request<{ applied: boolean }>('POST', `sessions/${encodeURIComponent(sessionId)}/effort`, {
+      body: { effort, immediately },
     }),
+  cancelEffortChange: (sessionId: string) =>
+    request<void>('DELETE', `sessions/${encodeURIComponent(sessionId)}/effort`),
   stopSession: (id: string) => request<void>('DELETE', `sessions/${encodeURIComponent(id)}`),
 
   listFiles: (path: string) => request<FileEntry[]>('GET', 'files', { query: { path } }),
