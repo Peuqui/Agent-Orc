@@ -11,6 +11,26 @@ import { baseName } from '../format'
 const { sessions, profiles, refresh } = useSessions()
 const toast = useToast()
 const stopping = ref<AgentSession | null>(null)
+const effortChange = ref<{
+  session: AgentSession
+  effort: string | null
+  select: HTMLSelectElement
+} | null>(null)
+
+const levels = computed(() => new Map(profiles.value.map((p) => [p.name, p.effort_levels])))
+
+// Cancelled: show the effort that is actually in effect again.
+function cancelEffort(): void {
+  const change = effortChange.value
+  effortChange.value = null
+  if (change) change.select.value = change.session.effort ?? ''
+}
+
+function confirmEffort(): void {
+  const change = effortChange.value
+  effortChange.value = null
+  if (change) void run(() => api.changeEffort(change.session.id, change.effort))
+}
 
 const labels = computed(() => new Map(profiles.value.map((p) => [p.name, p.label])))
 const sorted = computed(() =>
@@ -71,6 +91,28 @@ function resume(session: AgentSession): void {
           :tokens="session.context_tokens"
           :window="session.context_window"
         />
+        <label
+          v-if="session.running && levels.get(session.profile)?.length"
+          class="mb-3 flex items-center gap-2 text-sm text-slate-400"
+        >
+          {{ $t('agent.effort') }}
+          <select
+            class="h-9 rounded-md border border-slate-600 bg-slate-900 px-2 text-slate-200"
+            :value="session.effort ?? ''"
+            @change="
+              effortChange = {
+                session,
+                effort: ($event.target as HTMLSelectElement).value || null,
+                select: $event.target as HTMLSelectElement,
+              }
+            "
+          >
+            <option value="">{{ $t('agent.effortDefault') }}</option>
+            <option v-for="level in levels.get(session.profile)" :key="level" :value="level">
+              {{ level }}
+            </option>
+          </select>
+        </label>
         <div class="flex flex-wrap gap-2">
           <RouterLink v-if="session.running" :to="`/terminal/${session.id}`" class="btn-primary">
             <AppIcon name="agents" />{{ $t('sessions.terminal') }}
@@ -85,6 +127,19 @@ function resume(session: AgentSession): void {
       </li>
     </ul>
 
+    <ConfirmDialog
+      v-if="effortChange"
+      :title="$t('agent.effort')"
+      :message="
+        $t('sessions.confirmEffort', {
+          name: baseName(effortChange.session.path),
+          effort: effortChange.effort ?? $t('agent.effortDefault'),
+        })
+      "
+      :confirm-label="$t('sessions.changeEffort')"
+      @confirm="confirmEffort"
+      @close="cancelEffort"
+    />
     <ConfirmDialog
       v-if="stopping"
       :title="$t('sessions.stop')"

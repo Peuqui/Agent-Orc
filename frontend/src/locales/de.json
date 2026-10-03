@@ -32,6 +32,8 @@
     "contextLabel": "Kontext",
     "context": "{used} von {total} · {percent} %",
     "startNew": "Neuen Agenten starten",
+    "confirmEffort": "Aufwand für „{name}“ auf „{effort}“ setzen? Er gilt für das Projekt; der Agent startet dafür kurz neu und setzt das Gespräch fort. Eine gerade laufende Antwort wird abgebrochen.",
+    "changeEffort": "Ändern und fortsetzen",
     "confirmStop": "Agent in „{name}“ beenden? Das Gespräch bleibt gespeichert und lässt sich fortsetzen."
   },
   "files": {

@@ -15,10 +15,10 @@ from ai_orc import files
 from ai_orc.auth import Clock, Credentials, LoginGuard, TokenSigner, verify_password
 from ai_orc.config import Config, TerminalConfig
 from ai_orc.context import session_status
+from ai_orc.effort import EFFORT_STORES, InvalidEffortError
 from ai_orc.scope import AccessScope, OutsideScopeError
 from ai_orc.sessions import (
     AgentSession,
-    InvalidEffortError,
     SessionAlreadyRunningError,
     SessionManager,
     SessionNotFoundError,
@@ -91,7 +91,11 @@ class StartSessionRequest(BaseModel):
     profile: str
     path: str
     resume: bool
-    # None: the agent's own default.
+    # Stored as the folder's effort; None: the agent's own default.
+    effort: str | None
+
+
+class EffortRequest(BaseModel):
     effort: str | None
 
 
@@ -150,6 +154,17 @@ def create_app(
         for session in sessions.list():
             if session.path.is_relative_to(path):
                 raise FolderBusyError(str(session.path))
+
+    def store_effort(profile_name: str, folder: Path, effort: str | None) -> None:
+        """Keep the effort for the folder; an agent without effort setting accepts only None."""
+        profile = config.agents.get(profile_name)
+        if profile is None or profile.effort is None:
+            if effort is not None:
+                raise InvalidEffortError(effort)
+            return
+        if effort is not None and effort not in profile.effort.levels:
+            raise InvalidEffortError(effort)
+        EFFORT_STORES[profile.effort.store].write(folder, effort)
 
     def scope_state() -> dict[str, Any]:
         return {
@@ -220,7 +235,25 @@ def create_app(
         profile = config.agents.get(body.profile)
         if profile and profile.trust:
             FOLDER_TRUST[profile.trust](home, path)
-        return sessions.start(body.profile, path, body.resume, body.effort)
+        store_effort(body.profile, path, body.effort)
+        return sessions.start(body.profile, path, body.resume)
+
+    @app.post("/api/sessions/{session_id}/effort", dependencies=authenticated)
+    def change_effort(session_id: str, body: EffortRequest) -> AgentSession:
+        """Store the folder's new effort and resume the agent, which only reads it at start."""
+        session = next((s for s in sessions.list() if s.id == session_id), None)
+        if session is None:
+            raise SessionNotFoundError(session_id)
+        store_effort(session.profile, session.path, body.effort)
+        sessions.stop(session.id)
+        return sessions.start(session.profile, session.path, resume=True)
+
+    @app.get("/api/effort", dependencies=authenticated)
+    def folder_effort(profile: str, path: str) -> dict[str, str | None]:
+        agent = config.agents.get(profile)
+        if agent is None or agent.effort is None:
+            return {"effort": None}
+        return {"effort": EFFORT_STORES[agent.effort.store].read(scope.resolve(path))}
 
     @app.delete(
         "/api/sessions/{session_id}",

@@ -6,7 +6,7 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
-from ai_orc.config import EFFORT_PLACEHOLDER, NAME_PLACEHOLDER, AgentProfile
+from ai_orc.config import NAME_PLACEHOLDER, AgentProfile
 
 # Every agent gets its session id in this environment variable, so helpers it runs
 # (e.g. the status line command) know which session they belong to.
@@ -33,10 +33,6 @@ class SessionError(RuntimeError):
 
 
 class UnknownProfileError(SessionError):
-    pass
-
-
-class InvalidEffortError(SessionError):
     pass
 
 
@@ -95,19 +91,14 @@ class SessionManager:
     def find_by_path(self, path: Path) -> AgentSession | None:
         return next((s for s in self.list() if s.path == path), None)
 
-    def start(
-        self, profile_name: str, path: Path, resume: bool, effort: str | None
-    ) -> AgentSession:
+    def start(self, profile_name: str, path: Path, resume: bool) -> AgentSession:
         """Start an agent in `path`; at most one agent session exists per folder.
 
-        A session whose agent has already exited is replaced. `effort` must be one of the
-        profile's levels; None leaves the choice to the agent.
+        A session whose agent has already exited is replaced.
         """
         profile = self._agents.get(profile_name)
         if profile is None:
             raise UnknownProfileError(profile_name)
-        if effort is not None and (profile.effort is None or effort not in profile.effort.levels):
-            raise InvalidEffortError(effort)
         existing = self.find_by_path(path)
         if existing is not None:
             if existing.running:
@@ -116,8 +107,6 @@ class SessionManager:
 
         session_id = session_id_for(path)
         command = build_command(profile.resume if resume else profile.start, path.name)
-        if effort is not None and profile.effort is not None:
-            command += [arg.replace(EFFORT_PLACEHOLDER, effort) for arg in profile.effort.args]
         # One tmux invocation, so remain-on-exit is active before the agent can exit
         # and its exit status stays visible. The status bar would only repeat what the
         # app shows and costs a terminal line on small screens. Mouse mode turns wheel

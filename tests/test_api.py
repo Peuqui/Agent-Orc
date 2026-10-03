@@ -42,7 +42,7 @@ def config(home: Path, socket_name: str) -> Config:
             "label": "Sleeper",
             "start": ["sleep", "60"],
             "resume": ["true"],
-            "effort": {"levels": ["low", "high"], "args": ["--effort", "{effort}"]},
+            "effort": {"levels": ["low", "high"], "store": "claude_project"},
         },
         "shell": {
             "label": "Shell",
@@ -343,3 +343,49 @@ def test_invalid_effort_is_rejected(client: TestClient, home: Path) -> None:
     response = client.post("/api/sessions", json=body)
     assert response.status_code == 422
     assert response.json()["error"] == "InvalidEffortError"
+
+
+def test_effort_is_stored_in_the_project(client: TestClient, home: Path) -> None:
+    folder = home / "projects"
+    settings = folder / ".claude" / "settings.local.json"
+    settings.parent.mkdir()
+    settings.write_text(json.dumps({"permissions": {"allow": ["Bash(ls:*)"]}}))
+    query = {"profile": "sleeper", "path": str(folder)}
+    assert client.get("/api/effort", params=query).json() == {"effort": None}
+
+    start = {"profile": "sleeper", "path": str(folder), "resume": False, "effort": "high"}
+    assert client.post("/api/sessions", json=start).status_code == 200
+    assert json.loads(settings.read_text()) == {
+        "permissions": {"allow": ["Bash(ls:*)"]},
+        "effortLevel": "high",
+    }
+    assert client.get("/api/effort", params=query).json() == {"effort": "high"}
+
+
+def test_changing_effort_resumes_the_agent(
+    client: TestClient, home: Path, socket_name: str
+) -> None:
+    folder = home / "projects"
+    start = {"profile": "sleeper", "path": str(folder), "resume": False, "effort": None}
+    session_id = client.post("/api/sessions", json=start).json()["id"]
+    changed = client.post(f"/api/sessions/{session_id}/effort", json={"effort": "low"})
+    assert changed.status_code == 200
+    # Resumed with the profile's resume command ("true" exits at once for the test agent).
+    command = subprocess.run(
+        ["tmux", "-L", socket_name, "display-message", "-p", "-t", f"={session_id}:",
+         "#{pane_start_command}"],
+        capture_output=True, text=True, check=True,
+    ).stdout.strip()  # fmt: skip
+    assert command == "true"
+    settings = json.loads((folder / ".claude" / "settings.local.json").read_text())
+    assert settings == {"effortLevel": "low"}
+
+    back = client.post(f"/api/sessions/{session_id}/effort", json={"effort": None})
+    assert back.status_code == 200
+    assert json.loads((folder / ".claude" / "settings.local.json").read_text()) == {}
+
+
+def test_effort_for_agent_without_effort_setting(client: TestClient, home: Path) -> None:
+    body = {"profile": "shell", "path": str(home / "projects"), "resume": False, "effort": "low"}
+    assert client.post("/api/sessions", json=body).status_code == 422
+    assert not (home / "projects" / ".claude").exists()

@@ -130,9 +130,16 @@ export const api = {
   agents: () => request<AgentProfile[]>('GET', 'agents'),
   terminalSettings: () => request<TerminalSettings>('GET', 'terminal'),
   sessions: () => request<AgentSession[]>('GET', 'sessions'),
-  /** effort null: the agent's own default. */
+  /** effort is stored for the folder; null: the agent's own default. */
   startSession: (profile: string, path: string, resume: boolean, effort: string | null) =>
     request<AgentSession>('POST', 'sessions', { body: { profile, path, resume, effort } }),
+  folderEffort: (profile: string, path: string) =>
+    request<{ effort: string | null }>('GET', 'effort', { query: { profile, path } }),
+  /** Stores the folder's effort and resumes the agent (it reads the effort only at start). */
+  changeEffort: (sessionId: string, effort: string | null) =>
+    request<AgentSession>('POST', `sessions/${encodeURIComponent(sessionId)}/effort`, {
+      body: { effort },
+    }),
   stopSession: (id: string) => request<void>('DELETE', `sessions/${encodeURIComponent(id)}`),
 
   listFiles: (path: string) => request<FileEntry[]>('GET', 'files', { query: { path } }),

@@ -9,7 +9,6 @@ import yaml
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
 NAME_PLACEHOLDER = "{name}"
-EFFORT_PLACEHOLDER = "{effort}"
 CONFIG_FILE_NAME = "config.yaml"
 CREDENTIALS_FILE_NAME = "credentials.json"
 
@@ -64,11 +63,11 @@ class TmuxConfig(StrictModel):
 
 
 class EffortConfig(StrictModel):
-    """Reasoning effort the user may pick at start; without a pick the agent's own default."""
+    """Reasoning effort the user may pick; without a pick the agent's own default applies."""
 
     levels: list[str]
-    # Appended to the start/resume command; contains the placeholder {effort}.
-    args: list[str]
+    # Where the choice is kept (see effort.py); "claude_project": the folder's Claude settings.
+    store: Literal["claude_project"]
 
 
 class AgentProfile(StrictModel):

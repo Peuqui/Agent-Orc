@@ -19,8 +19,15 @@ const busy = ref(false)
 const effortLevels = computed(
   () => profiles.value.find((profile) => profile.name === selected.value)?.effort_levels ?? [],
 )
-watch(selected, () => {
+// Preselect the folder's stored effort for the chosen agent.
+watch(selected, async (profile) => {
   effort.value = ''
+  if (!profile) return
+  try {
+    effort.value = (await api.folderEffort(profile, props.path)).effort ?? ''
+  } catch (error) {
+    toast.error(error)
+  }
 })
 
 onMounted(async () => {
