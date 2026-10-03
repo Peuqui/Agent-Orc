@@ -62,7 +62,7 @@ Ein Neustart des Dienstes lässt laufende Agenten am Leben; sie werden wieder au
 
 ### Hinter nginx
 
-`deploy/nginx-location.conf` stellt AI-Orc unter `/orc/` in einem HTTPS-Server-Block
+`deploy/nginx-location.conf` stellt AI-Orc unter `/ai-orc/` in einem HTTPS-Server-Block
 bereit, einschließlich des Terminal-WebSockets.
 
 ## Sicherheit

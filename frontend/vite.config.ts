@@ -3,7 +3,7 @@ import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
-// Relative base: the app works at / locally and under a sub-path (e.g. /orc/) behind a proxy.
+// Relative base: the app works at / locally and under a sub-path (e.g. /ai-orc/) behind a proxy.
 export default defineConfig({
   base: './',
   build: {

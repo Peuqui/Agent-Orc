@@ -60,7 +60,7 @@ Restarting the service keeps running agents alive; they are picked up again.
 
 ### Behind nginx
 
-`deploy/nginx-location.conf` serves AI-Orc under `/orc/` inside an HTTPS server block,
+`deploy/nginx-location.conf` serves AI-Orc under `/ai-orc/` inside an HTTPS server block,
 including the terminal WebSocket.
 
 ## Security
