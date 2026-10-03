@@ -4,14 +4,16 @@ import time
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
-from fastapi import Depends, FastAPI, HTTPException, Request, Response, status
+from fastapi import Depends, FastAPI, HTTPException, Request, Response, WebSocket, status
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from ai_orc import files
 from ai_orc.auth import Clock, Credentials, LoginGuard, TokenSigner, verify_password
-from ai_orc.config import Config
+from ai_orc.config import Config, TerminalConfig
 from ai_orc.scope import AccessScope, OutsideScopeError
 from ai_orc.sessions import (
     AgentSession,
@@ -20,9 +22,14 @@ from ai_orc.sessions import (
     SessionNotFoundError,
     UnknownProfileError,
 )
+from ai_orc.terminal import bridge
 from ai_orc.trash import RestoreConflictError, Trash, TrashEntryNotFoundError, home_trash_dir
 
 SESSION_COOKIE = "ai_orc_session"
+# Custom WebSocket close codes (4000-4999 are free for applications).
+WS_CLOSE_UNAUTHORIZED = 4401
+WS_CLOSE_FORBIDDEN_ORIGIN = 4403
+WS_CLOSE_SESSION_NOT_FOUND = 4404
 SECONDS_PER_DAY = 86400
 SECONDS_PER_MINUTE = 60
 
@@ -86,7 +93,14 @@ class TrashEntryRequest(BaseModel):
     id: str
 
 
-def create_app(config: Config, credentials: Credentials, clock: Clock = time.time) -> FastAPI:
+def create_app(
+    config: Config,
+    credentials: Credentials,
+    *,
+    static_dir: Path | None,
+    clock: Clock = time.time,
+) -> FastAPI:
+    """Build the app; static_dir holds the built PWA (None serves the API only, for tests)."""
     sessions = SessionManager(config.tmux.socket_name, config.agents)
     scope = AccessScope(
         config.files.base_dir,
@@ -108,9 +122,11 @@ def create_app(config: Config, credentials: Credentials, clock: Clock = time.tim
         app.add_exception_handler(error_type, _error_handler(status_code))
 
     def require_login(request: Request) -> None:
-        token = request.cookies.get(SESSION_COOKIE)
-        if token is None or not signer.is_valid(token):
+        if not is_logged_in(request.cookies.get(SESSION_COOKIE)):
             raise HTTPException(status.HTTP_401_UNAUTHORIZED)
+
+    def is_logged_in(token: str | None) -> bool:
+        return token is not None and signer.is_valid(token)
 
     def check_password(password: str) -> None:
         locked = guard.seconds_locked()
@@ -133,6 +149,7 @@ def create_app(config: Config, credentials: Credentials, clock: Clock = time.tim
             "root": str(scope.root),
             "base_dir": str(scope.base_dir),
             "seconds_unlocked": scope.seconds_unlocked(),
+            "unlock_minutes": config.files.unlock_minutes,
         }
 
     @app.post("/api/login", status_code=status.HTTP_204_NO_CONTENT)
@@ -176,6 +193,10 @@ def create_app(config: Config, credentials: Credentials, clock: Clock = time.tim
     def agents() -> list[dict[str, str]]:
         return [{"name": name, "label": p.label} for name, p in config.agents.items()]
 
+    @app.get("/api/terminal", dependencies=authenticated)
+    def terminal_settings() -> TerminalConfig:
+        return config.terminal
+
     @app.get("/api/sessions", dependencies=authenticated)
     def list_sessions() -> list[AgentSession]:
         return sessions.list()
@@ -194,6 +215,22 @@ def create_app(config: Config, credentials: Credentials, clock: Clock = time.tim
     )
     def stop_session(session_id: str) -> None:
         sessions.stop(session_id)
+
+    @app.websocket("/api/sessions/{session_id}/terminal")
+    async def terminal(websocket: WebSocket, session_id: str) -> None:
+        if not is_logged_in(websocket.cookies.get(SESSION_COOKIE)):
+            await websocket.close(WS_CLOSE_UNAUTHORIZED)
+            return
+        # Browsers send cookies on cross-site WebSocket handshakes too; the Origin check
+        # stops other web pages from opening a terminal with the user's login.
+        if urlsplit(websocket.headers.get("origin", "")).netloc != websocket.headers.get("host"):
+            await websocket.close(WS_CLOSE_FORBIDDEN_ORIGIN)
+            return
+        if all(session.id != session_id for session in sessions.list()):
+            await websocket.close(WS_CLOSE_SESSION_NOT_FOUND)
+            return
+        await websocket.accept()
+        await bridge(websocket, config.tmux.socket_name, session_id)
 
     @app.get("/api/files", dependencies=authenticated)
     def list_files(path: str) -> list[files.FileEntry]:
@@ -249,6 +286,10 @@ def create_app(config: Config, credentials: Credentials, clock: Clock = time.tim
     @app.delete("/api/trash", dependencies=authenticated, status_code=status.HTTP_204_NO_CONTENT)
     def empty_trash() -> None:
         trash.empty()
+
+    if static_dir is not None:
+        # Mounted last, so the API routes above take precedence.
+        app.mount("/", StaticFiles(directory=static_dir, html=True), name="pwa")
 
     return app
 

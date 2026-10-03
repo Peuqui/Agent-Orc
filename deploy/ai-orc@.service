@@ -1,0 +1,18 @@
+# AI-Orc as a system service for one user: systemctl enable --now ai-orc@<user>
+[Unit]
+Description=AI-Orc agent orchestrator for %i
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=%i
+# A login shell provides the user's PATH, where agent CLIs (claude, codex, ...) live.
+ExecStart=/bin/bash -lc 'exec ai-orc serve'
+Restart=on-failure
+# Stop only the web server: the tmux server and the agents in it keep running across
+# restarts and are picked up again via the tmux socket.
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target

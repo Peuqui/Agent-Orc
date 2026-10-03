@@ -1,11 +1,15 @@
 """End-to-end tests of the HTTP API with a real tmux server and a throwaway home."""
 
+import json
+import subprocess
 from pathlib import Path
 from typing import Any
 
 import pytest
 import yaml
 from fastapi.testclient import TestClient
+from starlette.testclient import WebSocketTestSession
+from starlette.websockets import WebSocketDisconnect
 
 from ai_orc.api import create_app
 from ai_orc.auth import new_credentials
@@ -31,13 +35,20 @@ def config(home: Path, socket_name: str) -> Config:
     raw["server"]["cookie_secure"] = False  # TestClient talks plain HTTP
     raw["files"]["base_dir"] = str(home / "projects")
     raw["tmux"]["socket_name"] = socket_name
-    raw["agents"] = {"sleeper": {"label": "Sleeper", "start": ["sleep", "60"], "resume": ["true"]}}
+    raw["agents"] = {
+        "sleeper": {"label": "Sleeper", "start": ["sleep", "60"], "resume": ["true"]},
+        "shell": {
+            "label": "Shell",
+            "start": ["sh", "-c", "echo READY; exec cat"],
+            "resume": ["true"],
+        },
+    }
     return Config.model_validate(raw)
 
 
 @pytest.fixture
 def anonymous(config: Config, clock: FakeClock) -> TestClient:
-    return TestClient(create_app(config, new_credentials(PASSWORD), clock))
+    return TestClient(create_app(config, new_credentials(PASSWORD), static_dir=None, clock=clock))
 
 
 @pytest.fixture
@@ -140,6 +151,7 @@ def test_outside_scope_until_unlocked(client: TestClient, home: Path, clock: Fak
     assert client.post("/api/scope/unlock", json={"password": "wrong"}).status_code == 401
     unlocked = client.post("/api/scope/unlock", json={"password": PASSWORD})
     assert unlocked.json()["root"] == str(home)
+    assert unlocked.json()["unlock_minutes"] == 10
     assert client.get("/api/files", params={"path": private}).status_code == 200
 
     clock.advance(10 * 60 + 1)
@@ -192,3 +204,89 @@ def test_empty_trash(client: TestClient, home: Path) -> None:
     client.post("/api/files/trash", json={"path": str(home / "projects" / "a.txt")})
     assert client.delete("/api/trash").status_code == 204
     assert client.get("/api/trash").json() == []
+
+
+def test_serves_pwa_next_to_api(config: Config, clock: FakeClock, tmp_path: Path) -> None:
+    static = tmp_path / "static"
+    static.mkdir()
+    (static / "index.html").write_text("<title>AI-Orc</title>")
+    app = create_app(config, new_credentials(PASSWORD), static_dir=static, clock=clock)
+    client = TestClient(app)
+    assert "AI-Orc" in client.get("/").text
+    assert client.get("/api/me").status_code == 401
+
+
+ORIGIN = {"origin": "http://testserver"}
+MAX_TERMINAL_FRAMES = 500
+
+
+def start_shell(client: TestClient, home: Path) -> str:
+    body = {"profile": "shell", "path": str(home / "projects"), "resume": False}
+    session_id: str = client.post("/api/sessions", json=body).json()["id"]
+    return session_id
+
+
+def read_until(terminal: WebSocketTestSession, text: str) -> str:
+    received = ""
+    for _ in range(MAX_TERMINAL_FRAMES):
+        received += terminal.receive_bytes().decode(errors="replace")
+        if text in received:
+            return received
+    raise AssertionError(f"{text!r} not seen in terminal output")
+
+
+def refused_code(client: TestClient, session_id: str, headers: dict[str, str]) -> int:
+    url = f"/api/sessions/{session_id}/terminal"
+    connect = client.websocket_connect(url, headers=headers)
+    with pytest.raises(WebSocketDisconnect) as refused, connect:
+        pass
+    code: int = refused.value.code
+    return code
+
+
+def test_terminal_refuses_anonymous_foreign_origin_and_unknown_session(
+    anonymous: TestClient, home: Path
+) -> None:
+    assert refused_code(anonymous, "x", ORIGIN) == 4401
+    anonymous.post("/api/login", json={"password": PASSWORD})
+    session_id = start_shell(anonymous, home)
+    assert refused_code(anonymous, session_id, {"origin": "https://evil.example"}) == 4403
+    assert refused_code(anonymous, "unknown", ORIGIN) == 4404
+
+
+def tmux_client_size(socket_name: str) -> str:
+    return subprocess.run(
+        ["tmux", "-L", socket_name, "list-clients", "-F", "#{client_width}x#{client_height}"],
+        capture_output=True, text=True, check=True,
+    ).stdout.strip()  # fmt: skip
+
+
+def test_terminal_roundtrip_resize_and_detach(
+    client: TestClient, home: Path, socket_name: str
+) -> None:
+    session_id = start_shell(client, home)
+    with client.websocket_connect(f"/api/sessions/{session_id}/terminal", headers=ORIGIN) as term:
+        read_until(term, "READY")
+        term.send_text(json.dumps({"type": "input", "data": "hallo-orc\r"}))
+        read_until(term, "hallo-orc")
+
+        term.send_text(json.dumps({"type": "resize", "cols": 101, "rows": 31}))
+        # tmux redraws after the resize, so each received frame is a chance to re-check.
+        for _ in range(MAX_TERMINAL_FRAMES):
+            if tmux_client_size(socket_name) == "101x31":
+                break
+            term.receive_bytes()
+        assert tmux_client_size(socket_name) == "101x31"
+
+    # Closing the terminal only detaches: the agent keeps running.
+    assert client.get("/api/sessions").json()[0]["running"] is True
+
+
+def test_terminal_closes_when_session_stops(client: TestClient, home: Path) -> None:
+    session_id = start_shell(client, home)
+    with client.websocket_connect(f"/api/sessions/{session_id}/terminal", headers=ORIGIN) as term:
+        read_until(term, "READY")
+        client.delete(f"/api/sessions/{session_id}")
+        with pytest.raises(WebSocketDisconnect):
+            for _ in range(MAX_TERMINAL_FRAMES):
+                term.receive_bytes()

@@ -12,3 +12,6 @@ build/
 # Frontend
 frontend/node_modules/
 frontend/dist/
+
+# Built PWA, bundled into the wheel via hatch artifacts
+src/ai_orc/static/

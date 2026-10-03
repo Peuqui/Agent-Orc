@@ -3,9 +3,10 @@
 import os
 from importlib.resources import files
 from pathlib import Path
+from typing import Literal, Self
 
 import yaml
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
 NAME_PLACEHOLDER = "{name}"
 CONFIG_FILE_NAME = "config.yaml"
@@ -40,6 +41,23 @@ class FilesConfig(StrictModel):
         return value.expanduser()
 
 
+class TerminalKey(StrictModel):
+    label: str
+    send: str | None = None
+    modifier: Literal["ctrl", "alt"] | None = None
+
+    @model_validator(mode="after")
+    def send_xor_modifier(self) -> Self:
+        if (self.send is None) == (self.modifier is None):
+            raise ValueError(f"key {self.label!r} needs exactly one of send or modifier")
+        return self
+
+
+class TerminalConfig(StrictModel):
+    keys: list[list[TerminalKey]]
+    submit_delay_ms: int
+
+
 class TmuxConfig(StrictModel):
     socket_name: str
 
@@ -54,6 +72,7 @@ class Config(StrictModel):
     server: ServerConfig
     auth: AuthConfig
     files: FilesConfig
+    terminal: TerminalConfig
     tmux: TmuxConfig
     agents: dict[str, AgentProfile]
 

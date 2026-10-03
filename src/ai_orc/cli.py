@@ -3,6 +3,8 @@
 import argparse
 import getpass
 import sys
+from importlib.resources import files
+from pathlib import Path
 
 import uvicorn
 
@@ -41,7 +43,10 @@ def serve() -> None:
     directory = config_dir()
     config = load_config(directory / CONFIG_FILE_NAME)
     credentials = load_credentials(directory / CREDENTIALS_FILE_NAME)
-    app = create_app(config, credentials)
+    static_dir = Path(str(files("ai_orc").joinpath("static")))
+    if not (static_dir / "index.html").is_file():
+        sys.exit(f"Frontend not built: no index.html in {static_dir} (run: npm run build)")
+    app = create_app(config, credentials, static_dir=static_dir)
     uvicorn.run(app, host=config.server.host, port=config.server.port)
 
 

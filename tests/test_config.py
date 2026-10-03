@@ -26,3 +26,17 @@ def test_missing_section_is_rejected() -> None:
 def test_config_dir_follows_xdg(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
     assert config_dir() == tmp_path / "ai-orc"
+
+
+def test_terminal_keys_parse_escapes() -> None:
+    keys = parse_config(default_config_text()).terminal.keys
+    sends = {key.label: key.send for row in keys for key in row}
+    assert sends["Esc"] == "\x1b"
+    assert sends["⇧Tab"] == "\x1b[Z"
+    assert sends["^C"] == "\x03"
+
+
+def test_key_needs_exactly_one_action() -> None:
+    text = default_config_text().replace('{label: Esc, send: "\\e"}', "{label: Esc}")
+    with pytest.raises(ValidationError):
+        parse_config(text)

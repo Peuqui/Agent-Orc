@@ -25,6 +25,31 @@ files:
   # Larger files are not opened in the editor.
   max_edit_bytes: 2097152
 
+terminal:
+  # Extra-keys bar shown above the on-screen keyboard, one list per row.
+  # A key either sends a byte sequence (YAML escapes: "\e" is Esc) or is a sticky
+  # modifier (ctrl or alt) that applies to the next key typed.
+  keys:
+    - - {label: Esc, send: "\e"}
+      - {label: Tab, send: "\t"}
+      - {label: "⇧Tab", send: "\e[Z"}
+      - {label: Ctrl, modifier: ctrl}
+      - {label: Alt, modifier: alt}
+      - {label: "↑", send: "\e[A"}
+      - {label: "↓", send: "\e[B"}
+      - {label: "⏎", send: "\r"}
+    - - {label: "^C", send: "\x03"}
+      - {label: "←", send: "\e[D"}
+      - {label: "→", send: "\e[C"}
+      - {label: PgUp, send: "\e[5~"}
+      - {label: PgDn, send: "\e[6~"}
+      - {label: "/", send: "/"}
+      - {label: "|", send: "|"}
+      - {label: "~", send: "~"}
+  # Text from the input field is sent first, Enter after this pause, so agents treat it
+  # as typed text plus submit rather than as one pasted block.
+  submit_delay_ms: 80
+
 tmux:
   # Dedicated tmux server socket, so AI-Orc never touches your own tmux sessions.
   socket_name: ai-orc

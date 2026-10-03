@@ -29,6 +29,8 @@ ai-orc = "ai_orc.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/ai_orc"]
+# The built PWA is git-ignored but must ship in the wheel.
+artifacts = ["src/ai_orc/static/**"]
 
 [tool.ruff]
 line-length = 100
