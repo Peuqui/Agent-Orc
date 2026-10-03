@@ -68,7 +68,10 @@
     "effortDefault": "Standard (Einstellung des Agenten)",
     "profile": "Agent",
     "startNew": "Neu starten",
-    "resume": "Letztes Gespräch fortsetzen"
+    "resume": "Letztes Gespräch fortsetzen",
+    "earlier": "Frühere Gespräche in diesem Ordner",
+    "untitled": "(ohne Titel)",
+    "recentlyActive": "gerade aktiv – evtl. noch woanders offen"
   },
   "trash": {
     "empty": "Der Papierkorb ist leer.",

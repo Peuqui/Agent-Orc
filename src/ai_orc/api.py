@@ -20,6 +20,7 @@ from ai_orc.auth import Clock, Credentials, LoginGuard, TokenSigner, verify_pass
 from ai_orc.config import Config, TerminalConfig
 from ai_orc.context import session_busy, session_status
 from ai_orc.effort import EFFORT_STORES, InvalidEffortError
+from ai_orc.history import CONVERSATION_SOURCES, ConversationNotFoundError
 from ai_orc.scope import AccessScope, OutsideScopeError
 from ai_orc.sessions import (
     AgentSession,
@@ -67,6 +68,7 @@ ERROR_STATUS: dict[type[Exception], int] = {
     SessionNotFoundError: status.HTTP_404_NOT_FOUND,
     UnknownProfileError: status.HTTP_404_NOT_FOUND,
     TrashEntryNotFoundError: status.HTTP_404_NOT_FOUND,
+    ConversationNotFoundError: status.HTTP_404_NOT_FOUND,
 }
 
 
@@ -101,6 +103,8 @@ class StartSessionRequest(BaseModel):
     resume: bool
     # Stored as the folder's effort; None: the agent's own default.
     effort: str | None
+    # Resume this earlier conversation (from GET /api/conversations) instead.
+    conversation: str | None
 
 
 class EffortRequest(BaseModel):
@@ -296,8 +300,23 @@ def create_app(
         profile = config.agents.get(body.profile)
         if profile and profile.trust:
             FOLDER_TRUST[profile.trust](home, path)
+        if body.conversation is not None:
+            ids = {c["id"] for c in conversations_of(body.profile, path)}
+            if body.conversation not in ids:
+                raise ConversationNotFoundError(body.conversation)
         store_effort(body.profile, path, body.effort)
-        return sessions.start(body.profile, path, body.resume)
+        return sessions.start(body.profile, path, body.resume, body.conversation)
+
+    def conversations_of(profile_name: str, folder: Path) -> list[dict[str, Any]]:
+        profile = config.agents.get(profile_name)
+        if profile is None or profile.conversations is None:
+            return []
+        listing = CONVERSATION_SOURCES[profile.conversations.source](home, folder, clock)
+        return [asdict(conversation) for conversation in listing]
+
+    @app.get("/api/conversations", dependencies=authenticated)
+    def list_conversations(profile: str, path: str) -> list[dict[str, Any]]:
+        return conversations_of(profile, scope.resolve(path))
 
     @app.post("/api/sessions/{session_id}/effort", dependencies=authenticated)
     def change_effort(session_id: str, body: EffortRequest) -> dict[str, bool]:

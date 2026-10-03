@@ -16,6 +16,7 @@ from ai_orc.api import create_app
 from ai_orc.auth import new_credentials
 from ai_orc.config import Config, default_config_text
 from ai_orc.context import store_activity, store_status
+from ai_orc.history import claude_project_dir
 from ai_orc.sessions import SESSION_ENV
 from tests.conftest import FakeClock
 
@@ -44,6 +45,15 @@ def config(home: Path, socket_name: str) -> Config:
             "start": ["sleep", "60"],
             "resume": ["true"],
             "effort": {"levels": ["low", "high"], "store": "claude_project"},
+        },
+        "talker": {
+            "label": "Talker",
+            "start": ["sleep", "60"],
+            "resume": ["sleep", "61"],
+            "conversations": {
+                "source": "claude",
+                "resume": ["sh", "-c", "echo resumed {conversation}; sleep 60"],
+            },
         },
         "shell": {
             "label": "Shell",
@@ -111,7 +121,13 @@ def test_folder_session_and_trash_flow(client: TestClient, home: Path) -> None:
     demo = Path(created.json()["path"])
     assert demo == projects / "demo"
 
-    start = {"profile": "sleeper", "path": str(demo), "resume": False, "effort": None}
+    start = {
+        "profile": "sleeper",
+        "path": str(demo),
+        "resume": False,
+        "effort": None,
+        "conversation": None,
+    }
     session = client.post("/api/sessions", json=start)
     assert session.status_code == 200
     assert session.json()["running"] is True
@@ -135,13 +151,19 @@ def test_folder_session_and_trash_flow(client: TestClient, home: Path) -> None:
 
 
 def test_second_agent_in_same_folder_is_refused(client: TestClient, home: Path) -> None:
-    body = {"profile": "sleeper", "path": str(home / "projects"), "resume": False, "effort": None}
+    body = {
+        "profile": "sleeper",
+        "path": str(home / "projects"),
+        "resume": False,
+        "effort": None,
+        "conversation": None,
+    }
     assert client.post("/api/sessions", json=body).status_code == 200
     assert client.post("/api/sessions", json=body).status_code == 409
 
 
 def test_unknown_profile_and_missing_folder(client: TestClient, home: Path) -> None:
-    base = {"path": str(home / "projects"), "resume": False, "effort": None}
+    base = {"path": str(home / "projects"), "resume": False, "effort": None, "conversation": None}
     unknown = {**base, "profile": "nope"}
     assert client.post("/api/sessions", json=unknown).status_code == 404
     missing = {**base, "profile": "sleeper", "path": str(home / "projects" / "missing")}
@@ -231,7 +253,13 @@ MAX_TERMINAL_FRAMES = 500
 
 
 def start_shell(client: TestClient, home: Path) -> str:
-    body = {"profile": "shell", "path": str(home / "projects"), "resume": False, "effort": None}
+    body = {
+        "profile": "shell",
+        "path": str(home / "projects"),
+        "resume": False,
+        "effort": None,
+        "conversation": None,
+    }
     session_id: str = client.post("/api/sessions", json=body).json()["id"]
     return session_id
 
@@ -306,7 +334,13 @@ def test_sessions_report_model_and_context(
     client: TestClient, home: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
-    start = {"profile": "sleeper", "path": str(home / "projects"), "resume": False, "effort": None}
+    start = {
+        "profile": "sleeper",
+        "path": str(home / "projects"),
+        "resume": False,
+        "effort": None,
+        "conversation": None,
+    }
     session_id = client.post("/api/sessions", json=start).json()["id"]
     listed = client.get("/api/sessions").json()[0]
     assert listed["model"] is None and listed["context_tokens"] is None
@@ -324,7 +358,13 @@ def test_sessions_report_model_and_context(
 
 
 def test_agent_knows_its_session_id(client: TestClient, home: Path, socket_name: str) -> None:
-    start = {"profile": "sleeper", "path": str(home / "projects"), "resume": False, "effort": None}
+    start = {
+        "profile": "sleeper",
+        "path": str(home / "projects"),
+        "resume": False,
+        "effort": None,
+        "conversation": None,
+    }
     session_id = client.post("/api/sessions", json=start).json()["id"]
     environment = subprocess.run(
         ["tmux", "-L", socket_name, "show-environment", "-t", f"={session_id}", SESSION_ENV],
@@ -340,7 +380,13 @@ def test_agents_list_their_effort_levels(client: TestClient) -> None:
 
 
 def test_invalid_effort_is_rejected(client: TestClient, home: Path) -> None:
-    body = {"profile": "sleeper", "path": str(home / "projects"), "resume": False, "effort": "max"}
+    body = {
+        "profile": "sleeper",
+        "path": str(home / "projects"),
+        "resume": False,
+        "effort": "max",
+        "conversation": None,
+    }
     response = client.post("/api/sessions", json=body)
     assert response.status_code == 422
     assert response.json()["error"] == "InvalidEffortError"
@@ -354,7 +400,13 @@ def test_effort_is_stored_in_the_project(client: TestClient, home: Path) -> None
     query = {"profile": "sleeper", "path": str(folder)}
     assert client.get("/api/effort", params=query).json() == {"effort": None}
 
-    start = {"profile": "sleeper", "path": str(folder), "resume": False, "effort": "high"}
+    start = {
+        "profile": "sleeper",
+        "path": str(folder),
+        "resume": False,
+        "effort": "high",
+        "conversation": None,
+    }
     assert client.post("/api/sessions", json=start).status_code == 200
     assert json.loads(settings.read_text()) == {
         "permissions": {"allow": ["Bash(ls:*)"]},
@@ -367,7 +419,13 @@ def test_changing_effort_resumes_the_agent(
     client: TestClient, home: Path, socket_name: str
 ) -> None:
     folder = home / "projects"
-    start = {"profile": "sleeper", "path": str(folder), "resume": False, "effort": None}
+    start = {
+        "profile": "sleeper",
+        "path": str(folder),
+        "resume": False,
+        "effort": None,
+        "conversation": None,
+    }
     session_id = client.post("/api/sessions", json=start).json()["id"]
     change = {"effort": "low", "immediately": False}
     changed = client.post(f"/api/sessions/{session_id}/effort", json=change)
@@ -391,7 +449,13 @@ def test_changing_effort_resumes_the_agent(
 
 
 def test_effort_for_agent_without_effort_setting(client: TestClient, home: Path) -> None:
-    body = {"profile": "shell", "path": str(home / "projects"), "resume": False, "effort": "low"}
+    body = {
+        "profile": "shell",
+        "path": str(home / "projects"),
+        "resume": False,
+        "effort": "low",
+        "conversation": None,
+    }
     assert client.post("/api/sessions", json=body).status_code == 422
     assert not (home / "projects" / ".claude").exists()
 
@@ -401,7 +465,13 @@ def test_effort_change_waits_for_a_busy_agent(
 ) -> None:
     monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
     folder = home / "projects"
-    start = {"profile": "sleeper", "path": str(folder), "resume": False, "effort": None}
+    start = {
+        "profile": "sleeper",
+        "path": str(folder),
+        "resume": False,
+        "effort": None,
+        "conversation": None,
+    }
     session_id = client.post("/api/sessions", json=start).json()["id"]
     store_activity(session_id, busy=True)
     url = f"/api/sessions/{session_id}/effort"
@@ -441,7 +511,13 @@ def test_pending_effort_applies_when_the_agent_is_done(
         create_app(config, new_credentials(PASSWORD), static_dir=None, clock=clock)
     ) as client:
         client.post("/api/login", json={"password": PASSWORD})
-        start = {"profile": "sleeper", "path": str(folder), "resume": False, "effort": None}
+        start = {
+            "profile": "sleeper",
+            "path": str(folder),
+            "resume": False,
+            "effort": None,
+            "conversation": None,
+        }
         session_id = client.post("/api/sessions", json=start).json()["id"]
         store_activity(session_id, busy=True)
         url = f"/api/sessions/{session_id}/effort"
@@ -457,3 +533,42 @@ def test_pending_effort_applies_when_the_agent_is_done(
         assert client.get("/api/sessions").json()[0]["effort_pending"] is False
         settings = json.loads((folder / ".claude" / "settings.local.json").read_text())
         assert settings == {"effortLevel": "low"}
+
+
+def test_resume_a_chosen_earlier_conversation(
+    client: TestClient, home: Path, socket_name: str
+) -> None:
+    folder = home / "projects"
+    conversation_id = "1b0c8f2e-0000-4000-8000-00000000abcd"
+    transcripts = claude_project_dir(home, folder)
+    transcripts.mkdir(parents=True)
+    title = {"type": "ai-title", "aiTitle": "Lander bauen"}
+    (transcripts / f"{conversation_id}.jsonl").write_text(json.dumps(title) + "\n")
+
+    query = {"profile": "talker", "path": str(folder)}
+    listed = client.get("/api/conversations", params=query).json()
+    assert [(c["id"], c["title"]) for c in listed] == [(conversation_id, "Lander bauen")]
+    assert client.get("/api/conversations", params={**query, "profile": "shell"}).json() == []
+
+    base = {
+        "profile": "talker",
+        "path": str(folder),
+        "resume": True,
+        "effort": None,
+        "conversation": None,
+    }
+    unknown = client.post("/api/sessions", json={**base, "conversation": "not-there"})
+    assert unknown.status_code == 404
+
+    started = client.post("/api/sessions", json={**base, "conversation": conversation_id})
+    assert started.status_code == 200
+    target = f"={started.json()['id']}:"
+    for _ in range(50):
+        pane = subprocess.run(
+            ["tmux", "-L", socket_name, "capture-pane", "-p", "-t", target],
+            capture_output=True, text=True, check=True,
+        ).stdout  # fmt: skip
+        if conversation_id in pane:
+            break
+        time.sleep(0.1)
+    assert f"resumed {conversation_id}" in pane

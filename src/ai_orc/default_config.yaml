@@ -63,6 +63,10 @@ agents:
     label: Claude Code
     start: [claude, --settings, &claude_settings '{"statusLine": {"type": "command", "command": "ai-orc statusline"}, "hooks": {"UserPromptSubmit": [{"hooks": [{"type": "command", "command": "ai-orc agent-busy"}]}], "Stop": [{"hooks": [{"type": "command", "command": "ai-orc agent-idle"}]}]}}', --remote-control, "{name}"]
     resume: [claude, --settings, *claude_settings, --continue, --remote-control, "{name}"]
+    # Every earlier conversation in the folder (also from VS Code or a terminal) can be resumed.
+    conversations:
+      source: claude
+      resume: [claude, --settings, *claude_settings, --resume, "{conversation}", --remote-control, "{name}"]
     # Starting an agent in a folder means trusting it: skip Claude's trust prompt.
     trust: claude
     # Reasoning effort per project folder (<folder>/.claude/settings.local.json); without a

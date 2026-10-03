@@ -6,7 +6,7 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
-from ai_orc.config import NAME_PLACEHOLDER, AgentProfile
+from ai_orc.config import CONVERSATION_PLACEHOLDER, NAME_PLACEHOLDER, AgentProfile
 
 # Every agent gets its session id in this environment variable, so helpers it runs
 # (e.g. the status line command) know which session they belong to.
@@ -91,10 +91,13 @@ class SessionManager:
     def find_by_path(self, path: Path) -> AgentSession | None:
         return next((s for s in self.list() if s.path == path), None)
 
-    def start(self, profile_name: str, path: Path, resume: bool) -> AgentSession:
+    def start(
+        self, profile_name: str, path: Path, resume: bool, conversation: str | None = None
+    ) -> AgentSession:
         """Start an agent in `path`; at most one agent session exists per folder.
 
-        A session whose agent has already exited is replaced.
+        A session whose agent has already exited is replaced. `conversation` resumes that
+        earlier conversation (the caller has checked that it exists); `resume` the last one.
         """
         profile = self._agents.get(profile_name)
         if profile is None:
@@ -106,7 +109,14 @@ class SessionManager:
             self.stop(existing.id)
 
         session_id = session_id_for(path)
-        command = build_command(profile.resume if resume else profile.start, path.name)
+        if conversation is not None and profile.conversations is not None:
+            arguments = [
+                argument.replace(CONVERSATION_PLACEHOLDER, conversation)
+                for argument in profile.conversations.resume
+            ]
+        else:
+            arguments = profile.resume if resume else profile.start
+        command = build_command(arguments, path.name)
         # One tmux invocation, so remain-on-exit is active before the agent can exit
         # and its exit status stays visible. The status bar would only repeat what the
         # app shows and costs a terminal line on small screens. Mouse mode turns wheel

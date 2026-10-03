@@ -9,6 +9,7 @@ import yaml
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
 NAME_PLACEHOLDER = "{name}"
+CONVERSATION_PLACEHOLDER = "{conversation}"
 CONFIG_FILE_NAME = "config.yaml"
 CREDENTIALS_FILE_NAME = "credentials.json"
 
@@ -70,10 +71,20 @@ class EffortConfig(StrictModel):
     store: Literal["claude_project"]
 
 
+class ConversationsConfig(StrictModel):
+    """Earlier conversations in a folder that can be resumed one by one."""
+
+    # Where they are listed from (see history.py).
+    source: Literal["claude"]
+    # Command resuming one of them; contains the placeholder {conversation}.
+    resume: list[str]
+
+
 class AgentProfile(StrictModel):
     label: str
     start: list[str]
     resume: list[str]
+    conversations: ConversationsConfig | None = None
     effort: EffortConfig | None = None
     # Mark the folder as trusted before starting, so the agent does not stop at a prompt.
     trust: Literal["claude"] | None = None

@@ -68,6 +68,15 @@ export interface TerminalSettings {
   submit_delay_ms: number
 }
 
+export interface Conversation {
+  id: string
+  title: string
+  modified: number
+  size: number
+  /** Written to in the last minutes: probably still open elsewhere, e.g. in VS Code. */
+  recently_active: boolean
+}
+
 export class ApiError extends Error {
   constructor(
     readonly status: number,
@@ -135,9 +144,22 @@ export const api = {
   agents: () => request<AgentProfile[]>('GET', 'agents'),
   terminalSettings: () => request<TerminalSettings>('GET', 'terminal'),
   sessions: () => request<AgentSession[]>('GET', 'sessions'),
-  /** effort is stored for the folder; null: the agent's own default. */
-  startSession: (profile: string, path: string, resume: boolean, effort: string | null) =>
-    request<AgentSession>('POST', 'sessions', { body: { profile, path, resume, effort } }),
+  /**
+   * effort is stored for the folder (null: the agent's own default); conversation resumes
+   * that earlier conversation, resume the last one.
+   */
+  startSession: (
+    profile: string,
+    path: string,
+    resume: boolean,
+    effort: string | null,
+    conversation: string | null = null,
+  ) =>
+    request<AgentSession>('POST', 'sessions', {
+      body: { profile, path, resume, effort, conversation },
+    }),
+  conversations: (profile: string, path: string) =>
+    request<Conversation[]>('GET', 'conversations', { query: { profile, path } }),
   folderEffort: (profile: string, path: string) =>
     request<{ effort: string | null }>('GET', 'effort', { query: { profile, path } }),
   /**

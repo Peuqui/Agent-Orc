@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { api } from '../api'
+import { useI18n } from 'vue-i18n'
+import { api, type Conversation } from '../api'
 import { useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
-import { baseName } from '../format'
+import { baseName, formatDate, formatSize } from '../format'
 import BaseDialog from './BaseDialog.vue'
 
 const props = defineProps<{ path: string }>()
@@ -15,16 +16,21 @@ const selected = ref('')
 // Empty string: the agent's own default effort.
 const effort = ref('')
 const busy = ref(false)
+const conversations = ref<Conversation[]>([])
+const MILLISECONDS_PER_SECOND = 1000
+const { locale } = useI18n()
 
 const effortLevels = computed(
   () => profiles.value.find((profile) => profile.name === selected.value)?.effort_levels ?? [],
 )
-// Preselect the folder's stored effort for the chosen agent.
+// For the chosen agent: preselect the folder's stored effort, list earlier conversations.
 watch(selected, async (profile) => {
   effort.value = ''
+  conversations.value = []
   if (!profile) return
   try {
     effort.value = (await api.folderEffort(profile, props.path)).effort ?? ''
+    conversations.value = await api.conversations(profile, props.path)
   } catch (error) {
     toast.error(error)
   }
@@ -35,10 +41,10 @@ onMounted(async () => {
   selected.value = profiles.value[0]?.name ?? ''
 })
 
-async function start(resume: boolean): Promise<void> {
+async function start(resume: boolean, conversation: string | null = null): Promise<void> {
   busy.value = true
   try {
-    await api.startSession(selected.value, props.path, resume, effort.value || null)
+    await api.startSession(selected.value, props.path, resume, effort.value || null, conversation)
     await refresh()
     emit('started')
   } catch (error) {
@@ -78,6 +84,29 @@ async function start(resume: boolean): Promise<void> {
         {{ $t('agent.resume') }}
       </button>
       <button class="btn" @click="emit('close')">{{ $t('common.cancel') }}</button>
+    </div>
+    <div v-if="conversations.length" class="mt-5 border-t border-slate-700 pt-4">
+      <h3 class="mb-2 text-sm text-slate-400">{{ $t('agent.earlier') }}</h3>
+      <ul class="flex max-h-64 flex-col gap-1 overflow-y-auto">
+        <li v-for="conversation in conversations" :key="conversation.id">
+          <button
+            class="flex w-full flex-col items-start rounded-lg px-3 py-2 text-left hover:bg-slate-700"
+            :disabled="busy"
+            @click="start(true, conversation.id)"
+          >
+            <span class="w-full truncate text-sm text-slate-100">
+              {{ conversation.title || $t('agent.untitled') }}
+            </span>
+            <span class="text-xs text-slate-500">
+              {{ formatDate(new Date(conversation.modified * MILLISECONDS_PER_SECOND), locale) }}
+              · {{ formatSize(conversation.size) }}
+              <span v-if="conversation.recently_active" class="text-amber-400">
+                · {{ $t('agent.recentlyActive') }}
+              </span>
+            </span>
+          </button>
+        </li>
+      </ul>
     </div>
   </BaseDialog>
 </template>

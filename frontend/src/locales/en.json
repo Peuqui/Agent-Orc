@@ -68,7 +68,10 @@
     "effortDefault": "Default (agent's own setting)",
     "profile": "Agent",
     "startNew": "Start new",
-    "resume": "Resume last conversation"
+    "resume": "Resume last conversation",
+    "earlier": "Earlier conversations in this folder",
+    "untitled": "(untitled)",
+    "recentlyActive": "recently active – may still be open elsewhere"
   },
   "trash": {
     "empty": "The trash is empty.",
