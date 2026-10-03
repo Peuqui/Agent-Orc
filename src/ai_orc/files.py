@@ -1,5 +1,6 @@
 """File manager operations. Callers pass paths already checked by AccessScope."""
 
+import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -33,7 +34,17 @@ class FileEntry:
 @dataclass(frozen=True)
 class TextFile:
     content: str
-    modified_ns: int
+    # Opaque version token (the mtime in ns as text). A string, because a nanosecond
+    # timestamp exceeds the integer precision of JavaScript numbers.
+    version: str
+
+
+def _version(stat: os.stat_result) -> str:
+    return str(stat.st_mtime_ns)
+
+
+def file_version(path: Path) -> str:
+    return _version(path.stat())
 
 
 def validate_name(name: str, pattern: str) -> None:
@@ -81,23 +92,23 @@ def read_text(path: Path, max_bytes: int) -> TextFile:
         content = path.read_bytes().decode("utf-8")
     except UnicodeDecodeError as error:
         raise NotTextError(str(path)) from error
-    return TextFile(content=content, modified_ns=stat.st_mtime_ns)
+    return TextFile(content=content, version=_version(stat))
 
 
-def write_text(path: Path, content: str, expected_modified_ns: int | None, max_bytes: int) -> int:
-    """Write a text file and return its new modification time.
+def write_text(path: Path, content: str, expected_version: str | None, max_bytes: int) -> str:
+    """Write a text file and return its new version.
 
-    expected_modified_ns None creates a new file; otherwise the file must be unchanged
-    since it was read. Writing in place keeps permissions such as the executable bit.
+    expected_version None creates a new file; otherwise the file must be unchanged since
+    it was read. Writing in place keeps permissions such as the executable bit.
     """
     data = content.encode("utf-8")
     if len(data) > max_bytes:
         raise FileTooLargeError(str(path))
-    if expected_modified_ns is None:
+    if expected_version is None:
         with path.open("xb") as handle:
             handle.write(data)
     else:
-        if path.stat().st_mtime_ns != expected_modified_ns:
+        if file_version(path) != expected_version:
             raise FileConflictError(str(path))
         path.write_bytes(data)
-    return path.stat().st_mtime_ns
+    return file_version(path)

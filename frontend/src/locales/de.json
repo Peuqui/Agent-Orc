@@ -1,0 +1,106 @@
+{
+  "app": {
+    "tagline": "Agent Orchestrator",
+    "logout": "Abmelden",
+    "retry": "Erneut versuchen",
+    "language": "Sprache"
+  },
+  "nav": {
+    "sessions": "Agenten",
+    "files": "Dateien",
+    "trash": "Papierkorb"
+  },
+  "common": {
+    "cancel": "Abbrechen",
+    "create": "Anlegen",
+    "save": "Speichern",
+    "confirm": "Bestätigen",
+    "rename": "Umbenennen"
+  },
+  "login": {
+    "title": "Anmelden",
+    "password": "Passwort",
+    "submit": "Anmelden"
+  },
+  "sessions": {
+    "empty": "Kein Agent läuft. Starte einen über die Dateien.",
+    "running": "läuft",
+    "exited": "beendet (Exit {code})",
+    "stop": "Beenden",
+    "resume": "Fortsetzen",
+    "terminal": "Terminal",
+    "startNew": "Agent starten",
+    "confirmStop": "Agent in „{name}“ beenden? Das Gespräch bleibt gespeichert und lässt sich fortsetzen."
+  },
+  "files": {
+    "newFolder": "Neuer Ordner",
+    "folderName": "Ordnername",
+    "newName": "Neuer Name",
+    "toTrash": "In den Papierkorb",
+    "confirmTrash": "„{name}“ in den Papierkorb legen?",
+    "startAgent": "Agent hier starten",
+    "agentRunning": "Agent läuft",
+    "up": "Eine Ebene höher",
+    "empty": "Dieser Ordner ist leer.",
+    "actions": "Aktionen für {name}"
+  },
+  "scope": {
+    "unlock": "Außerhalb freischalten",
+    "unlockTitle": "Zugriff außerhalb des Projektordners",
+    "unlockHint": "Für {minutes} Minuten wird dein ganzes Home-Verzeichnis zugänglich. Zur Bestätigung bitte das Passwort eingeben.",
+    "unlocked": "Home freigeschaltet · {time}",
+    "lock": "Sperren"
+  },
+  "agent": {
+    "title": "Agent in „{name}“ starten",
+    "profile": "Agent",
+    "startNew": "Neu starten",
+    "resume": "Letztes Gespräch fortsetzen"
+  },
+  "trash": {
+    "empty": "Der Papierkorb ist leer.",
+    "emptyAll": "Papierkorb leeren",
+    "confirmEmpty": "Alle {count} Einträge endgültig löschen? Das lässt sich nicht rückgängig machen.",
+    "restore": "Wiederherstellen",
+    "deleteForever": "Endgültig löschen",
+    "confirmDelete": "„{name}“ endgültig löschen? Das lässt sich nicht rückgängig machen.",
+    "deletedAt": "gelöscht {date}"
+  },
+  "terminal": {
+    "back": "Zurück",
+    "placeholder": "Nachricht an den Agenten …",
+    "send": "Senden",
+    "disconnected": "Verbindung zum Terminal beendet.",
+    "reconnect": "Neu verbinden",
+    "smaller": "Schrift kleiner",
+    "larger": "Schrift größer"
+  },
+  "editor": {
+    "search": "Suchen",
+    "conflictTitle": "Datei wurde geändert",
+    "reload": "Neu laden (meine Änderungen verwerfen)",
+    "overwrite": "Trotzdem speichern (überschreiben)",
+    "unsavedTitle": "Ungespeicherte Änderungen",
+    "unsavedMessage": "Deine Änderungen sind noch nicht gespeichert. Trotzdem verlassen?",
+    "discard": "Verwerfen"
+  },
+  "errors": {
+    "NetworkError": "Server nicht erreichbar.",
+    "OutsideScopeError": "Dieser Ort liegt außerhalb des freigegebenen Bereichs.",
+    "FolderBusyError": "In diesem Ordner läuft noch ein Agent. Beende ihn zuerst.",
+    "SessionAlreadyRunningError": "In diesem Ordner läuft bereits ein Agent.",
+    "FileExistsError": "Ein Eintrag mit diesem Namen existiert bereits.",
+    "RestoreConflictError": "Am ursprünglichen Ort liegt inzwischen etwas Gleichnamiges.",
+    "InvalidNameError": "Ungültiger Name. Erlaubt sind Buchstaben, Ziffern, Punkt, Binde- und Unterstrich.",
+    "FileTooLargeError": "Die Datei ist zu groß für den Editor.",
+    "NotTextError": "Das ist keine Textdatei.",
+    "FileConflictError": "Die Datei wurde inzwischen geändert, zum Beispiel vom Agenten.",
+    "NotADirectoryError": "Das ist kein Ordner.",
+    "FileNotFoundError": "Nicht gefunden.",
+    "UnknownProfileError": "Unbekannter Agent.",
+    "SessionNotFoundError": "Diese Sitzung gibt es nicht mehr.",
+    "TrashEntryNotFoundError": "Dieser Eintrag ist nicht mehr im Papierkorb.",
+    "http401": "Falsches Passwort.",
+    "http429": "Zu viele Fehlversuche. Bitte warte {minutes} Minuten."
+  }
+}

@@ -170,22 +170,24 @@ def test_restore_outside_scope_needs_unlock(client: TestClient, home: Path) -> N
 def test_editor_roundtrip_with_conflict(client: TestClient, home: Path) -> None:
     path = str(home / "projects" / "notes.md")
     created = client.put(
-        "/api/files/content", json={"path": path, "content": "eins", "expected_modified_ns": None}
+        "/api/files/content", json={"path": path, "content": "eins", "expected_version": None}
     )
     assert created.status_code == 200
     loaded = client.get("/api/files/content", params={"path": path}).json()
     assert loaded["content"] == "eins"
+    # A string: a nanosecond timestamp would lose precision as a JavaScript number.
+    assert isinstance(loaded["version"], str)
 
-    stale = loaded["modified_ns"] - 1
+    stale = str(int(loaded["version"]) - 1)
     conflict = client.put(
-        "/api/files/content", json={"path": path, "content": "zwei", "expected_modified_ns": stale}
+        "/api/files/content", json={"path": path, "content": "zwei", "expected_version": stale}
     )
     assert conflict.status_code == 409
     assert conflict.json()["error"] == "FileConflictError"
 
     saved = client.put(
         "/api/files/content",
-        json={"path": path, "content": "zwei", "expected_modified_ns": loaded["modified_ns"]},
+        json={"path": path, "content": "zwei", "expected_version": loaded["version"]},
     )
     assert saved.status_code == 200
     assert Path(path).read_text() == "zwei"

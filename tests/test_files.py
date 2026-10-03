@@ -45,7 +45,7 @@ def test_read_text(tmp_path: Path) -> None:
     path.write_text("Grüße", encoding="utf-8")
     text = files.read_text(path, MAX_BYTES)
     assert text.content == "Grüße"
-    assert text.modified_ns == path.stat().st_mtime_ns
+    assert text.version == str(path.stat().st_mtime_ns)
 
 
 def test_read_rejects_large_and_binary_files(tmp_path: Path) -> None:
@@ -62,9 +62,10 @@ def test_write_detects_concurrent_change(tmp_path: Path) -> None:
     path.write_text("v1")
     loaded = files.read_text(path, MAX_BYTES)
     path.write_text("changed by agent")
-    os.utime(path, ns=(loaded.modified_ns + 1, loaded.modified_ns + 1))
+    changed = int(loaded.version) + 1
+    os.utime(path, ns=(changed, changed))
     with pytest.raises(files.FileConflictError):
-        files.write_text(path, "v2", loaded.modified_ns, MAX_BYTES)
+        files.write_text(path, "v2", loaded.version, MAX_BYTES)
     assert path.read_text() == "changed by agent"
 
 
@@ -72,10 +73,10 @@ def test_write_keeps_executable_bit(tmp_path: Path) -> None:
     path = tmp_path / "run.sh"
     path.write_text("echo 1")
     path.chmod(0o755)
-    modified = files.write_text(path, "echo 2", path.stat().st_mtime_ns, MAX_BYTES)
+    version = files.write_text(path, "echo 2", files.file_version(path), MAX_BYTES)
     assert path.read_text() == "echo 2"
     assert path.stat().st_mode & 0o111
-    assert modified == path.stat().st_mtime_ns
+    assert version == files.file_version(path)
 
 
 def test_write_new_file_does_not_overwrite(tmp_path: Path) -> None:

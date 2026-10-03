@@ -102,10 +102,14 @@ class SessionManager:
         session_id = session_id_for(path)
         command = build_command(profile.resume if resume else profile.start, path.name)
         # One tmux invocation, so remain-on-exit is active before the agent can exit
-        # and its exit status stays visible.
+        # and its exit status stays visible. The status bar would only repeat what the
+        # app shows and costs a terminal line on small screens. Mouse mode turns wheel
+        # and touch scrolling in the browser terminal into scrolling the agent's history.
         self._tmux(
             "start-server", ";",
             "set-option", "-g", "remain-on-exit", "on", ";",
+            "set-option", "-g", "status", "off", ";",
+            "set-option", "-g", "mouse", "on", ";",
             "new-session", "-d", "-s", session_id, "-c", str(path), *command, ";",
             "set-option", "-t", exact_target(session_id), PROFILE_OPTION, profile_name, ";",
             "set-option", "-t", exact_target(session_id), PATH_OPTION, str(path),

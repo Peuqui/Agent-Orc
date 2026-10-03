@@ -1,0 +1,39 @@
+@import "tailwindcss";
+
+/* Colour scheme follows HaemoTrace: dark slate surfaces, red accents. */
+@layer base {
+  html,
+  body {
+    @apply bg-slate-900 text-slate-100 antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Component classes as utilities, so they can build on each other via @apply. */
+@utility card {
+  @apply rounded-xl border border-slate-700 bg-slate-800;
+}
+
+@utility btn {
+  @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+}
+
+@utility btn-primary {
+  @apply btn bg-red-600 text-white hover:bg-red-500 active:bg-red-700;
+}
+
+@utility btn-secondary {
+  @apply btn border border-slate-600 bg-slate-700 text-slate-100 hover:bg-slate-600;
+}
+
+@utility btn-danger {
+  @apply btn border border-red-700 bg-red-900/40 text-red-300 hover:bg-red-900/70;
+}
+
+@utility btn-icon {
+  @apply inline-flex size-11 items-center justify-center rounded-lg text-slate-300 hover:bg-slate-700 disabled:opacity-30 disabled:hover:bg-transparent;
+}
+
+@utility input {
+  @apply min-h-11 w-full rounded-lg border border-slate-600 bg-slate-900 px-3 text-slate-100 placeholder:text-slate-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 focus:outline-none;
+}

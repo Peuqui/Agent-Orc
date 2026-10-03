@@ -1,0 +1,106 @@
+{
+  "app": {
+    "tagline": "Agent Orchestrator",
+    "logout": "Log out",
+    "retry": "Try again",
+    "language": "Language"
+  },
+  "nav": {
+    "sessions": "Agents",
+    "files": "Files",
+    "trash": "Trash"
+  },
+  "common": {
+    "cancel": "Cancel",
+    "create": "Create",
+    "save": "Save",
+    "confirm": "Confirm",
+    "rename": "Rename"
+  },
+  "login": {
+    "title": "Log in",
+    "password": "Password",
+    "submit": "Log in"
+  },
+  "sessions": {
+    "empty": "No agent is running. Start one from the files view.",
+    "running": "running",
+    "exited": "exited (code {code})",
+    "stop": "Stop",
+    "resume": "Resume",
+    "terminal": "Terminal",
+    "startNew": "Start agent",
+    "confirmStop": "Stop the agent in “{name}”? The conversation is kept and can be resumed."
+  },
+  "files": {
+    "newFolder": "New folder",
+    "folderName": "Folder name",
+    "newName": "New name",
+    "toTrash": "Move to trash",
+    "confirmTrash": "Move “{name}” to the trash?",
+    "startAgent": "Start agent here",
+    "agentRunning": "Agent running",
+    "up": "Up one level",
+    "empty": "This folder is empty.",
+    "actions": "Actions for {name}"
+  },
+  "scope": {
+    "unlock": "Unlock outside",
+    "unlockTitle": "Access outside the project folder",
+    "unlockHint": "Your whole home directory becomes accessible for {minutes} minutes. Enter your password to confirm.",
+    "unlocked": "Home unlocked · {time}",
+    "lock": "Lock"
+  },
+  "agent": {
+    "title": "Start agent in “{name}”",
+    "profile": "Agent",
+    "startNew": "Start new",
+    "resume": "Resume last conversation"
+  },
+  "trash": {
+    "empty": "The trash is empty.",
+    "emptyAll": "Empty trash",
+    "confirmEmpty": "Permanently delete all {count} entries? This cannot be undone.",
+    "restore": "Restore",
+    "deleteForever": "Delete permanently",
+    "confirmDelete": "Permanently delete “{name}”? This cannot be undone.",
+    "deletedAt": "deleted {date}"
+  },
+  "terminal": {
+    "back": "Back",
+    "placeholder": "Message to the agent …",
+    "send": "Send",
+    "disconnected": "Terminal connection closed.",
+    "reconnect": "Reconnect",
+    "smaller": "Smaller text",
+    "larger": "Larger text"
+  },
+  "editor": {
+    "search": "Search",
+    "conflictTitle": "File has changed",
+    "reload": "Reload (discard my changes)",
+    "overwrite": "Save anyway (overwrite)",
+    "unsavedTitle": "Unsaved changes",
+    "unsavedMessage": "Your changes are not saved yet. Leave anyway?",
+    "discard": "Discard"
+  },
+  "errors": {
+    "NetworkError": "Server not reachable.",
+    "OutsideScopeError": "This location is outside the allowed area.",
+    "FolderBusyError": "An agent is still running in this folder. Stop it first.",
+    "SessionAlreadyRunningError": "An agent is already running in this folder.",
+    "FileExistsError": "An entry with this name already exists.",
+    "RestoreConflictError": "Something with the same name now exists at the original location.",
+    "InvalidNameError": "Invalid name. Letters, digits, dot, dash and underscore are allowed.",
+    "FileTooLargeError": "The file is too large for the editor.",
+    "NotTextError": "This is not a text file.",
+    "FileConflictError": "The file has changed in the meantime, for example by the agent.",
+    "NotADirectoryError": "This is not a folder.",
+    "FileNotFoundError": "Not found.",
+    "UnknownProfileError": "Unknown agent.",
+    "SessionNotFoundError": "This session no longer exists.",
+    "TrashEntryNotFoundError": "This entry is no longer in the trash.",
+    "http401": "Wrong password.",
+    "http429": "Too many failed attempts. Please wait {minutes} minutes."
+  }
+}

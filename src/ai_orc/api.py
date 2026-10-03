@@ -79,8 +79,8 @@ class RenameRequest(BaseModel):
 class WriteFileRequest(BaseModel):
     path: str
     content: str
-    # None creates a new file; otherwise the mtime the editor loaded.
-    expected_modified_ns: int | None
+    # None creates a new file; otherwise the version the editor loaded.
+    expected_version: str | None
 
 
 class StartSessionRequest(BaseModel):
@@ -252,12 +252,10 @@ def create_app(
         return files.read_text(scope.resolve(path), max_edit_bytes)
 
     @app.put("/api/files/content", dependencies=authenticated)
-    def write_file(body: WriteFileRequest) -> dict[str, int]:
+    def write_file(body: WriteFileRequest) -> dict[str, str]:
         path = scope.resolve(body.path)
-        modified_ns = files.write_text(
-            path, body.content, body.expected_modified_ns, max_edit_bytes
-        )
-        return {"modified_ns": modified_ns}
+        version = files.write_text(path, body.content, body.expected_version, max_edit_bytes)
+        return {"version": version}
 
     @app.post("/api/files/trash", dependencies=authenticated)
     def move_to_trash(body: PathRequest) -> dict[str, Any]:

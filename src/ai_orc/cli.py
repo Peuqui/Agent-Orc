@@ -47,7 +47,9 @@ def serve() -> None:
     if not (static_dir / "index.html").is_file():
         sys.exit(f"Frontend not built: no index.html in {static_dir} (run: npm run build)")
     app = create_app(config, credentials, static_dir=static_dir)
-    uvicorn.run(app, host=config.server.host, port=config.server.port)
+    # The standard asyncio loop, not uvloop: uvloop runs preexec_fn before setsid(), which
+    # breaks claiming the terminal PTY (see terminal.py); the tests also run on asyncio.
+    uvicorn.run(app, host=config.server.host, port=config.server.port, loop="asyncio")
 
 
 COMMANDS = {
