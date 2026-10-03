@@ -6,9 +6,10 @@ from pathlib import Path
 
 import pytest
 
-from ai_orc.config import AgentProfile
+from ai_orc.config import AgentProfile, EffortConfig
 from ai_orc.sessions import (
     AgentSession,
+    InvalidEffortError,
     SessionAlreadyRunningError,
     SessionManager,
     SessionNotFoundError,
@@ -19,7 +20,12 @@ from ai_orc.sessions import (
 )
 
 AGENTS = {
-    "sleeper": AgentProfile(label="Sleeper", start=["sleep", "60"], resume=["sleep", "61"]),
+    "sleeper": AgentProfile(
+        label="Sleeper",
+        start=["sleep", "60"],
+        resume=["sleep", "61"],
+        effort=EffortConfig(levels=["low", "high"], args=["--effort", "{effort}"]),
+    ),
     "failing": AgentProfile(label="Failing", start=["sh", "-c", "exit 3"], resume=["true"]),
     "echo": AgentProfile(
         label="Echo", start=["sh", "-c", "echo started {name}; sleep 60"], resume=["sleep", "60"]
@@ -60,7 +66,7 @@ def test_list_without_server_is_empty(manager: SessionManager) -> None:
 
 
 def test_start_list_stop(manager: SessionManager, workdir: Path) -> None:
-    session = manager.start("sleeper", workdir, resume=False)
+    session = manager.start("sleeper", workdir, resume=False, effort=None)
     assert session.running
     assert session.profile == "sleeper"
     assert session.path == workdir
@@ -73,7 +79,7 @@ def test_start_list_stop(manager: SessionManager, workdir: Path) -> None:
 def test_resume_uses_resume_command(
     manager: SessionManager, socket_name: str, workdir: Path
 ) -> None:
-    session = manager.start("sleeper", workdir, resume=True)
+    session = manager.start("sleeper", workdir, resume=True, effort=None)
     command = tmux_query(
         socket_name, "display-message", "-p", "-t", exact_target(session.id),
         "#{pane_start_command}",
@@ -84,7 +90,7 @@ def test_resume_uses_resume_command(
 def test_agent_runs_in_folder_with_name_placeholder(
     manager: SessionManager, socket_name: str, workdir: Path
 ) -> None:
-    session = manager.start("echo", workdir, resume=False)
+    session = manager.start("echo", workdir, resume=False, effort=None)
     target = exact_target(session.id)
     for _ in range(50):
         pane = tmux_query(socket_name, "capture-pane", "-p", "-t", target)
@@ -97,28 +103,28 @@ def test_agent_runs_in_folder_with_name_placeholder(
 
 
 def test_exited_agent_stays_visible_with_status(manager: SessionManager, workdir: Path) -> None:
-    manager.start("failing", workdir, resume=False)
+    manager.start("failing", workdir, resume=False, effort=None)
     session = wait_until_exited(manager, workdir)
     assert session.exit_status == 3
 
 
 def test_exited_session_is_replaced_on_start(manager: SessionManager, workdir: Path) -> None:
-    manager.start("failing", workdir, resume=False)
+    manager.start("failing", workdir, resume=False, effort=None)
     wait_until_exited(manager, workdir)
-    session = manager.start("sleeper", workdir, resume=False)
+    session = manager.start("sleeper", workdir, resume=False, effort=None)
     assert session.running
     assert len(manager.list()) == 1
 
 
 def test_only_one_running_agent_per_folder(manager: SessionManager, workdir: Path) -> None:
-    manager.start("sleeper", workdir, resume=False)
+    manager.start("sleeper", workdir, resume=False, effort=None)
     with pytest.raises(SessionAlreadyRunningError):
-        manager.start("echo", workdir, resume=False)
+        manager.start("echo", workdir, resume=False, effort=None)
 
 
 def test_unknown_profile(manager: SessionManager, workdir: Path) -> None:
     with pytest.raises(UnknownProfileError):
-        manager.start("nope", workdir, resume=False)
+        manager.start("nope", workdir, resume=False, effort=None)
 
 
 def test_stop_unknown_session(manager: SessionManager) -> None:
@@ -135,3 +141,23 @@ def test_session_id_is_tmux_safe_and_unique() -> None:
 
 def test_build_command_replaces_placeholder() -> None:
     assert build_command(["x", "--name", "{name}"], "demo") == ["x", "--name", "demo"]
+
+
+def test_effort_is_appended_to_the_command(
+    manager: SessionManager, socket_name: str, workdir: Path
+) -> None:
+    # sleep ignores the extra arguments; only the recorded command matters here.
+    session = manager.start("sleeper", workdir, resume=False, effort="high")
+    command = tmux_query(
+        socket_name, "display-message", "-p", "-t", exact_target(session.id),
+        "#{pane_start_command}",
+    )  # fmt: skip
+    assert command.endswith("--effort high")
+
+
+def test_unknown_effort_is_refused(manager: SessionManager, workdir: Path) -> None:
+    with pytest.raises(InvalidEffortError):
+        manager.start("sleeper", workdir, resume=False, effort="ultra")
+    with pytest.raises(InvalidEffortError):
+        manager.start("echo", workdir, resume=False, effort="low")
+    assert manager.list() == []

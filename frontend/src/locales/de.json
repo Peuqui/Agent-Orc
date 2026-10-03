@@ -55,6 +55,8 @@
   },
   "agent": {
     "title": "Agent in „{name}“ starten",
+    "effort": "Aufwand (Reasoning)",
+    "effortDefault": "Standard (Einstellung des Agenten)",
     "profile": "Agent",
     "startNew": "Neu starten",
     "resume": "Letztes Gespräch fortsetzen"

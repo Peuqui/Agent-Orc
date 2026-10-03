@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { api } from '../api'
 import { useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
@@ -12,7 +12,16 @@ const emit = defineEmits<{ started: []; close: [] }>()
 const { profiles, loadProfiles, refresh } = useSessions()
 const toast = useToast()
 const selected = ref('')
+// Empty string: the agent's own default effort.
+const effort = ref('')
 const busy = ref(false)
+
+const effortLevels = computed(
+  () => profiles.value.find((profile) => profile.name === selected.value)?.effort_levels ?? [],
+)
+watch(selected, () => {
+  effort.value = ''
+})
 
 onMounted(async () => {
   if (profiles.value.length === 0) await loadProfiles()
@@ -22,7 +31,7 @@ onMounted(async () => {
 async function start(resume: boolean): Promise<void> {
   busy.value = true
   try {
-    await api.startSession(selected.value, props.path, resume)
+    await api.startSession(selected.value, props.path, resume, effort.value || null)
     await refresh()
     emit('started')
   } catch (error) {
@@ -47,6 +56,13 @@ async function start(resume: boolean): Promise<void> {
         {{ profile.label }}
       </label>
     </fieldset>
+    <label v-if="effortLevels.length" class="mb-5 block">
+      <span class="mb-1 block text-sm text-slate-400">{{ $t('agent.effort') }}</span>
+      <select v-model="effort" class="input">
+        <option value="">{{ $t('agent.effortDefault') }}</option>
+        <option v-for="level in effortLevels" :key="level" :value="level">{{ level }}</option>
+      </select>
+    </label>
     <div class="flex flex-col gap-2">
       <button class="btn-primary" :disabled="busy || !selected" @click="start(false)">
         {{ $t('agent.startNew') }}

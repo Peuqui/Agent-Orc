@@ -64,6 +64,10 @@ agents:
     resume: [claude, --settings, *claude_status, --continue, --remote-control, "{name}"]
     # Starting an agent in a folder means trusting it: skip Claude's trust prompt.
     trust: claude
+    # Optional at start; without a choice Claude uses its own setting per model.
+    effort:
+      levels: [low, medium, high, xhigh, max]
+      args: [--effort, "{effort}"]
   codex:
     label: Codex CLI
     start: [codex]

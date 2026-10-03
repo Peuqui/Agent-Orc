@@ -33,7 +33,8 @@ function confirmStop(): void {
 }
 
 function resume(session: AgentSession): void {
-  void run(() => api.startSession(session.profile, session.path, true))
+  // Resume with the effort the agent last reported.
+  void run(() => api.startSession(session.profile, session.path, true, session.effort))
 }
 </script>
 
@@ -54,6 +55,7 @@ function resume(session: AgentSession): void {
             <p class="mt-1 text-sm text-slate-400">
               {{ labels.get(session.profile) ?? session.profile }}
               <span v-if="session.model" class="text-slate-500"> · {{ session.model }}</span>
+              <span v-if="session.effort" class="text-slate-500"> · {{ session.effort }}</span>
             </p>
           </div>
           <span

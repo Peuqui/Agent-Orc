@@ -38,7 +38,12 @@ def config(home: Path, socket_name: str) -> Config:
     raw["files"]["base_dir"] = str(home / "projects")
     raw["tmux"]["socket_name"] = socket_name
     raw["agents"] = {
-        "sleeper": {"label": "Sleeper", "start": ["sleep", "60"], "resume": ["true"]},
+        "sleeper": {
+            "label": "Sleeper",
+            "start": ["sleep", "60"],
+            "resume": ["true"],
+            "effort": {"levels": ["low", "high"], "args": ["--effort", "{effort}"]},
+        },
         "shell": {
             "label": "Shell",
             "start": ["sh", "-c", "echo READY; exec cat"],
@@ -105,9 +110,8 @@ def test_folder_session_and_trash_flow(client: TestClient, home: Path) -> None:
     demo = Path(created.json()["path"])
     assert demo == projects / "demo"
 
-    session = client.post(
-        "/api/sessions", json={"profile": "sleeper", "path": str(demo), "resume": False}
-    )
+    start = {"profile": "sleeper", "path": str(demo), "resume": False, "effort": None}
+    session = client.post("/api/sessions", json=start)
     assert session.status_code == 200
     assert session.json()["running"] is True
     assert [s["path"] for s in client.get("/api/sessions").json()] == [str(demo)]
@@ -130,15 +134,16 @@ def test_folder_session_and_trash_flow(client: TestClient, home: Path) -> None:
 
 
 def test_second_agent_in_same_folder_is_refused(client: TestClient, home: Path) -> None:
-    body = {"profile": "sleeper", "path": str(home / "projects"), "resume": False}
+    body = {"profile": "sleeper", "path": str(home / "projects"), "resume": False, "effort": None}
     assert client.post("/api/sessions", json=body).status_code == 200
     assert client.post("/api/sessions", json=body).status_code == 409
 
 
 def test_unknown_profile_and_missing_folder(client: TestClient, home: Path) -> None:
-    unknown = {"profile": "nope", "path": str(home / "projects"), "resume": False}
+    base = {"path": str(home / "projects"), "resume": False, "effort": None}
+    unknown = {**base, "profile": "nope"}
     assert client.post("/api/sessions", json=unknown).status_code == 404
-    missing = {"profile": "sleeper", "path": str(home / "projects" / "missing"), "resume": False}
+    missing = {**base, "profile": "sleeper", "path": str(home / "projects" / "missing")}
     assert client.post("/api/sessions", json=missing).status_code == 400
 
 
@@ -225,7 +230,7 @@ MAX_TERMINAL_FRAMES = 500
 
 
 def start_shell(client: TestClient, home: Path) -> str:
-    body = {"profile": "shell", "path": str(home / "projects"), "resume": False}
+    body = {"profile": "shell", "path": str(home / "projects"), "resume": False, "effort": None}
     session_id: str = client.post("/api/sessions", json=body).json()["id"]
     return session_id
 
@@ -300,7 +305,7 @@ def test_sessions_report_model_and_context(
     client: TestClient, home: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
-    start = {"profile": "sleeper", "path": str(home / "projects"), "resume": False}
+    start = {"profile": "sleeper", "path": str(home / "projects"), "resume": False, "effort": None}
     session_id = client.post("/api/sessions", json=start).json()["id"]
     listed = client.get("/api/sessions").json()[0]
     assert listed["model"] is None and listed["context_tokens"] is None
@@ -318,10 +323,23 @@ def test_sessions_report_model_and_context(
 
 
 def test_agent_knows_its_session_id(client: TestClient, home: Path, socket_name: str) -> None:
-    start = {"profile": "sleeper", "path": str(home / "projects"), "resume": False}
+    start = {"profile": "sleeper", "path": str(home / "projects"), "resume": False, "effort": None}
     session_id = client.post("/api/sessions", json=start).json()["id"]
     environment = subprocess.run(
         ["tmux", "-L", socket_name, "show-environment", "-t", f"={session_id}", SESSION_ENV],
         capture_output=True, text=True, check=True,
     ).stdout.strip()  # fmt: skip
     assert environment == f"{SESSION_ENV}={session_id}"
+
+
+def test_agents_list_their_effort_levels(client: TestClient) -> None:
+    agents = {agent["name"]: agent for agent in client.get("/api/agents").json()}
+    assert agents["sleeper"]["effort_levels"] == ["low", "high"]
+    assert agents["shell"]["effort_levels"] == []
+
+
+def test_invalid_effort_is_rejected(client: TestClient, home: Path) -> None:
+    body = {"profile": "sleeper", "path": str(home / "projects"), "resume": False, "effort": "max"}
+    response = client.post("/api/sessions", json=body)
+    assert response.status_code == 422
+    assert response.json()["error"] == "InvalidEffortError"

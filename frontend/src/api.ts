@@ -3,6 +3,8 @@ import { ref } from 'vue'
 export interface AgentProfile {
   name: string
   label: string
+  /** Selectable reasoning effort; empty if the agent has none. */
+  effort_levels: string[]
 }
 
 export interface AgentSession {
@@ -14,6 +16,7 @@ export interface AgentSession {
   created: number
   /** Reported by the agent itself (Claude: via `ai-orc statusline`); null until it reports. */
   model: string | null
+  effort: string | null
   /** Occupied context window in tokens; null when unknown. */
   context_tokens: number | null
   context_window: number | null
@@ -127,8 +130,9 @@ export const api = {
   agents: () => request<AgentProfile[]>('GET', 'agents'),
   terminalSettings: () => request<TerminalSettings>('GET', 'terminal'),
   sessions: () => request<AgentSession[]>('GET', 'sessions'),
-  startSession: (profile: string, path: string, resume: boolean) =>
-    request<AgentSession>('POST', 'sessions', { body: { profile, path, resume } }),
+  /** effort null: the agent's own default. */
+  startSession: (profile: string, path: string, resume: boolean, effort: string | null) =>
+    request<AgentSession>('POST', 'sessions', { body: { profile, path, resume, effort } }),
   stopSession: (id: string) => request<void>('DELETE', `sessions/${encodeURIComponent(id)}`),
 
   listFiles: (path: string) => request<FileEntry[]>('GET', 'files', { query: { path } }),

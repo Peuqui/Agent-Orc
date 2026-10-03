@@ -14,6 +14,7 @@ def claude_status(used_percentage: int | None, usage: dict[str, int] | None) -> 
     """Shape of Claude Code's status line input (recorded from version 2.1.288)."""
     return {
         "model": {"id": "claude-opus-5-5[1m]", "display_name": "Opus 5.5 (1M context)"},
+        "effort": {"level": "medium"},
         "workspace": {"current_dir": "/w", "project_dir": "/w"},
         "context_window": {
             "context_window_size": 1_000_000,
@@ -46,6 +47,7 @@ def test_stored_status_is_reported() -> None:
     touch(store_status("demo-abc123", claude_status(5, usage)), SESSION_START + 10)
     assert session_status(session()) == {
         "model": "Opus 5.5 (1M context)",
+        "effort": "medium",
         "context_tokens": 48621,
         "context_window": 1_000_000,
     }

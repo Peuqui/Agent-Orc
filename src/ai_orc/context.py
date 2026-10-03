@@ -58,6 +58,7 @@ def session_status(session: AgentSession) -> dict[str, Any]:
     usage = window.get("current_usage")
     return {
         "model": status["model"]["display_name"],
+        "effort": (status.get("effort") or {}).get("level"),
         "context_tokens": sum(usage.get(field, 0) for field in CONTEXT_FIELDS) if usage else None,
         "context_window": window.get("context_window_size"),
     }

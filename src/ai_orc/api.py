@@ -18,6 +18,7 @@ from ai_orc.context import session_status
 from ai_orc.scope import AccessScope, OutsideScopeError
 from ai_orc.sessions import (
     AgentSession,
+    InvalidEffortError,
     SessionAlreadyRunningError,
     SessionManager,
     SessionNotFoundError,
@@ -52,6 +53,7 @@ ERROR_STATUS: dict[type[Exception], int] = {
     FolderBusyError: status.HTTP_409_CONFLICT,
     SessionAlreadyRunningError: status.HTTP_409_CONFLICT,
     files.InvalidNameError: status.HTTP_422_UNPROCESSABLE_CONTENT,
+    InvalidEffortError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     files.FileTooLargeError: status.HTTP_413_CONTENT_TOO_LARGE,
     files.NotTextError: status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
     SessionNotFoundError: status.HTTP_404_NOT_FOUND,
@@ -89,6 +91,8 @@ class StartSessionRequest(BaseModel):
     profile: str
     path: str
     resume: bool
+    # None: the agent's own default.
+    effort: str | None
 
 
 class TrashEntryRequest(BaseModel):
@@ -193,8 +197,11 @@ def create_app(
         return scope_state()
 
     @app.get("/api/agents", dependencies=authenticated)
-    def agents() -> list[dict[str, str]]:
-        return [{"name": name, "label": p.label} for name, p in config.agents.items()]
+    def agents() -> list[dict[str, Any]]:
+        return [
+            {"name": name, "label": p.label, "effort_levels": p.effort.levels if p.effort else []}
+            for name, p in config.agents.items()
+        ]
 
     @app.get("/api/terminal", dependencies=authenticated)
     def terminal_settings() -> TerminalConfig:
@@ -202,7 +209,7 @@ def create_app(
 
     @app.get("/api/sessions", dependencies=authenticated)
     def list_sessions() -> list[dict[str, Any]]:
-        empty = {"model": None, "context_tokens": None, "context_window": None}
+        empty = {"model": None, "effort": None, "context_tokens": None, "context_window": None}
         return [{**asdict(s), **empty, **session_status(s)} for s in sessions.list()]
 
     @app.post("/api/sessions", dependencies=authenticated)
@@ -213,7 +220,7 @@ def create_app(
         profile = config.agents.get(body.profile)
         if profile and profile.trust:
             FOLDER_TRUST[profile.trust](home, path)
-        return sessions.start(body.profile, path, body.resume)
+        return sessions.start(body.profile, path, body.resume, body.effort)
 
     @app.delete(
         "/api/sessions/{session_id}",
