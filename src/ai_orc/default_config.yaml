@@ -1,0 +1,23 @@
+# AI-Orc configuration.
+# This file is the single source of all default values; `ai-orc init` copies it to
+# ~/.config/ai-orc/config.yaml, where you adapt it.
+
+tmux:
+  # Dedicated tmux server socket, so AI-Orc never touches your own tmux sessions.
+  socket_name: ai-orc
+
+# Agent profiles. Command arguments may contain the placeholder {name},
+# which is replaced by the name of the folder the agent runs in.
+agents:
+  claude:
+    label: Claude Code
+    start: [claude, --remote-control, "{name}"]
+    resume: [claude, --continue, --remote-control, "{name}"]
+  codex:
+    label: Codex CLI
+    start: [codex]
+    resume: [codex, resume, --last]
+  aider:
+    label: Aider
+    start: [aider]
+    resume: [aider, --restore-chat-history]
