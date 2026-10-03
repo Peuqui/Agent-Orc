@@ -55,6 +55,40 @@ terminal.loadAddon(fit)
 let socket: WebSocket | null = null
 const resizeObserver = new ResizeObserver(() => fit.fit())
 
+// Touch scrolling: the agent's history lives in tmux (mouse mode), which scrolls on wheel
+// events. xterm.js does not pass finger swipes on, so a vertical swipe becomes wheel events
+// on the terminal, just like a mouse wheel on the desktop. Taps stay untouched.
+const PIXELS_PER_WHEEL_STEP = 24
+let touchY: number | null = null
+
+function onTouchStart(event: TouchEvent): void {
+  touchY = event.touches.length === 1 ? event.touches[0].clientY : null
+}
+
+function onTouchMove(event: TouchEvent): void {
+  if (touchY === null || event.touches.length !== 1 || !terminal.element) return
+  const touch = event.touches[0]
+  const steps = Math.trunc((touchY - touch.clientY) / PIXELS_PER_WHEEL_STEP)
+  if (steps === 0) return
+  event.preventDefault()
+  // Keep the remainder, so slow swipes still add up to steps.
+  touchY -= steps * PIXELS_PER_WHEEL_STEP
+  terminal.element.dispatchEvent(
+    new WheelEvent('wheel', {
+      deltaY: steps * PIXELS_PER_WHEEL_STEP,
+      deltaMode: WheelEvent.DOM_DELTA_PIXEL,
+      clientX: touch.clientX,
+      clientY: touch.clientY,
+      bubbles: true,
+      cancelable: true,
+    }),
+  )
+}
+
+function onTouchEnd(): void {
+  touchY = null
+}
+
 function send(message: object): void {
   if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message))
 }
@@ -124,6 +158,10 @@ onMounted(async () => {
   terminal.open(container.value)
   fit.fit()
   resizeObserver.observe(container.value)
+  container.value.addEventListener('touchstart', onTouchStart, { passive: true })
+  // Not passive: a swipe must not also scroll or zoom the page.
+  container.value.addEventListener('touchmove', onTouchMove, { passive: false })
+  container.value.addEventListener('touchend', onTouchEnd, { passive: true })
   connect()
 })
 
