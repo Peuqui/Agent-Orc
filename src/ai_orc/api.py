@@ -14,6 +14,7 @@ from pydantic import BaseModel
 from ai_orc import files
 from ai_orc.auth import Clock, Credentials, LoginGuard, TokenSigner, verify_password
 from ai_orc.config import Config, TerminalConfig
+from ai_orc.context import session_status
 from ai_orc.scope import AccessScope, OutsideScopeError
 from ai_orc.sessions import (
     AgentSession,
@@ -24,6 +25,7 @@ from ai_orc.sessions import (
 )
 from ai_orc.terminal import bridge
 from ai_orc.trash import RestoreConflictError, Trash, TrashEntryNotFoundError, home_trash_dir
+from ai_orc.trust import FOLDER_TRUST
 
 SESSION_COOKIE = "ai_orc_session"
 # Custom WebSocket close codes (4000-4999 are free for applications).
@@ -102,9 +104,10 @@ def create_app(
 ) -> FastAPI:
     """Build the app; static_dir holds the built PWA (None serves the API only, for tests)."""
     sessions = SessionManager(config.tmux.socket_name, config.agents)
+    home = Path.home()
     scope = AccessScope(
         config.files.base_dir,
-        Path.home(),
+        home,
         config.files.unlock_minutes * SECONDS_PER_MINUTE,
         clock,
     )
@@ -198,14 +201,18 @@ def create_app(
         return config.terminal
 
     @app.get("/api/sessions", dependencies=authenticated)
-    def list_sessions() -> list[AgentSession]:
-        return sessions.list()
+    def list_sessions() -> list[dict[str, Any]]:
+        empty = {"model": None, "context_tokens": None, "context_window": None}
+        return [{**asdict(s), **empty, **session_status(s)} for s in sessions.list()]
 
     @app.post("/api/sessions", dependencies=authenticated)
     def start_session(body: StartSessionRequest) -> AgentSession:
         path = scope.resolve(body.path)
         if not path.is_dir():
             raise NotADirectoryError(str(path))
+        profile = config.agents.get(body.profile)
+        if profile and profile.trust:
+            FOLDER_TRUST[profile.trust](home, path)
         return sessions.start(body.profile, path, body.resume)
 
     @app.delete(

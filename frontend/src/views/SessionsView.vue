@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { api, type AgentSession } from '../api'
 import AppIcon from '../components/AppIcon.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
+import ContextMeter from '../components/ContextMeter.vue'
 import { useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
 import { baseName } from '../format'
@@ -38,10 +39,11 @@ function resume(session: AgentSession): void {
 
 <template>
   <section>
-    <div v-if="sorted.length === 0" class="card p-6 text-center text-slate-400">
-      <p class="mb-4">{{ $t('sessions.empty') }}</p>
-      <RouterLink to="/files" class="btn-primary"><AppIcon name="play" />{{ $t('sessions.startNew') }}</RouterLink>
-    </div>
+    <!-- Always reachable: a new agent starts in a folder chosen in the file view. -->
+    <RouterLink to="/files" class="btn-primary mb-4 w-full sm:w-auto">
+      <AppIcon name="plus" />{{ $t('sessions.startNew') }}
+    </RouterLink>
+    <p v-if="sorted.length === 0" class="card p-6 text-center text-slate-400">{{ $t('sessions.empty') }}</p>
 
     <ul class="flex flex-col gap-3">
       <li v-for="session in sorted" :key="session.id" class="card p-4">
@@ -49,7 +51,10 @@ function resume(session: AgentSession): void {
           <div class="min-w-0">
             <h2 class="truncate font-semibold">{{ baseName(session.path) }}</h2>
             <p class="truncate text-xs text-slate-500">{{ session.path }}</p>
-            <p class="mt-1 text-sm text-slate-400">{{ labels.get(session.profile) ?? session.profile }}</p>
+            <p class="mt-1 text-sm text-slate-400">
+              {{ labels.get(session.profile) ?? session.profile }}
+              <span v-if="session.model" class="text-slate-500"> · {{ session.model }}</span>
+            </p>
           </div>
           <span
             class="shrink-0 rounded-full px-2.5 py-1 text-xs font-medium"
@@ -58,6 +63,12 @@ function resume(session: AgentSession): void {
             {{ session.running ? $t('sessions.running') : $t('sessions.exited', { code: session.exit_status }) }}
           </span>
         </div>
+        <ContextMeter
+          v-if="session.context_tokens != null && session.context_window != null"
+          class="mb-3"
+          :tokens="session.context_tokens"
+          :window="session.context_window"
+        />
         <div class="flex flex-wrap gap-2">
           <RouterLink v-if="session.running" :to="`/terminal/${session.id}`" class="btn-primary">
             <AppIcon name="agents" />{{ $t('sessions.terminal') }}

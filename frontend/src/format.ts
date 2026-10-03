@@ -26,6 +26,16 @@ export function formatDate(date: Date, locale: string): string {
   return date.toLocaleString(locale, { dateStyle: 'short', timeStyle: 'short' })
 }
 
+const THOUSAND = 1000
+const MILLION = 1_000_000
+
+/** Token counts in short form: 950, 675k, 1M, 1.2M. */
+export function formatTokens(tokens: number): string {
+  if (tokens >= MILLION) return `${Number((tokens / MILLION).toFixed(1))}M`
+  if (tokens >= THOUSAND) return `${Math.round(tokens / THOUSAND)}k`
+  return String(tokens)
+}
+
 /** Seconds as "m:ss", e.g. 476 → "7:56". */
 export function formatCountdown(seconds: number): string {
   const whole = Math.max(0, Math.floor(seconds))

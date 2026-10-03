@@ -66,6 +66,8 @@ class AgentProfile(StrictModel):
     label: str
     start: list[str]
     resume: list[str]
+    # Mark the folder as trusted before starting, so the agent does not stop at a prompt.
+    trust: Literal["claude"] | None = None
 
 
 class Config(StrictModel):

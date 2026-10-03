@@ -23,13 +23,15 @@
     "submit": "Anmelden"
   },
   "sessions": {
-    "empty": "Kein Agent läuft. Starte einen über die Dateien.",
+    "empty": "Kein Agent läuft. Wähle über „Neuen Agenten starten“ einen Ordner.",
     "running": "läuft",
     "exited": "beendet (Exit {code})",
     "stop": "Beenden",
     "resume": "Fortsetzen",
     "terminal": "Terminal",
-    "startNew": "Agent starten",
+    "contextLabel": "Kontext",
+    "context": "{used} von {total} · {percent} %",
+    "startNew": "Neuen Agenten starten",
     "confirmStop": "Agent in „{name}“ beenden? Das Gespräch bleibt gespeichert und lässt sich fortsetzen."
   },
   "files": {

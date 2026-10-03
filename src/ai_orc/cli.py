@@ -2,6 +2,8 @@
 
 import argparse
 import getpass
+import json
+import os
 import sys
 from importlib.resources import files
 from pathlib import Path
@@ -17,6 +19,8 @@ from ai_orc.config import (
     default_config_text,
     load_config,
 )
+from ai_orc.context import status_line, store_status
+from ai_orc.sessions import SESSION_ENV
 
 
 def init() -> None:
@@ -52,10 +56,22 @@ def serve() -> None:
     uvicorn.run(app, host=config.server.host, port=config.server.port, loop="asyncio")
 
 
+def statusline() -> None:
+    """Status line command for Claude Code: store the session status, print a short line."""
+    status = json.load(sys.stdin)
+    # Set by AI-Orc for every agent it starts; the command is only configured there.
+    store_status(os.environ[SESSION_ENV], status)
+    print(status_line(status))
+
+
 COMMANDS = {
     "init": (init, "write the default config to ~/.config/ai-orc/"),
     "set-password": (set_password, "set the login password"),
     "serve": (serve, "run the web server"),
+    "statusline": (
+        statusline,
+        "status line command for Claude Code sessions (reads JSON on stdin)",
+    ),
 }
 
 

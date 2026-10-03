@@ -11,6 +11,12 @@ export interface AgentSession {
   path: string
   running: boolean
   exit_status: number | null
+  created: number
+  /** Reported by the agent itself (Claude: via `ai-orc statusline`); null until it reports. */
+  model: string | null
+  /** Occupied context window in tokens; null when unknown. */
+  context_tokens: number | null
+  context_window: number | null
 }
 
 export interface FileEntry {

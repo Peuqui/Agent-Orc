@@ -14,6 +14,8 @@ from starlette.websockets import WebSocketDisconnect
 from ai_orc.api import create_app
 from ai_orc.auth import new_credentials
 from ai_orc.config import Config, default_config_text
+from ai_orc.context import store_status
+from ai_orc.sessions import SESSION_ENV
 from tests.conftest import FakeClock
 
 PASSWORD = "richtig-langes-passwort"
@@ -292,3 +294,34 @@ def test_terminal_closes_when_session_stops(client: TestClient, home: Path) -> N
         with pytest.raises(WebSocketDisconnect):
             for _ in range(MAX_TERMINAL_FRAMES):
                 term.receive_bytes()
+
+
+def test_sessions_report_model_and_context(
+    client: TestClient, home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
+    start = {"profile": "sleeper", "path": str(home / "projects"), "resume": False}
+    session_id = client.post("/api/sessions", json=start).json()["id"]
+    listed = client.get("/api/sessions").json()[0]
+    assert listed["model"] is None and listed["context_tokens"] is None
+
+    usage = {"input_tokens": 10, "cache_creation_input_tokens": 20, "cache_read_input_tokens": 300}
+    status = {
+        "model": {"display_name": "Opus 5.5 (1M context)"},
+        "context_window": {"context_window_size": 1_000_000, "current_usage": usage},
+    }
+    store_status(session_id, status)
+    listed = client.get("/api/sessions").json()[0]
+    assert listed["model"] == "Opus 5.5 (1M context)"
+    assert listed["context_tokens"] == 330
+    assert listed["context_window"] == 1_000_000
+
+
+def test_agent_knows_its_session_id(client: TestClient, home: Path, socket_name: str) -> None:
+    start = {"profile": "sleeper", "path": str(home / "projects"), "resume": False}
+    session_id = client.post("/api/sessions", json=start).json()["id"]
+    environment = subprocess.run(
+        ["tmux", "-L", socket_name, "show-environment", "-t", f"={session_id}", SESSION_ENV],
+        capture_output=True, text=True, check=True,
+    ).stdout.strip()  # fmt: skip
+    assert environment == f"{SESSION_ENV}={session_id}"

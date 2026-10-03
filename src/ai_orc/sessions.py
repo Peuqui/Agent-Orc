@@ -8,6 +8,9 @@ from pathlib import Path
 
 from ai_orc.config import NAME_PLACEHOLDER, AgentProfile
 
+# Every agent gets its session id in this environment variable, so helpers it runs
+# (e.g. the status line command) know which session they belong to.
+SESSION_ENV = "AI_ORC_SESSION"
 PROFILE_OPTION = "@orc_profile"
 PATH_OPTION = "@orc_path"
 FIELD_SEPARATOR = "\t"
@@ -18,6 +21,7 @@ LIST_FORMAT = FIELD_SEPARATOR.join(
         "#{" + PATH_OPTION + "}",
         "#{pane_dead}",
         "#{pane_dead_status}",
+        "#{session_created}",
     ]
 )
 # tmux reports a missing server on stderr; that state simply means "no sessions".
@@ -47,6 +51,8 @@ class AgentSession:
     path: Path
     running: bool
     exit_status: int | None
+    # Unix time the tmux session was created.
+    created: float
 
 
 def session_id_for(path: Path) -> str:
@@ -110,7 +116,8 @@ class SessionManager:
             "set-option", "-g", "remain-on-exit", "on", ";",
             "set-option", "-g", "status", "off", ";",
             "set-option", "-g", "mouse", "on", ";",
-            "new-session", "-d", "-s", session_id, "-c", str(path), *command, ";",
+            "new-session", "-d", "-s", session_id, "-c", str(path),
+            "-e", f"{SESSION_ENV}={session_id}", *command, ";",
             "set-option", "-t", exact_target(session_id), PROFILE_OPTION, profile_name, ";",
             "set-option", "-t", exact_target(session_id), PATH_OPTION, str(path),
         )  # fmt: skip
@@ -125,7 +132,7 @@ class SessionManager:
             raise SessionNotFoundError(session_id)
 
     def _parse_line(self, line: str) -> AgentSession:
-        session_id, profile, path, pane_dead, dead_status = line.split(FIELD_SEPARATOR)
+        session_id, profile, path, pane_dead, dead_status, created = line.split(FIELD_SEPARATOR)
         running = pane_dead != "1"
         return AgentSession(
             id=session_id,
@@ -133,6 +140,7 @@ class SessionManager:
             path=Path(path),
             running=running,
             exit_status=None if running else int(dead_status),
+            created=float(created),
         )
 
     def _tmux(self, *arguments: str, check: bool = True) -> subprocess.CompletedProcess[str]:

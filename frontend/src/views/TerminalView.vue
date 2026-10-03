@@ -6,6 +6,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api, terminalUrl, type Modifier, type TerminalSettings } from '../api'
 import AppIcon from '../components/AppIcon.vue'
+import ContextMeter from '../components/ContextMeter.vue'
 import KeyBar from '../components/KeyBar.vue'
 import { useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
@@ -34,10 +35,8 @@ const text = ref('')
 const connected = ref(false)
 const fontSize = ref(Number(localStorage.getItem(FONT_SIZE_KEY)) || DEFAULT_FONT_SIZE)
 
-const name = computed(() => {
-  const session = sessions.value.find((candidate) => candidate.id === props.id)
-  return session ? baseName(session.path) : props.id
-})
+const session = computed(() => sessions.value.find((candidate) => candidate.id === props.id))
+const name = computed(() => (session.value ? baseName(session.value.path) : props.id))
 
 const terminal = new Terminal({
   fontSize: fontSize.value,
@@ -142,6 +141,12 @@ onBeforeUnmount(() => {
         <AppIcon name="up" class="-rotate-90" />
       </button>
       <h1 class="min-w-0 flex-1 truncate font-semibold">{{ name }}</h1>
+      <ContextMeter
+        v-if="session && session.context_tokens != null && session.context_window != null"
+        compact
+        :tokens="session.context_tokens"
+        :window="session.context_window"
+      />
       <span class="size-2.5 rounded-full" :class="connected ? 'bg-red-500' : 'bg-slate-600'" />
       <button class="btn-icon text-sm" :aria-label="$t('terminal.smaller')" @click="changeFontSize(-1)">A−</button>
       <button class="btn-icon text-base" :aria-label="$t('terminal.larger')" @click="changeFontSize(1)">A+</button>
