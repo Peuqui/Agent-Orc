@@ -5,9 +5,9 @@ import iconUrl from '../../brand/icon.svg'
 
 <template>
   <div class="flex items-center gap-2.5">
-    <img :src="iconUrl" alt="" class="size-10" />
+    <img :src="iconUrl" alt="" class="size-11 sm:size-12" />
     <div class="flex flex-col leading-none">
-      <span class="text-xl font-medium tracking-tight whitespace-nowrap text-slate-100 sm:text-2xl" aria-label="Agent-Orc">
+      <span class="text-2xl font-medium tracking-tight whitespace-nowrap text-slate-100 sm:text-3xl" aria-label="Agent-Orc">
         Agent-<span class="font-serif text-red-500 italic">Ø</span>rc
       </span>
       <span class="mt-1 text-[0.55rem] font-semibold tracking-[0.18em] text-slate-400 uppercase">

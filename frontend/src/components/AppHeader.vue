@@ -32,9 +32,10 @@ async function logout(): Promise<void> {
           <AppIcon :name="item.icon" />{{ $t(item.label) }}
         </RouterLink>
       </nav>
-      <div class="flex items-center gap-1">
+      <!-- Compact buttons, so the logo keeps its room on narrow screens. -->
+      <div class="flex shrink-0 items-center [&_.btn-icon]:size-8">
         <select
-          class="h-6 rounded-md border border-slate-700 bg-slate-800 px-1.5 text-xs text-slate-300"
+          class="mr-1 h-6 rounded-md border border-slate-700 bg-slate-800 px-1 text-xs text-slate-300"
           :aria-label="$t('app.language')"
           :value="locale"
           @change="setLocale(($event.target as HTMLSelectElement).value as Locale)"
