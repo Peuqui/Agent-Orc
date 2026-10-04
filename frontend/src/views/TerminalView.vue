@@ -156,8 +156,10 @@ function connect(): void {
     connected.value = true
     send({ type: 'resize', cols: terminal.cols, rows: terminal.rows })
     // Typing goes to our input field first: dictation tools (and phone keyboards) work there,
-    // not in the terminal's own input.
-    messageInput.value?.focus()
+    // not in the terminal's own input. In the workspace only the active column takes the focus.
+    if (!props.embedded || window.frameElement?.getAttribute('data-active') === 'true') {
+      messageInput.value?.focus()
+    }
   }
   socket.onmessage = (event: MessageEvent<ArrayBuffer>) => terminal.write(new Uint8Array(event.data))
   socket.onclose = () => {

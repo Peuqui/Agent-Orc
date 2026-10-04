@@ -8,7 +8,7 @@ import { baseName, formatDate, formatSize } from '../format'
 import BaseDialog from './BaseDialog.vue'
 
 const props = defineProps<{ path: string }>()
-const emit = defineEmits<{ started: []; close: [] }>()
+const emit = defineEmits<{ started: [id: string]; close: [] }>()
 
 const { profiles, loadProfiles, refresh } = useSessions()
 const toast = useToast()
@@ -44,9 +44,15 @@ onMounted(async () => {
 async function start(resume: boolean, conversation: string | null = null): Promise<void> {
   busy.value = true
   try {
-    await api.startSession(selected.value, props.path, resume, effort.value || null, conversation)
+    const session = await api.startSession(
+      selected.value,
+      props.path,
+      resume,
+      effort.value || null,
+      conversation,
+    )
     await refresh()
-    emit('started')
+    emit('started', session.id)
   } catch (error) {
     toast.error(error)
   } finally {

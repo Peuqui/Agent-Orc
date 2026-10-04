@@ -9,7 +9,8 @@
   "nav": {
     "sessions": "Agenten",
     "files": "Dateien",
-    "trash": "Papierkorb"
+    "trash": "Papierkorb",
+    "workspace": "Arbeitsfläche"
   },
   "common": {
     "cancel": "Abbrechen",
@@ -148,6 +149,8 @@
     "columns": "Spalten",
     "fewerColumns": "Eine Spalte weniger",
     "moreColumns": "Eine Spalte mehr",
-    "empty": "Leere Spalte – oben einen Agenten antippen"
+    "pick": "Welcher Agent soll in diese Spalte?",
+    "shown": "schon in einer Spalte",
+    "dropHere": "Hier ablegen"
   }
 }

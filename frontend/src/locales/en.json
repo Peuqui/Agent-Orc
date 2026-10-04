@@ -9,7 +9,8 @@
   "nav": {
     "sessions": "Agents",
     "files": "Files",
-    "trash": "Trash"
+    "trash": "Trash",
+    "workspace": "Workspace"
   },
   "common": {
     "cancel": "Cancel",
@@ -148,6 +149,8 @@
     "columns": "Columns",
     "fewerColumns": "One column less",
     "moreColumns": "One more column",
-    "empty": "Empty column – tap an agent above"
+    "pick": "Which agent goes into this column?",
+    "shown": "already in a column",
+    "dropHere": "Drop here"
   }
 }

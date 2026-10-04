@@ -51,8 +51,13 @@ async function loadEntries(): Promise<void> {
   }
 }
 
+// Set when a workspace column asked for a new agent: it opens there once started.
+const workspaceColumn = computed(() =>
+  typeof route.query.column === 'string' ? route.query.column : undefined,
+)
+
 function open(path: string): void {
-  void router.push({ path: '/files', query: { path } })
+  void router.push({ path: '/files', query: { path, column: workspaceColumn.value } })
 }
 
 function edit(path: string): void {
@@ -100,9 +105,10 @@ function confirmTrash(): void {
   void run(() => api.moveToTrash(current.entry.path))
 }
 
-function onAgentStarted(): void {
+function onAgentStarted(id: string): void {
   dialog.value = null
-  void router.push('/sessions')
+  if (workspaceColumn.value === undefined) void router.push('/sessions')
+  else void router.push({ path: '/workspace', query: { open: id, column: workspaceColumn.value } })
 }
 
 onMounted(async () => {

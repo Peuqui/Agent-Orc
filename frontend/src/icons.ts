@@ -16,6 +16,7 @@ export const ICONS = {
   pencil: 'M4 20h4L19 9l-4-4L4 16z M13 7l4 4',
   search: 'M10.5 17a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13z M15.5 15.5L20 20',
   copy: 'M8 8h11v12H8z M5 16V4h11',
+  workspace: 'M3 5h18v14H3z M9 5v14 M15 5v14',
   mic: 'M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3z M5 11a7 7 0 0 0 14 0 M12 18v3',
 } as const
 
