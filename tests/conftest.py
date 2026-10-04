@@ -55,6 +55,15 @@ def fake_whisper() -> Iterator[FakeWhisper]:
     fake = FakeWhisper()
 
     class Handler(BaseHTTPRequestHandler):
+        def do_GET(self) -> None:
+            assert self.path == "/status"
+            body = json.dumps({"engines": ["whisper", "parakeet"]}).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
         def do_POST(self) -> None:
             assert self.path == "/transcribe"
             fake.bodies.append(self.rfile.read(int(self.headers["Content-Length"])))

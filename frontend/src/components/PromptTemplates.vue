@@ -6,16 +6,16 @@ import AppIcon from './AppIcon.vue'
 import BaseDialog from './BaseDialog.vue'
 
 // Prompts used again and again, kept on the server: a tap puts one into the input field (not
-// sent yet, so it can be completed); "manage" adds, edits and removes them.
+// sent yet, so it can be completed); "manage" adds, edits and removes them. Opened from the
+// attach menu, so it takes no room of its own in the input row.
 const emit = defineEmits<{ insert: [text: string] }>()
 const toast = useToast()
 const open = ref(false)
 const templates = ref<PromptTemplate[]>([])
 const editing = ref<PromptTemplate[] | null>(null)
 
-async function toggle(): Promise<void> {
-  open.value = !open.value
-  if (!open.value) return
+async function show(): Promise<void> {
+  open.value = true
   try {
     templates.value = await api.promptTemplates()
   } catch (error) {
@@ -33,6 +33,8 @@ function manage(): void {
   editing.value = templates.value.map((template) => ({ ...template }))
 }
 
+defineExpose({ show })
+
 async function save(): Promise<void> {
   if (!editing.value) return
   const kept = editing.value.filter((template) => template.label.trim() && template.text.trim())
@@ -47,16 +49,7 @@ async function save(): Promise<void> {
 </script>
 
 <template>
-  <div class="relative">
-    <button
-      type="button"
-      class="btn-icon size-10"
-      :aria-label="$t('templates.title')"
-      :title="$t('templates.title')"
-      @click="toggle"
-    >
-      <AppIcon name="template" />
-    </button>
+  <div>
     <div v-if="open" class="card absolute bottom-full left-0 z-30 mb-1 flex w-72 flex-col p-1 shadow-xl">
       <button
         v-for="template in templates"

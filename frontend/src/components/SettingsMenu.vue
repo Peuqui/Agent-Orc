@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
+import { api } from '../api'
+import { useToast } from '../composables/useToast'
 import { useI18n } from 'vue-i18n'
 import {
   LINE_HEIGHT_STEP,
@@ -18,10 +20,22 @@ import HandoverSettings from './HandoverSettings.vue'
 import PushSettings from './PushSettings.vue'
 
 // Settings of this device; more entries join here as they become adjustable.
-const { scrollLines, lineHeight, fontSize, terminalFont } = useSettings()
+const { scrollLines, lineHeight, fontSize, terminalFont, dictationEngine } = useSettings()
+const toast = useToast()
+const open = ref(false)
+// The engines the Whisper service offers; asked when the menu opens.
+const engines = ref<string[]>([])
+
+watch(open, async (isOpen) => {
+  if (!isOpen) return
+  try {
+    engines.value = (await api.dictationSettings()).engines
+  } catch (error) {
+    toast.error(error)
+  }
+})
 const FONT_NAMES: Record<TerminalFont, string> = { jetbrains: 'JetBrains Mono', system: 'System' }
 const { locale } = useI18n()
-const open = ref(false)
 
 function changeFontSize(delta: number): void {
   fontSize.value = Math.min(MAX_FONT_SIZE, Math.max(MIN_FONT_SIZE, fontSize.value + delta))
@@ -41,7 +55,7 @@ function changeScrollLines(delta: number): void {
 <template>
   <div class="relative">
     <button class="btn-icon" :title="$t('settings.title')" :aria-label="$t('settings.title')" @click="open = !open">
-      <AppIcon name="settings" />
+      <AppIcon name="menu" />
     </button>
     <div v-if="open" class="card absolute top-full right-0 z-30 mt-1 w-64 p-3 shadow-xl">
       <h2 class="mb-2 text-sm font-semibold text-slate-200">{{ $t('settings.title') }}</h2>
@@ -86,6 +100,22 @@ function changeScrollLines(delta: number): void {
         </div>
       </div>
       <p class="mt-1 text-xs text-slate-500">{{ $t('settings.lineHeightHint') }}</p>
+      <div v-if="engines.length" class="mt-3 border-t border-slate-700 pt-3 text-sm text-slate-300">
+        <span>{{ $t('settings.dictationEngine') }}</span>
+        <!-- A row of its own: the service may offer more engines than fit beside the label. -->
+        <div class="mt-1 flex overflow-hidden rounded-md border border-slate-600 text-xs">
+          <button
+            v-for="engine in ['', ...engines]"
+            :key="engine"
+            class="flex-1 px-2 py-1 capitalize"
+            :class="dictationEngine === engine ? 'bg-slate-600 text-slate-100' : 'text-slate-400'"
+            @click="dictationEngine = engine"
+          >
+            {{ engine === '' ? $t('settings.engineDefault') : engine }}
+          </button>
+        </div>
+        <p class="mt-1 text-xs text-slate-500">{{ $t('settings.dictationEngineHint') }}</p>
+      </div>
       <PushSettings />
       <HandoverSettings />
     </div>

@@ -117,6 +117,13 @@ async function captureScreen(): Promise<void> {
   if (blob) await attachFile(new File([blob], SCREENSHOT_NAME, { type: 'image/png' }))
 }
 
+const templates = ref<InstanceType<typeof PromptTemplates>>()
+
+function showTemplates(): void {
+  attaching.value = false
+  void templates.value?.show()
+}
+
 /** A template goes into the field, after what is there already. */
 function insertTemplate(template: string): void {
   text.value = text.value ? `${text.value}\n${template}` : template
@@ -259,14 +266,17 @@ function onKeydown(event: KeyboardEvent): void {
         <button type="button" class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-slate-700" @click="choose(fileInput)">
           <AppIcon name="paperclip" />{{ $t('attach.file') }}
         </button>
+        <button type="button" class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-slate-700" @click="showTemplates">
+          <AppIcon name="template" />{{ $t('templates.title') }}
+        </button>
       </div>
+      <PromptTemplates ref="templates" @insert="insertTemplate" />
       <!-- capture opens the camera directly on phones; without it phones offer their gallery
            (newest screenshots first); desktops show the file dialog. -->
       <input ref="photoInput" type="file" accept="image/*" capture="environment" class="hidden" @change="onFileChosen" />
       <input ref="imageInput" type="file" accept="image/*" class="hidden" @change="onFileChosen" />
       <input ref="fileInput" type="file" class="hidden" @change="onFileChosen" />
     </div>
-    <PromptTemplates @insert="insertTemplate" />
     <template v-if="microphone">
       <!-- Device switch first and small, the microphone right beside the text field and large:
            the one used most is the easiest to hit. -->

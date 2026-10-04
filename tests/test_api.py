@@ -629,6 +629,44 @@ def test_effort_change_waits_for_a_busy_agent(
     }
 
 
+def test_restart_resumes_a_busy_agent_with_its_waiting_effort(
+    client: TestClient, home: Path, socket_name: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
+    folder = home / "projects"
+    start = {
+        "profile": "sleeper",
+        "path": str(folder),
+        "resume": False,
+        "effort": None,
+        "ultracode": False,
+        "conversation": None,
+    }
+    session_id = client.post("/api/sessions", json=start).json()["id"]
+    store_activity(session_id, busy=True)
+    change = {"effort": "high", "ultracode": False, "immediately": False}
+    assert client.post(f"/api/sessions/{session_id}/effort", json=change).json() == {
+        "applied": False
+    }
+    with client.websocket_connect(terminal_url(session_id), headers=ORIGIN):
+        restarted = client.post(f"/api/sessions/{session_id}/restart")
+        # Restarted in its own session: the open terminal stays attached to the same id.
+        assert tmux_client_size(socket_name) == f"{START_COLS}x{START_ROWS}"
+    assert restarted.json()["id"] == session_id
+    command = subprocess.run(
+        ["tmux", "-L", socket_name, "display-message", "-p", "-t", f"={session_id}:",
+         "#{pane_start_command}"],
+        capture_output=True, text=True, check=True,
+    ).stdout.strip()  # fmt: skip
+    assert command == "sleep 61"
+    listed = client.get("/api/sessions").json()[0]
+    assert (listed["busy"], listed["effort_pending"]) == (False, False)
+    stored = json.loads((folder / ".claude" / "settings.local.json").read_text())
+    assert stored["effortLevel"] == "high"
+
+    assert client.post("/api/sessions/unknown/restart").status_code == 404
+
+
 def test_pending_effort_applies_when_the_agent_is_done(
     config: Config, clock: FakeClock, home: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -735,8 +773,14 @@ def test_dictation(config: Config, clock: FakeClock, fake_whisper: FakeWhisper) 
 
     assert dictate("cpu").status_code == 401
     client.post("/api/login", json={"password": PASSWORD})
-    assert client.get("/api/dictation").json() == {"language": "de", "whisper": True}
+    assert client.get("/api/dictation").json() == {
+        "language": "de",
+        "whisper": True,
+        "engines": ["whisper", "parakeet"],
+    }
     assert dictate("cpu").json() == {"text": "Hallo Welt"}
+    assert dictate("cpu&engine=parakeet").json() == {"text": "Hallo Welt"}
+    assert b'name="engine"\r\n\r\nparakeet' in fake_whisper.bodies[-1]
     assert dictate("tpu").status_code == 422
     fake_whisper.status = 503
     fake_whisper.answer = {"error": "no GPU with enough VRAM"}

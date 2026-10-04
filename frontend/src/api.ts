@@ -314,6 +314,9 @@ export const api = {
   storePromptTemplates: (templates: PromptTemplate[]) =>
     request<void>('PUT', 'prompt-templates', { body: templates }),
   consumption: () => request<ConsumptionRow[]>('GET', 'consumption'),
+  /** Resumes the agent in its own session; a running answer and background tasks end. */
+  restartSession: (sessionId: string) =>
+    request<AgentSession>('POST', `sessions/${encodeURIComponent(sessionId)}/restart`),
   /** Types the handover request into the agent. */
   requestHandover: (sessionId: string) =>
     request<void>('POST', `sessions/${encodeURIComponent(sessionId)}/handover`),
@@ -356,10 +359,16 @@ export const api = {
       query: { name: file.name },
     }),
 
-  dictationSettings: () => request<{ language: string; whisper: boolean }>('GET', 'dictation'),
+  /** engines: what the Whisper service offers to choose from (empty while it does not answer). */
+  dictationSettings: () =>
+    request<{ language: string; whisper: boolean; engines: string[] }>('GET', 'dictation'),
   /** Transcribe recorded speech on the chosen device; never switches device by itself. */
-  dictate: (audio: Blob, device: DictationDevice) =>
-    request<{ text: string }>('POST', 'dictation', { upload: audio, query: { device } }),
+  dictate: (audio: Blob, device: DictationDevice, engine: string) =>
+    request<{ text: string }>('POST', 'dictation', {
+      upload: audio,
+      // No engine: the service's default.
+      query: engine ? { device, engine } : { device },
+    }),
 
   listFiles: (path: string) => request<FileEntry[]>('GET', 'files', { query: { path } }),
   createFolder: (parent: string, name: string) =>

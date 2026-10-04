@@ -193,7 +193,10 @@
     "lineHeightHint": "Multiple of the font size; 1.00 means no spacing at all.",
     "font": "Terminal font",
     "fontSize": "Font size",
-    "fontSizeHint": "Default for all terminals; A−/A+ in a terminal changes only that one."
+    "fontSizeHint": "Default for all terminals; A−/A+ in a terminal changes only that one.",
+    "dictationEngine": "Dictation engine",
+    "engineDefault": "Default",
+    "dictationEngineHint": "Speech recognition of the Whisper service; “Default” takes what the service sets. Applies to this device."
   },
   "attach": {
     "title": "Attach a photo, screenshot or file",
@@ -316,7 +319,7 @@
   "consumption": {
     "title": "Consumption",
     "days": "{count} days",
-    "hint": "Tokens from all Claude conversations on this machine – from Agent-Orc, the terminal and VS Code, subagents included.",
+    "hint": "Tokens from all Claude conversations on this machine – from Agent-Orc, the terminal and VS Code, subagents included. The figures come from Claude's own transcripts (as the API reports them); this is not a bill.",
     "loading": "Counting …",
     "perDay": "Per day (all tokens)",
     "perProject": "By project",
@@ -345,5 +348,11 @@
     "confirm": "Remove the working copy “{name}”? Uncommitted changes prevent this; the branch stays as long as it is not merged.",
     "removedWithBranch": "Worktree removed; branch “{branch}” was merged and is deleted.",
     "removedKeptBranch": "Worktree removed; branch “{branch}” is not merged yet and is kept."
+  },
+  "restart": {
+    "title": "Restart",
+    "confirm": "Restart the agent in “{name}”? The conversation is resumed; the agent's running background tasks end.",
+    "confirmBusy": "“{name}” is working right now. A restart ends the running answer and its background tasks; the conversation is resumed afterwards.",
+    "done": "“{name}” was restarted."
   }
 }

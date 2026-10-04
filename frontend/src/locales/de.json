@@ -193,7 +193,10 @@
     "lineHeightHint": "Vielfaches der Schriftgröße; 1,00 ist ganz ohne Abstand.",
     "font": "Schrift im Terminal",
     "fontSize": "Schriftgröße",
-    "fontSizeHint": "Standard für alle Terminals; A−/A+ im Terminal stellt nur dieses um."
+    "fontSizeHint": "Standard für alle Terminals; A−/A+ im Terminal stellt nur dieses um.",
+    "dictationEngine": "Diktat-Engine",
+    "engineDefault": "Standard",
+    "dictationEngineHint": "Spracherkennung des Whisper-Dienstes; „Standard“ nimmt, was der Dienst vorgibt. Gilt für dieses Gerät."
   },
   "attach": {
     "title": "Foto, Screenshot oder Datei anhängen",
@@ -316,7 +319,7 @@
   "consumption": {
     "title": "Verbrauch",
     "days": "{count} Tage",
-    "hint": "Tokens aus allen Claude-Gesprächen auf diesem Rechner – aus Agent-Orc, dem Terminal und VS Code, mit Hilfsagenten.",
+    "hint": "Tokens aus allen Claude-Gesprächen auf diesem Rechner – aus Agent-Orc, dem Terminal und VS Code, mit Hilfsagenten. Die Werte stammen aus Claudes eigenen Gesprächsdateien (so, wie die API sie meldet); das ist keine Abrechnung.",
     "loading": "Wird ausgewertet …",
     "perDay": "Pro Tag (alle Tokens)",
     "perProject": "Nach Projekt",
@@ -345,5 +348,11 @@
     "confirm": "Die Arbeitskopie „{name}“ entfernen? Nicht committete Änderungen verhindern das; der Branch bleibt, solange er nicht zusammengeführt ist.",
     "removedWithBranch": "Worktree entfernt, Branch „{branch}“ war zusammengeführt und ist gelöscht.",
     "removedKeptBranch": "Worktree entfernt; Branch „{branch}“ ist noch nicht zusammengeführt und bleibt erhalten."
+  },
+  "restart": {
+    "title": "Neu starten",
+    "confirm": "Agent in „{name}“ neu starten? Das Gespräch wird fortgesetzt; laufende Hintergrundaufgaben des Agenten enden dabei.",
+    "confirmBusy": "„{name}“ arbeitet gerade. Ein Neustart bricht die laufende Antwort und seine Hintergrundaufgaben ab; das Gespräch wird danach fortgesetzt.",
+    "done": "„{name}“ wurde neu gestartet."
   }
 }

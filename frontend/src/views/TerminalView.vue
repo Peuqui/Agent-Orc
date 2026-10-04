@@ -12,6 +12,7 @@ import { useRouter } from 'vue-router'
 import { api, terminalUrl, type Modifier, type TerminalSettings } from '../api'
 import AppIcon from '../components/AppIcon.vue'
 import ContextMeter from '../components/ContextMeter.vue'
+import RestartButton from '../components/RestartButton.vue'
 import JogScroller from '../components/JogScroller.vue'
 import KeyBar from '../components/KeyBar.vue'
 import MessageInput from '../components/MessageInput.vue'
@@ -278,15 +279,17 @@ onBeforeUnmount(() => {
       >
         <AppIcon name="up" class="-rotate-90" />
       </button>
-      <!-- Embedded in the workspace, the column's tab names the agent already. -->
-      <h1 class="min-w-0 flex-1 truncate font-semibold">{{ embedded ? '' : name }}</h1>
+      <!-- State on the left, the buttons acting on the agent on the right. -->
       <ContextMeter
         v-if="session && session.context_tokens != null && session.context_window != null"
         compact
         :tokens="session.context_tokens"
         :window="session.context_window"
       />
-      <span class="size-2.5 rounded-full" :class="connected ? 'bg-red-500' : 'bg-slate-600'" />
+      <span class="mx-1 size-2.5 shrink-0 rounded-full" :class="connected ? 'bg-red-500' : 'bg-slate-600'" />
+      <!-- Embedded in the workspace, the column's tab names the agent already. -->
+      <h1 class="min-w-0 flex-1 truncate font-semibold">{{ embedded ? '' : name }}</h1>
+      <RestartButton v-if="session?.running" :session="session" button-class="btn-icon" />
       <!-- What the agent changed; in the workspace it opens within the column (back returns). -->
       <RouterLink
         :to="`/changes/${encodeURIComponent(id)}`"

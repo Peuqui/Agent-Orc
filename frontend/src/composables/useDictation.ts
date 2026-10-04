@@ -1,4 +1,5 @@
 import { computed, ref } from 'vue'
+import { useSettings } from './useSettings'
 import { api, type DictationDevice } from '../api'
 import { START_BEEP, STOP_BEEP, playBeep } from '../sounds'
 
@@ -36,6 +37,8 @@ export type DictationState = 'idle' | 'recording' | 'transcribing' | 'listening'
  * failed, as a separate button pressed deliberately. Without a Whisper service the microphone
  * uses the browser's recognition directly.
  */
+const { dictationEngine } = useSettings()
+
 export function useDictation(onText: (text: string) => void, onError: (error: unknown) => void) {
   const state = ref<DictationState>('idle')
   const device = ref<DictationDevice>(localStorage.getItem(DEVICE_KEY) === 'cpu' ? 'cpu' : 'cuda')
@@ -90,7 +93,7 @@ export function useDictation(onText: (text: string) => void, onError: (error: un
     state.value = 'transcribing'
     failedAudio.value = null
     try {
-      const { text } = await api.dictate(audio, device.value)
+      const { text } = await api.dictate(audio, device.value, dictationEngine.value)
       whisperFailed.value = false
       if (text) onText(text)
     } catch (error) {

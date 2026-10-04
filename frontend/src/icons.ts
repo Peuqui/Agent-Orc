@@ -7,6 +7,7 @@ export const ICONS = {
   play: 'M8 5l11 7-11 7z',
   stop: 'M7 7h10v10H7z',
   resume: 'M4 12a8 8 0 1 0 2.4-5.7 M4 4v4h4',
+  restart: 'M20 12a8 8 0 1 1-2.4-5.7 M20 4v4h-4',
   more: 'M12 5h.01 M12 12h.01 M12 19h.01',
   lock: 'M6 11h12v9H6z M9 11V8a3 3 0 0 1 6 0v3',
   unlock: 'M6 11h12v9H6z M9 11V8a3 3 0 0 1 5.8-1',
@@ -28,6 +29,7 @@ export const ICONS = {
   diff: 'M6 3v12 M6 21a2 2 0 1 0 0-4 2 2 0 0 0 0 4z M18 9a2 2 0 1 0 0-4 2 2 0 0 0 0 4z M18 9c0 6-12 3-12 8',
   chart: 'M4 20V10 M10 20V4 M16 20v-7 M22 20H2',
   template: 'M5 4h14v16H5z M8 8h8 M8 12h8 M8 16h5',
+  menu: 'M4 6h16 M4 12h16 M4 18h16',
   mic: 'M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3z M5 11a7 7 0 0 0 14 0 M12 18v3',
 } as const
 

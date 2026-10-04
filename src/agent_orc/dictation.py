@@ -32,7 +32,29 @@ class DictationServiceError(RuntimeError):
     """The Whisper service cannot be reached or failed."""
 
 
-def transcribe(audio: bytes, content_type: str, device: Device, config: DictationConfig) -> str:
+# How long a look at the service's engines may take; the settings menu waits for it.
+STATUS_TIMEOUT_SECONDS = 3
+
+
+def service_engines(config: DictationConfig) -> list[str]:
+    """The engines the Whisper service offers (whisper-stt GET /status), e.g. whisper and
+    parakeet; none when no service is configured or it does not answer right now."""
+    if config.whisper_url is None:
+        return []
+    try:
+        with urllib.request.urlopen(
+            f"{config.whisper_url}/status", timeout=STATUS_TIMEOUT_SECONDS
+        ) as response:
+            engines: list[str] = json.load(response).get("engines", [])
+    except (urllib.error.URLError, TimeoutError):
+        return []
+    return engines
+
+
+def transcribe(
+    audio: bytes, content_type: str, device: Device, engine: str | None, config: DictationConfig
+) -> str:
+    """engine None: the service's default engine."""
     if config.whisper_url is None:
         raise DictationServiceError("no Whisper service configured")
     media_type = content_type.split(";")[0].strip()
@@ -40,6 +62,8 @@ def transcribe(audio: bytes, content_type: str, device: Device, config: Dictatio
         raise UnsupportedAudioError(content_type)
     boundary = uuid.uuid4().hex
     fields = {"device": device, "language": config.language}
+    if engine is not None:
+        fields["engine"] = engine
     body = _multipart(boundary, fields, f"dictation{AUDIO_SUFFIXES[media_type]}", media_type, audio)
     request = urllib.request.Request(
         f"{config.whisper_url}/transcribe",

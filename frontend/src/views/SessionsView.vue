@@ -9,6 +9,7 @@ import ConfirmDialog from '../components/ConfirmDialog.vue'
 import ContextMeter from '../components/ContextMeter.vue'
 import ReasoningControl from '../components/ReasoningControl.vue'
 import QuotaPanel from '../components/QuotaPanel.vue'
+import RestartButton from '../components/RestartButton.vue'
 import { moveInList, useReorder } from '../composables/useReorder'
 import { useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
@@ -367,6 +368,7 @@ function resume(session: AgentSession): void {
             <!-- The icon only (its name in the tooltip), so the row stays one line. -->
             <AppIcon name="diff" />
           </RouterLink>
+          <RestartButton v-if="session.running" :session="session" button-class="btn-secondary btn-small" />
           <button
             class="btn-secondary btn-small"
             :title="$t('sessions.stop')"

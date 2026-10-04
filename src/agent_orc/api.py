@@ -33,6 +33,7 @@ from agent_orc.dictation import (
     DictationServiceError,
     GpuUnavailableError,
     UnsupportedAudioError,
+    service_engines,
     transcribe,
 )
 from agent_orc.effort import (
@@ -559,15 +560,21 @@ def create_app(
         return {
             "language": config.dictation.language,
             "whisper": config.dictation.whisper_url is not None,
+            # To choose from in the settings; empty while the service does not answer.
+            "engines": service_engines(config.dictation),
         }
 
     @app.post("/api/dictation", dependencies=authenticated)
-    async def dictate(request: Request, device: Device) -> dict[str, str]:
+    async def dictate(
+        request: Request, device: Device, engine: str | None = None
+    ) -> dict[str, str]:
         """Transcribe the recorded audio in the request body."""
         audio = await request.body()
         content_type = request.headers.get("content-type", "")
         # The Whisper call blocks for seconds, on the CPU even longer.
-        text = await asyncio.to_thread(transcribe, audio, content_type, device, config.dictation)
+        text = await asyncio.to_thread(
+            transcribe, audio, content_type, device, engine, config.dictation
+        )
         return {"text": text}
 
     @app.get("/api/sessions", dependencies=authenticated)
@@ -659,6 +666,22 @@ def create_app(
         if not any(r.id == body.request and r.session == session_id for r in open_requests()):
             raise ApprovalNotFoundError(body.request)
         decide(body.request, body.allow)
+
+    @app.post("/api/sessions/{session_id}/restart", dependencies=authenticated)
+    def restart_session(session_id: str) -> AgentSession:
+        """Resume the agent in its own session, ending a running answer and background tasks
+        (the user confirmed that); attached terminals stay connected."""
+        session = find_session(session_id)
+        if session is None:
+            raise SessionNotFoundError(session_id)
+        pending = pending_effort.pop(session_id, None)
+        if pending is not None:
+            # The agent reads the folder's effort at start: a waiting change comes along.
+            store_effort(session.profile, session.path, pending)
+        restarted = sessions.restart(session)
+        # The ended agent cannot report that it stopped working.
+        store_activity(session_id, busy=False)
+        return restarted
 
     @app.post(
         "/api/sessions/{session_id}/handover",
