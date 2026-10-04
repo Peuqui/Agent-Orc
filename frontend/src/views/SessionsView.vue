@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { api, type AgentSession, type Reasoning } from '../api'
 import AppIcon from '../components/AppIcon.vue'
 import BaseDialog from '../components/BaseDialog.vue'
@@ -11,10 +12,12 @@ import QuotaPanel from '../components/QuotaPanel.vue'
 import { moveInList, useReorder } from '../composables/useReorder'
 import { useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
+import { openWorkspace } from '../composables/useWorkspaceTab'
 import { baseName } from '../format'
 
 const { sessions, profiles, refresh } = useSessions()
 const toast = useToast()
+const router = useRouter()
 const { t } = useI18n()
 const stopping = ref<AgentSession | null>(null)
 // A chosen reasoning waiting for confirmation; the control shows it until then.
@@ -135,20 +138,22 @@ function resume(session: AgentSession): void {
   <section>
     <!-- Always reachable: a new agent starts in a folder chosen in the file view. -->
     <QuotaPanel />
-    <RouterLink to="/files" class="btn-primary mb-4 w-full sm:w-auto">
-      <AppIcon name="plus" />{{ $t('sessions.startNew') }}
-    </RouterLink>
-    <div v-if="workspaceNames.length > 0" class="mb-4 flex flex-wrap items-center gap-2">
-      <span class="text-sm text-slate-400">{{ $t('workspace.saved') }}</span>
+    <!-- Named workspaces next to it: a tap opens one (its own browser tab once this one shows
+         agents); the link address lets a middle click open a tab, too. -->
+    <div class="mb-4 flex flex-wrap items-center gap-2">
+      <RouterLink to="/files" class="btn-primary w-full sm:w-auto">
+        <AppIcon name="plus" />{{ $t('sessions.startNew') }}
+      </RouterLink>
       <span v-for="workspace in workspaceNames" :key="workspace" class="card flex items-center">
-        <RouterLink
-          :to="{ path: '/workspace', query: { name: workspace } }"
-          class="flex items-center gap-1.5 py-1 pl-3 text-sm hover:text-slate-100"
+        <a
+          :href="router.resolve({ path: '/workspace', query: { name: workspace } }).href"
+          class="flex items-center gap-1.5 py-1.5 pl-3 text-sm hover:text-slate-100"
+          @click.prevent="openWorkspace(router, workspace)"
         >
           <AppIcon name="workspace" />{{ workspace }}
-        </RouterLink>
+        </a>
         <button
-          class="px-2.5 py-1 text-slate-500 hover:text-slate-200"
+          class="px-2.5 py-1.5 text-slate-500 hover:text-slate-200"
           :aria-label="$t('workspace.delete')"
           :title="$t('workspace.delete')"
           @click="deletingWorkspace = workspace"
@@ -156,6 +161,9 @@ function resume(session: AgentSession): void {
           ×
         </button>
       </span>
+      <button class="btn-secondary btn-small" @click="openWorkspace(router, null)">
+        <AppIcon name="plus" />{{ $t('workspace.new') }}
+      </button>
     </div>
     <p v-if="sorted.length === 0" class="card p-6 text-center text-slate-400">{{ $t('sessions.empty') }}</p>
 

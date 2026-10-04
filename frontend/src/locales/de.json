@@ -165,9 +165,12 @@
     "unnamed": "Arbeitsfläche ohne Namen",
     "nameHint": "Name eingeben speichert die Arbeitsfläche, dann lässt sie sich aus der Übersicht wieder öffnen",
     "nameTaken": "Eine Arbeitsfläche „{name}“ gibt es schon.",
-    "saved": "Arbeitsflächen",
     "delete": "Arbeitsfläche löschen",
-    "confirmDelete": "Arbeitsfläche „{name}“ löschen? Die Agenten laufen weiter."
+    "confirmDelete": "Arbeitsfläche „{name}“ löschen? Die Agenten laufen weiter.",
+    "switch": "Andere Arbeitsfläche",
+    "openInTab": "In eigenem Browser-Tab öffnen",
+    "noOthers": "Keine weiteren benannten Arbeitsflächen.",
+    "new": "Neue Arbeitsfläche"
   },
   "settings": {
     "title": "Einstellungen",

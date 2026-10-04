@@ -165,9 +165,12 @@
     "unnamed": "Unnamed workspace",
     "nameHint": "Entering a name saves the workspace, so it can be opened again from the overview",
     "nameTaken": "A workspace \"{name}\" exists already.",
-    "saved": "Workspaces",
     "delete": "Delete workspace",
-    "confirmDelete": "Delete workspace \"{name}\"? The agents keep running."
+    "confirmDelete": "Delete workspace \"{name}\"? The agents keep running.",
+    "switch": "Other workspace",
+    "openInTab": "Open in its own browser tab",
+    "noOthers": "No other named workspaces.",
+    "new": "New workspace"
   },
   "settings": {
     "title": "Settings",

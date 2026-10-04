@@ -7,6 +7,16 @@ import AppIcon from '../components/AppIcon.vue'
 import { moveInList, useReorder } from '../composables/useReorder'
 import { useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
+import {
+  emptyWorkspace,
+  loadTabState,
+  MIN_VISIBLE,
+  nameWindow,
+  openWorkspaceTab,
+  ownTabs,
+  saveTabState,
+  switchWorkspace,
+} from '../composables/useWorkspaceTab'
 import { baseName } from '../format'
 
 // Several agents side by side. Every open agent is one column: its tab is the head of that
@@ -14,20 +24,9 @@ import { baseName } from '../format'
 // how many columns fill the screen; further ones follow to the right (horizontal scrolling).
 // Each column is the terminal page in an iframe; the iframes never move in the DOM (that
 // would reload them), only their grid column changes.
-// The workspace of this browser tab, so each tab can show other agents; a reload keeps it. A
-// named workspace lives on the server (every device and tab can open it by name), the tab then
-// only remembers the name.
-const TAB_STATE_KEY = 'agent-orc-workspace-tab'
-const MIN_VISIBLE = 1
 // Narrowest and widest column a divider can set, as a share of the screen width.
 const MIN_WIDTH_SHARE = 0.1
 const MAX_WIDTH_SHARE = 1
-
-interface TabState {
-  /** Name of the workspace this tab shows; null for its own unnamed one. */
-  name: string | null
-  unnamed: Workspace
-}
 
 interface Resize {
   id: string
@@ -41,15 +40,6 @@ const router = useRouter()
 const toast = useToast()
 const { t } = useI18n()
 const { sessions } = useSessions()
-
-function emptyWorkspace(): Workspace {
-  return { tabs: [], visible: MIN_VISIBLE, widths: {}, active: null }
-}
-
-function loadTabState(): TabState {
-  const stored = sessionStorage.getItem(TAB_STATE_KEY)
-  return stored ? (JSON.parse(stored) as TabState) : { name: null, unnamed: emptyWorkspace() }
-}
 
 const tabState = loadTabState()
 const name = ref<string | null>(null)
@@ -67,6 +57,8 @@ const heads = ref<HTMLElement[]>([])
 const resize = ref<Resize | null>(null)
 const row = ref<HTMLElement>()
 const picking = ref(false)
+const switching = ref(false)
+const otherNames = computed(() => savedNames.value.filter((saved) => saved !== name.value).sort())
 
 const notOpen = computed(() =>
   sessions.value.filter((session) => session.running && !workspace.value.tabs.includes(session.id)),
@@ -197,7 +189,8 @@ function persist(): void {
   if (name.value === null) tabState.unnamed = workspace.value
   else void api.storeWorkspace(name.value, workspace.value).catch(toast.error)
   tabState.name = name.value
-  sessionStorage.setItem(TAB_STATE_KEY, JSON.stringify(tabState))
+  saveTabState(tabState)
+  nameWindow(name.value)
 }
 
 watch(workspace, persist, { deep: true })
@@ -220,7 +213,10 @@ watch(() => route.query.open, () => ready.value && openRequested())
 
 async function load(): Promise<void> {
   const requested = route.query.name
-  name.value = typeof requested === 'string' && requested !== '' ? requested : tabState.name
+  if (route.query.new !== undefined) {
+    name.value = null
+    tabState.unnamed = emptyWorkspace()
+  } else name.value = typeof requested === 'string' && requested !== '' ? requested : tabState.name
   nameInput.value = name.value ?? ''
   const named = await api.workspaces()
   savedNames.value = Object.keys(named)
@@ -233,13 +229,14 @@ async function load(): Promise<void> {
 
 load().catch(toast.error)
 
-// Another address while the page stays open: a different name loads that workspace, none
-// shows the current name again.
+// Another address while the page stays open: a different name (or "new") loads that workspace,
+// none shows the current name again.
 watch(
-  () => route.query.name,
-  (requested) => {
-    if (!ready.value || requested === name.value) return
-    if (typeof requested !== 'string' || requested === '') {
+  () => [route.query.name, route.query.new] as const,
+  ([requested, fresh]) => {
+    if (!ready.value) return
+    if (fresh === undefined && requested === name.value) return
+    if (fresh === undefined && (typeof requested !== 'string' || requested === '')) {
       showName()
       return
     }
@@ -247,6 +244,17 @@ watch(
     load().catch(toast.error)
   },
 )
+
+/** From the switcher: another workspace in this window. */
+function switchTo(other: string | null): void {
+  switching.value = false
+  switchWorkspace(router, other)
+}
+
+function openInOwnTab(other: string | null): void {
+  switching.value = false
+  openWorkspaceTab(router, other)
+}
 
 /** Naming stores the workspace on the server; renaming moves it there. */
 async function rename(): Promise<void> {
@@ -293,6 +301,39 @@ async function rename(): Promise<void> {
         @keydown.enter="($event.target as HTMLInputElement).blur()"
         @change="rename"
       />
+      <div class="relative">
+        <button
+          class="btn-icon"
+          :aria-label="$t('workspace.switch')"
+          :title="$t('workspace.switch')"
+          @click="switching = !switching"
+        >
+          <AppIcon name="chevron" />
+        </button>
+        <div
+          v-if="switching"
+          class="card absolute top-full right-0 z-20 mt-1 flex w-64 flex-col gap-1 p-2 shadow-xl"
+        >
+          <div v-for="other in otherNames" :key="other" class="flex items-center rounded-md hover:bg-slate-700">
+            <button class="flex min-w-0 flex-1 items-center gap-2 px-3 py-2 text-left" @click="switchTo(other)">
+              <AppIcon name="workspace" /><span class="truncate">{{ other }}</span>
+            </button>
+            <button
+              v-if="ownTabs"
+              class="px-3 py-2 text-slate-400 hover:text-slate-100"
+              :aria-label="$t('workspace.openInTab')"
+              :title="$t('workspace.openInTab')"
+              @click="openInOwnTab(other)"
+            >
+              <AppIcon name="external" />
+            </button>
+          </div>
+          <p v-if="otherNames.length === 0" class="px-3 py-2 text-sm text-slate-500">{{ $t('workspace.noOthers') }}</p>
+          <button class="btn-secondary mt-1" @click="ownTabs ? openInOwnTab(null) : switchTo(null)">
+            <AppIcon name="plus" />{{ $t('workspace.new') }}
+          </button>
+        </div>
+      </div>
       <div class="relative">
         <button class="btn-icon" :aria-label="$t('workspace.add')" :title="$t('workspace.add')" @click="picking = !picking">
           <AppIcon name="plus" />
