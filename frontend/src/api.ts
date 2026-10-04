@@ -227,6 +227,13 @@ export const api = {
   cardOrder: () => request<string[]>('GET', 'card-order'),
   arrangeCards: (folders: string[]) => request<void>('PUT', 'card-order', { body: { folders } }),
 
+  /** Store a file in the agent's folder; returns its path there, as the agent reads it. */
+  attach: (sessionId: string, file: File) =>
+    request<{ path: string }>('POST', `sessions/${encodeURIComponent(sessionId)}/attachments`, {
+      upload: file,
+      query: { name: file.name },
+    }),
+
   dictationSettings: () => request<{ language: string; whisper: boolean }>('GET', 'dictation'),
   /** Transcribe recorded speech on the chosen device; never switches device by itself. */
   dictate: (audio: Blob, device: DictationDevice) =>

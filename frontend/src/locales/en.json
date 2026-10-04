@@ -91,7 +91,7 @@
   },
   "terminal": {
     "back": "Back",
-    "placeholder": "Message to the agent …",
+    "placeholder": "Message …",
     "send": "Send",
     "disconnected": "Terminal connection closed.",
     "reconnect": "Reconnect",
@@ -174,5 +174,10 @@
     "font": "Terminal font",
     "fontSize": "Font size",
     "fontSizeHint": "Default for all terminals; A−/A+ in a terminal changes only that one."
+  },
+  "attach": {
+    "title": "Attach a photo or file",
+    "photo": "Take a photo",
+    "file": "Choose a file"
   }
 }

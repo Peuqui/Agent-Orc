@@ -689,3 +689,18 @@ def test_card_order_is_kept(
     order = {"folders": ["/w/b", "/w/a"]}
     assert client.put("/api/card-order", json=order).status_code == 204
     assert client.get("/api/card-order").json() == ["/w/b", "/w/a"]
+
+
+def test_attachment_lands_in_the_agents_folder(client: TestClient, home: Path) -> None:
+    session_id = start_shell(client, home)
+    response = client.post(
+        f"/api/sessions/{session_id}/attachments",
+        params={"name": "foto.jpg"},
+        content=b"jpeg",
+        headers={"Content-Type": "image/jpeg"},
+    )
+    relative = response.json()["path"]
+    assert relative.startswith(".agent-orc/uploads/")
+    assert (home / "projects" / relative).read_bytes() == b"jpeg"
+    missing = client.post("/api/sessions/nope/attachments", params={"name": "a"}, content=b"")
+    assert missing.status_code == 404

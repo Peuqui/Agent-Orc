@@ -318,7 +318,7 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <MessageInput ref="messageInput" @submit="submitText" />
+    <MessageInput ref="messageInput" :session-id="id" @submit="submitText" />
 
     <KeyBar
       v-if="settings"

@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
+import { api } from '../api'
 import { useDictation } from '../composables/useDictation'
 import { useToast } from '../composables/useToast'
 import AppIcon from './AppIcon.vue'
 
+const props = defineProps<{ sessionId: string }>()
 const emit = defineEmits<{ submit: [text: string] }>()
 
 const toast = useToast()
@@ -34,6 +36,37 @@ const microphoneBusy = computed(
 )
 
 defineExpose({ focus: () => field.value?.focus() })
+
+// Attaching a photo or file: it is stored in the agent's folder, and its path goes into the
+// text ("@path", as Claude Code reads files), where the question is added before sending.
+const attaching = ref(false)
+const uploading = ref(false)
+const photoInput = ref<HTMLInputElement>()
+const fileInput = ref<HTMLInputElement>()
+
+function choose(input: HTMLInputElement | undefined): void {
+  attaching.value = false
+  input?.click()
+}
+
+async function onFileChosen(event: Event): Promise<void> {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  // Cleared, so choosing the same file again still counts as a change.
+  input.value = ''
+  if (!file) return
+  uploading.value = true
+  try {
+    const { path } = await api.attach(props.sessionId, file)
+    const mention = `@${path} `
+    text.value = text.value ? `${text.value} ${mention}` : mention
+    field.value?.focus()
+  } catch (error) {
+    toast.error(error)
+  } finally {
+    uploading.value = false
+  }
+}
 
 // Grows with its content (up to a cap set in CSS), so a long dictation can be read before sending.
 watch(text, async () => {
@@ -81,6 +114,30 @@ function onKeydown(event: KeyboardEvent): void {
     >
       {{ state === 'listening' ? $t('dictation.browserStop') : $t('dictation.browser') }}
     </button>
+    <div class="relative">
+      <button
+        type="button"
+        class="btn-icon size-10"
+        :class="{ 'animate-pulse': uploading }"
+        :disabled="uploading"
+        :aria-label="$t('attach.title')"
+        :title="$t('attach.title')"
+        @click="attaching = !attaching"
+      >
+        <AppIcon name="paperclip" />
+      </button>
+      <div v-if="attaching" class="card absolute bottom-full left-0 z-30 mb-1 flex w-48 flex-col p-1 shadow-xl">
+        <button type="button" class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-slate-700" @click="choose(photoInput)">
+          <AppIcon name="camera" />{{ $t('attach.photo') }}
+        </button>
+        <button type="button" class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-slate-700" @click="choose(fileInput)">
+          <AppIcon name="paperclip" />{{ $t('attach.file') }}
+        </button>
+      </div>
+      <!-- capture opens the camera directly on phones; desktops show the file dialog. -->
+      <input ref="photoInput" type="file" accept="image/*" capture="environment" class="hidden" @change="onFileChosen" />
+      <input ref="fileInput" type="file" class="hidden" @change="onFileChosen" />
+    </div>
     <template v-if="microphone">
       <!-- Device switch first and small, the microphone right beside the text field and large:
            the one used most is the easiest to hit. -->

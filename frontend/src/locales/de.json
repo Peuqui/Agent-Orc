@@ -91,7 +91,7 @@
   },
   "terminal": {
     "back": "Zurück",
-    "placeholder": "Nachricht an den Agenten …",
+    "placeholder": "Nachricht …",
     "send": "Senden",
     "disconnected": "Verbindung zum Terminal beendet.",
     "reconnect": "Neu verbinden",
@@ -174,5 +174,10 @@
     "font": "Schrift im Terminal",
     "fontSize": "Schriftgröße",
     "fontSizeHint": "Standard für alle Terminals; A−/A+ im Terminal stellt nur dieses um."
+  },
+  "attach": {
+    "title": "Foto oder Datei anhängen",
+    "photo": "Foto aufnehmen",
+    "file": "Datei wählen"
   }
 }

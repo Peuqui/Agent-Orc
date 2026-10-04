@@ -16,6 +16,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from agent_orc import files
+from agent_orc.attachments import store_attachment
 from agent_orc.auth import Clock, Credentials, LoginGuard, TokenSigner, verify_password
 from agent_orc.config import Config, TerminalConfig
 from agent_orc.context import QUOTA_SOURCES, session_busy, session_status
@@ -422,6 +423,15 @@ def create_app(
     @app.get("/api/effort", dependencies=authenticated)
     def folder_effort(profile: str, path: str) -> Reasoning:
         return folder_reasoning(profile, scope.resolve(path))
+
+    @app.post("/api/sessions/{session_id}/attachments", dependencies=authenticated)
+    async def attach(session_id: str, name: str, request: Request) -> dict[str, str]:
+        """Store the file in the request body in the agent's folder; returns its path there."""
+        session = find_session(session_id)
+        if session is None:
+            raise SessionNotFoundError(session_id)
+        content = await request.body()
+        return {"path": str(store_attachment(session.path, name, content, clock))}
 
     @app.get("/api/sessions/{session_id}/text", dependencies=authenticated)
     def session_text(session_id: str) -> dict[str, str]:
