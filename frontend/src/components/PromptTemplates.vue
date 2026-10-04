@@ -33,7 +33,7 @@ function manage(): void {
   editing.value = templates.value.map((template) => ({ ...template }))
 }
 
-defineExpose({ show })
+defineExpose({ show, open })
 
 async function save(): Promise<void> {
   if (!editing.value) return

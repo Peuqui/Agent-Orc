@@ -119,6 +119,15 @@ async function captureScreen(): Promise<void> {
 
 const templates = ref<InstanceType<typeof PromptTemplates>>()
 
+/** The paperclip also closes the open template list, which has no button of its own. */
+function toggleAttachMenu(): void {
+  if (templates.value?.open) {
+    templates.value.open = false
+    return
+  }
+  attaching.value = !attaching.value
+}
+
 function showTemplates(): void {
   attaching.value = false
   void templates.value?.show()
@@ -249,7 +258,7 @@ function onKeydown(event: KeyboardEvent): void {
         :disabled="uploading"
         :aria-label="$t('attach.title')"
         :title="$t('attach.title')"
-        @click="attaching = !attaching"
+        @click="toggleAttachMenu"
       >
         <AppIcon name="paperclip" />
       </button>
