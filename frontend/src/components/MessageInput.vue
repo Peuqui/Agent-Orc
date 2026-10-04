@@ -85,7 +85,10 @@ function onKeydown(event: KeyboardEvent): void {
       <button
         type="button"
         class="btn-icon size-11"
-        :class="{ 'animate-pulse text-red-500': microphoneActive, 'opacity-50': microphoneBusy }"
+        :class="[
+          microphoneActive ? 'animate-pulse text-red-500' : 'text-amber-300',
+          { 'opacity-50': microphoneBusy },
+        ]"
         :disabled="microphoneBusy"
         :aria-label="microphoneActive ? $t('dictation.stop') : $t('dictation.start')"
         :title="microphoneActive ? $t('dictation.stop') : $t('dictation.start')"
