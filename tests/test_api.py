@@ -87,11 +87,11 @@ def config(home: Path, socket_name: str) -> Config:
                 "resume": ["sh", "-c", "echo resumed {conversation}; sleep 60"],
             },
         },
-        # Offers models; "thinker" takes two levels, "plain" none (as lclaude --levels says).
+        # Offers models, "thinker" with a note: it takes two levels, "plain" none (lclaude --levels)
         "chooser": {
             "label": "Chooser",
             "hint": "Stop the other model first.",
-            "models": ["printf", "thinker\\nplain\\n"],
+            "models": ["printf", "thinker\\tfree until Friday\\nplain\\n"],
             "start": ["sh", "-c", 'echo "started {model} [$ORC_EFFORT]"; exec cat'],
             "resume": ["sh", "-c", 'echo "resumed {model} [$ORC_EFFORT]"; exec cat'],
             "env": {"ORC_EFFORT": "{effort}"},
@@ -1319,7 +1319,10 @@ def test_extra_keys_arranged_for_every_device(
 
 
 def test_a_chosen_model_gets_its_levels_and_environment(client: TestClient, home: Path) -> None:
-    assert client.get("/api/agents/chooser/models").json() == ["thinker", "plain"]
+    assert client.get("/api/agents/chooser/models").json() == [
+        {"name": "thinker", "note": "free until Friday"},
+        {"name": "plain", "note": None},
+    ]
     assert client.get("/api/agents/chooser/levels", params={"model": "thinker"}).json() == [
         "low",
         "high",

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { api, type Conversation, type ConversationHit, type Reasoning } from '../api'
+import { api, type Conversation, type ConversationHit, type ModelChoice, type Reasoning } from '../api'
 import { useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
 import { baseName, formatDate, formatSize } from '../format'
@@ -62,7 +62,7 @@ const { locale } = useI18n()
 
 const profile = computed(() => profiles.value.find((candidate) => candidate.name === selected.value))
 // Profiles with a choice of models (e.g. the local ones): the list, the choice, its levels.
-const models = ref<string[]>([])
+const models = ref<ModelChoice[]>([])
 const model = ref<string | null>(null)
 const modelLevels = ref<string[]>([])
 const LAST_MODEL_KEY = 'agent-orc-last-model:'
@@ -104,7 +104,8 @@ watch(selected, async (name) => {
     if (profile.value?.models) {
       models.value = await api.agentModels(name)
       const last = localStorage.getItem(LAST_MODEL_KEY + name)
-      model.value = last !== null && models.value.includes(last) ? last : (models.value[0] ?? null)
+      const names = models.value.map((choice) => choice.name)
+      model.value = last !== null && names.includes(last) ? last : (names[0] ?? null)
     } else {
       preselectReasoning()
     }
@@ -171,7 +172,9 @@ async function start(resume: boolean, conversation: string | null = null): Promi
     <label v-if="profile?.models" class="mb-5 flex flex-col gap-1 text-sm text-slate-400">
       {{ $t('agent.model') }}
       <select v-model="model" class="input text-sm text-slate-200">
-        <option v-for="choice in models" :key="choice" :value="choice">{{ choice }}</option>
+        <option v-for="choice in models" :key="choice.name" :value="choice.name">
+          {{ choice.note ? `${choice.name} – ${choice.note}` : choice.name }}
+        </option>
       </select>
     </label>
     <ReasoningControl

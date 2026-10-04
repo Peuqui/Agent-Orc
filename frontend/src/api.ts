@@ -1,5 +1,11 @@
 import { ref } from 'vue'
 
+/** A model a profile offers at start; the note is shown beside it (e.g. until when it is free). */
+export interface ModelChoice {
+  name: string
+  note: string | null
+}
+
 export interface AgentProfile {
   name: string
   label: string
@@ -321,7 +327,7 @@ export const api = {
       body: { profile, path, model, resume, ...reasoning, conversation, worktree },
     }),
   /** The models a profile offers at start (e.g. the local ones of llama-swap). */
-  agentModels: (profile: string) => request<string[]>('GET', `agents/${encodeURIComponent(profile)}/models`),
+  agentModels: (profile: string) => request<ModelChoice[]>('GET', `agents/${encodeURIComponent(profile)}/models`),
   /** The levels the profile takes with this model; empty: no level at all. */
   agentLevels: (profile: string, model: string) =>
     request<string[]>('GET', `agents/${encodeURIComponent(profile)}/levels`, { query: { model } }),

@@ -184,7 +184,8 @@ class AgentProfile(StrictModel):
     quota: Literal["claude"] | None = None
     # A plain terminal, no agent: it may run in a folder next to that folder's agent.
     terminal: bool = False
-    # Prints the models to choose from at start, one per line; the choice fills {model}.
+    # Prints the models to choose from at start, one per line; the choice fills {model}. A tab
+    # may follow the name, then a note shown beside it (e.g. until when the model is free).
     models: list[str] | None = None
     # Environment of the agent; {effort} is the folder's level (left out when it has none).
     env: dict[str, str] = {}

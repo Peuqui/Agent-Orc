@@ -200,6 +200,12 @@ class WriteFileRequest(BaseModel):
     expected_version: str | None
 
 
+class ModelChoice(BaseModel):
+    name: str
+    # Shown beside the name, e.g. until when the model is free to use.
+    note: str | None
+
+
 class StartSessionRequest(BaseModel):
     profile: str
     path: str
@@ -320,20 +326,24 @@ def create_app(
     def find_session(session_id: str) -> AgentSession | None:
         return next((s for s in sessions.list() if s.id == session_id), None)
 
-    def run_profile_command(command: list[str]) -> list[str]:
-        """The command's output, one entry per line (or space-separated word)."""
+    def run_profile_command(command: list[str]) -> str:
         result = subprocess.run(
             command, capture_output=True, text=True, timeout=PROFILE_COMMAND_TIMEOUT_SECONDS
         )
         if result.returncode != 0:
             raise ProfileCommandError(result.stderr.strip() or " ".join(command))
-        return result.stdout.split()
+        return result.stdout
 
-    def profile_models(profile_name: str) -> list[str]:
+    def profile_models(profile_name: str) -> list[ModelChoice]:
+        """One model per line, optionally followed by a tab and a note on it."""
         profile = config.agents.get(profile_name)
         if profile is None or profile.models is None:
             return []
-        return run_profile_command(profile.models)
+        choices = []
+        for line in run_profile_command(profile.models).splitlines():
+            name, _, note = line.partition("\t")
+            choices.append(ModelChoice(name=name.strip(), note=note.strip() or None))
+        return choices
 
     levels_cache: dict[tuple[str, str | None], tuple[float, list[str]]] = {}
 
@@ -349,7 +359,7 @@ def create_app(
         if cached is not None and clock() - cached[0] < LEVELS_CACHE_SECONDS:
             return cached[1]
         command = [argument.replace(MODEL_PLACEHOLDER, model) for argument in effort.levels_command]
-        levels = run_profile_command(command)
+        levels = run_profile_command(command).split()
         levels_cache[(profile_name, model)] = (clock(), levels)
         return levels
 
@@ -612,7 +622,7 @@ def create_app(
         ]
 
     @app.get("/api/agents/{name}/models", dependencies=authenticated)
-    def agent_models(name: str) -> list[str]:
+    def agent_models(name: str) -> list[ModelChoice]:
         return profile_models(name)
 
     @app.get("/api/agents/{name}/levels", dependencies=authenticated)
@@ -816,7 +826,9 @@ def create_app(
                 raise ConversationNotFoundError(body.conversation)
         if (profile is not None and profile.models is not None) != (body.model is not None):
             raise UnknownModelError(str(body.model))
-        if body.model is not None and body.model not in profile_models(body.profile):
+        if body.model is not None and body.model not in {
+            choice.name for choice in profile_models(body.profile)
+        }:
             raise UnknownModelError(body.model)
         effort = body.effort
         if effort is None and effort_levels(body.profile, body.model):
