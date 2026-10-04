@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from ai_orc.scope import AccessScope, OutsideScopeError
+from agent_orc.scope import AccessScope, OutsideScopeError
 from tests.conftest import FakeClock
 
 

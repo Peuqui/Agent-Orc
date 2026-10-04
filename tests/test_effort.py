@@ -2,7 +2,7 @@ import json
 import stat
 from pathlib import Path
 
-from ai_orc.effort import (
+from agent_orc.effort import (
     CLAUDE_PROJECT_SETTINGS,
     read_claude_project_effort,
     write_claude_project_effort,
@@ -31,7 +31,7 @@ def test_keeps_other_settings_and_file_mode(tmp_path: Path) -> None:
         "effortLevel": "high",
     }
     assert stat.S_IMODE(path.stat().st_mode) == 0o600
-    assert not list(path.parent.glob("*.ai-orc-tmp"))
+    assert not list(path.parent.glob("*.agent-orc-tmp"))
 
 
 def test_none_removes_only_the_effort(tmp_path: Path) -> None:

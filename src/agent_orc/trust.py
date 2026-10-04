@@ -1,5 +1,5 @@
 """Mark a folder as trusted before an agent starts there, so it does not stop at a
-"do you trust this folder?" prompt. Starting an agent in a folder via AI-Orc is the user's
+"do you trust this folder?" prompt. Starting an agent in a folder via Agent-Orc is the user's
 explicit decision to trust it."""
 
 import json
@@ -25,7 +25,7 @@ def trust_claude_folder(home: Path, folder: Path) -> None:
     if project.get("hasTrustDialogAccepted"):
         return
     project["hasTrustDialogAccepted"] = True
-    temporary = path.with_name(f"{path.name}.ai-orc-tmp")
+    temporary = path.with_name(f"{path.name}.agent-orc-tmp")
     descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, CLAUDE_STATE_MODE)
     with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
         json.dump(state, handle, indent=2)

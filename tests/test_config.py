@@ -3,12 +3,12 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from ai_orc.config import config_dir, default_config_text, parse_config
+from agent_orc.config import config_dir, default_config_text, parse_config
 
 
 def test_default_config_is_valid() -> None:
     config = parse_config(default_config_text())
-    assert config.tmux.socket_name == "ai-orc"
+    assert config.tmux.socket_name == "agent-orc"
     assert "claude" in config.agents
     assert config.files.base_dir.is_absolute()
 
@@ -25,7 +25,7 @@ def test_missing_section_is_rejected() -> None:
 
 def test_config_dir_follows_xdg(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
-    assert config_dir() == tmp_path / "ai-orc"
+    assert config_dir() == tmp_path / "agent-orc"
 
 
 def test_terminal_keys_parse_escapes() -> None:

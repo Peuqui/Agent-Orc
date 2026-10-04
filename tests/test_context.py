@@ -4,8 +4,8 @@ from typing import Any
 
 import pytest
 
-from ai_orc.context import session_status, status_file, status_line, store_status
-from ai_orc.sessions import AgentSession
+from agent_orc.context import session_status, status_file, status_line, store_status
+from agent_orc.sessions import AgentSession
 
 SESSION_START = 1_000_000.0
 

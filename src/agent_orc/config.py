@@ -1,4 +1,4 @@
-"""Loading and validating the AI-Orc configuration file."""
+"""Loading and validating the Agent-Orc configuration file."""
 
 import os
 from importlib.resources import files
@@ -57,6 +57,7 @@ class TerminalKey(StrictModel):
 class TerminalConfig(StrictModel):
     keys: list[list[TerminalKey]]
     submit_delay_ms: int
+    text_history_lines: int
 
 
 class TmuxConfig(StrictModel):
@@ -100,14 +101,14 @@ class Config(StrictModel):
 
 
 def default_config_text() -> str:
-    """Return the shipped default configuration, used as template by `ai-orc init`."""
-    return files("ai_orc").joinpath("default_config.yaml").read_text(encoding="utf-8")
+    """Return the shipped default configuration, used as template by `agent-orc init`."""
+    return files("agent_orc").joinpath("default_config.yaml").read_text(encoding="utf-8")
 
 
 def config_dir() -> Path:
-    """AI-Orc's config directory, following the XDG base directory spec."""
+    """Agent-Orc's config directory, following the XDG base directory spec."""
     config_home = os.environ.get("XDG_CONFIG_HOME") or str(Path.home() / ".config")
-    return Path(config_home) / "ai-orc"
+    return Path(config_home) / "agent-orc"
 
 
 def parse_config(text: str) -> Config:

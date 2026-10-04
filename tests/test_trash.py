@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from ai_orc.trash import RestoreConflictError, Trash, TrashEntryNotFoundError
+from agent_orc.trash import RestoreConflictError, Trash, TrashEntryNotFoundError
 
 
 @pytest.fixture

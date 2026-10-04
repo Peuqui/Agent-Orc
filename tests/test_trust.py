@@ -2,7 +2,7 @@ import json
 import stat
 from pathlib import Path
 
-from ai_orc.trust import CLAUDE_STATE, trust_claude_folder
+from agent_orc.trust import CLAUDE_STATE, trust_claude_folder
 
 
 def write_state(home: Path, state: dict[str, object]) -> Path:
@@ -21,7 +21,7 @@ def test_marks_folder_trusted_and_keeps_everything_else(tmp_path: Path) -> None:
     assert state["projects"]["/a"] == other
     assert state["projects"]["/b/new"] == {"hasTrustDialogAccepted": True}
     assert stat.S_IMODE(path.stat().st_mode) == 0o600
-    assert not list(tmp_path.glob("*.ai-orc-tmp"))
+    assert not list(tmp_path.glob("*.agent-orc-tmp"))
 
 
 def test_existing_project_entry_is_extended(tmp_path: Path) -> None:

@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from ai_orc.config import AgentProfile
-from ai_orc.sessions import (
+from agent_orc.config import AgentProfile
+from agent_orc.sessions import (
     AgentSession,
     SessionAlreadyRunningError,
     SessionManager,

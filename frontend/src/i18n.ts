@@ -5,7 +5,7 @@ import en from './locales/en.json'
 export const LOCALES = ['de', 'en'] as const
 export type Locale = (typeof LOCALES)[number]
 
-const STORAGE_KEY = 'ai-orc-locale'
+const STORAGE_KEY = 'agent-orc-locale'
 
 function initialLocale(): Locale {
   const stored = localStorage.getItem(STORAGE_KEY)

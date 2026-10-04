@@ -14,7 +14,7 @@ export interface AgentSession {
   running: boolean
   exit_status: number | null
   created: number
-  /** Reported by the agent itself (Claude: via `ai-orc statusline`); null until it reports. */
+  /** Reported by the agent itself (Claude: via `agent-orc statusline`); null until it reports. */
   model: string | null
   effort: string | null
   /** The agent is working on an answer (reported by its hooks). */
@@ -92,7 +92,12 @@ export class ApiError extends Error {
 /** null until the first request tells whether the login cookie is valid. */
 export const authenticated = ref<boolean | null>(null)
 
+/** The server runs a different build than this page: it needs a reload. */
+export const newVersion = ref(false)
+
 const NO_CONTENT = 204
+// Sent by the server with the id of its installed build (agent_orc.api.BUILD_ID_HEADER).
+const BUILD_ID_HEADER = 'X-Build-Id'
 export const NETWORK_ERROR = 'NetworkError'
 
 async function request<T>(
@@ -118,18 +123,27 @@ async function request<T>(
     // fetch only rejects when no HTTP response arrived at all (server down, network gone).
     throw new ApiError(0, NETWORK_ERROR, String(error), null)
   }
+  checkBuild(response)
   if (response.status === 401 && path !== 'login' && path !== 'scope/unlock') {
     authenticated.value = false
   }
   if (!response.ok) {
     const data = await response.json()
-    // AI-Orc errors carry {error, detail}; FastAPI's own errors only {detail}.
+    // Agent-Orc errors carry {error, detail}; FastAPI's own errors only {detail}.
     const code: string = data.error ?? `http${response.status}`
     const detail = typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail)
     const retryAfter = response.headers.get('Retry-After')
     throw new ApiError(response.status, code, detail, retryAfter === null ? null : Number(retryAfter))
   }
   return response.status === NO_CONTENT ? (undefined as T) : ((await response.json()) as T)
+}
+
+function checkBuild(response: Response): void {
+  const serverBuild = response.headers.get(BUILD_ID_HEADER)
+  // The Vite dev server's page is no installed build, so there is nothing to compare.
+  if (!import.meta.env.DEV && serverBuild !== null && serverBuild !== __BUILD_ID__) {
+    newVersion.value = true
+  }
 }
 
 export const api = {
@@ -173,6 +187,9 @@ export const api = {
   cancelEffortChange: (sessionId: string) =>
     request<void>('DELETE', `sessions/${encodeURIComponent(sessionId)}/effort`),
   stopSession: (id: string) => request<void>('DELETE', `sessions/${encodeURIComponent(id)}`),
+  /** The terminal as plain text, for selecting and copying. */
+  sessionText: (id: string) =>
+    request<{ text: string }>('GET', `sessions/${encodeURIComponent(id)}/text`),
 
   listFiles: (path: string) => request<FileEntry[]>('GET', 'files', { query: { path } }),
   createFolder: (parent: string, name: string) =>

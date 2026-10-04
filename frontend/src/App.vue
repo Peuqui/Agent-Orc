@@ -5,6 +5,7 @@ import { ApiError, NETWORK_ERROR, api, authenticated } from './api'
 import AppHeader from './components/AppHeader.vue'
 import BottomNav from './components/BottomNav.vue'
 import ToastList from './components/ToastList.vue'
+import UpdateBanner from './components/UpdateBanner.vue'
 import { useSessions } from './composables/useSessions'
 import { useToast } from './composables/useToast'
 import LoginView from './views/LoginView.vue'
@@ -54,4 +55,5 @@ watch(authenticated, (isAuthenticated) => {
     <BottomNav />
   </div>
   <ToastList />
+  <UpdateBanner />
 </template>

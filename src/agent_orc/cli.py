@@ -1,4 +1,4 @@
-"""Command line entry point: `ai-orc init | set-password | serve`."""
+"""Command line entry point: `agent-orc init | set-password | serve`."""
 
 import argparse
 import getpass
@@ -10,17 +10,17 @@ from pathlib import Path
 
 import uvicorn
 
-from ai_orc.api import create_app
-from ai_orc.auth import load_credentials, new_credentials, save_credentials
-from ai_orc.config import (
+from agent_orc.api import create_app
+from agent_orc.auth import load_credentials, new_credentials, save_credentials
+from agent_orc.config import (
     CONFIG_FILE_NAME,
     CREDENTIALS_FILE_NAME,
     config_dir,
     default_config_text,
     load_config,
 )
-from ai_orc.context import status_line, store_activity, store_status
-from ai_orc.sessions import SESSION_ENV
+from agent_orc.context import status_line, store_activity, store_status
+from agent_orc.sessions import SESSION_ENV
 
 
 def init() -> None:
@@ -29,7 +29,7 @@ def init() -> None:
         sys.exit(f"Config already exists: {path}")
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(default_config_text(), encoding="utf-8")
-    print(f"Wrote {path}. Adapt it, then run `ai-orc set-password`.")
+    print(f"Wrote {path}. Adapt it, then run `agent-orc set-password`.")
 
 
 def set_password() -> None:
@@ -47,7 +47,7 @@ def serve() -> None:
     directory = config_dir()
     config = load_config(directory / CONFIG_FILE_NAME)
     credentials = load_credentials(directory / CREDENTIALS_FILE_NAME)
-    static_dir = Path(str(files("ai_orc").joinpath("static")))
+    static_dir = Path(str(files("agent_orc").joinpath("static")))
     if not (static_dir / "index.html").is_file():
         sys.exit(f"Frontend not built: no index.html in {static_dir} (run: npm run build)")
     app = create_app(config, credentials, static_dir=static_dir)
@@ -59,7 +59,7 @@ def serve() -> None:
 def statusline() -> None:
     """Status line command for Claude Code: store the session status, print a short line."""
     status = json.load(sys.stdin)
-    # Set by AI-Orc for every agent it starts; the command is only configured there.
+    # Set by Agent-Orc for every agent it starts; the command is only configured there.
     store_status(os.environ[SESSION_ENV], status)
     print(status_line(status))
 
@@ -75,7 +75,7 @@ def agent_idle() -> None:
 
 
 COMMANDS = {
-    "init": (init, "write the default config to ~/.config/ai-orc/"),
+    "init": (init, "write the default config to ~/.config/agent-orc/"),
     "set-password": (set_password, "set the login password"),
     "serve": (serve, "run the web server"),
     "statusline": (statusline, "status line command for agent sessions (JSON on stdin)"),
@@ -85,7 +85,7 @@ COMMANDS = {
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(prog="ai-orc", description="Agent orchestrator")
+    parser = argparse.ArgumentParser(prog="agent-orc", description="Agent orchestrator")
     subcommands = parser.add_subparsers(dest="command", required=True)
     for name, (_, help_text) in COMMANDS.items():
         subcommands.add_parser(name, help=help_text)

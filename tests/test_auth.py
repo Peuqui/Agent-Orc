@@ -1,7 +1,7 @@
 import stat
 from pathlib import Path
 
-from ai_orc.auth import (
+from agent_orc.auth import (
     LoginGuard,
     TokenSigner,
     hash_password,

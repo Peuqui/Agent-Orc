@@ -14,4 +14,4 @@ frontend/node_modules/
 frontend/dist/
 
 # Built PWA, bundled into the wheel via hatch artifacts
-src/ai_orc/static/
+src/agent_orc/static/

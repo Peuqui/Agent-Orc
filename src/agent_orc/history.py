@@ -1,7 +1,7 @@
 """Earlier conversations of an agent in a folder, so any of them can be resumed.
 
 Claude Code keeps each conversation as ~/.claude/projects/<folder>/<id>.jsonl, no matter
-whether it ran in a terminal, in VS Code or in AI-Orc, so all of them are listed here.
+whether it ran in a terminal, in VS Code or in Agent-Orc, so all of them are listed here.
 """
 
 import json
@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ai_orc.auth import Clock
+from agent_orc.auth import Clock
 
 CLAUDE_PROJECTS = Path(".claude") / "projects"
 CLAUDE_TITLE_ENTRY = "ai-title"

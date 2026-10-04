@@ -3,7 +3,8 @@
     "tagline": "Agent Orchestrator",
     "logout": "Abmelden",
     "retry": "Erneut versuchen",
-    "language": "Sprache"
+    "language": "Sprache",
+    "newVersion": "Neue Version – neu laden"
   },
   "nav": {
     "sessions": "Agenten",
@@ -89,7 +90,11 @@
     "disconnected": "Verbindung zum Terminal beendet.",
     "reconnect": "Neu verbinden",
     "smaller": "Schrift kleiner",
-    "larger": "Schrift größer"
+    "larger": "Schrift größer",
+    "plainText": "Als Text (markieren & kopieren)",
+    "copyAll": "Alles kopieren",
+    "close": "Schließen",
+    "copied": "In die Zwischenablage kopiert."
   },
   "editor": {
     "search": "Suchen",

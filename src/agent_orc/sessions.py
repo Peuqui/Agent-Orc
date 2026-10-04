@@ -1,4 +1,4 @@
-"""Agent sessions, each one a tmux session on AI-Orc's own tmux server."""
+"""Agent sessions, each one a tmux session on Agent-Orc's own tmux server."""
 
 import hashlib
 import re
@@ -6,11 +6,11 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
-from ai_orc.config import CONVERSATION_PLACEHOLDER, NAME_PLACEHOLDER, AgentProfile
+from agent_orc.config import CONVERSATION_PLACEHOLDER, NAME_PLACEHOLDER, AgentProfile
 
 # Every agent gets its session id in this environment variable, so helpers it runs
 # (e.g. the status line command) know which session they belong to.
-SESSION_ENV = "AI_ORC_SESSION"
+SESSION_ENV = "AGENT_ORC_SESSION"
 PROFILE_OPTION = "@orc_profile"
 PATH_OPTION = "@orc_path"
 FIELD_SEPARATOR = "\t"
@@ -135,6 +135,16 @@ class SessionManager:
         if session is None:
             raise SessionError(f"tmux session {session_id} vanished right after start")
         return session
+
+    def text(self, session_id: str, history_lines: int) -> str:
+        """The session's screen and history as plain text; wrapped lines are joined again."""
+        result = self._tmux(
+            "capture-pane", "-p", "-J", "-S", f"-{history_lines}", "-t", exact_target(session_id),
+            check=False,
+        )  # fmt: skip
+        if result.returncode != 0:
+            raise SessionNotFoundError(session_id)
+        return result.stdout.rstrip("\n")
 
     def stop(self, session_id: str) -> None:
         result = self._tmux("kill-session", "-t", exact_target(session_id), check=False)

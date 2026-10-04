@@ -1,7 +1,7 @@
-# AI-Orc configuration.
-# This file is the single source of all default values; `ai-orc init` copies it to
-# ~/.config/ai-orc/config.yaml, where you adapt it.
-# The password lives separately in credentials.json, written by `ai-orc set-password`.
+# Agent-Orc configuration.
+# This file is the single source of all default values; `agent-orc init` copies it to
+# ~/.config/agent-orc/config.yaml, where you adapt it.
+# The password lives separately in credentials.json, written by `agent-orc set-password`.
 
 server:
   host: 127.0.0.1
@@ -49,19 +49,21 @@ terminal:
   # Text from the input field is sent first, Enter after this pause, so agents treat it
   # as typed text plus submit rather than as one pasted block.
   submit_delay_ms: 80
+  # How much history the plain-text view (for selecting and copying) shows.
+  text_history_lines: 5000
 
 tmux:
-  # Dedicated tmux server socket, so AI-Orc never touches your own tmux sessions.
-  socket_name: ai-orc
+  # Dedicated tmux server socket, so Agent-Orc never touches your own tmux sessions.
+  socket_name: agent-orc
 
 # Agent profiles. Command arguments may contain the placeholder {name},
 # which is replaced by the name of the folder the agent runs in.
-# Claude reports model and context usage through `ai-orc statusline` as its status line, and
-# whether it is working through hooks; both only for sessions started by AI-Orc.
+# Claude reports model and context usage through `agent-orc statusline` as its status line, and
+# whether it is working through hooks; both only for sessions started by Agent-Orc.
 agents:
   claude:
     label: Claude Code
-    start: [claude, --settings, &claude_settings '{"statusLine": {"type": "command", "command": "ai-orc statusline"}, "hooks": {"UserPromptSubmit": [{"hooks": [{"type": "command", "command": "ai-orc agent-busy"}]}], "Stop": [{"hooks": [{"type": "command", "command": "ai-orc agent-idle"}]}]}}', --remote-control, "{name}"]
+    start: [claude, --settings, &claude_settings '{"statusLine": {"type": "command", "command": "agent-orc statusline"}, "hooks": {"UserPromptSubmit": [{"hooks": [{"type": "command", "command": "agent-orc agent-busy"}]}], "Stop": [{"hooks": [{"type": "command", "command": "agent-orc agent-idle"}]}]}}', --remote-control, "{name}"]
     resume: [claude, --settings, *claude_settings, --continue, --remote-control, "{name}"]
     # Every earlier conversation in the folder (also from VS Code or a terminal) can be resumed.
     conversations:

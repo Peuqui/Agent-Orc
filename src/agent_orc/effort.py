@@ -48,7 +48,7 @@ def write_claude_project_effort(folder: Path, effort: str | None) -> None:
         settings[CLAUDE_EFFORT_KEY] = effort
     path.parent.mkdir(exist_ok=True)
     mode = path.stat().st_mode & 0o777 if path.exists() else NEW_SETTINGS_MODE
-    temporary = path.with_name(f"{path.name}.ai-orc-tmp")
+    temporary = path.with_name(f"{path.name}.agent-orc-tmp")
     descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, mode)
     with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
         json.dump(settings, handle, indent=2)

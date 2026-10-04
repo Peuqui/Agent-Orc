@@ -1,11 +1,11 @@
-<p align="center"><img src="frontend/brand/logo.svg" alt="AI-Ørc — Agent Orchestrator" width="440"></p>
+<p align="center"><img src="frontend/brand/logo.svg" alt="Agent-Ørc — Agent Orchestrator" width="440"></p>
 
 [English](README.md)
 
 > **Status: früh, aber benutzbar.** Getestet unter Linux mit Claude Code; weitere
 > Agent-Profile (Codex, Aider) sind vorbereitet, aber ungetestet.
 
-AI-Orc startet, beobachtet und beendet Sitzungen von Coding-Agenten
+Agent-Orc startet, beobachtet und beendet Sitzungen von Coding-Agenten
 (Claude Code, Codex, Aider, …) auf dem eigenen Linux-Rechner, bedient über
 eine handytaugliche Web-App (PWA).
 
@@ -32,42 +32,44 @@ dadurch zusätzlich in der Claude-App auf dem Handy.
 
 ## Installation
 
-AI-Orc ist ein Python-Paket, das die gebaute Web-App mitbringt. Bis es veröffentlicht ist,
+Agent-Orc ist ein Python-Paket, das die gebaute Web-App mitbringt. Bis es veröffentlicht ist,
 wird es aus dem Repository installiert:
 
 ```
-git clone https://github.com/Peuqui/AI-Orc.git && cd AI-Orc
-(cd frontend && npm ci && npm run build)    # erst die Web-App bauen; pip packt sie mit ein
-python3 -m venv venv && venv/bin/pip install .
-venv/bin/ai-orc init            # schreibt ~/.config/ai-orc/config.yaml
-venv/bin/ai-orc set-password    # schreibt ~/.config/ai-orc/credentials.json
-venv/bin/ai-orc serve           # http://127.0.0.1:8770
+git clone https://github.com/Peuqui/Agent-Orc.git && cd Agent-Orc
+deploy/install.sh          # baut die Web-App, installiert nach ~/.local/share/agent-orc/venv
+agent-orc init             # schreibt ~/.config/agent-orc/config.yaml
+agent-orc set-password     # schreibt ~/.config/agent-orc/credentials.json
+agent-orc serve            # http://127.0.0.1:8770
 ```
 
-Vor dem ersten Start `~/.config/ai-orc/config.yaml` anpassen, mindestens `files.base_dir`
+`deploy/install.sh` verlinkt den Befehl nach `~/.local/bin`, das im `PATH` liegen muss. Nach
+`git pull` erneut aufrufen, um zu aktualisieren; es installiert nur committeten Code.
+
+Vor dem ersten Start `~/.config/agent-orc/config.yaml` anpassen, mindestens `files.base_dir`
 (der Ordner mit deinen Projekten). Für einen ersten Test über reines HTTP
 `server.cookie_secure: false` setzen; hinter HTTPS bleibt es `true`.
 
 ### Als Dienst
 
-`deploy/ai-orc@.service` startet AI-Orc für einen Benutzer (`ai-orc` muss in dessen
+`deploy/agent-orc@.service` startet Agent-Orc für einen Benutzer (`agent-orc` muss in dessen
 `PATH` liegen):
 
 ```
-sudo cp deploy/ai-orc@.service /etc/systemd/system/
-sudo systemctl enable --now ai-orc@$USER
+sudo cp deploy/agent-orc@.service /etc/systemd/system/
+sudo systemctl enable --now agent-orc@$USER
 ```
 
 Ein Neustart des Dienstes lässt laufende Agenten am Leben; sie werden wieder aufgegriffen.
 
 ### Hinter nginx
 
-`deploy/nginx-location.conf` stellt AI-Orc unter `/ai-orc/` in einem HTTPS-Server-Block
+`deploy/nginx-location.conf` stellt Agent-Orc unter `/agent-orc/` in einem HTTPS-Server-Block
 bereit, einschließlich des Terminal-WebSockets.
 
 ## Sicherheit
 
-AI-Orc ermöglicht Fernzugriff auf Shell-Ebene. Es bringt einen eigenen Login
+Agent-Orc ermöglicht Fernzugriff auf Shell-Ebene. Es bringt einen eigenen Login
 mit und lauscht nur auf `127.0.0.1`. Ins Internet gehört es nur hinter HTTPS,
 am besten hinter einem Reverse Proxy mit zusätzlicher Authentifizierung.
 

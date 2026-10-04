@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from ai_orc.auth import Clock
+from agent_orc.auth import Clock
 
 
 class OutsideScopeError(PermissionError):

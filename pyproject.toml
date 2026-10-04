@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "ai-orc"
+name = "agent-orc"
 version = "0.1.0"
 description = "Start, watch and stop coding-agent CLI sessions (Claude Code, Codex, ...) from a mobile-friendly PWA"
 readme = "README.md"
@@ -25,12 +25,12 @@ dev = [
 ]
 
 [project.scripts]
-ai-orc = "ai_orc.cli:main"
+agent-orc = "agent_orc.cli:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/ai_orc"]
+packages = ["src/agent_orc"]
 # The built PWA is git-ignored but must ship in the wheel.
-artifacts = ["src/ai_orc/static/**"]
+artifacts = ["src/agent_orc/static/**"]
 
 [tool.ruff]
 line-length = 100

@@ -3,8 +3,8 @@ from pathlib import Path
 
 import pytest
 
-from ai_orc import files
-from ai_orc.config import default_config_text, parse_config
+from agent_orc import files
+from agent_orc.config import default_config_text, parse_config
 
 PATTERN = parse_config(default_config_text()).files.name_pattern
 MAX_BYTES = 1000

@@ -1,4 +1,4 @@
-// Simple stroke icons on a 24×24 grid, drawn for AI-Orc.
+// Simple stroke icons on a 24×24 grid, drawn for Agent-Orc.
 export const ICONS = {
   agents: 'M4 5h16v14H4z M7 9l3 3-3 3 M12 15h5',
   folder: 'M3 6h6l2 2h10v11H3z',
@@ -15,6 +15,7 @@ export const ICONS = {
   logout: 'M14 4h5v16h-5 M10 8l-4 4 4 4 M6 12h10',
   pencil: 'M4 20h4L19 9l-4-4L4 16z M13 7l4 4',
   search: 'M10.5 17a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13z M15.5 15.5L20 20',
+  copy: 'M8 8h11v12H8z M5 16V4h11',
 } as const
 
 export type IconName = keyof typeof ICONS

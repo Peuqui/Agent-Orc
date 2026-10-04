@@ -3,7 +3,8 @@
     "tagline": "Agent Orchestrator",
     "logout": "Log out",
     "retry": "Try again",
-    "language": "Language"
+    "language": "Language",
+    "newVersion": "New version – reload"
   },
   "nav": {
     "sessions": "Agents",
@@ -89,7 +90,11 @@
     "disconnected": "Terminal connection closed.",
     "reconnect": "Reconnect",
     "smaller": "Smaller text",
-    "larger": "Larger text"
+    "larger": "Larger text",
+    "plainText": "As text (select & copy)",
+    "copyAll": "Copy all",
+    "close": "Close",
+    "copied": "Copied to the clipboard."
   },
   "editor": {
     "search": "Search",

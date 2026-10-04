@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 from typing import Any
 
-from ai_orc.history import (
+from agent_orc.history import (
     READ_CHUNK_BYTES,
     RECENTLY_ACTIVE_SECONDS,
     claude_project_dir,

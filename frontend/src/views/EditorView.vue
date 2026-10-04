@@ -18,7 +18,7 @@ import { baseName, parentPath } from '../format'
 
 const props = defineProps<{ path: string }>()
 
-const FONT_SIZE_KEY = 'ai-orc-editor-font-size'
+const FONT_SIZE_KEY = 'agent-orc-editor-font-size'
 const DEFAULT_FONT_SIZE = 14
 const MIN_FONT_SIZE = 8
 const MAX_FONT_SIZE = 28

@@ -30,8 +30,8 @@
     <circle cx="256" cy="270" r="34" fill="none" stroke="#f1f5f9" stroke-width="13"/>
     <line x1="222" y1="312" x2="290" y2="228" stroke="#f1f5f9" stroke-width="13" stroke-linecap="round"/></g>
   <g transform="translate(150 78)">
-    <text x="0" y="10" font-family="Futura, Avenir, 'DejaVu Sans', sans-serif" font-size="52" font-weight="500" fill="#f1f5f9">AI-<tspan font-family="Baskerville, Georgia, 'Liberation Serif', 'Noto Serif', serif" font-size="56" font-style="italic" fill="#ef4444">Ø</tspan>rc</text>
+    <text x="0" y="10" font-family="Futura, Avenir, 'DejaVu Sans', sans-serif" font-size="52" font-weight="500" fill="#f1f5f9">Agent-<tspan font-family="Baskerville, Georgia, 'Liberation Serif', 'Noto Serif', serif" font-size="56" font-style="italic" fill="#ef4444">Ø</tspan>rc</text>
     <text x="2" y="38" font-family="Futura, Avenir, 'DejaVu Sans', sans-serif" font-size="14" font-weight="600" fill="#94a3b8" letter-spacing="3">AGENT ORCHESTRATOR</text>
   </g>
-  <rect x="150" y="132" width="230" height="1" fill="#64748b"/>
+  <rect x="150" y="132" width="250" height="1" fill="#64748b"/>
 </svg>

@@ -1,9 +1,9 @@
-"""HTTP API of AI-Orc."""
+"""HTTP API of Agent-Orc."""
 
 import asyncio
 import logging
 import time
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from dataclasses import asdict
 from pathlib import Path
@@ -15,25 +15,29 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from ai_orc import files
-from ai_orc.auth import Clock, Credentials, LoginGuard, TokenSigner, verify_password
-from ai_orc.config import Config, TerminalConfig
-from ai_orc.context import session_busy, session_status
-from ai_orc.effort import EFFORT_STORES, InvalidEffortError
-from ai_orc.history import CONVERSATION_SOURCES, ConversationNotFoundError
-from ai_orc.scope import AccessScope, OutsideScopeError
-from ai_orc.sessions import (
+from agent_orc import files
+from agent_orc.auth import Clock, Credentials, LoginGuard, TokenSigner, verify_password
+from agent_orc.config import Config, TerminalConfig
+from agent_orc.context import session_busy, session_status
+from agent_orc.effort import EFFORT_STORES, InvalidEffortError
+from agent_orc.history import CONVERSATION_SOURCES, ConversationNotFoundError
+from agent_orc.scope import AccessScope, OutsideScopeError
+from agent_orc.sessions import (
     AgentSession,
     SessionAlreadyRunningError,
     SessionManager,
     SessionNotFoundError,
     UnknownProfileError,
 )
-from ai_orc.terminal import bridge
-from ai_orc.trash import RestoreConflictError, Trash, TrashEntryNotFoundError, home_trash_dir
-from ai_orc.trust import FOLDER_TRUST
+from agent_orc.terminal import bridge
+from agent_orc.trash import RestoreConflictError, Trash, TrashEntryNotFoundError, home_trash_dir
+from agent_orc.trust import FOLDER_TRUST
 
-SESSION_COOKIE = "ai_orc_session"
+SESSION_COOKIE = "agent_orc_session"
+# Written by the frontend build next to index.html (frontend/vite.config.ts); sent with every
+# response, so an open app notices that a newer build has been installed.
+BUILD_ID_FILE = "build-id.txt"
+BUILD_ID_HEADER = "X-Build-Id"
 # Custom WebSocket close codes (4000-4999 are free for applications).
 WS_CLOSE_UNAUTHORIZED = 4401
 WS_CLOSE_FORBIDDEN_ORIGIN = 4403
@@ -179,7 +183,7 @@ def create_app(
         watcher.cancel()
 
     app = FastAPI(
-        title="AI-Orc", docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan
+        title="Agent-Orc", docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan
     )
 
     for error_type, status_code in ERROR_STATUS.items():
@@ -346,6 +350,11 @@ def create_app(
             return {"effort": None}
         return {"effort": EFFORT_STORES[agent.effort.store].read(scope.resolve(path))}
 
+    @app.get("/api/sessions/{session_id}/text", dependencies=authenticated)
+    def session_text(session_id: str) -> dict[str, str]:
+        """Plain text of the terminal, for selecting and copying on a phone."""
+        return {"text": sessions.text(session_id, config.terminal.text_history_lines)}
+
     @app.delete(
         "/api/sessions/{session_id}",
         dependencies=authenticated,
@@ -424,6 +433,16 @@ def create_app(
         trash.empty()
 
     if static_dir is not None:
+        build_id = (static_dir / BUILD_ID_FILE).read_text(encoding="utf-8")
+
+        @app.middleware("http")
+        async def send_build_id(
+            request: Request, call_next: Callable[[Request], Awaitable[Response]]
+        ) -> Response:
+            response = await call_next(request)
+            response.headers[BUILD_ID_HEADER] = build_id
+            return response
+
         # Mounted last, so the API routes above take precedence.
         app.mount("/", StaticFiles(directory=static_dir, html=True), name="pwa")
 

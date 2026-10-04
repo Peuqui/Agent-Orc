@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { FitAddon } from '@xterm/addon-fit'
+import { Unicode11Addon } from '@xterm/addon-unicode11'
 import { Terminal } from '@xterm/xterm'
 import '@xterm/xterm/css/xterm.css'
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { api, terminalUrl, type Modifier, type TerminalSettings } from '../api'
 import AppIcon from '../components/AppIcon.vue'
@@ -14,7 +16,7 @@ import { baseName } from '../format'
 
 const props = defineProps<{ id: string }>()
 
-const FONT_SIZE_KEY = 'ai-orc-terminal-font-size'
+const FONT_SIZE_KEY = 'agent-orc-terminal-font-size'
 const DEFAULT_FONT_SIZE = 14
 const MIN_FONT_SIZE = 8
 const MAX_FONT_SIZE = 28
@@ -25,6 +27,7 @@ const CTRL_OFFSET = 64
 const CTRL_RANGE_END = 95
 
 const router = useRouter()
+const { t } = useI18n()
 const toast = useToast()
 const { sessions } = useSessions()
 
@@ -35,6 +38,31 @@ const text = ref('')
 const connected = ref(false)
 const fontSize = ref(Number(localStorage.getItem(FONT_SIZE_KEY)) || DEFAULT_FONT_SIZE)
 
+// Plain-text view: the canvas terminal cannot be selected on a phone, ordinary text can.
+const plainText = ref<string | null>(null)
+const plainTextBox = ref<HTMLElement>()
+
+async function showPlainText(): Promise<void> {
+  try {
+    plainText.value = (await api.sessionText(props.id)).text
+    await nextTick()
+    // Newest output is at the end.
+    plainTextBox.value?.scrollTo({ top: plainTextBox.value.scrollHeight })
+  } catch (error) {
+    toast.error(error)
+  }
+}
+
+async function copyPlainText(): Promise<void> {
+  if (plainText.value === null) return
+  try {
+    await navigator.clipboard.writeText(plainText.value)
+    toast.info(t('terminal.copied'))
+  } catch (error) {
+    toast.error(error)
+  }
+}
+
 const session = computed(() => sessions.value.find((candidate) => candidate.id === props.id))
 const name = computed(() => (session.value ? baseName(session.value.path) : props.id))
 
@@ -43,6 +71,8 @@ const terminal = new Terminal({
   fontFamily: 'ui-monospace, "Cascadia Mono", "DejaVu Sans Mono", monospace',
   cursorBlink: true,
   scrollback: SCROLLBACK_LINES,
+  // The unicode API of the addon below is still marked as proposed.
+  allowProposedApi: true,
   theme: {
     background: '#0f172a',
     foreground: '#f1f5f9',
@@ -52,6 +82,10 @@ const terminal = new Terminal({
 })
 const fit = new FitAddon()
 terminal.loadAddon(fit)
+// Emoji are two cells wide in the agents' output; xterm's default (Unicode 6) counts one and
+// shifts every following character.
+terminal.loadAddon(new Unicode11Addon())
+terminal.unicode.activeVersion = '11'
 let socket: WebSocket | null = null
 const resizeObserver = new ResizeObserver(() => fit.fit())
 
@@ -186,9 +220,26 @@ onBeforeUnmount(() => {
         :window="session.context_window"
       />
       <span class="size-2.5 rounded-full" :class="connected ? 'bg-red-500' : 'bg-slate-600'" />
+      <button class="btn-icon" :aria-label="$t('terminal.plainText')" :title="$t('terminal.plainText')" @click="showPlainText">
+        <AppIcon name="copy" />
+      </button>
       <button class="btn-icon text-sm" :aria-label="$t('terminal.smaller')" @click="changeFontSize(-1)">A−</button>
       <button class="btn-icon text-base" :aria-label="$t('terminal.larger')" @click="changeFontSize(1)">A+</button>
     </header>
+
+    <div v-if="plainText !== null" class="fixed inset-0 z-40 flex flex-col bg-slate-900">
+      <header class="flex items-center gap-2 border-b border-slate-800 px-2 py-1">
+        <h2 class="flex-1 font-semibold">{{ $t('terminal.plainText') }}</h2>
+        <button class="btn-primary min-h-10 px-3" @click="copyPlainText">{{ $t('terminal.copyAll') }}</button>
+        <button class="btn-secondary min-h-10 px-3" @click="plainText = null">{{ $t('terminal.close') }}</button>
+      </header>
+      <pre
+        ref="plainTextBox"
+        class="flex-1 overflow-auto p-3 font-mono whitespace-pre-wrap break-words text-slate-200 select-text"
+        :style="{ fontSize: `${fontSize}px` }"
+        >{{ plainText }}</pre
+      >
+    </div>
 
     <div class="relative min-h-0 flex-1 px-1 pt-1">
       <div ref="container" class="h-full w-full" />

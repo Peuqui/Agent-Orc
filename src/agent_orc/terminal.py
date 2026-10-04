@@ -12,7 +12,7 @@ from typing import Any
 
 from fastapi import WebSocket, WebSocketDisconnect
 
-from ai_orc.sessions import exact_target
+from agent_orc.sessions import exact_target
 
 TERM = "xterm-256color"
 READ_SIZE = 65536

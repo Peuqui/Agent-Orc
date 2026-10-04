@@ -2,13 +2,13 @@
 agent itself.
 
 Claude Code passes a JSON document to its status line command on every update. Sessions
-started by AI-Orc use `ai-orc statusline` as that command (see the claude profile in
+started by Agent-Orc use `agent-orc statusline` as that command (see the claude profile in
 default_config.yaml), which stores the document here, one file per session. The command
-learns its session from the environment variable AI-Orc sets for every agent.
+learns its session from the environment variable Agent-Orc sets for every agent.
 The window size thus always matches the model actually running, also after /model.
 
 Whether the agent is working comes from Claude's hooks: UserPromptSubmit runs
-`ai-orc agent-busy`, Stop runs `ai-orc agent-idle`.
+`agent-orc agent-busy`, Stop runs `agent-orc agent-idle`.
 """
 
 import json
@@ -16,7 +16,7 @@ import os
 from pathlib import Path
 from typing import Any
 
-from ai_orc.sessions import AgentSession
+from agent_orc.sessions import AgentSession
 
 STATUS_SUFFIX = ".json"
 ACTIVITY_SUFFIX = ".activity"
@@ -28,7 +28,7 @@ CONTEXT_FIELDS = ("input_tokens", "cache_creation_input_tokens", "cache_read_inp
 
 def status_dir() -> Path:
     state_home = os.environ.get("XDG_STATE_HOME") or str(Path.home() / ".local" / "state")
-    return Path(state_home) / "ai-orc" / "status"
+    return Path(state_home) / "agent-orc" / "status"
 
 
 def status_file(session_id: str) -> Path:

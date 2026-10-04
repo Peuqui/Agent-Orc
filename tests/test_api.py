@@ -12,12 +12,12 @@ from fastapi.testclient import TestClient
 from starlette.testclient import WebSocketTestSession
 from starlette.websockets import WebSocketDisconnect
 
-from ai_orc.api import create_app
-from ai_orc.auth import new_credentials
-from ai_orc.config import Config, default_config_text
-from ai_orc.context import store_activity, store_status
-from ai_orc.history import claude_project_dir
-from ai_orc.sessions import SESSION_ENV
+from agent_orc.api import BUILD_ID_FILE, BUILD_ID_HEADER, create_app
+from agent_orc.auth import new_credentials
+from agent_orc.config import Config, default_config_text
+from agent_orc.context import store_activity, store_status
+from agent_orc.history import claude_project_dir
+from agent_orc.sessions import SESSION_ENV
 from tests.conftest import FakeClock
 
 PASSWORD = "richtig-langes-passwort"
@@ -241,11 +241,17 @@ def test_empty_trash(client: TestClient, home: Path) -> None:
 def test_serves_pwa_next_to_api(config: Config, clock: FakeClock, tmp_path: Path) -> None:
     static = tmp_path / "static"
     static.mkdir()
-    (static / "index.html").write_text("<title>AI-Orc</title>")
+    (static / "index.html").write_text("<title>Agent-Orc</title>")
+    (static / BUILD_ID_FILE).write_text("build-1")
     app = create_app(config, new_credentials(PASSWORD), static_dir=static, clock=clock)
     client = TestClient(app)
-    assert "AI-Orc" in client.get("/").text
-    assert client.get("/api/me").status_code == 401
+    page = client.get("/")
+    assert "Agent-Orc" in page.text
+    assert page.headers[BUILD_ID_HEADER] == "build-1"
+    me = client.get("/api/me")
+    assert me.status_code == 401
+    # Also on API answers, which an open app keeps polling.
+    assert me.headers[BUILD_ID_HEADER] == "build-1"
 
 
 ORIGIN = {"origin": "http://testserver"}
@@ -504,7 +510,7 @@ def test_pending_effort_applies_when_the_agent_is_done(
     config: Config, clock: FakeClock, home: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
-    monkeypatch.setattr("ai_orc.api.PENDING_EFFORT_CHECK_SECONDS", 0.1)
+    monkeypatch.setattr("agent_orc.api.PENDING_EFFORT_CHECK_SECONDS", 0.1)
     folder = home / "projects"
     # The context manager runs the app's lifespan, i.e. the background watcher.
     with TestClient(
@@ -572,3 +578,14 @@ def test_resume_a_chosen_earlier_conversation(
             break
         time.sleep(0.1)
     assert f"resumed {conversation_id}" in pane
+
+
+def test_session_text_for_copying(client: TestClient, home: Path) -> None:
+    session_id = start_shell(client, home)
+    for _ in range(50):
+        text = client.get(f"/api/sessions/{session_id}/text").json()["text"]
+        if "READY" in text:
+            break
+        time.sleep(0.1)
+    assert "READY" in text
+    assert client.get("/api/sessions/unknown/text").status_code == 404
