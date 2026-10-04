@@ -89,6 +89,22 @@ const reorder = useReorder({
 })
 const drag = reorder.drag
 
+// Named workspaces, opened again with one tap; the unnamed one of a browser tab is not listed.
+const workspaceNames = ref<string[]>([])
+const deletingWorkspace = ref<string | null>(null)
+
+function loadWorkspaceNames(): void {
+  api.workspaces().then((named) => (workspaceNames.value = Object.keys(named).sort()), toast.error)
+}
+
+loadWorkspaceNames()
+
+function confirmDeleteWorkspace(): void {
+  const workspace = deletingWorkspace.value
+  deletingWorkspace.value = null
+  if (workspace !== null) api.deleteWorkspace(workspace).then(loadWorkspaceNames, toast.error)
+}
+
 async function run(action: () => Promise<unknown>): Promise<void> {
   try {
     await action()
@@ -122,6 +138,25 @@ function resume(session: AgentSession): void {
     <RouterLink to="/files" class="btn-primary mb-4 w-full sm:w-auto">
       <AppIcon name="plus" />{{ $t('sessions.startNew') }}
     </RouterLink>
+    <div v-if="workspaceNames.length > 0" class="mb-4 flex flex-wrap items-center gap-2">
+      <span class="text-sm text-slate-400">{{ $t('workspace.saved') }}</span>
+      <span v-for="workspace in workspaceNames" :key="workspace" class="card flex items-center">
+        <RouterLink
+          :to="{ path: '/workspace', query: { name: workspace } }"
+          class="flex items-center gap-1.5 py-1 pl-3 text-sm hover:text-slate-100"
+        >
+          <AppIcon name="workspace" />{{ workspace }}
+        </RouterLink>
+        <button
+          class="px-2.5 py-1 text-slate-500 hover:text-slate-200"
+          :aria-label="$t('workspace.delete')"
+          :title="$t('workspace.delete')"
+          @click="deletingWorkspace = workspace"
+        >
+          ×
+        </button>
+      </span>
+    </div>
     <p v-if="sorted.length === 0" class="card p-6 text-center text-slate-400">{{ $t('sessions.empty') }}</p>
 
     <!-- As many cards side by side as fit, before the page has to scroll; one column on phones.
@@ -257,6 +292,15 @@ function resume(session: AgentSession): void {
       danger
       @confirm="confirmStop"
       @close="stopping = null"
+    />
+    <ConfirmDialog
+      v-if="deletingWorkspace"
+      :title="$t('workspace.delete')"
+      :message="$t('workspace.confirmDelete', { name: deletingWorkspace })"
+      :confirm-label="$t('workspace.delete')"
+      danger
+      @confirm="confirmDeleteWorkspace"
+      @close="deletingWorkspace = null"
     />
   </section>
 </template>

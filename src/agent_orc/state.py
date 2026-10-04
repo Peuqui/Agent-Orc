@@ -3,8 +3,10 @@
 import json
 import os
 from pathlib import Path
+from typing import Any
 
 CARD_ORDER_FILE = "card-order.json"
+WORKSPACES_FILE = "workspaces.json"
 
 
 def state_dir() -> Path:
@@ -32,3 +34,16 @@ def read_card_order() -> list[str]:
 
 def write_card_order(folders: list[str]) -> None:
     write_atomically(state_dir() / CARD_ORDER_FILE, json.dumps(folders))
+
+
+def read_workspaces() -> dict[str, Any]:
+    """Named workspaces (open agents, columns, widths) by name; empty until one is named."""
+    path = state_dir() / WORKSPACES_FILE
+    if not path.is_file():
+        return {}
+    workspaces: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
+    return workspaces
+
+
+def write_workspaces(workspaces: dict[str, Any]) -> None:
+    write_atomically(state_dir() / WORKSPACES_FILE, json.dumps(workspaces))

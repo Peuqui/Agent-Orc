@@ -54,6 +54,17 @@ export interface Reasoning {
 /** Where Whisper transcribes: the GPU is near instant, the CPU slower but always there. */
 export type DictationDevice = 'cuda' | 'cpu'
 
+/** Several agents side by side, as the workspace page arranges them. */
+export interface Workspace {
+  /** Open agents, in column order. */
+  tabs: string[]
+  /** How many columns fill the screen. */
+  visible: number
+  /** Columns set wider or narrower by dragging their divider, as a share of the screen width. */
+  widths: Record<string, number>
+  active: string | null
+}
+
 export interface FileEntry {
   name: string
   path: string
@@ -226,6 +237,12 @@ export const api = {
   /** Folders of the agent cards in the order the user arranged them (kept on the server). */
   cardOrder: () => request<string[]>('GET', 'card-order'),
   arrangeCards: (folders: string[]) => request<void>('PUT', 'card-order', { body: { folders } }),
+
+  /** Named workspaces by name; an unnamed one stays in its browser tab. */
+  workspaces: () => request<Record<string, Workspace>>('GET', 'workspaces'),
+  storeWorkspace: (name: string, workspace: Workspace) =>
+    request<void>('PUT', `workspaces/${encodeURIComponent(name)}`, { body: workspace }),
+  deleteWorkspace: (name: string) => request<void>('DELETE', `workspaces/${encodeURIComponent(name)}`),
 
   /** Store a file in the agent's folder; returns its path there, as the agent reads it. */
   attach: (sessionId: string, file: File) =>

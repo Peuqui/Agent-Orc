@@ -37,7 +37,7 @@ from agent_orc.sessions import (
     SessionNotFoundError,
     UnknownProfileError,
 )
-from agent_orc.state import read_card_order, write_card_order
+from agent_orc.state import read_card_order, read_workspaces, write_card_order, write_workspaces
 from agent_orc.terminal import bridge
 from agent_orc.trash import RestoreConflictError, Trash, TrashEntryNotFoundError, home_trash_dir
 from agent_orc.trust import FOLDER_TRUST
@@ -134,6 +134,18 @@ class EffortRequest(BaseModel):
 class CardOrderRequest(BaseModel):
     # Folders of the agent cards, in the order the user arranged them.
     folders: list[str]
+
+
+class Workspace(BaseModel):
+    """Several agents side by side, as the workspace page arranges them."""
+
+    # Open agents (session ids), in column order.
+    tabs: list[str]
+    # How many columns fill the screen.
+    visible: int
+    # Columns set wider or narrower, as a share of the screen width.
+    widths: dict[str, float]
+    active: str | None
 
 
 class TrashEntryRequest(BaseModel):
@@ -322,6 +334,27 @@ def create_app(
     @app.put("/api/card-order", dependencies=authenticated, status_code=status.HTTP_204_NO_CONTENT)
     def arrange_cards(body: CardOrderRequest) -> None:
         write_card_order(body.folders)
+
+    @app.get("/api/workspaces", dependencies=authenticated)
+    def workspaces() -> dict[str, Workspace]:
+        """Named workspaces, kept on the server so every device and browser tab can open them."""
+        return {name: Workspace(**stored) for name, stored in read_workspaces().items()}
+
+    @app.put(
+        "/api/workspaces/{name}", dependencies=authenticated, status_code=status.HTTP_204_NO_CONTENT
+    )
+    def store_workspace(name: str, body: Workspace) -> None:
+        stored = read_workspaces()
+        stored[name] = body.model_dump()
+        write_workspaces(stored)
+
+    @app.delete(
+        "/api/workspaces/{name}", dependencies=authenticated, status_code=status.HTTP_204_NO_CONTENT
+    )
+    def delete_workspace(name: str) -> None:
+        stored = read_workspaces()
+        stored.pop(name, None)
+        write_workspaces(stored)
 
     @app.get("/api/quota", dependencies=authenticated)
     def quota() -> list[dict[str, Any]]:

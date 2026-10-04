@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
+import { api, type Workspace } from '../api'
 import AppIcon from '../components/AppIcon.vue'
 import { moveInList, useReorder } from '../composables/useReorder'
 import { useSessions } from '../composables/useSessions'
+import { useToast } from '../composables/useToast'
 import { baseName } from '../format'
 
 // Several agents side by side. Every open agent is one column: its tab is the head of that
@@ -11,20 +14,19 @@ import { baseName } from '../format'
 // how many columns fill the screen; further ones follow to the right (horizontal scrolling).
 // Each column is the terminal page in an iframe; the iframes never move in the DOM (that
 // would reload them), only their grid column changes.
-const STORAGE_KEY = 'agent-orc-columns'
+// The workspace of this browser tab, so each tab can show other agents; a reload keeps it. A
+// named workspace lives on the server (every device and tab can open it by name), the tab then
+// only remembers the name.
+const TAB_STATE_KEY = 'agent-orc-workspace-tab'
 const MIN_VISIBLE = 1
 // Narrowest and widest column a divider can set, as a share of the screen width.
 const MIN_WIDTH_SHARE = 0.1
 const MAX_WIDTH_SHARE = 1
 
-interface Workspace {
-  /** Open agents, in column order. */
-  tabs: string[]
-  /** How many columns fill the screen. */
-  visible: number
-  /** Columns set wider or narrower by dragging their divider, as a share of the screen width. */
-  widths: Record<string, number>
-  active: string | null
+interface TabState {
+  /** Name of the workspace this tab shows; null for its own unnamed one. */
+  name: string | null
+  unnamed: Workspace
 }
 
 interface Resize {
@@ -34,23 +36,32 @@ interface Resize {
   startShare: number
 }
 
-
 const route = useRoute()
 const router = useRouter()
+const toast = useToast()
+const { t } = useI18n()
 const { sessions } = useSessions()
 
-function loadWorkspace(): Workspace {
-  const stored = localStorage.getItem(STORAGE_KEY)
-  return stored
-    ? (JSON.parse(stored) as Workspace)
-    : { tabs: [], visible: MIN_VISIBLE, widths: {}, active: null }
+function emptyWorkspace(): Workspace {
+  return { tabs: [], visible: MIN_VISIBLE, widths: {}, active: null }
 }
 
-const workspace = ref<Workspace>(loadWorkspace())
-watch(workspace, (value) => localStorage.setItem(STORAGE_KEY, JSON.stringify(value)), { deep: true })
+function loadTabState(): TabState {
+  const stored = sessionStorage.getItem(TAB_STATE_KEY)
+  return stored ? (JSON.parse(stored) as TabState) : { name: null, unnamed: emptyWorkspace() }
+}
+
+const tabState = loadTabState()
+const name = ref<string | null>(null)
+/** The name field; becomes the name when it is left. */
+const nameInput = ref('')
+const savedNames = ref<string[]>([])
+const workspace = ref<Workspace>(emptyWorkspace())
+// Nothing is stored before the workspace has been loaded, or an empty one would replace it.
+const ready = ref(false)
 
 // Opened order of the iframes, apart from the column order: only appended and removed.
-const frameIds = ref<string[]>([...workspace.value.tabs])
+const frameIds = ref<string[]>([])
 const frames = ref<HTMLIFrameElement[]>([])
 const heads = ref<HTMLElement[]>([])
 const resize = ref<Resize | null>(null)
@@ -180,16 +191,90 @@ watch(
   },
 )
 
+/** Store the workspace where it lives; a divider is stored once it is let go. */
+function persist(): void {
+  if (!ready.value || resize.value !== null) return
+  if (name.value === null) tabState.unnamed = workspace.value
+  else void api.storeWorkspace(name.value, workspace.value).catch(toast.error)
+  tabState.name = name.value
+  sessionStorage.setItem(TAB_STATE_KEY, JSON.stringify(tabState))
+}
+
+watch(workspace, persist, { deep: true })
+watch(resize, persist)
+
+/** The address names the workspace, so a reload or a bookmark opens the same one. */
+function showName(): void {
+  void router.replace({ path: '/workspace', query: name.value === null ? {} : { name: name.value } })
+}
+
 // Opened from the agent list, or a new agent started from the "+" menu.
+function openRequested(): void {
+  const id = route.query.open
+  if (typeof id !== 'string') return
+  open(id)
+  showName()
+}
+
+watch(() => route.query.open, () => ready.value && openRequested())
+
+async function load(): Promise<void> {
+  const requested = route.query.name
+  name.value = typeof requested === 'string' && requested !== '' ? requested : tabState.name
+  nameInput.value = name.value ?? ''
+  const named = await api.workspaces()
+  savedNames.value = Object.keys(named)
+  workspace.value = name.value === null ? tabState.unnamed : (named[name.value] ?? emptyWorkspace())
+  frameIds.value = [...workspace.value.tabs]
+  ready.value = true
+  if (typeof route.query.open === 'string') openRequested()
+  else showName()
+}
+
+load().catch(toast.error)
+
+// Another address while the page stays open: a different name loads that workspace, none
+// shows the current name again.
 watch(
-  () => route.query.open,
-  (id) => {
-    if (typeof id !== 'string') return
-    open(id)
-    void router.replace({ path: '/workspace' })
+  () => route.query.name,
+  (requested) => {
+    if (!ready.value || requested === name.value) return
+    if (typeof requested !== 'string' || requested === '') {
+      showName()
+      return
+    }
+    ready.value = false
+    load().catch(toast.error)
   },
-  { immediate: true },
 )
+
+/** Naming stores the workspace on the server; renaming moves it there. */
+async function rename(): Promise<void> {
+  const wanted = nameInput.value.trim()
+  const current = name.value
+  if (wanted === '' || wanted === current) {
+    nameInput.value = current ?? ''
+    return
+  }
+  if (savedNames.value.includes(wanted)) {
+    toast.info(t('workspace.nameTaken', { name: wanted }))
+    nameInput.value = current ?? ''
+    return
+  }
+  try {
+    await api.storeWorkspace(wanted, workspace.value)
+    if (current !== null) await api.deleteWorkspace(current)
+  } catch (error) {
+    toast.error(error)
+    return
+  }
+  savedNames.value = [...savedNames.value.filter((saved) => saved !== current), wanted]
+  name.value = wanted
+  nameInput.value = wanted
+  if (current === null) tabState.unnamed = emptyWorkspace()
+  persist()
+  showName()
+}
 </script>
 
 <template>
@@ -198,7 +283,16 @@ watch(
       <button class="btn-icon" :aria-label="$t('terminal.back')" @click="router.push('/sessions')">
         <AppIcon name="up" class="-rotate-90" />
       </button>
-      <h1 class="flex-1 truncate font-semibold">{{ $t('nav.workspace') }}</h1>
+      <input
+        v-model="nameInput"
+        class="min-w-0 flex-1 rounded-md bg-transparent px-2 py-1 font-semibold placeholder:font-normal placeholder:text-slate-500 hover:bg-slate-800 focus:bg-slate-800 focus:outline-none"
+        :placeholder="$t('workspace.unnamed')"
+        :title="$t('workspace.nameHint')"
+        :aria-label="$t('workspace.nameHint')"
+        enterkeyhint="done"
+        @keydown.enter="($event.target as HTMLInputElement).blur()"
+        @change="rename"
+      />
       <div class="relative">
         <button class="btn-icon" :aria-label="$t('workspace.add')" :title="$t('workspace.add')" @click="picking = !picking">
           <AppIcon name="plus" />
@@ -228,7 +322,7 @@ watch(
       </div>
     </header>
 
-    <p v-if="workspace.tabs.length === 0" class="p-6 text-center text-slate-400">{{ $t('workspace.empty') }}</p>
+    <p v-if="ready && workspace.tabs.length === 0" class="p-6 text-center text-slate-400">{{ $t('workspace.empty') }}</p>
 
     <!-- One scrolling row; 100cqw is its width, so N columns fill it exactly. -->
     <div

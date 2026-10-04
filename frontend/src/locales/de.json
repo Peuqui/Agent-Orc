@@ -161,7 +161,13 @@
     "allOpen": "Alle laufenden Agenten sind schon offen.",
     "move": "Ziehen zum Verschieben",
     "empty": "Noch kein Agent offen – über „+“ oben einen hinzufügen.",
-    "resize": "Ziehen ändert die Breite, Doppelklick setzt sie zurück"
+    "resize": "Ziehen ändert die Breite, Doppelklick setzt sie zurück",
+    "unnamed": "Arbeitsfläche ohne Namen",
+    "nameHint": "Name eingeben speichert die Arbeitsfläche, dann lässt sie sich aus der Übersicht wieder öffnen",
+    "nameTaken": "Eine Arbeitsfläche „{name}“ gibt es schon.",
+    "saved": "Arbeitsflächen",
+    "delete": "Arbeitsfläche löschen",
+    "confirmDelete": "Arbeitsfläche „{name}“ löschen? Die Agenten laufen weiter."
   },
   "settings": {
     "title": "Einstellungen",

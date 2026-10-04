@@ -691,6 +691,20 @@ def test_card_order_is_kept(
     assert client.get("/api/card-order").json() == ["/w/b", "/w/a"]
 
 
+def test_named_workspaces_are_kept_and_deleted(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+    assert client.get("/api/workspaces").json() == {}
+    left = {"tabs": ["a", "b"], "visible": 2, "widths": {"a": 0.3}, "active": "b"}
+    assert client.put("/api/workspaces/Links", json=left).status_code == 204
+    right = {"tabs": [], "visible": 1, "widths": {}, "active": None}
+    assert client.put("/api/workspaces/Rechts", json=right).status_code == 204
+    assert client.get("/api/workspaces").json() == {"Links": left, "Rechts": right}
+    assert client.delete("/api/workspaces/Links").status_code == 204
+    assert client.get("/api/workspaces").json() == {"Rechts": right}
+
+
 def test_attachment_lands_in_the_agents_folder(client: TestClient, home: Path) -> None:
     session_id = start_shell(client, home)
     response = client.post(
