@@ -287,6 +287,15 @@ onBeforeUnmount(() => {
         :window="session.context_window"
       />
       <span class="size-2.5 rounded-full" :class="connected ? 'bg-red-500' : 'bg-slate-600'" />
+      <!-- What the agent changed; in the workspace it opens within the column (back returns). -->
+      <RouterLink
+        :to="`/changes/${encodeURIComponent(id)}`"
+        class="btn-icon"
+        :aria-label="$t('changes.open')"
+        :title="$t('changes.open')"
+      >
+        <AppIcon name="diff" />
+      </RouterLink>
       <button class="btn-icon" :aria-label="$t('terminal.plainText')" :title="$t('terminal.plainText')" @click="showPlainText">
         <AppIcon name="copy" />
       </button>

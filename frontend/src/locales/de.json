@@ -211,7 +211,7 @@
           "Kontingent oben: verbrauchte 5-Stunden- und Wochen-Quote von Claude, sobald eine Sitzung sie gemeldet hat.",
           "„Start“ auf der Karte: Freigabe-Modus, in dem der Agent startet – Fragen, Bearbeiten (Dateiänderungen ohne Nachfrage), Auto oder Planen. Voreinstellung ist Auto; gilt ab dem nächsten Start, im Agenten wechselt Shift+Tab.",
           "Fragt ein Agent um Erlaubnis, zeigt seine Karte den Befehl mit „Erlauben“ und „Ablehnen“. Im Terminal steht dieselbe Frage; wo zuerst geantwortet wird, das gilt.",
-          "„Änderungen“ (Zweig-Symbol) zeigt, was der Agent im Projekt geändert hat: geänderte, neue und gelöschte Dateien seit dem letzten Commit, ein Tipp zeigt den Diff."
+          "„Änderungen“ (Zweig-Symbol, auf der Karte und im Kopf jedes Terminals) zeigt, was der Agent im Projekt geändert hat: geänderte, neue und gelöschte Dateien seit dem letzten Commit, ein Tipp zeigt den Diff."
         ]
       },
       {

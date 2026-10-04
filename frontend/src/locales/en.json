@@ -211,7 +211,7 @@
           "Quota at the top: Claude's used five-hour and weekly limits, once a session has reported them.",
           "“Start” on the card: the permission mode the agent starts in – Ask, Edit (file edits without asking), Auto or Plan. Auto by default; applies from the next start, inside the agent Shift+Tab switches it.",
           "When an agent asks for permission, its card shows the command with “Allow” and “Deny”. The terminal asks the same; the first answer counts.",
-          "“Changes” (branch icon) shows what the agent changed in the project: changed, new and deleted files since the last commit; a tap shows the diff."
+          "“Changes” (branch icon, on the card and in the header of every terminal) shows what the agent changed in the project: changed, new and deleted files since the last commit; a tap shows the diff."
         ]
       },
       {
