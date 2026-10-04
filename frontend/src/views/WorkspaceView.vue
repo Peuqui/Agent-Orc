@@ -12,6 +12,10 @@ import { baseName } from '../format'
 // would reload them), only their grid column changes.
 const STORAGE_KEY = 'agent-orc-columns'
 const MIN_VISIBLE = 1
+// A mouse drag starts after this much movement; less is a click.
+const DRAG_THRESHOLD_PX = 8
+// A finger first holds a tab this long, so that swiping across the tabs still scrolls.
+const TOUCH_HOLD_MS = 400
 // Narrowest and widest column a divider can set, as a share of the screen width.
 const MIN_WIDTH_SHARE = 0.1
 const MAX_WIDTH_SHARE = 1
@@ -36,8 +40,12 @@ interface Resize {
 interface Drag {
   id: string
   pointerId: number
-  /** The tab it would be put in front of (null: at the end). */
-  before: string | null
+  startX: number
+  startY: number
+  /** False until the pointer has moved (mouse) or was held (finger) long enough. */
+  active: boolean
+  /** The tab whose place it takes when dropped. */
+  target: string | null
 }
 
 const route = useRoute()
@@ -149,33 +157,61 @@ function resetWidth(id: string): void {
   delete workspace.value.widths[id]
 }
 
-// Sorting: a tab is dragged by its grip; the columns follow, as they belong to the same grid.
-function onGripPointerDown(event: PointerEvent, id: string): void {
+// Sorting: a whole tab is dragged and takes the place of the tab it is dropped on (the others
+// move up); the columns follow, as they belong to the same grid.
+let holdTimer: number | undefined
+
+function startDrag(element: HTMLElement): void {
+  if (drag.value === null) return
+  drag.value.active = true
+  // Keeps the pointer events coming while the pointer leaves the tab.
+  element.setPointerCapture(drag.value.pointerId)
+}
+
+function onTabPointerDown(event: PointerEvent, id: string): void {
   if (event.button !== 0) return
-  drag.value = { id, pointerId: event.pointerId, before: null }
-  // Keeps the pointer events coming while the pointer leaves the grip.
-  const grip = event.currentTarget as HTMLElement
-  grip.setPointerCapture(event.pointerId)
+  const element = event.currentTarget as HTMLElement
+  const { pointerId, clientX, clientY } = event
+  drag.value = { id, pointerId, startX: clientX, startY: clientY, active: false, target: null }
+  if (event.pointerType === 'touch') holdTimer = window.setTimeout(() => startDrag(element), TOUCH_HOLD_MS)
 }
 
-function onGripPointerMove(event: PointerEvent): void {
+function onTabPointerMove(event: PointerEvent): void {
   const current = drag.value
   if (current === null || event.pointerId !== current.pointerId) return
-  const next = workspace.value.tabs.find((id) => {
-    const box = headOf(id)?.getBoundingClientRect()
-    return box !== undefined && event.clientX < box.left + box.width / 2
-  })
-  current.before = next ?? null
+  if (!current.active) {
+    const moved = Math.hypot(event.clientX - current.startX, event.clientY - current.startY)
+    if (moved < DRAG_THRESHOLD_PX) return
+    // A finger moving before the hold is up swipes the row instead.
+    if (event.pointerType === 'touch') return endDrag()
+    startDrag(event.currentTarget as HTMLElement)
+  }
+  current.target =
+    workspace.value.tabs.find((id) => {
+      const box = headOf(id)?.getBoundingClientRect()
+      return box !== undefined && event.clientX >= box.left && event.clientX < box.right
+    }) ?? null
 }
 
-function onGripPointerUp(event: PointerEvent): void {
+function onTabPointerUp(event: PointerEvent): void {
   const current = drag.value
   if (current === null || event.pointerId !== current.pointerId) return
-  drag.value = null
-  if (current.before === current.id) return
+  endDrag()
+  if (!current.active || current.target === null || current.target === current.id) return
   const { tabs } = workspace.value
+  const to = tabs.indexOf(current.target)
   tabs.splice(tabs.indexOf(current.id), 1)
-  tabs.splice(current.before === null ? tabs.length : tabs.indexOf(current.before), 0, current.id)
+  tabs.splice(to, 0, current.id)
+}
+
+function endDrag(): void {
+  window.clearTimeout(holdTimer)
+  drag.value = null
+}
+
+// While a finger drags a tab, the row must not scroll along.
+function onTabTouchMove(event: TouchEvent): void {
+  if (drag.value?.active) event.preventDefault()
 }
 
 // The iframes share this page's origin, so their pointer events can be watched directly: a
@@ -264,29 +300,30 @@ watch(
           :key="`head-${id}`"
           ref="heads"
           :data-tab-id="id"
-          class="flex snap-start items-center gap-1 border-b-2 bg-slate-900 px-1 py-1 text-sm"
+          class="flex cursor-grab touch-pan-x snap-start items-center gap-1 border-b-2 bg-slate-900 py-1 pl-2 text-sm select-none [-webkit-touch-callout:none]"
           :class="[
             workspace.active === id ? 'border-red-500 text-slate-100' : 'border-slate-800 text-slate-400',
-            drag && drag.before === id && drag.id !== id ? 'shadow-[inset_3px_0_0_0] shadow-amber-400' : '',
-            drag?.id === id ? 'opacity-50' : '',
+            drag?.active && drag.target === id && drag.id !== id ? 'ring-2 ring-amber-400 ring-inset' : '',
+            drag?.active && drag.id === id ? 'opacity-50' : '',
           ]"
           :style="{ gridColumn: column(id), gridRow: '1' }"
+          :title="$t('workspace.move')"
+          @pointerdown="onTabPointerDown($event, id)"
+          @pointermove="onTabPointerMove"
+          @pointerup="onTabPointerUp"
+          @pointercancel="endDrag"
+          @touchmove="onTabTouchMove"
+          @contextmenu.prevent
         >
-          <span
-            class="cursor-grab touch-none px-1 text-slate-500 select-none"
-            :aria-label="$t('workspace.move')"
-            :title="$t('workspace.move')"
-            @pointerdown="onGripPointerDown($event, id)"
-            @pointermove="onGripPointerMove"
-            @pointerup="onGripPointerUp"
-            @pointercancel="drag = null"
-          >
-            ⠿
-          </span>
           <button class="min-w-0 flex-1 truncate text-left font-medium" @click="activate(id)">
             {{ tabName(id) }}
           </button>
-          <button class="px-2 text-slate-500 hover:text-slate-200" :aria-label="$t('workspace.close')" @click="closeTab(id)">
+          <button
+            class="px-2 text-slate-500 hover:text-slate-200"
+            :aria-label="$t('workspace.close')"
+            @pointerdown.stop
+            @click="closeTab(id)"
+          >
             ×
           </button>
         </div>
