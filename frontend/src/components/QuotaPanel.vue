@@ -24,15 +24,21 @@ function detail(window: QuotaWindow): string {
 </script>
 
 <template>
-  <div v-for="quota in quotas" :key="quota.profile" class="card mb-4 flex flex-col gap-2 p-4">
-    <h2 class="text-sm font-semibold text-slate-300">{{ $t('quota.title', { agent: quota.label }) }}</h2>
+  <div
+    v-for="quota in quotas"
+    :key="quota.profile"
+    class="card mb-4 flex flex-col gap-x-6 gap-y-1 px-4 py-2.5 md:flex-row md:items-center"
+  >
+    <h2 class="shrink-0 text-sm font-semibold text-slate-300">{{ $t('quota.title', { agent: quota.label }) }}</h2>
     <p v-if="Object.keys(quota.windows).length === 0" class="text-xs text-slate-500">{{ $t('quota.none') }}</p>
-    <UsageBar
-      v-for="(usage, name) in quota.windows"
-      :key="name"
-      :label="windowLabel(String(name))"
-      :percent="usage.used_percentage"
-      :detail="detail(usage)"
-    />
+    <div class="grid flex-1 gap-x-6 gap-y-1 md:grid-cols-2">
+      <UsageBar
+        v-for="(usage, name) in quota.windows"
+        :key="name"
+        :label="windowLabel(String(name))"
+        :percent="usage.used_percentage"
+        :detail="detail(usage)"
+      />
+    </div>
   </div>
 </template>

@@ -144,10 +144,10 @@
     "browserHint": "Whisper failed: use the browser's speech recognition (Chrome sends the audio to Google)"
   },
   "quota": {
-    "title": "{agent} usage",
+    "title": "{agent} usage:",
     "five_hour": "5 hours",
     "seven_day": "Week",
-    "detail": "{percent} % · resets {when}",
+    "detail": "{percent} % · reset {when}",
     "none": "No data yet – appears once a session has worked."
   },
   "workspace": {
