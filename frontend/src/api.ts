@@ -27,6 +27,9 @@ export interface AgentSession {
   context_window: number | null
 }
 
+/** Where Whisper transcribes: the GPU is near instant, the CPU slower but always there. */
+export type DictationDevice = 'cuda' | 'cpu'
+
 export interface FileEntry {
   name: string
   path: string
@@ -103,22 +106,26 @@ export const NETWORK_ERROR = 'NetworkError'
 async function request<T>(
   method: string,
   path: string,
-  options: { body?: unknown; query?: Record<string, string> } = {},
+  /** body is sent as JSON, upload (e.g. recorded audio) as it is. */
+  options: { body?: unknown; upload?: Blob; query?: Record<string, string> } = {},
 ): Promise<T> {
   // Relative to the page, so the app also works under a reverse-proxy sub-path.
   const url = new URL(`api/${path}`, document.baseURI)
   for (const [key, value] of Object.entries(options.query ?? {})) {
     url.searchParams.set(key, value)
   }
-  const hasBody = options.body !== undefined
+  let headers: Record<string, string> = {}
+  let body: BodyInit | undefined
+  if (options.upload !== undefined) {
+    headers = { 'Content-Type': options.upload.type }
+    body = options.upload
+  } else if (options.body !== undefined) {
+    headers = { 'Content-Type': 'application/json' }
+    body = JSON.stringify(options.body)
+  }
   let response: Response
   try {
-    response = await fetch(url, {
-      method,
-      credentials: 'same-origin',
-      headers: hasBody ? { 'Content-Type': 'application/json' } : {},
-      body: hasBody ? JSON.stringify(options.body) : undefined,
-    })
+    response = await fetch(url, { method, credentials: 'same-origin', headers, body })
   } catch (error) {
     // fetch only rejects when no HTTP response arrived at all (server down, network gone).
     throw new ApiError(0, NETWORK_ERROR, String(error), null)
@@ -190,6 +197,11 @@ export const api = {
   /** The terminal as plain text, for selecting and copying. */
   sessionText: (id: string) =>
     request<{ text: string }>('GET', `sessions/${encodeURIComponent(id)}/text`),
+
+  dictationSettings: () => request<{ language: string }>('GET', 'dictation'),
+  /** Transcribe recorded speech on the chosen device; never switches device by itself. */
+  dictate: (audio: Blob, device: DictationDevice) =>
+    request<{ text: string }>('POST', 'dictation', { upload: audio, query: { device } }),
 
   listFiles: (path: string) => request<FileEntry[]>('GET', 'files', { query: { path } }),
   createFolder: (parent: string, name: string) =>

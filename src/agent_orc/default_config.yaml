@@ -52,6 +52,14 @@ terminal:
   # How much history the plain-text view (for selecting and copying) shows.
   text_history_lines: 5000
 
+# Dictation in the terminal's input field: the browser records, Agent-Orc hands the audio to a
+# Whisper service (whisper-stt API: POST /transcribe) and puts the text into the field.
+dictation:
+  whisper_url: http://127.0.0.1:5080
+  language: de
+  # CPU transcription of a long dictation can take a while.
+  timeout_seconds: 300
+
 tmux:
   # Dedicated tmux server socket, so Agent-Orc never touches your own tmux sessions.
   socket_name: agent-orc
@@ -84,3 +92,8 @@ agents:
     label: Aider
     start: [aider]
     resume: [aider, --restore-chat-history]
+  shell:
+    label: Shell
+    # A plain shell in the folder; it has no conversation to resume, resuming opens a new one.
+    start: [bash]
+    resume: [bash]

@@ -10,8 +10,10 @@ import { api, terminalUrl, type Modifier, type TerminalSettings } from '../api'
 import AppIcon from '../components/AppIcon.vue'
 import ContextMeter from '../components/ContextMeter.vue'
 import KeyBar from '../components/KeyBar.vue'
+import MessageInput from '../components/MessageInput.vue'
 import { useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
+import { PIXELS_PER_STEP, useTouchScroll } from '../composables/useTouchScroll'
 import { baseName } from '../format'
 
 const props = defineProps<{ id: string }>()
@@ -34,7 +36,6 @@ const { sessions } = useSessions()
 const container = ref<HTMLElement>()
 const settings = ref<TerminalSettings | null>(null)
 const modifiers = ref(new Set<Modifier>())
-const text = ref('')
 const connected = ref(false)
 const fontSize = ref(Number(localStorage.getItem(FONT_SIZE_KEY)) || DEFAULT_FONT_SIZE)
 
@@ -90,38 +91,21 @@ let socket: WebSocket | null = null
 const resizeObserver = new ResizeObserver(() => fit.fit())
 
 // Touch scrolling: the agent's history lives in tmux (mouse mode), which scrolls on wheel
-// events. xterm.js does not pass finger swipes on, so a vertical swipe becomes wheel events
-// on the terminal, just like a mouse wheel on the desktop. Taps stay untouched.
-const PIXELS_PER_WHEEL_STEP = 24
-let touchY: number | null = null
-
-function onTouchStart(event: TouchEvent): void {
-  touchY = event.touches.length === 1 ? event.touches[0].clientY : null
-}
-
-function onTouchMove(event: TouchEvent): void {
-  if (touchY === null || event.touches.length !== 1 || !terminal.element) return
-  const touch = event.touches[0]
-  const steps = Math.trunc((touchY - touch.clientY) / PIXELS_PER_WHEEL_STEP)
-  if (steps === 0) return
-  event.preventDefault()
-  // Keep the remainder, so slow swipes still add up to steps.
-  touchY -= steps * PIXELS_PER_WHEEL_STEP
-  terminal.element.dispatchEvent(
+// events. xterm.js does not pass finger swipes on, so swipes (and their glide after a flick)
+// become wheel events on the terminal, just like a mouse wheel on the desktop. Taps stay
+// untouched.
+const touchScroll = useTouchScroll((steps, x, y) => {
+  terminal.element?.dispatchEvent(
     new WheelEvent('wheel', {
-      deltaY: steps * PIXELS_PER_WHEEL_STEP,
+      deltaY: steps * PIXELS_PER_STEP,
       deltaMode: WheelEvent.DOM_DELTA_PIXEL,
-      clientX: touch.clientX,
-      clientY: touch.clientY,
+      clientX: x,
+      clientY: y,
       bubbles: true,
       cancelable: true,
     }),
   )
-}
-
-function onTouchEnd(): void {
-  touchY = null
-}
+})
 
 function send(message: object): void {
   if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message))
@@ -150,12 +134,11 @@ function toggleModifier(modifier: Modifier): void {
   modifiers.value = next
 }
 
-function submitText(): void {
-  if (!settings.value || !text.value) return
-  sendInput(text.value)
+function submitText(text: string): void {
+  if (!settings.value) return
+  sendInput(text)
   // Enter separately, so the agent sees typed text plus submit, not one pasted block.
   window.setTimeout(() => sendInput('\r'), settings.value.submit_delay_ms)
-  text.value = ''
 }
 
 function changeFontSize(delta: number): void {
@@ -192,14 +175,15 @@ onMounted(async () => {
   terminal.open(container.value)
   fit.fit()
   resizeObserver.observe(container.value)
-  container.value.addEventListener('touchstart', onTouchStart, { passive: true })
+  container.value.addEventListener('touchstart', touchScroll.onTouchStart, { passive: true })
   // Not passive: a swipe must not also scroll or zoom the page.
-  container.value.addEventListener('touchmove', onTouchMove, { passive: false })
-  container.value.addEventListener('touchend', onTouchEnd, { passive: true })
+  container.value.addEventListener('touchmove', touchScroll.onTouchMove, { passive: false })
+  container.value.addEventListener('touchend', touchScroll.onTouchEnd, { passive: true })
   connect()
 })
 
 onBeforeUnmount(() => {
+  touchScroll.stopGlide()
   resizeObserver.disconnect()
   socket?.close()
   terminal.dispose()
@@ -252,15 +236,7 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <form class="flex gap-1 border-t border-slate-800 p-1" @submit.prevent="submitText">
-      <input
-        v-model="text"
-        class="input min-h-10 flex-1"
-        :placeholder="$t('terminal.placeholder')"
-        enterkeyhint="send"
-      />
-      <button type="submit" class="btn-primary min-h-10 px-3" :disabled="!text">{{ $t('terminal.send') }}</button>
-    </form>
+    <MessageInput @submit="submitText" />
 
     <KeyBar
       v-if="settings"

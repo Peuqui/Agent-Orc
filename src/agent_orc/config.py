@@ -60,6 +60,14 @@ class TerminalConfig(StrictModel):
     text_history_lines: int
 
 
+class DictationConfig(StrictModel):
+    """Speech input, transcribed by a Whisper service (see dictation.py)."""
+
+    whisper_url: str
+    language: str
+    timeout_seconds: int
+
+
 class TmuxConfig(StrictModel):
     socket_name: str
 
@@ -96,6 +104,7 @@ class Config(StrictModel):
     auth: AuthConfig
     files: FilesConfig
     terminal: TerminalConfig
+    dictation: DictationConfig
     tmux: TmuxConfig
     agents: dict[str, AgentProfile]
 

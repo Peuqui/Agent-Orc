@@ -122,6 +122,17 @@
     "SessionNotFoundError": "Diese Sitzung gibt es nicht mehr.",
     "TrashEntryNotFoundError": "Dieser Eintrag ist nicht mehr im Papierkorb.",
     "http401": "Falsches Passwort.",
-    "http429": "Zu viele Fehlversuche. Bitte warte {minutes} Minuten."
+    "http429": "Zu viele Fehlversuche. Bitte warte {minutes} Minuten.",
+    "GpuUnavailableError": "Auf keiner GPU ist gerade Platz für Whisper. Schalte auf CPU um.",
+    "DictationServiceError": "Whisper antwortet nicht.",
+    "UnsupportedAudioError": "Dieses Audioformat kann Whisper nicht verarbeiten."
+  },
+  "dictation": {
+    "start": "Diktat starten",
+    "stop": "Diktat beenden",
+    "device": "Whisper auf GPU (sofort) oder CPU (langsamer, immer verfügbar)",
+    "transcribing": "Wird transkribiert …",
+    "browser": "Browser",
+    "browserHint": "Whisper ging nicht: Spracherkennung des Browsers nutzen (Chrome schickt das Audio an Google)"
   }
 }

@@ -19,6 +19,13 @@ from agent_orc import files
 from agent_orc.auth import Clock, Credentials, LoginGuard, TokenSigner, verify_password
 from agent_orc.config import Config, TerminalConfig
 from agent_orc.context import session_busy, session_status
+from agent_orc.dictation import (
+    Device,
+    DictationServiceError,
+    GpuUnavailableError,
+    UnsupportedAudioError,
+    transcribe,
+)
 from agent_orc.effort import EFFORT_STORES, InvalidEffortError
 from agent_orc.history import CONVERSATION_SOURCES, ConversationNotFoundError
 from agent_orc.scope import AccessScope, OutsideScopeError
@@ -73,6 +80,9 @@ ERROR_STATUS: dict[type[Exception], int] = {
     UnknownProfileError: status.HTTP_404_NOT_FOUND,
     TrashEntryNotFoundError: status.HTTP_404_NOT_FOUND,
     ConversationNotFoundError: status.HTTP_404_NOT_FOUND,
+    UnsupportedAudioError: status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+    GpuUnavailableError: status.HTTP_503_SERVICE_UNAVAILABLE,
+    DictationServiceError: status.HTTP_502_BAD_GATEWAY,
 }
 
 
@@ -280,6 +290,20 @@ def create_app(
     @app.get("/api/terminal", dependencies=authenticated)
     def terminal_settings() -> TerminalConfig:
         return config.terminal
+
+    @app.get("/api/dictation", dependencies=authenticated)
+    def dictation_settings() -> dict[str, str]:
+        # The browser's own speech recognition (the fallback) listens in the same language.
+        return {"language": config.dictation.language}
+
+    @app.post("/api/dictation", dependencies=authenticated)
+    async def dictate(request: Request, device: Device) -> dict[str, str]:
+        """Transcribe the recorded audio in the request body."""
+        audio = await request.body()
+        content_type = request.headers.get("content-type", "")
+        # The Whisper call blocks for seconds, on the CPU even longer.
+        text = await asyncio.to_thread(transcribe, audio, content_type, device, config.dictation)
+        return {"text": text}
 
     @app.get("/api/sessions", dependencies=authenticated)
     def list_sessions() -> list[dict[str, Any]]:

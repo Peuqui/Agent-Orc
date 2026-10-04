@@ -14,11 +14,11 @@ from starlette.websockets import WebSocketDisconnect
 
 from agent_orc.api import BUILD_ID_FILE, BUILD_ID_HEADER, create_app
 from agent_orc.auth import new_credentials
-from agent_orc.config import Config, default_config_text
+from agent_orc.config import Config, DictationConfig, default_config_text
 from agent_orc.context import store_activity, store_status
 from agent_orc.history import claude_project_dir
 from agent_orc.sessions import SESSION_ENV
-from tests.conftest import FakeClock
+from tests.conftest import FakeClock, FakeWhisper
 
 PASSWORD = "richtig-langes-passwort"
 
@@ -589,3 +589,32 @@ def test_session_text_for_copying(client: TestClient, home: Path) -> None:
         time.sleep(0.1)
     assert "READY" in text
     assert client.get("/api/sessions/unknown/text").status_code == 404
+
+
+def test_dictation(config: Config, clock: FakeClock, fake_whisper: FakeWhisper) -> None:
+    dictation = DictationConfig(whisper_url=fake_whisper.url, language="de", timeout_seconds=5)
+    app = create_app(
+        config.model_copy(update={"dictation": dictation}),
+        new_credentials(PASSWORD),
+        static_dir=None,
+        clock=clock,
+    )
+    client = TestClient(app)
+
+    def dictate(device: str) -> Any:
+        return client.post(
+            f"/api/dictation?device={device}",
+            content=b"opus",
+            headers={"Content-Type": "audio/webm"},
+        )
+
+    assert dictate("cpu").status_code == 401
+    client.post("/api/login", json={"password": PASSWORD})
+    assert client.get("/api/dictation").json() == {"language": "de"}
+    assert dictate("cpu").json() == {"text": "Hallo Welt"}
+    assert dictate("tpu").status_code == 422
+    fake_whisper.status = 503
+    fake_whisper.answer = {"error": "no GPU with enough VRAM"}
+    full = dictate("cuda")
+    assert full.status_code == 503
+    assert full.json()["error"] == "GpuUnavailableError"

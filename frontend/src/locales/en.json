@@ -122,6 +122,17 @@
     "SessionNotFoundError": "This session no longer exists.",
     "TrashEntryNotFoundError": "This entry is no longer in the trash.",
     "http401": "Wrong password.",
-    "http429": "Too many failed attempts. Please wait {minutes} minutes."
+    "http429": "Too many failed attempts. Please wait {minutes} minutes.",
+    "GpuUnavailableError": "No GPU has room for Whisper right now. Switch to CPU.",
+    "DictationServiceError": "Whisper is not responding.",
+    "UnsupportedAudioError": "Whisper cannot process this audio format."
+  },
+  "dictation": {
+    "start": "Start dictation",
+    "stop": "Stop dictation",
+    "device": "Whisper on GPU (instant) or CPU (slower, always available)",
+    "transcribing": "Transcribing …",
+    "browser": "Browser",
+    "browserHint": "Whisper failed: use the browser's speech recognition (Chrome sends the audio to Google)"
   }
 }
