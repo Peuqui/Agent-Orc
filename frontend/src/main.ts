@@ -5,8 +5,8 @@ import { i18n } from './i18n'
 import { router } from './router'
 // The terminal font, shipped with the app (see TERMINAL_FONTS).
 import '@fontsource-variable/jetbrains-mono'
-// Only the symbols part of Noto Sans Symbols 2 (see TERMINAL_FONTS).
-import '@fontsource/noto-sans-symbols-2/symbols.css'
+// Symbol fallback for the terminal fonts (see TERMINAL_FONTS), all of its parts.
+import '@fontsource/noto-sans-symbols-2'
 import './style.css'
 
 registerSW({ immediate: true })

@@ -25,7 +25,7 @@ export const TERMINAL_FONTS = {
   system: `ui-monospace, "Cascadia Mono", "DejaVu Sans Mono", ${SYMBOLS}, monospace`,
 } as const
 /** Loading these characters fetches every font part the terminal needs before it draws. */
-export const FONT_SAMPLE = 'Aä⏵⏺●✻⎿'
+export const FONT_SAMPLE = 'Aä⏵⏺●✻⎿⠋∑'
 export type TerminalFont = keyof typeof TERMINAL_FONTS
 
 const updatersByKey = new Map<string, (stored: string) => void>()
