@@ -7,6 +7,7 @@ import TrashView from './views/TrashView.vue'
 const EditorView = () => import('./views/EditorView.vue')
 const TerminalView = () => import('./views/TerminalView.vue')
 const WorkspaceView = () => import('./views/WorkspaceView.vue')
+const ChangesView = () => import('./views/ChangesView.vue')
 
 // Hash history: no server-side routing needed, also under a reverse-proxy sub-path.
 export const router = createRouter({
@@ -23,6 +24,13 @@ export const router = createRouter({
       path: '/terminal/:id',
       component: TerminalView,
       props: (route) => ({ id: route.params.id, embedded: 'embedded' in route.query }),
+      meta: { fullscreen: true },
+    },
+    // What an agent changed in its project (git).
+    {
+      path: '/changes/:id',
+      component: ChangesView,
+      props: true,
       meta: { fullscreen: true },
     },
     {

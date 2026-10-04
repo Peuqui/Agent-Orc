@@ -317,8 +317,22 @@ function resume(session: AgentSession): void {
           <button v-if="!session.running" class="btn-primary btn-small" @click="resume(session)">
             <AppIcon name="resume" />{{ $t('sessions.resume') }}
           </button>
-          <button class="btn-secondary btn-small" @click="stopping = session">
-            <AppIcon name="stop" />{{ $t('sessions.stop') }}
+          <RouterLink
+            :to="`/changes/${encodeURIComponent(session.id)}`"
+            class="btn-secondary btn-small"
+            :title="$t('changes.open')"
+            :aria-label="$t('changes.button')"
+          >
+            <!-- Phones: the icon only, so the row stays one line. -->
+            <AppIcon name="diff" /><span class="hidden sm:inline">{{ $t('changes.button') }}</span>
+          </RouterLink>
+          <button
+            class="btn-secondary btn-small"
+            :title="$t('sessions.stop')"
+            :aria-label="$t('sessions.stop')"
+            @click="stopping = session"
+          >
+            <AppIcon name="stop" /><span class="hidden sm:inline">{{ $t('sessions.stop') }}</span>
           </button>
           <label
             v-if="permissionModes.get(session.profile)?.length"

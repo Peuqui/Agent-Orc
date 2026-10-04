@@ -824,6 +824,24 @@ def test_permission_request_is_answered_from_the_card(
     assert wait_for_decision(request.id) is False
 
 
+def test_changes_of_an_agents_project(client: TestClient, home: Path) -> None:
+    folder = home / "projects"
+    for arguments in (["init", "-q"], ["commit", "-q", "--allow-empty", "-m", "start"]):
+        subprocess.run(
+            ["git", "-C", str(folder), "-c", "user.name=T", "-c", "user.email=t@e.org", *arguments],
+            check=True,
+        )
+    (folder / "plan.md").write_text("# Plan\n")
+    session_id = start_shell(client, home)
+    assert client.get(f"/api/sessions/{session_id}/changes").json() == [
+        {"path": "plan.md", "status": "??"}
+    ]
+    diff = client.get(f"/api/sessions/{session_id}/changes/diff", params={"path": "plan.md"})
+    assert diff.json() == {"text": "+# Plan\n", "truncated": False}
+    other = client.get(f"/api/sessions/{session_id}/changes/diff", params={"path": "x"})
+    assert other.status_code == 404
+
+
 def test_push_subscription_and_test_message(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,

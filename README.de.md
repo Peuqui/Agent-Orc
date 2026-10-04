@@ -32,6 +32,8 @@ aus wieder aufnehmen.
   pro Projektordner).
 - Oben das 5-Stunden- und Wochen-Kontingent von Claude; die Karten lassen sich in die eigene
   Reihenfolge ziehen.
+- Was ein Agent im Projekt geändert hat: geänderte, neue und gelöschte Dateien mit ihrem Diff
+  (git).
 - Benachrichtigungen aufs Handy oder den Rechner, wenn ein Agent fertig ist oder auf eine
   Freigabe oder Antwort wartet (Web Push, pro Gerät einschaltbar); Antippen öffnet den Agenten.
 - Der Freigabe-Modus, in dem ein Agent startet, pro Projekt (Fragen, Bearbeiten, Auto, Planen;

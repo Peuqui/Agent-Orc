@@ -13,6 +13,19 @@ export interface AgentProfile {
   permission_modes: string[]
 }
 
+/** A file the agent changed (git working tree against the last commit); status as git puts it. */
+export interface FileChange {
+  path: string
+  /** "M", "A", "D", "R", "??" (new, untracked), ... */
+  status: string
+}
+
+export interface FileDiff {
+  text: string
+  /** Cut at the server's limit. */
+  truncated: boolean
+}
+
 /** A permission request of an agent, waiting for the user (also asked in its terminal). */
 export interface Approval {
   id: string
@@ -248,6 +261,10 @@ export const api = {
     request<void>('POST', `sessions/${encodeURIComponent(sessionId)}/approval`, {
       body: { request: requestId, allow },
     }),
+  changes: (sessionId: string) =>
+    request<FileChange[]>('GET', `sessions/${encodeURIComponent(sessionId)}/changes`),
+  changeDiff: (sessionId: string, path: string) =>
+    request<FileDiff>('GET', `sessions/${encodeURIComponent(sessionId)}/changes/diff`, { query: { path } }),
   /** Takes effect at the agent's next start. */
   changePermissionMode: (sessionId: string, mode: string) =>
     request<void>('PUT', `sessions/${encodeURIComponent(sessionId)}/permission-mode`, { body: { mode } }),

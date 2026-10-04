@@ -19,6 +19,12 @@ from agent_orc import files
 from agent_orc.approvals import ApprovalNotFoundError, ApprovalRequest, decide, open_requests
 from agent_orc.attachments import store_attachment
 from agent_orc.auth import Clock, Credentials, LoginGuard, TokenSigner, verify_password
+from agent_orc.changes import (
+    ChangeNotFoundError,
+    NotAGitRepositoryError,
+    file_changes,
+    file_diff,
+)
 from agent_orc.config import Config, LiveEffortConfig, TerminalConfig
 from agent_orc.context import QUOTA_SOURCES, session_busy, session_status, store_activity
 from agent_orc.dictation import (
@@ -93,6 +99,8 @@ ERROR_STATUS: dict[type[Exception], int] = {
     InvalidEffortError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     InvalidPermissionModeError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     ApprovalNotFoundError: status.HTTP_404_NOT_FOUND,
+    ChangeNotFoundError: status.HTTP_404_NOT_FOUND,
+    NotAGitRepositoryError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     files.FileTooLargeError: status.HTTP_413_CONTENT_TOO_LARGE,
     files.NotTextError: status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
     SessionNotFoundError: status.HTTP_404_NOT_FOUND,
@@ -550,6 +558,21 @@ def create_app(
         if not any(r.id == body.request and r.session == session_id for r in open_requests()):
             raise ApprovalNotFoundError(body.request)
         decide(body.request, body.allow)
+
+    def session_folder(session_id: str) -> Path:
+        session = find_session(session_id)
+        if session is None:
+            raise SessionNotFoundError(session_id)
+        return session.path
+
+    @app.get("/api/sessions/{session_id}/changes", dependencies=authenticated)
+    def list_changes(session_id: str) -> list[dict[str, str]]:
+        """Files the agent changed in its project (git working tree against the last commit)."""
+        return [asdict(change) for change in file_changes(session_folder(session_id))]
+
+    @app.get("/api/sessions/{session_id}/changes/diff", dependencies=authenticated)
+    def change_diff(session_id: str, path: str) -> dict[str, Any]:
+        return asdict(file_diff(session_folder(session_id), path))
 
     def folder_permission_mode(profile_name: str, folder: Path) -> str | None:
         profile = config.agents.get(profile_name)
