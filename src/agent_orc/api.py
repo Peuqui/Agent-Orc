@@ -19,7 +19,7 @@ from agent_orc import files
 from agent_orc.approvals import ApprovalNotFoundError, ApprovalRequest, decide, open_requests
 from agent_orc.attachments import store_attachment
 from agent_orc.auth import Clock, Credentials, LoginGuard, TokenSigner, verify_password
-from agent_orc.config import Config, TerminalConfig
+from agent_orc.config import Config, LiveEffortConfig, TerminalConfig
 from agent_orc.context import QUOTA_SOURCES, session_busy, session_status, store_activity
 from agent_orc.dictation import (
     Device,
@@ -34,6 +34,7 @@ from agent_orc.effort import (
     InvalidEffortError,
     InvalidPermissionModeError,
     Reasoning,
+    set_reasoning_live,
 )
 from agent_orc.history import CONVERSATION_SOURCES, ConversationNotFoundError
 from agent_orc.push import (
@@ -219,10 +220,26 @@ def create_app(
     def find_session(session_id: str) -> AgentSession | None:
         return next((s for s in sessions.list() if s.id == session_id), None)
 
+    def live_effort(profile_name: str) -> LiveEffortConfig | None:
+        profile = config.agents.get(profile_name)
+        return profile.effort.live if profile and profile.effort else None
+
     def apply_effort(session: AgentSession, reasoning: Reasoning) -> AgentSession:
-        """Store the folder's reasoning and resume the agent, which only reads it at start."""
+        """Store the folder's reasoning (read at every start) and hand it to the agent: typed
+        into a running agent that can switch in place, otherwise by resuming it."""
         pending_effort.pop(session.id, None)
+        previous = folder_reasoning(session.profile, session.path)
         store_effort(session.profile, session.path, reasoning)
+        live = live_effort(session.profile)
+        if session.running and live is not None:
+            submit_delay = config.terminal.submit_delay_ms
+            set_reasoning_live(
+                lambda line: sessions.type_line(session.id, line, submit_delay),
+                live,
+                previous,
+                reasoning,
+            )
+            return session
         restarted = sessions.restart(session)
         # The ended agent cannot report that it stopped working.
         store_activity(session.id, busy=False)
@@ -240,7 +257,8 @@ def create_app(
         while True:
             await asyncio.sleep(PENDING_EFFORT_CHECK_SECONDS)
             try:
-                apply_pending_efforts()
+                # Off the event loop: switching in place waits a few seconds (effort.py).
+                await asyncio.to_thread(apply_pending_efforts)
             except Exception:
                 # Keep watching the other sessions; this one is dropped and logged.
                 logger.exception("applying a pending effort change failed")
@@ -361,6 +379,8 @@ def create_app(
                 "label": p.label,
                 "effort_levels": p.effort.levels if p.effort else [],
                 "ultracode": bool(p.effort and p.effort.ultracode),
+                # Switches its reasoning in place, without a restart.
+                "effort_live": bool(p.effort and p.effort.live),
                 "permission_modes": p.permission.modes if p.permission else [],
             }
             for name, p in config.agents.items()
@@ -561,7 +581,10 @@ def create_app(
             raise SessionNotFoundError(session_id)
         reasoning = Reasoning(body.effort, body.ultracode)
         validate_effort(session.profile, reasoning)
-        if body.immediately or not session.running or not session_busy(session):
+        # Typing into a busy agent would mix with its work: an agent that switches in place
+        # always waits for the end of its answer.
+        immediately = body.immediately and live_effort(session.profile) is None
+        if immediately or not session.running or not session_busy(session):
             apply_effort(session, reasoning)
             return {"applied": True}
         pending_effort[session_id] = reasoning

@@ -8,16 +8,24 @@ session does not pick up a change, so changing the reasoning of a running agent 
 resuming it. Setting it here, rather than with /effort inside the session, matters: /effort
 silently saves the level as the user's global default.
 
+A running Claude Code session can take a new reasoning in place: typing `/effort <level>` (and
+`/effort ultracode on|off`) switches it at once, without a restart, so its background tasks
+keep running (verified with Claude Code 2.1.289). /effort also rewrites the user's own
+settings file; set_reasoning_live puts that file back as it was.
+
 The same file also holds the permission mode a session starts in (`permissions.defaultMode`,
 values as listed by the installed Claude Code); inside a session Shift+Tab switches it.
 """
 
 import json
 import os
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+from agent_orc.config import LiveEffortConfig
 
 CLAUDE_PROJECT_SETTINGS = Path(".claude") / "settings.local.json"
 CLAUDE_EFFORT_KEY = "effortLevel"
@@ -90,6 +98,47 @@ def _write_settings(path: Path, settings: dict[str, Any]) -> None:
         json.dump(settings, handle, indent=2)
         handle.write("\n")
     os.chmod(temporary, mode)
+    temporary.replace(path)
+
+
+# How long after typing /effort the protected file is watched for the agent's rewrite.
+PROTECT_SECONDS = 5.0
+PROTECT_POLL_SECONDS = 0.2
+
+
+def set_reasoning_live(
+    type_line: Callable[[str], None],
+    live: LiveEffortConfig,
+    previous: Reasoning,
+    wanted: Reasoning,
+) -> None:
+    """Switch a running agent's reasoning by typing its commands; the protected file stays.
+
+    `wanted.effort` is always typed (it may differ from what the agent runs with), ultracode
+    only when it changes.
+    """
+    protected = Path(live.protected_file).expanduser()
+    before = protected.read_bytes() if protected.is_file() else None
+    type_line(live.command.format(level=wanted.effort))
+    if wanted.ultracode != previous.ultracode:
+        type_line(live.ultracode_command.format(state="on" if wanted.ultracode else "off"))
+    # The agent rewrites the file shortly after; whatever it writes within this time is undone.
+    deadline = time.monotonic() + PROTECT_SECONDS
+    while time.monotonic() < deadline:
+        time.sleep(PROTECT_POLL_SECONDS)
+        current = protected.read_bytes() if protected.is_file() else None
+        if current == before:
+            continue
+        if before is None:
+            protected.unlink()
+        else:
+            _write_bytes_keeping_mode(protected, before)
+
+
+def _write_bytes_keeping_mode(path: Path, content: bytes) -> None:
+    temporary = path.with_name(f"{path.name}.agent-orc-tmp")
+    temporary.write_bytes(content)
+    os.chmod(temporary, path.stat().st_mode & 0o777)
     temporary.replace(path)
 
 

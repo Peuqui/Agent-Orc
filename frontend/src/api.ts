@@ -7,6 +7,8 @@ export interface AgentProfile {
   effort_levels: string[]
   /** The agent offers ultracode (workflow orchestration) next to the effort. */
   ultracode: boolean
+  /** Switches its reasoning in place, without a restart (Claude: /effort). */
+  effort_live: boolean
   /** Permission modes a session may start in; empty if the agent has none. */
   permission_modes: string[]
 }

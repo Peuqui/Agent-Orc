@@ -25,6 +25,7 @@ const effortChange = ref<{ session: AgentSession; reasoning: Reasoning } | null>
 
 const levels = computed(() => new Map(profiles.value.map((p) => [p.name, p.effort_levels])))
 const permissionModes = computed(() => new Map(profiles.value.map((p) => [p.name, p.permission_modes])))
+const effortLive = computed(() => new Map(profiles.value.map((p) => [p.name, p.effort_live])))
 const ultracodeOffered = computed(() => new Map(profiles.value.map((p) => [p.name, p.ultracode])))
 
 // Cancelled: the slider falls back to the effort actually in effect.
@@ -42,6 +43,14 @@ function shownReasoning(session: AgentSession): Reasoning {
   return effortChange.value?.session.id === session.id
     ? effortChange.value.reasoning
     : { effort: session.effort, ultracode: session.ultracode }
+}
+
+/** The confirmation names what really happens: a switch in place, or a restart. */
+function effortMessage(session: AgentSession): string {
+  if (effortLive.value.get(session.profile)) {
+    return session.busy ? 'sessions.confirmEffortLiveBusy' : 'sessions.confirmEffortLive'
+  }
+  return session.busy ? 'sessions.confirmEffortBusy' : 'sessions.confirmEffort'
 }
 
 function applyPendingNow(session: AgentSession): void {
@@ -287,6 +296,7 @@ function resume(session: AgentSession): void {
             }}
           </span>
           <button
+            v-if="!effortLive.get(session.profile)"
             class="btn-secondary min-h-9"
             @click="applyPendingNow(session)"
           >
@@ -335,7 +345,7 @@ function resume(session: AgentSession): void {
     <BaseDialog v-if="effortChange" :title="$t('agent.effort')" @close="cancelEffort">
       <p class="mb-5 text-slate-300">
         {{
-          $t(effortChange.session.busy ? 'sessions.confirmEffortBusy' : 'sessions.confirmEffort', {
+          $t(effortMessage(effortChange.session), {
             name: baseName(effortChange.session.path),
             effort: reasoningLabel(effortChange.reasoning),
           })
@@ -344,9 +354,14 @@ function resume(session: AgentSession): void {
       <div class="flex flex-col gap-2">
         <template v-if="effortChange.session.busy">
           <button class="btn-primary" @click="applyEffort(false)">{{ $t('sessions.changeAfterAnswer') }}</button>
-          <button class="btn-danger" @click="applyEffort(true)">{{ $t('sessions.changeNow') }}</button>
+          <!-- A restart would end the answer; an agent that switches in place simply waits. -->
+          <button v-if="!effortLive.get(effortChange.session.profile)" class="btn-danger" @click="applyEffort(true)">
+            {{ $t('sessions.changeNow') }}
+          </button>
         </template>
-        <button v-else class="btn-primary" @click="applyEffort(false)">{{ $t('sessions.changeEffort') }}</button>
+        <button v-else class="btn-primary" @click="applyEffort(false)">
+          {{ $t(effortLive.get(effortChange.session.profile) ? 'sessions.changeEffortLive' : 'sessions.changeEffort') }}
+        </button>
         <button class="btn" @click="cancelEffort">{{ $t('common.cancel') }}</button>
       </div>
     </BaseDialog>

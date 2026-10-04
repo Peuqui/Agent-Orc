@@ -4,6 +4,7 @@ import builtins
 import hashlib
 import re
 import subprocess
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -25,6 +26,7 @@ LIST_FORMAT = FIELD_SEPARATOR.join(
         "#{session_created}",
     ]
 )
+MILLISECONDS_PER_SECOND = 1000
 # tmux reports a missing server on stderr; that state simply means "no sessions".
 NO_SERVER_MARKERS = ("no server running", "error connecting")
 
@@ -166,6 +168,13 @@ class SessionManager:
         if respawned is None:
             raise SessionError(f"tmux session {session.id} vanished right after restart")
         return respawned
+
+    def type_line(self, session_id: str, line: str, submit_delay_ms: int) -> None:
+        """Type a line into the agent and submit it, as the user would."""
+        self._tmux("send-keys", "-t", exact_target(session_id), "-l", line)
+        # Enter separately, so the agent sees typed text plus submit, not one pasted block.
+        time.sleep(submit_delay_ms / MILLISECONDS_PER_SECOND)
+        self._tmux("send-keys", "-t", exact_target(session_id), "-l", "\r")
 
     def text(self, session_id: str, history_lines: int) -> str:
         """The session's screen and history as plain text; wrapped lines are joined again."""

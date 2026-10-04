@@ -43,7 +43,10 @@
     "effortPending": "Change to “{effort}” scheduled – after the current answer",
     "applyNow": "Now",
     "discard": "Discard",
-    "ended": "ended"
+    "ended": "ended",
+    "confirmEffortLive": "Set the reasoning of “{name}” to “{effort}”? The agent takes it at once, without a restart, and it applies to future starts in this project too.",
+    "confirmEffortLiveBusy": "“{name}” is working. The reasoning “{effort}” is taken once the answer is done – without a restart, running background tasks keep going.",
+    "changeEffortLive": "Change"
   },
   "files": {
     "newFolder": "New folder",
@@ -204,7 +207,7 @@
           "“Start new agent”: pick a folder; the agent starts and gets going at once with its start request (e.g. the AI-Connect watcher). Resuming starts without it.",
           "Sorting cards: drag at a free spot with the mouse; with a finger, hold briefly first. The order is the same on every device.",
           "Context ring: green below 50 %, amber above, red from 70 % – time for /compact or a new conversation soon.",
-          "Effort slider and ultracode apply per project folder. While the agent is working you choose: after the answer, or now (restart with resume).",
+          "Effort slider and ultracode apply per project folder. A running Claude takes the new level without a restart once its current answer is done; background tasks keep running.",
           "Quota at the top: Claude's used five-hour and weekly limits, once a session has reported them.",
           "“Start” on the card: the permission mode the agent starts in – Ask, Edit (file edits without asking), Auto or Plan. Auto by default; applies from the next start, inside the agent Shift+Tab switches it.",
           "When an agent asks for permission, its card shows the command with “Allow” and “Deny”. The terminal asks the same; the first answer counts."

@@ -103,6 +103,13 @@ agents:
       store: claude_project
       # Ultracode: Claude plans multi-agent workflows for larger tasks by itself.
       ultracode: true
+      # A running agent takes a new reasoning in place, without a restart (its background tasks
+      # keep running): typed in once it is idle. /effort also rewrites the user's own settings
+      # file, which Agent-Orc then puts back as it was.
+      live:
+        command: /effort {level}
+        ultracode_command: /effort ultracode {state}
+        protected_file: ~/.claude/settings.json
     # Permission mode a session of the folder starts in (<folder>/.claude/settings.local.json):
     # default asks before changes and commands, acceptEdits takes file edits without asking,
     # auto lets Claude decide what is safe, plan only plans. A folder without a mode of its own

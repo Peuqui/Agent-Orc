@@ -85,6 +85,18 @@ class TmuxConfig(StrictModel):
     socket_name: str
 
 
+class LiveEffortConfig(StrictModel):
+    """How a running agent switches its reasoning in place, without a restart."""
+
+    # Typed into the agent; {level} becomes the effort level.
+    command: str
+    # Typed when ultracode changes; {state} becomes "on" or "off".
+    ultracode_command: str
+    # A file the agent rewrites when its effort is set this way (Claude: the user's own
+    # settings); Agent-Orc puts it back as it was, so nothing changes outside the session.
+    protected_file: str
+
+
 class EffortConfig(StrictModel):
     """Reasoning effort the user may pick, and the one a folder has until the user picks."""
 
@@ -95,6 +107,8 @@ class EffortConfig(StrictModel):
     store: Literal["claude_project"]
     # The agent also offers ultracode (workflow orchestration), switched on next to the effort.
     ultracode: bool = False
+    # Without it, a running agent is restarted (resumed) to take a new reasoning.
+    live: LiveEffortConfig | None = None
 
     @model_validator(mode="after")
     def default_is_offered(self) -> "EffortConfig":

@@ -58,6 +58,23 @@ def config(home: Path, socket_name: str) -> Config:
                 "store": "claude_project",
             },
         },
+        # Switches its reasoning in place, like Claude with /effort.
+        "switcher": {
+            "label": "Switcher",
+            "start": ["sleep", "60"],
+            "resume": ["sleep", "61"],
+            "effort": {
+                "levels": ["low", "high"],
+                "default": "low",
+                "store": "claude_project",
+                "ultracode": True,
+                "live": {
+                    "command": "/effort {level}",
+                    "ultracode_command": "/effort ultracode {state}",
+                    "protected_file": str(home / "user-settings.json"),
+                },
+            },
+        },
         "talker": {
             "label": "Talker",
             "start": ["sleep", "60"],
@@ -524,6 +541,48 @@ def test_effort_for_agent_without_effort_setting(client: TestClient, home: Path)
     }
     assert client.post("/api/sessions", json=body).status_code == 422
     assert not (home / "projects" / ".claude").exists()
+
+
+def test_reasoning_switches_in_place_without_restart(
+    client: TestClient, home: Path, socket_name: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("agent_orc.effort.PROTECT_SECONDS", 0.3)
+    start = {
+        "profile": "switcher",
+        "path": str(home / "projects"),
+        "resume": False,
+        "effort": None,
+        "ultracode": False,
+        "conversation": None,
+    }
+    session_id = client.post("/api/sessions", json=start).json()["id"]
+    target = f"={session_id}:"
+
+    def pane(field: str) -> str:
+        return subprocess.run(
+            ["tmux", "-L", socket_name, "display-message", "-p", "-t", target, field],
+            capture_output=True, text=True, check=True,
+        ).stdout.strip()  # fmt: skip
+
+    process = pane("#{pane_pid}")
+    url = f"/api/sessions/{session_id}/effort"
+    store_activity(session_id, busy=True)
+    # A busy agent waits for the end of its answer, even when asked to switch now.
+    now = {"effort": "high", "ultracode": True, "immediately": True}
+    assert client.post(url, json=now).json() == {"applied": False}
+    store_activity(session_id, busy=False)
+    assert client.post(url, json=now).json() == {"applied": True}
+    # Typed into the running agent (the terminal echoes it), which keeps running.
+    screen = subprocess.run(
+        ["tmux", "-L", socket_name, "capture-pane", "-p", "-t", target],
+        capture_output=True, text=True, check=True,
+    ).stdout  # fmt: skip
+    assert "/effort high" in screen
+    assert "/effort ultracode on" in screen
+    assert pane("#{pane_pid}") == process
+    agents = {agent["name"]: agent for agent in client.get("/api/agents").json()}
+    assert agents["switcher"]["effort_live"] is True
+    assert agents["sleeper"]["effort_live"] is False
 
 
 def test_effort_change_waits_for_a_busy_agent(
