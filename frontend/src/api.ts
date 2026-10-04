@@ -56,6 +56,16 @@ export interface Approval {
   description: string | null
 }
 
+/** A prompt typed into an agent later: planned by the user, or the resume after its usage limit. */
+export interface ScheduledPrompt {
+  id: string
+  session: string
+  text: string
+  /** Unix seconds. */
+  at: number
+  reason: 'user' | 'limit'
+}
+
 export interface AgentSession {
   id: string
   profile: string
@@ -74,6 +84,8 @@ export interface AgentSession {
    * stored one there. */
   permission_mode: string | null
   approvals: Approval[]
+  /** Earliest first; typed once due and the agent is idle. */
+  scheduled: ScheduledPrompt[]
   /** Runs in a git worktree of its own (removable once ended). */
   worktree: boolean
   /** From the configured share of the context on: hand over to a fresh session. */
@@ -317,6 +329,16 @@ export const api = {
   /** Resumes the agent in its own session; a running answer and background tasks end. */
   restartSession: (sessionId: string) =>
     request<AgentSession>('POST', `sessions/${encodeURIComponent(sessionId)}/restart`),
+  /** Types the prompt into the agent at `at` (Unix seconds), once it is idle. */
+  schedulePrompt: (sessionId: string, text: string, at: number) =>
+    request<ScheduledPrompt>('POST', `sessions/${encodeURIComponent(sessionId)}/scheduled`, {
+      body: { text, at },
+    }),
+  cancelScheduled: (promptId: string) =>
+    request<void>('DELETE', `scheduled/${encodeURIComponent(promptId)}`),
+  /** Types the same prompt into each of the (running) agents. */
+  broadcast: (sessionIds: string[], text: string) =>
+    request<void>('POST', 'broadcast', { body: { sessions: sessionIds, text } }),
   /** Types the handover request into the agent. */
   requestHandover: (sessionId: string) =>
     request<void>('POST', `sessions/${encodeURIComponent(sessionId)}/handover`),

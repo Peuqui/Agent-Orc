@@ -26,6 +26,15 @@ export function formatDate(date: Date, locale: string): string {
   return date.toLocaleString(locale, { dateStyle: 'short', timeStyle: 'short' })
 }
 
+/** A coming moment, as short as it can be: the time today, otherwise weekday and time. */
+export function formatMoment(date: Date, locale: string): string {
+  const sameDay = date.toDateString() === new Date().toDateString()
+  return date.toLocaleString(
+    locale,
+    sameDay ? { timeStyle: 'short' } : { weekday: 'short', hour: '2-digit', minute: '2-digit' },
+  )
+}
+
 const THOUSAND = 1000
 const MILLION = 1_000_000
 const BILLION = 1_000_000_000

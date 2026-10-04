@@ -57,6 +57,17 @@ from agent_orc.push import (
     remove_subscription,
     send_to_all,
 )
+from agent_orc.schedule import (
+    Reason,
+    ScheduledPrompt,
+    ScheduledPromptNotFoundError,
+    add_scheduled,
+    next_reset,
+    read_scheduled,
+    remove_scheduled,
+    remove_scheduled_of,
+    take_limited,
+)
 from agent_orc.scope import AccessScope, OutsideScopeError
 from agent_orc.sessions import (
     AgentSession,
@@ -96,8 +107,9 @@ WS_CLOSE_FORBIDDEN_ORIGIN = 4403
 WS_CLOSE_SESSION_NOT_FOUND = 4404
 SECONDS_PER_DAY = 86400
 SECONDS_PER_MINUTE = 60
-# How often effort changes waiting for a busy agent are checked.
-PENDING_EFFORT_CHECK_SECONDS = 2
+# How often the server looks after the agents: effort changes waiting for a busy agent,
+# handover advice, scheduled prompts.
+AGENT_CHECK_SECONDS = 2
 
 logger = logging.getLogger(__name__)
 
@@ -110,6 +122,7 @@ class FolderBusyError(RuntimeError):
 ERROR_STATUS: dict[type[Exception], int] = {
     OutsideScopeError: status.HTTP_403_FORBIDDEN,
     FileNotFoundError: status.HTTP_404_NOT_FOUND,
+    ScheduledPromptNotFoundError: status.HTTP_404_NOT_FOUND,
     NotADirectoryError: status.HTTP_400_BAD_REQUEST,
     IsADirectoryError: status.HTTP_400_BAD_REQUEST,
     FileExistsError: status.HTTP_409_CONFLICT,
@@ -229,6 +242,17 @@ class Workspace(BaseModel):
     active: str | None
 
 
+class ScheduledPromptRequest(BaseModel):
+    text: str
+    # When to type it, in seconds since the epoch.
+    at: float
+
+
+class BroadcastRequest(BaseModel):
+    sessions: list[str]
+    text: str
+
+
 class TrashEntryRequest(BaseModel):
     id: str
 
@@ -322,9 +346,41 @@ def create_app(
             if auto:
                 ask_for_handover(session)
 
-    async def watch_pending_efforts() -> None:
+    def plan_limit_resumes() -> None:
+        """Resume agents stopped by their usage limit once it is reset, as far as their quota
+        source knows the reset yet."""
+        for session_id in take_limited():
+            session = find_session(session_id)
+            profile = config.agents.get(session.profile) if session else None
+            if session is None or profile is None or profile.quota is None:
+                continue
+            reset = next_reset(QUOTA_SOURCES[profile.quota](), clock())
+            if reset is None:
+                continue
+            resume = config.limit_resume
+            add_scheduled(session.id, resume.prompt, reset + resume.delay_seconds, Reason.LIMIT)
+
+    def deliver_scheduled() -> None:
+        """Type due prompts into their agents, each as soon as its agent is idle."""
+        now = clock()
+        for prompt in read_scheduled():
+            if prompt.at > now:
+                break
+            session = find_session(prompt.session)
+            if session is not None and session.running and session_busy(session):
+                continue
+            remove_scheduled(prompt.id)
+            if session is None:
+                continue
+            if session.running:
+                sessions.type_line(session.id, prompt.text, config.terminal.submit_delay_ms)
+            else:
+                message = agent_message("unsent", session.id, session.path.name, prompt.text)
+                send_to_all(message, config.push)
+
+    async def watch_agents() -> None:
         while True:
-            await asyncio.sleep(PENDING_EFFORT_CHECK_SECONDS)
+            await asyncio.sleep(AGENT_CHECK_SECONDS)
             try:
                 # Off the event loop: switching in place waits a few seconds (effort.py).
                 await asyncio.to_thread(apply_pending_efforts)
@@ -336,10 +392,15 @@ def create_app(
                 await asyncio.to_thread(check_handovers)
             except Exception:
                 logger.exception("checking for handovers failed")
+            try:
+                await asyncio.to_thread(plan_limit_resumes)
+                await asyncio.to_thread(deliver_scheduled)
+            except Exception:
+                logger.exception("handling scheduled prompts failed")
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
-        watcher = asyncio.create_task(watch_pending_efforts())
+        watcher = asyncio.create_task(watch_agents())
         yield
         watcher.cancel()
 
@@ -580,9 +641,12 @@ def create_app(
     @app.get("/api/sessions", dependencies=authenticated)
     def list_sessions() -> list[dict[str, Any]]:
         requests = open_requests()
-        return [session_entry(s, requests) for s in sessions.list()]
+        scheduled = read_scheduled()
+        return [session_entry(s, requests, scheduled) for s in sessions.list()]
 
-    def session_entry(session: AgentSession, requests: list[ApprovalRequest]) -> dict[str, Any]:
+    def session_entry(
+        session: AgentSession, requests: list[ApprovalRequest], scheduled: list[ScheduledPrompt]
+    ) -> dict[str, Any]:
         empty = {"model": None, "context_tokens": None, "context_window": None}
         pending = pending_effort.get(session.id)
         status = session_status(session)
@@ -601,6 +665,7 @@ def create_app(
             "handover": asdict(advise(session, config.handover)),
             # Waiting for the user's answer; normally at most one, as Claude asks one at a time.
             "approvals": [asdict(r) for r in requests if r.session == session.id],
+            "scheduled": [asdict(p) for p in scheduled if p.session == session.id],
             "effort_pending": pending is not None,
             "pending_effort": pending.effort if pending else None,
             "pending_ultracode": pending.ultracode if pending else None,
@@ -792,6 +857,32 @@ def create_app(
     )
     def stop_session(session_id: str) -> None:
         sessions.stop(session_id)
+        remove_scheduled_of(session_id)
+
+    @app.post("/api/sessions/{session_id}/scheduled", dependencies=authenticated)
+    def schedule_prompt(session_id: str, body: ScheduledPromptRequest) -> ScheduledPrompt:
+        """Type the prompt into the agent at the given time (once it is idle)."""
+        if find_session(session_id) is None:
+            raise SessionNotFoundError(session_id)
+        return add_scheduled(session_id, body.text, body.at, Reason.USER)
+
+    @app.delete(
+        "/api/scheduled/{prompt_id}",
+        dependencies=authenticated,
+        status_code=status.HTTP_204_NO_CONTENT,
+    )
+    def cancel_scheduled(prompt_id: str) -> None:
+        remove_scheduled(prompt_id)
+
+    @app.post("/api/broadcast", dependencies=authenticated, status_code=status.HTTP_204_NO_CONTENT)
+    def broadcast(body: BroadcastRequest) -> None:
+        """Type the same prompt into several agents, as the user would into each."""
+        running = {s.id for s in sessions.list() if s.running}
+        missing = [session_id for session_id in body.sessions if session_id not in running]
+        if missing:
+            raise SessionNotFoundError(", ".join(missing))
+        for session_id in body.sessions:
+            sessions.type_line(session_id, body.text, config.terminal.submit_delay_ms)
 
     @app.post("/api/sessions/{session_id}/remove-worktree", dependencies=authenticated)
     def remove_session_worktree(session_id: str) -> dict[str, Any]:

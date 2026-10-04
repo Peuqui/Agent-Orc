@@ -170,14 +170,46 @@ const drag = reorder.drag
 // touch inside a column makes it the active one (a focus change alone could be the terminal's
 // own autofocus).
 function onFrameLoad(id: string): void {
-  frameOf(id)?.contentWindow?.addEventListener(
+  const frameWindow = frameOf(id)?.contentWindow
+  frameWindow?.addEventListener(
     'pointerdown',
     () => {
       workspace.value.active = id
     },
     true,
   )
+  // Typing mostly happens inside a column: its shortcuts are caught there, before the terminal.
+  frameWindow?.addEventListener('keydown', onShortcut, true)
 }
+
+// Desktop shortcuts: Alt+Shift+1…9 goes to that column, Alt+Shift+←/→ to the previous or next
+// workspace. Ctrl+digits cannot be used: the browser keeps them for its own tabs.
+const COLUMN_KEYS = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9']
+const WORKSPACE_STEPS: Record<string, number> = { ArrowLeft: -1, ArrowRight: 1 }
+
+function onShortcut(event: KeyboardEvent): void {
+  if (!event.altKey || !event.shiftKey || event.ctrlKey || event.metaKey) return
+  // The key's place, not its character: Shift turns "1" into "!" (layouts differ).
+  const column = COLUMN_KEYS.indexOf(event.code)
+  const step = WORKSPACE_STEPS[event.code]
+  if (column >= 0) {
+    const id = workspace.value.tabs[column]
+    if (id === undefined) return
+    event.preventDefault()
+    void activate(id).then(() => frameOf(id)?.contentDocument?.querySelector('textarea')?.focus())
+  } else if (step !== undefined) {
+    if (otherNames.value.length === 0) return
+    event.preventDefault()
+    // Alphabetical, as the bar shows them, going round at the ends; an unnamed workspace
+    // stands before the first.
+    const names = name.value === null ? otherNames.value : [...otherNames.value, name.value].sort()
+    const here = name.value === null ? (step > 0 ? -1 : 0) : names.indexOf(name.value)
+    jumpToWorkspace(router, names[(here + step + names.length) % names.length])
+  }
+}
+
+window.addEventListener('keydown', onShortcut, true)
+onBeforeUnmount(() => window.removeEventListener('keydown', onShortcut, true))
 
 // Typing goes to the active column's input field.
 watch(

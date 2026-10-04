@@ -5,11 +5,14 @@ import { useRouter } from 'vue-router'
 import { api, type AgentSession, type Approval, type Reasoning } from '../api'
 import AppIcon from '../components/AppIcon.vue'
 import BaseDialog from '../components/BaseDialog.vue'
+import BroadcastButton from '../components/BroadcastButton.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
 import ContextMeter from '../components/ContextMeter.vue'
 import ReasoningControl from '../components/ReasoningControl.vue'
 import QuotaPanel from '../components/QuotaPanel.vue'
 import RestartButton from '../components/RestartButton.vue'
+import ScheduleButton from '../components/ScheduleButton.vue'
+import ScheduledList from '../components/ScheduledList.vue'
 import { moveInList, useReorder } from '../composables/useReorder'
 import { useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
@@ -214,6 +217,7 @@ function resume(session: AgentSession): void {
       <button class="btn-secondary btn-small" @click="openWorkspace(router, null)">
         <AppIcon name="plus" />{{ $t('workspace.new') }}
       </button>
+      <BroadcastButton />
     </div>
     <p v-if="sorted.length === 0" class="card p-6 text-center text-slate-400">{{ $t('sessions.empty') }}</p>
 
@@ -282,6 +286,7 @@ function resume(session: AgentSession): void {
             @update:model-value="(reasoning) => (effortChange = { session, reasoning })"
           />
         </div>
+        <ScheduledList :prompts="session.scheduled" />
         <!-- The context is large: a handover to a fresh session saves tokens (more so once cold). -->
         <div
           v-if="session.handover.recommended && !session.busy"
@@ -340,13 +345,16 @@ function resume(session: AgentSession): void {
             {{ $t('sessions.discard') }}
           </button>
         </div>
-        <div class="flex flex-wrap gap-2">
+        <div class="flex flex-wrap gap-1.5">
           <RouterLink
             v-if="session.running"
             :to="{ path: '/workspace', query: { open: session.id } }"
             class="btn-primary btn-small"
+            :title="$t('sessions.terminal')"
+            :aria-label="$t('sessions.terminal')"
           >
-            <AppIcon name="agents" />{{ $t('sessions.terminal') }}
+            <!-- On phones the icon only, so the action row stays one line. -->
+            <AppIcon name="agents" /><span class="max-sm:hidden">{{ $t('sessions.terminal') }}</span>
           </RouterLink>
           <button
             v-if="!session.running && session.worktree"
@@ -361,16 +369,17 @@ function resume(session: AgentSession): void {
           </button>
           <RouterLink
             :to="`/changes/${encodeURIComponent(session.id)}`"
-            class="btn-secondary btn-small"
+            class="btn-secondary btn-small-icon"
             :title="$t('changes.open')"
             :aria-label="$t('changes.button')"
           >
             <!-- The icon only (its name in the tooltip), so the row stays one line. -->
             <AppIcon name="diff" />
           </RouterLink>
-          <RestartButton v-if="session.running" :session="session" button-class="btn-secondary btn-small" />
+          <ScheduleButton v-if="session.running" :session="session" button-class="btn-secondary btn-small-icon" />
+          <RestartButton v-if="session.running" :session="session" button-class="btn-secondary btn-small-icon" />
           <button
-            class="btn-secondary btn-small"
+            class="btn-secondary btn-small-icon"
             :title="$t('sessions.stop')"
             :aria-label="$t('sessions.stop')"
             @click="stopping = session"
@@ -382,8 +391,6 @@ function resume(session: AgentSession): void {
             class="ml-auto flex items-center gap-1 text-xs text-slate-400"
             :title="$t('permission.title')"
           >
-            <!-- Phones have no room for the word next to Terminal and Stop; the title says it. -->
-            <span class="hidden sm:inline">{{ $t('permission.label') }}</span>
             <select
               class="h-7 rounded-lg border border-slate-600 bg-slate-800 pr-1 pl-1.5 text-xs text-slate-200"
               :aria-label="$t('permission.label')"

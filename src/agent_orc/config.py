@@ -70,6 +70,15 @@ class HandoverConfig(StrictModel):
     prompt: str
 
 
+class LimitResumeConfig(StrictModel):
+    """Resuming an agent stopped by its usage limit once the limit is reset (schedule.py)."""
+
+    # Typed into the agent after the reset.
+    prompt: str
+    # Waited after the announced reset, in case the limit lifts a little later.
+    delay_seconds: int
+
+
 class PushConfig(StrictModel):
     """Notifications on the user's devices when an agent finished or waits (see push.py)."""
 
@@ -171,6 +180,7 @@ class Config(StrictModel):
     terminal: TerminalConfig
     push: PushConfig
     handover: HandoverConfig
+    limit_resume: LimitResumeConfig
     dictation: DictationConfig
     tmux: TmuxConfig
     agents: dict[str, AgentProfile]

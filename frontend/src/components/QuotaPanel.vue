@@ -2,6 +2,7 @@
 import { useI18n } from 'vue-i18n'
 import type { QuotaWindow } from '../api'
 import { useSessions } from '../composables/useSessions'
+import { formatMoment } from '../format'
 import UsageBar from './UsageBar.vue'
 import UsageMeter from './UsageMeter.vue'
 
@@ -22,12 +23,7 @@ function shortLabel(name: string): string {
 }
 
 function detail(window: QuotaWindow): string {
-  const reset = new Date(window.resets_at * MILLISECONDS_PER_SECOND)
-  const sameDay = reset.toDateString() === new Date().toDateString()
-  const when = reset.toLocaleString(
-    locale.value,
-    sameDay ? { timeStyle: 'short' } : { weekday: 'short', hour: '2-digit', minute: '2-digit' },
-  )
+  const when = formatMoment(new Date(window.resets_at * MILLISECONDS_PER_SECOND), locale.value)
   return t('quota.detail', { percent: Math.round(window.used_percentage), when })
 }
 </script>

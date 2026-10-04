@@ -18,6 +18,7 @@ from agent_orc.auth import new_credentials
 from agent_orc.config import Config, DictationConfig, default_config_text
 from agent_orc.context import store_activity, store_status
 from agent_orc.history import claude_project_dir
+from agent_orc.schedule import mark_limited, read_scheduled
 from agent_orc.sessions import SESSION_ENV
 from agent_orc.terminal import attach_environment
 from tests.conftest import Device, FakeClock, FakePushService, FakeWhisper
@@ -298,10 +299,11 @@ ORIGIN = {"origin": "http://testserver"}
 MAX_TERMINAL_FRAMES = 500
 
 
-def start_shell(client: TestClient, home: Path) -> str:
+def start_shell(client: TestClient, folder: Path) -> str:
+    folder.mkdir(exist_ok=True)
     body = {
         "profile": "shell",
-        "path": str(home / "projects"),
+        "path": str(folder),
         "resume": False,
         "effort": None,
         "ultracode": False,
@@ -342,7 +344,7 @@ def test_terminal_refuses_anonymous_foreign_origin_and_unknown_session(
 ) -> None:
     assert refused_code(anonymous, "x", ORIGIN) == 4401
     anonymous.post("/api/login", json={"password": PASSWORD})
-    session_id = start_shell(anonymous, home)
+    session_id = start_shell(anonymous, home / "projects")
     assert refused_code(anonymous, session_id, {"origin": "https://evil.example"}) == 4403
     assert refused_code(anonymous, "unknown", ORIGIN) == 4404
 
@@ -357,7 +359,7 @@ def tmux_client_size(socket_name: str) -> str:
 def test_terminal_roundtrip_resize_and_detach(
     client: TestClient, home: Path, socket_name: str
 ) -> None:
-    session_id = start_shell(client, home)
+    session_id = start_shell(client, home / "projects")
     with client.websocket_connect(terminal_url(session_id), headers=ORIGIN) as term:
         read_until(term, "READY")
         # Attached at the size the browser sent along, before any resize message.
@@ -387,7 +389,7 @@ def test_tmux_client_does_not_inherit_tmux(monkeypatch: pytest.MonkeyPatch) -> N
 
 
 def test_terminal_closes_when_session_stops(client: TestClient, home: Path) -> None:
-    session_id = start_shell(client, home)
+    session_id = start_shell(client, home / "projects")
     with client.websocket_connect(terminal_url(session_id), headers=ORIGIN) as term:
         read_until(term, "READY")
         client.delete(f"/api/sessions/{session_id}")
@@ -671,7 +673,7 @@ def test_pending_effort_applies_when_the_agent_is_done(
     config: Config, clock: FakeClock, home: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
-    monkeypatch.setattr("agent_orc.api.PENDING_EFFORT_CHECK_SECONDS", 0.1)
+    monkeypatch.setattr("agent_orc.api.AGENT_CHECK_SECONDS", 0.1)
     folder = home / "projects"
     # The context manager runs the app's lifespan, i.e. the background watcher.
     with TestClient(
@@ -744,7 +746,7 @@ def test_resume_a_chosen_earlier_conversation(
 
 
 def test_session_text_for_copying(client: TestClient, home: Path) -> None:
-    session_id = start_shell(client, home)
+    session_id = start_shell(client, home / "projects")
     for _ in range(50):
         text = client.get(f"/api/sessions/{session_id}/text").json()["text"]
         if "READY" in text:
@@ -855,7 +857,7 @@ def test_permission_request_is_answered_from_the_card(
     client: TestClient, home: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
-    session_id = start_shell(client, home)
+    session_id = start_shell(client, home / "projects")
     hook = {"tool_name": "Bash", "tool_input": {"command": "git push"}}
     request = open_request(session_id, hook)
     listed = client.get("/api/sessions").json()[0]["approvals"]
@@ -876,7 +878,7 @@ def test_changes_of_an_agents_project(client: TestClient, home: Path) -> None:
             check=True,
         )
     (folder / "plan.md").write_text("# Plan\n")
-    session_id = start_shell(client, home)
+    session_id = start_shell(client, home / "projects")
     assert client.get(f"/api/sessions/{session_id}/changes").json() == [
         {"path": "plan.md", "status": "??"}
     ]
@@ -903,7 +905,7 @@ def test_handover_is_advised_from_the_threshold_on(
     client: TestClient, home: Path, socket_name: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
-    session_id = start_shell(client, home)
+    session_id = start_shell(client, home / "projects")
     report_context(session_id, 400)
     assert client.get("/api/sessions").json()[0]["handover"] == {
         "recommended": False,
@@ -1024,7 +1026,7 @@ def test_named_workspaces_are_kept_and_deleted(
 
 
 def test_attachment_lands_in_the_agents_folder(client: TestClient, home: Path) -> None:
-    session_id = start_shell(client, home)
+    session_id = start_shell(client, home / "projects")
     response = client.post(
         f"/api/sessions/{session_id}/attachments",
         params={"name": "foto.jpg"},
@@ -1036,3 +1038,112 @@ def test_attachment_lands_in_the_agents_folder(client: TestClient, home: Path) -
     assert (home / "projects" / relative).read_bytes() == b"jpeg"
     missing = client.post("/api/sessions/nope/attachments", params={"name": "a"}, content=b"")
     assert missing.status_code == 404
+
+
+def wait_for_text(client: TestClient, session_id: str, text: str) -> bool:
+    for _ in range(50):
+        if text in client.get(f"/api/sessions/{session_id}/text").json()["text"]:
+            return True
+        time.sleep(0.1)
+    return False
+
+
+def test_scheduled_prompt_waits_for_its_time_and_an_idle_agent(
+    config: Config, clock: FakeClock, home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
+    monkeypatch.setattr("agent_orc.api.AGENT_CHECK_SECONDS", 0.1)
+    with TestClient(
+        create_app(config, new_credentials(PASSWORD), static_dir=None, clock=clock)
+    ) as client:
+        client.post("/api/login", json={"password": PASSWORD})
+        session_id = start_shell(client, home / "projects" / "a")
+        assert wait_for_text(client, session_id, "READY")
+        url = f"/api/sessions/{session_id}/scheduled"
+        planned = client.post(url, json={"text": "later please", "at": clock.now + 60}).json()
+        assert planned["reason"] == "user"
+        listed = client.get("/api/sessions").json()[0]["scheduled"]
+        assert [p["text"] for p in listed] == ["later please"]
+        time.sleep(0.5)
+        assert "later please" not in client.get(f"/api/sessions/{session_id}/text").json()["text"]
+
+        # Due, but the agent is working: it waits for the end of the answer.
+        store_activity(session_id, busy=True)
+        clock.advance(61)
+        time.sleep(0.5)
+        assert client.get("/api/sessions").json()[0]["scheduled"] != []
+        store_activity(session_id, busy=False)
+        assert wait_for_text(client, session_id, "later please")
+        assert client.get("/api/sessions").json()[0]["scheduled"] == []
+
+        # Removed before it is due: never typed.
+        removed = client.post(url, json={"text": "never", "at": clock.now + 60}).json()
+        assert client.delete(f"/api/scheduled/{removed['id']}").status_code == 204
+        assert client.delete(f"/api/scheduled/{removed['id']}").status_code == 404
+        assert (
+            client.post("/api/sessions/unknown/scheduled", json={"text": "x", "at": 0}).status_code
+            == 404
+        )
+
+
+def test_agent_stopped_by_its_limit_resumes_after_the_reset(
+    config: Config, clock: FakeClock, home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
+    monkeypatch.setattr("agent_orc.api.AGENT_CHECK_SECONDS", 0.1)
+    shell = config.agents["shell"].model_copy(update={"quota": "claude"})
+    limited_config = config.model_copy(update={"agents": {**config.agents, "shell": shell}})
+    with TestClient(
+        create_app(limited_config, new_credentials(PASSWORD), static_dir=None, clock=clock)
+    ) as client:
+        client.post("/api/login", json={"password": PASSWORD})
+        session_id = start_shell(client, home / "projects" / "a")
+        assert wait_for_text(client, session_id, "READY")
+        reset = clock.now + 3600
+        store_status(
+            session_id,
+            {
+                "model": {"display_name": "Opus"},
+                "rate_limits": {
+                    "five_hour": {"used_percentage": 100, "resets_at": reset},
+                    "seven_day": {"used_percentage": 50, "resets_at": reset + 86400},
+                },
+            },
+        )
+        # What the StopFailure hook (agent-orc agent-limited) leaves behind.
+        mark_limited(session_id)
+        for _ in range(30):
+            planned = client.get("/api/sessions").json()[0]["scheduled"]
+            if planned:
+                break
+            time.sleep(0.1)
+        resume = config.limit_resume
+        assert [(p["reason"], p["text"], p["at"]) for p in planned] == [
+            ("limit", resume.prompt, reset + resume.delay_seconds)
+        ]
+        clock.advance(3600 + resume.delay_seconds)
+        assert wait_for_text(client, session_id, resume.prompt)
+
+        # Stopping the agent drops what it still had planned.
+        client.post(f"/api/sessions/{session_id}/scheduled", json={"text": "x", "at": 0})
+        client.delete(f"/api/sessions/{session_id}")
+        assert client.get("/api/sessions").json() == []
+        assert read_scheduled() == []
+
+
+def test_broadcast_types_into_every_chosen_agent(client: TestClient, home: Path) -> None:
+    first = start_shell(client, home / "projects" / "a")
+    assert wait_for_text(client, first, "READY")
+    second = start_shell(client, home / "projects" / "b")
+    assert wait_for_text(client, second, "READY")
+    response = client.post(
+        "/api/broadcast", json={"sessions": [first, second], "text": "commit and push"}
+    )
+    assert response.status_code == 204
+    assert wait_for_text(client, first, "commit and push")
+    assert wait_for_text(client, second, "commit and push")
+    # An unknown agent is refused before anything is typed.
+    refused = client.post("/api/broadcast", json={"sessions": [first, "gone"], "text": "nope"})
+    assert refused.status_code == 404
+    time.sleep(0.3)
+    assert "nope" not in client.get(f"/api/sessions/{first}/text").json()["text"]

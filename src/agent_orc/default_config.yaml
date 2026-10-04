@@ -61,6 +61,12 @@ handover:
   cold_after_minutes: 60
   prompt: "Your context is getting large. Write a handover document for the next session: goal, current state, decisions made, open tasks and next steps, with the files that matter. Save it in the project and tell me its path."
 
+# An agent stopped by its usage limit (Claude's StopFailure hook, see the claude profile) gets
+# this prompt once the limit is reset; its card shows the planned resume, which can be removed.
+limit_resume:
+  prompt: "The usage limit has been reset. Continue where you stopped."
+  delay_seconds: 60
+
 # Notifications on your devices (switched on per device in the settings menu): an agent finished
 # its answer or waits for you. Needs HTTPS (or localhost) and, on iPhones, the installed app.
 push:
@@ -94,7 +100,7 @@ tmux:
 agents:
   claude:
     label: Claude Code
-    start: [claude, --settings, &claude_settings '{"statusLine": {"type": "command", "command": "agent-orc statusline"}, "hooks": {"UserPromptSubmit": [{"hooks": [{"type": "command", "command": "agent-orc agent-busy"}]}], "Stop": [{"hooks": [{"type": "command", "command": "agent-orc agent-idle"}]}], "Notification": [{"matcher": "permission_prompt|elicitation_dialog", "hooks": [{"type": "command", "command": "agent-orc agent-waiting"}]}], "PermissionRequest": [{"matcher": "", "hooks": [{"type": "command", "command": "agent-orc agent-permission", "timeout": 86400}]}]}}', --remote-control, "{name}"]
+    start: [claude, --settings, &claude_settings '{"statusLine": {"type": "command", "command": "agent-orc statusline"}, "hooks": {"UserPromptSubmit": [{"hooks": [{"type": "command", "command": "agent-orc agent-busy"}]}], "Stop": [{"hooks": [{"type": "command", "command": "agent-orc agent-idle"}]}], "Notification": [{"matcher": "permission_prompt|elicitation_dialog", "hooks": [{"type": "command", "command": "agent-orc agent-waiting"}]}], "PermissionRequest": [{"matcher": "", "hooks": [{"type": "command", "command": "agent-orc agent-permission", "timeout": 86400}]}], "StopFailure": [{"matcher": "rate_limit", "hooks": [{"type": "command", "command": "agent-orc agent-limited"}]}]}}', --remote-control, "{name}"]
     resume: [claude, --settings, *claude_settings, --continue, --remote-control, "{name}"]
     # Every earlier conversation in the folder (also from VS Code or a terminal) can be resumed.
     conversations:

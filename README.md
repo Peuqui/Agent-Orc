@@ -37,6 +37,9 @@ detaches: the agents keep working, and you pick them up again from any device.
 - The permission mode an agent starts in, per project (ask, edit, auto, plan; auto by default).
 - An agent can start in a git worktree of its own (a second working copy on a new branch), so
   two agents can work on one project; removed again once it has ended, without losing work.
+- Restart (⟳) with the conversation resumed, schedule prompts for later, and carry on by
+  itself after the usage limit once the quota is reset.
+- Send the same prompt to several agents at once.
 
 **Workspaces**
 - Several agents side by side as columns; drag the column heads to sort them and the dividers
@@ -44,6 +47,8 @@ detaches: the agents keep working, and you pick them up again from any device.
 - Every browser tab has its own workspace. Give it a name and it is saved, shows up in the
   overview and in the bar of every workspace, and one click jumps to the tab that shows it –
   handy for spreading workspaces over several monitors. On the phone the bar switches in place.
+- Shortcuts on a computer: Alt+Shift+1 … 9 for the columns, Alt+Shift+← / → for the
+  workspaces.
 
 <p align="center">
   <img src="docs/screenshots/workspace-en.png" alt="Workspace with two agents side by side" width="860">
@@ -53,7 +58,9 @@ detaches: the agents keep working, and you pick them up again from any device.
 - A plain input field below the terminal, so phone keyboards, autocorrect and dictation work;
   Enter sends, Shift+Enter starts a new line.
 - Dictation through a local Whisper service ([whisper-stt](https://github.com/Peuqui/whisper-stt),
-  GPU or CPU) or the browser's own speech recognition.
+  GPU or CPU, engine chosen per device, e.g. Parakeet or Whisper) or the browser's own speech
+  recognition.
+- Prompt templates for frequent instructions, one tap into the input field.
 - Attach a photo, a screenshot (from the gallery, captured from the screen on the desktop, or
   simply pasted with Ctrl+V) or a file: it lands in the project folder, shows as a small preview
   above the input field and goes to the agent with the next message.

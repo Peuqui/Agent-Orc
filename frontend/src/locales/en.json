@@ -223,7 +223,11 @@
           "When an agent asks for permission, its card shows the command with “Allow” and “Deny”. The terminal asks the same; the first answer counts.",
           "“Changes” (branch icon, on the card and in the header of every terminal) shows what the agent changed in the project: changed, new and deleted files since the last commit; a tap shows the diff.",
           "From the configured context size on (50 % by default) the card advises a handover to a fresh session, a notification says so once; “Ask for a handover” asks the agent for a handover document. The settings menu can make this automatic.",
-          "“Start in a worktree of its own” (start dialog): the agent works in a second working copy on a new branch next to the project; once it has ended, “Remove worktree” on the card removes it again – without losing unsaved work."
+          "“Start in a worktree of its own” (start dialog): the agent works in a second working copy on a new branch next to the project; once it has ended, “Remove worktree” on the card removes it again – without losing unsaved work.",
+          "⟳ (card and terminal bar) restarts the agent and resumes its conversation, e.g. when it hangs or should read changed settings. It asks first; a running answer and background tasks end.",
+          "Clock on the card: schedule a prompt for later, e.g. “run the tests and report” at 7 am. It is typed in at that time once the agent is idle; scheduled prompts are listed on the card and removed with ×.",
+          "When a Claude agent runs into its usage limit, Agent-Orc schedules the resume for the next reset of the quota (yellow entry on the card). Is it still limited then, the next reset follows.",
+          "“To several” (next to the workspaces, from two running agents on): send the same prompt to several agents, e.g. “commit and push”."
         ]
       },
       {
@@ -235,7 +239,8 @@
           "Jumping only finds tabs opened from within Agent-Orc – so open further workspaces through the buttons; they can then be detached onto other monitors.",
           "On the phone (installed app) the bar switches within the same window.",
           "“+” adds a running agent as a column, “− n +” sets how many columns fill the screen.",
-          "Dragging a column head sorts the columns; dragging the divider on its right edge changes the width, a double click resets it."
+          "Dragging a column head sorts the columns; dragging the divider on its right edge changes the width, a double click resets it.",
+          "Shortcuts on a computer: Alt+Shift+1 … 9 jumps to that column, Alt+Shift+← / → to the previous or next workspace."
         ]
       },
       {
@@ -247,7 +252,7 @@
           "Grip on the right (jog): pull up or down to scroll, the further the faster. Mouse wheel and swiping scroll as well.",
           "A− / A+ changes the font size of this terminal only; the text view shows the screen for selecting and copying.",
           "The key bar sends Esc, Tab, arrows, Ctrl and so on – Ctrl and Alt apply to the next key.",
-          "Templates (list icon next to the paperclip): put frequent prompts into the input field with a tap; “Manage templates” creates them, for all devices."
+          "Templates (in the paperclip menu): put frequent prompts into the input field with a tap; “Manage templates” creates them, for all devices."
         ]
       },
       {
@@ -257,10 +262,11 @@
         ]
       },
       {
-        "title": "Settings (gear)",
+        "title": "Settings (☰)",
         "items": [
           "Font, font size, line spacing and lines per scroll step – stored on this device.",
-          "Notifications: switch them on per device in the gear menu. You then get a message when an agent is done or waits for a permission or an answer; tapping it opens the agent. Only over HTTPS; on iPhones only in the installed app."
+          "Notifications: switch them on per device in the ☰ menu. You then get a message when an agent is done or waits for a permission or an answer; tapping it opens the agent. Only over HTTPS; on iPhones only in the installed app.",
+          "Dictation engine: default or one of the engines the Whisper service offers (e.g. Parakeet: fast; Whisper) – per device."
         ]
       }
     ]
@@ -354,5 +360,23 @@
     "confirm": "Restart the agent in “{name}”? The conversation is resumed; the agent's running background tasks end.",
     "confirmBusy": "“{name}” is working right now. A restart ends the running answer and its background tasks; the conversation is resumed afterwards.",
     "done": "“{name}” was restarted."
+  },
+  "schedule": {
+    "title": "Schedule a prompt",
+    "text": "What should the agent do then?",
+    "at": "When",
+    "plan": "Schedule",
+    "hint": "Typed in at the chosen time, as soon as the agent has finished its current answer.",
+    "done": "Scheduled for “{name}”: {when}",
+    "due": "due",
+    "limit": "Resume after the usage limit",
+    "cancel": "Remove scheduled prompt"
+  },
+  "broadcast": {
+    "button": "To several",
+    "title": "Send to several agents",
+    "text": "Message to all chosen agents …",
+    "send": "Send to {count}",
+    "sent": "Sent to {count} agents"
   }
 }

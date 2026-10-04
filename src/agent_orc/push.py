@@ -76,7 +76,8 @@ def remove_subscription(endpoint: str) -> None:
 
 
 def agent_message(kind: str, session_id: str, folder: str, text: str) -> dict[str, Any]:
-    """What the service worker shows: kind "done" or "waiting", for the agent in folder."""
+    """What the service worker shows (its texts per kind are in push-sw.js), for the agent in
+    folder."""
     return {"kind": kind, "session": session_id, "folder": folder, "text": text[:MAX_TEXT_CHARS]}
 
 

@@ -43,6 +43,9 @@ aus wieder aufnehmen.
 - Ein Agent kann in einem eigenen Git-Worktree starten (zweite Arbeitskopie auf einem neuen
   Branch), damit zwei Agenten an einem Projekt arbeiten können; danach wird er wieder
   entfernt, ohne Arbeit zu verlieren.
+- Neu starten (⟳) mit fortgesetztem Gespräch, Prompts für später planen, und nach dem
+  Nutzungslimit automatisch weitermachen, sobald das Kontingent zurückgesetzt ist.
+- Denselben Prompt an mehrere Agenten auf einmal schicken.
 
 **Arbeitsflächen**
 - Mehrere Agenten als Spalten nebeneinander; Spaltenköpfe ziehen sortiert, die Trenner ziehen
@@ -51,6 +54,8 @@ aus wieder aufnehmen.
   erscheint in der Übersicht und in der Leiste jeder Arbeitsfläche, und ein Klick springt in den
   Tab, der sie zeigt – praktisch, um Arbeitsflächen auf mehrere Monitore zu verteilen. Am Handy
   wechselt die Leiste im selben Fenster.
+- Tastenkürzel am Rechner: Alt+Umschalt+1 … 9 für die Spalten, Alt+Umschalt+← / → für die
+  Arbeitsflächen.
 
 <p align="center">
   <img src="docs/screenshots/workspace-de.png" alt="Arbeitsfläche mit zwei Agenten nebeneinander" width="860">
@@ -60,7 +65,9 @@ aus wieder aufnehmen.
 - Ein normales Eingabefeld unter dem Terminal, damit Handytastatur, Autokorrektur und Diktat
   funktionieren; Enter sendet, Shift+Enter macht eine neue Zeile.
 - Diktat über einen lokalen Whisper-Dienst ([whisper-stt](https://github.com/Peuqui/whisper-stt),
-  GPU oder CPU) oder die Spracherkennung des Browsers.
+  GPU oder CPU, Engine pro Gerät wählbar, z. B. Parakeet oder Whisper) oder die
+  Spracherkennung des Browsers.
+- Prompt-Vorlagen für häufige Anweisungen, mit einem Tipp im Eingabefeld.
 - Foto, Screenshot (aus der Galerie, am Rechner direkt vom Bildschirm oder einfach mit Strg+V
   eingefügt) oder Datei anhängen: Sie landen im Projektordner, erscheinen als kleine Vorschau
   über dem Eingabefeld und gehen mit der nächsten Nachricht an den Agenten.

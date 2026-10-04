@@ -223,7 +223,11 @@
           "Fragt ein Agent um Erlaubnis, zeigt seine Karte den Befehl mit „Erlauben“ und „Ablehnen“. Im Terminal steht dieselbe Frage; wo zuerst geantwortet wird, das gilt.",
           "„Änderungen“ (Zweig-Symbol, auf der Karte und im Kopf jedes Terminals) zeigt, was der Agent im Projekt geändert hat: geänderte, neue und gelöschte Dateien seit dem letzten Commit, ein Tipp zeigt den Diff.",
           "Ab der eingestellten Kontextgröße (Voreinstellung 50 %) empfiehlt die Karte eine Übergabe an eine frische Sitzung, eine Benachrichtigung sagt es einmal; „Übergabe schreiben lassen“ bittet den Agenten um ein Übergabe-Dokument. Im Menü der Einstellungen lässt sich das automatisch anstoßen.",
-          "„In eigenem Worktree starten“ (Startdialog): Der Agent arbeitet in einer zweiten Arbeitskopie auf einem neuen Branch neben dem Projekt; ist er beendet, entfernt „Worktree entfernen“ auf der Karte sie wieder – ohne ungesicherte Arbeit zu verlieren."
+          "„In eigenem Worktree starten“ (Startdialog): Der Agent arbeitet in einer zweiten Arbeitskopie auf einem neuen Branch neben dem Projekt; ist er beendet, entfernt „Worktree entfernen“ auf der Karte sie wieder – ohne ungesicherte Arbeit zu verlieren.",
+          "⟳ (Karte und Terminalleiste) startet den Agenten neu und setzt das Gespräch fort, etwa wenn er hängt oder geänderte Einstellungen lesen soll. Vorher kommt eine Rückfrage; eine laufende Antwort und Hintergrundaufgaben enden dabei.",
+          "Uhr auf der Karte: einen Prompt für später planen, etwa „Tests laufen lassen und berichten“ um 7 Uhr. Er wird zur Zeit eingetippt, sobald der Agent fertig ist; geplante Prompts stehen auf der Karte und lassen sich mit × entfernen.",
+          "Läuft ein Claude-Agent ins Nutzungslimit, plant Agent-Orc das Weitermachen zur nächsten Rücksetzung des Kontingents (gelber Eintrag auf der Karte). Ist er dann noch gesperrt, kommt der nächste Termin.",
+          "„An mehrere“ (neben den Arbeitsflächen, ab zwei laufenden Agenten): denselben Prompt an mehrere Agenten schicken, etwa „committe und pushe“."
         ]
       },
       {
@@ -235,7 +239,8 @@
           "Springen findet nur Tabs, die aus Agent-Orc heraus geöffnet wurden – weitere Flächen also über die Knöpfe öffnen, dann lassen sie sich auch auf andere Monitore abkoppeln.",
           "Am Handy (installierte App) wechselt die Leiste im selben Fenster.",
           "„+“ fügt einen laufenden Agenten als Spalte hinzu, „− n +“ legt fest, wie viele Spalten den Bildschirm füllen.",
-          "Spaltenkopf ziehen sortiert die Spalten; den Trenner am rechten Rand ziehen ändert die Breite, Doppelklick setzt sie zurück."
+          "Spaltenkopf ziehen sortiert die Spalten; den Trenner am rechten Rand ziehen ändert die Breite, Doppelklick setzt sie zurück.",
+          "Tastenkürzel am Rechner: Alt+Umschalt+1 … 9 springt in die Spalte, Alt+Umschalt+← / → zur vorigen oder nächsten Arbeitsfläche."
         ]
       },
       {
@@ -247,7 +252,7 @@
           "Griff rechts (Jog): nach oben oder unten ziehen scrollt, je weiter, desto schneller. Mausrad und Wischen scrollen auch.",
           "A− / A+ ändert die Schriftgröße nur dieses Terminals; die Textansicht zeigt den Bildschirm zum Markieren und Kopieren.",
           "Die Tastenleiste schickt Esc, Tab, Pfeile, Ctrl usw. – Ctrl und Alt gelten für die nächste Taste.",
-          "Vorlagen (Listen-Symbol neben der Büroklammer): häufige Anweisungen mit einem Tipp ins Eingabefeld setzen; „Vorlagen verwalten“ legt sie an, für alle Geräte."
+          "Vorlagen (in der Büroklammer): häufige Anweisungen mit einem Tipp ins Eingabefeld setzen; „Vorlagen verwalten“ legt sie an, für alle Geräte."
         ]
       },
       {
@@ -257,10 +262,11 @@
         ]
       },
       {
-        "title": "Einstellungen (Zahnrad)",
+        "title": "Einstellungen (☰)",
         "items": [
           "Schrift, Schriftgröße, Zeilenabstand und Scroll-Zeilen pro Schritt – gespeichert auf diesem Gerät.",
-          "Benachrichtigungen: im Zahnrad pro Gerät einschalten. Dann kommt eine Nachricht, wenn ein Agent fertig ist oder auf eine Freigabe oder Antwort wartet; Antippen öffnet ihn. Nur über HTTPS, am iPhone nur in der installierten App."
+          "Benachrichtigungen: im Menü ☰ pro Gerät einschalten. Dann kommt eine Nachricht, wenn ein Agent fertig ist oder auf eine Freigabe oder Antwort wartet; Antippen öffnet ihn. Nur über HTTPS, am iPhone nur in der installierten App.",
+          "Diktat-Engine: Standard oder eine der Engines, die der Whisper-Dienst anbietet (z. B. Parakeet: schnell; Whisper) – pro Gerät."
         ]
       }
     ]
@@ -354,5 +360,23 @@
     "confirm": "Agent in „{name}“ neu starten? Das Gespräch wird fortgesetzt; laufende Hintergrundaufgaben des Agenten enden dabei.",
     "confirmBusy": "„{name}“ arbeitet gerade. Ein Neustart bricht die laufende Antwort und seine Hintergrundaufgaben ab; das Gespräch wird danach fortgesetzt.",
     "done": "„{name}“ wurde neu gestartet."
+  },
+  "schedule": {
+    "title": "Prompt planen",
+    "text": "Was soll der Agent dann tun?",
+    "at": "Wann",
+    "plan": "Planen",
+    "hint": "Wird zur gewählten Zeit eingetippt, sobald der Agent mit seiner laufenden Antwort fertig ist.",
+    "done": "Für „{name}“ geplant: {when}",
+    "due": "fällig",
+    "limit": "Weitermachen nach dem Limit",
+    "cancel": "Geplanten Prompt entfernen"
+  },
+  "broadcast": {
+    "button": "An mehrere",
+    "title": "An mehrere Agenten senden",
+    "text": "Nachricht an alle gewählten Agenten …",
+    "send": "An {count} senden",
+    "sent": "An {count} Agenten gesendet"
   }
 }

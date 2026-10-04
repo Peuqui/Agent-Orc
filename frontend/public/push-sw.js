@@ -1,4 +1,5 @@
-// Push messages from Agent-Orc (push.py): an agent finished its answer or waits for the user.
+// Push messages from Agent-Orc (push.py): an agent finished its answer, waits for the user, hit
+// its usage limit, ...
 // Loaded into the generated service worker (vite.config.ts, workbox importScripts). The service
 // worker cannot read the app's language setting, so it follows the browser's language.
 const PUSH_TEXTS = {
@@ -7,12 +8,16 @@ const PUSH_TEXTS = {
     waiting: '{folder} wartet auf dich',
     test: 'Benachrichtigungen sind eingerichtet',
     handover: '{folder}: Übergabe empfohlen',
+    limited: '{folder}: Limit erreicht',
+    unsent: '{folder}: geplanter Prompt nicht gesendet',
   },
   en: {
     done: '{folder} is done',
     waiting: '{folder} is waiting for you',
     test: 'Notifications are set up',
     handover: '{folder}: handover advised',
+    limited: '{folder}: usage limit reached',
+    unsent: '{folder}: scheduled prompt not sent',
   },
 }
 

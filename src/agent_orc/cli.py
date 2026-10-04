@@ -23,6 +23,7 @@ from agent_orc.config import (
 )
 from agent_orc.context import status_line, store_activity, store_status
 from agent_orc.push import agent_message, send_to_all
+from agent_orc.schedule import mark_limited
 from agent_orc.sessions import SESSION_ENV
 from agent_orc.setup import run_setup
 
@@ -72,6 +73,17 @@ def agent_idle() -> None:
     _notify("done", hook, hook.get("last_assistant_message") or "")
 
 
+def agent_limited() -> None:
+    """Hook command (Claude: StopFailure for rate_limit): the usage limit stopped the agent; the
+    server plans its resume for when the limit is reset."""
+    hook = json.load(sys.stdin)
+    session_id = os.environ[SESSION_ENV]
+    # StopFailure comes instead of Stop: the agent no longer works.
+    store_activity(session_id, busy=False)
+    mark_limited(session_id)
+    _notify("limited", hook, hook.get("last_assistant_message") or "")
+
+
 def agent_waiting() -> None:
     """Hook command (Claude: Notification): the agent waits for a permission or an answer."""
     hook = json.load(sys.stdin)
@@ -104,6 +116,7 @@ COMMANDS = {
     "statusline": (statusline, "status line command for agent sessions (JSON on stdin)"),
     "agent-busy": (agent_busy, "hook command: the agent started working"),
     "agent-idle": (agent_idle, "hook command: the agent finished its answer"),
+    "agent-limited": (agent_limited, "hook command: the usage limit stopped the agent"),
     "agent-waiting": (agent_waiting, "hook command: the agent waits for the user"),
     "agent-permission": (agent_permission, "hook command: a permission request for the web app"),
 }
