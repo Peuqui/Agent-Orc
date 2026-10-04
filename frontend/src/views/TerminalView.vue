@@ -50,7 +50,16 @@ const modifiers = ref(new Set<Modifier>())
 const connected = ref(false)
 // A−/A+ give this terminal its own size; otherwise it follows the size set in the settings.
 // One font size for every terminal of this device (settings menu, or ⋯ on phones).
-const { lineHeight, fontSize, stepFontSize, terminalFont } = useSettings()
+const { lineHeight, fontSize, stepFontSize, terminalFont, extraKeysVersion } = useSettings()
+
+// Arranged anew (on this or another column of the device): fetch the keys again.
+watch(extraKeysVersion, async () => {
+  try {
+    settings.value = await api.terminalSettings()
+  } catch (error) {
+    toast.error(error)
+  }
+})
 
 // Plain-text view: the canvas terminal cannot be selected on a phone, ordinary text can.
 const plainText = ref<string | null>(null)
@@ -446,6 +455,7 @@ onBeforeUnmount(() => {
       :rows="settings.keys"
       :active="modifiers"
       @send="(sequence) => sendInput(withModifiers(sequence))"
+      @submit="submitText"
       @toggle="toggleModifier"
     />
   </div>

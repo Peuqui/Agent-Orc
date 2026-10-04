@@ -5,7 +5,11 @@ import { useSettings } from '../composables/useSettings'
 import AppIcon from './AppIcon.vue'
 
 const props = defineProps<{ rows: TerminalKey[][]; active: Set<Modifier> }>()
-const emit = defineEmits<{ send: [sequence: string]; toggle: [modifier: Modifier] }>()
+const emit = defineEmits<{
+  send: [sequence: string]
+  submit: [text: string]
+  toggle: [modifier: Modifier]
+}>()
 // Folded, the first row stays (the keys used most go there in the config); the setting holds
 // for every terminal on this device.
 const { extraKeysUnfolded } = useSettings()
@@ -13,6 +17,7 @@ const shownRows = computed(() => (extraKeysUnfolded.value ? props.rows : props.r
 
 function press(key: TerminalKey): void {
   if (key.modifier) emit('toggle', key.modifier)
+  else if (key.send && key.submit) emit('submit', key.send)
   else if (key.send) emit('send', key.send)
 }
 </script>

@@ -208,7 +208,8 @@
     "fontSizeHint": "Default for all terminals; A−/A+ in a terminal changes only that one.",
     "dictationEngine": "Dictation engine",
     "engineDefault": "Default",
-    "dictationEngineHint": "Speech recognition of the Whisper service; “Default” takes what the service sets. Applies to this device."
+    "dictationEngineHint": "Speech recognition of the Whisper service; “Default” takes what the service sets. Applies to this device.",
+    "keys": "Arrange extra keys …"
   },
   "attach": {
     "title": "Attach a photo, screenshot or file",
@@ -272,7 +273,8 @@
           "Templates (in the paperclip menu): put frequent prompts into the input field with a tap; “Manage templates” creates them, for all devices.",
           "File paths in the output (e.g. src/main.py:42) are clickable when they exist: files open in the editor at that line, folders in the file view. The folder icon at the top opens the project folder.",
           "Editor: Markdown shows as a page (pencil: edit), pictures as pictures; other files that are not text can be downloaded. “Back” returns to where the file was opened from.",
-          "Extra keys: the arrow at the end of the first row folds or unfolds the other rows (for every terminal of the device); which keys the first row holds is set in the config."
+          "Extra keys: the arrow at the end of the first row folds or unfolds the other rows (for every terminal of the device).",
+          "Arrange extra keys (☰ menu): drag keys into order, also between rows, add ready-made keys, record a key combination (e.g. Ctrl+R) or create a text key that types a fixed text such as /compact and sends it if wanted. The arrangement holds for every device; “reset” brings back the config’s keys."
         ]
       },
       {
@@ -405,5 +407,31 @@
   "keys": {
     "fold": "Fewer extra keys",
     "unfold": "All extra keys"
+  },
+  "keysEditor": {
+    "title": "Arrange extra keys",
+    "hint": "Drag to arrange the keys, also between rows (hold with a finger first). Row 1 stays visible when folded; new keys land there. Holds for every device.",
+    "row": "Row {number}",
+    "rowEnd": "to the end",
+    "addRow": "Row",
+    "remove": "Remove key",
+    "add": "Add a key",
+    "record": "Record a key combination",
+    "recording": "Press the key now …",
+    "macro": "Text key (macro)",
+    "macroHint": "Types a fixed text with one press, e.g. /compact or git status.",
+    "macroLabel": "Label",
+    "macroText": "Text",
+    "macroSubmit": "then send it with Enter",
+    "macroAdd": "Text key",
+    "macroTitle": "Sends: {text}",
+    "reset": "Back to the keys of the config"
+  },
+  "keyCatalog": {
+    "basic": "Basic keys",
+    "moving": "Moving",
+    "control": "Control characters",
+    "characters": "Characters",
+    "function": "Function keys"
   }
 }

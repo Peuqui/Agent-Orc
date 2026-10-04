@@ -175,10 +175,14 @@ export interface TerminalKey {
   label: string
   send: string | null
   modifier: Modifier | null
+  /** A text key (macro): Enter follows the text, as when sending from the input field. */
+  submit: boolean
 }
 
 export interface TerminalSettings {
   keys: TerminalKey[][]
+  /** The user arranged the keys (for every device); otherwise the config's hold. */
+  keys_arranged: boolean
   submit_delay_ms: number
 }
 
@@ -285,6 +289,10 @@ export const api = {
 
   agents: () => request<AgentProfile[]>('GET', 'agents'),
   terminalSettings: () => request<TerminalSettings>('GET', 'terminal'),
+  /** Stores the extra keys for every device. */
+  arrangeKeys: (rows: TerminalKey[][]) => request<void>('PUT', 'terminal/keys', { body: rows }),
+  /** Back to the extra keys of the config. */
+  resetKeys: () => request<void>('DELETE', 'terminal/keys'),
   sessions: () => request<AgentSession[]>('GET', 'sessions'),
   /**
    * reasoning is stored for the folder; conversation resumes that earlier conversation,

@@ -1270,3 +1270,34 @@ def test_a_terminal_opens_next_to_the_folders_agent(client: TestClient, home: Pa
     # A second agent stays refused, the terminal is only one per folder as well.
     assert client.post("/api/sessions", json=agent).status_code == 409
     assert client.post("/api/sessions", json={**agent, "profile": "shell"}).status_code == 409
+
+
+def test_extra_keys_arranged_for_every_device(
+    client: TestClient, config: Config, home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
+    default = client.get("/api/terminal").json()
+    assert default["keys_arranged"] is False
+    assert default["keys"][0][0]["label"] == config.terminal.keys[0][0].label
+
+    rows = [
+        [{"label": "^C", "send": "\x03"}, {"label": "Ctrl", "modifier": "ctrl"}],
+        # A text key: Enter follows the text.
+        [{"label": "compact", "send": "/compact", "submit": True}],
+    ]
+    assert client.put("/api/terminal/keys", json=rows).status_code == 204
+    arranged = client.get("/api/terminal").json()
+    assert arranged["keys_arranged"] is True
+    assert [[k["label"] for k in row] for row in arranged["keys"]] == [["^C", "Ctrl"], ["compact"]]
+    assert arranged["keys"][1][0] == {
+        "label": "compact",
+        "send": "/compact",
+        "modifier": None,
+        "submit": True,
+    }
+    # A text key needs its text; a key is either a sequence or a modifier.
+    broken = [[{"label": "x", "modifier": "ctrl", "submit": True}]]
+    assert client.put("/api/terminal/keys", json=broken).status_code == 422
+
+    assert client.delete("/api/terminal/keys").status_code == 204
+    assert client.get("/api/terminal").json() == default

@@ -25,7 +25,7 @@ from agent_orc.changes import (
     file_changes,
     file_diff,
 )
-from agent_orc.config import Config, LiveEffortConfig, TerminalConfig
+from agent_orc.config import Config, LiveEffortConfig, TerminalKey
 from agent_orc.consumption import claude_consumption
 from agent_orc.context import QUOTA_SOURCES, session_busy, session_status, store_activity
 from agent_orc.dictation import (
@@ -78,9 +78,12 @@ from agent_orc.sessions import (
 )
 from agent_orc.state import (
     read_card_order,
+    read_extra_keys,
     read_prompt_templates,
     read_workspaces,
+    reset_extra_keys,
     write_card_order,
+    write_extra_keys,
     write_prompt_templates,
     write_workspaces,
 )
@@ -529,8 +532,32 @@ def create_app(
         ]
 
     @app.get("/api/terminal", dependencies=authenticated)
-    def terminal_settings() -> TerminalConfig:
-        return config.terminal
+    def terminal_settings() -> dict[str, Any]:
+        """The extra keys as arranged by the user (for every device), else the config's."""
+        arranged = read_extra_keys()
+        keys = (
+            config.terminal.keys
+            if arranged is None
+            else [[TerminalKey.model_validate(key) for key in row] for row in arranged]
+        )
+        return {
+            **config.terminal.model_dump(),
+            "keys": [[key.model_dump() for key in row] for row in keys],
+            "keys_arranged": arranged is not None,
+        }
+
+    @app.put(
+        "/api/terminal/keys", dependencies=authenticated, status_code=status.HTTP_204_NO_CONTENT
+    )
+    def arrange_keys(rows: list[list[TerminalKey]]) -> None:
+        write_extra_keys([[key.model_dump() for key in row] for row in rows])
+
+    @app.delete(
+        "/api/terminal/keys", dependencies=authenticated, status_code=status.HTTP_204_NO_CONTENT
+    )
+    def reset_keys() -> None:
+        """Back to the config's keys."""
+        reset_extra_keys()
 
     @app.get("/api/card-order", dependencies=authenticated)
     def card_order() -> list[str]:

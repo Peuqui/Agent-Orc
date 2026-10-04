@@ -15,12 +15,15 @@ import {
 } from '../composables/useSettings'
 import AppIcon from './AppIcon.vue'
 import HandoverSettings from './HandoverSettings.vue'
+import KeysEditor from './KeysEditor.vue'
 import PushSettings from './PushSettings.vue'
 
 // Settings of this device; more entries join here as they become adjustable.
 const { scrollLines, lineHeight, fontSize, stepFontSize, terminalFont, dictationEngine } = useSettings()
 const toast = useToast()
 const open = ref(false)
+// The extra-keys editor stays open after the menu has closed.
+const editingKeys = ref(false)
 // The engines the Whisper service offers; asked when the menu opens.
 const engines = ref<string[]>([])
 
@@ -110,8 +113,15 @@ function changeScrollLines(delta: number): void {
         </div>
         <p class="mt-1 text-xs text-slate-500">{{ $t('settings.dictationEngineHint') }}</p>
       </div>
+      <button
+        class="btn-secondary btn-small mt-3 w-full justify-center"
+        @click="((editingKeys = true), (open = false))"
+      >
+        {{ $t('settings.keys') }}
+      </button>
       <PushSettings />
       <HandoverSettings />
     </div>
+    <KeysEditor v-if="editingKeys" @close="editingKeys = false" />
   </div>
 </template>

@@ -8,6 +8,7 @@ from typing import Any
 CARD_ORDER_FILE = "card-order.json"
 WORKSPACES_FILE = "workspaces.json"
 PROMPT_TEMPLATES_FILE = "prompt-templates.json"
+EXTRA_KEYS_FILE = "extra-keys.json"
 
 
 def state_dir() -> Path:
@@ -61,3 +62,21 @@ def read_prompt_templates() -> list[dict[str, str]]:
 
 def write_prompt_templates(templates: list[dict[str, str]]) -> None:
     write_atomically(state_dir() / PROMPT_TEMPLATES_FILE, json.dumps(templates))
+
+
+def read_extra_keys() -> list[list[dict[str, Any]]] | None:
+    """The user's arrangement of the extra keys, for every device; None until arranged (then the
+    config's keys hold)."""
+    path = state_dir() / EXTRA_KEYS_FILE
+    if not path.is_file():
+        return None
+    rows: list[list[dict[str, Any]]] = json.loads(path.read_text(encoding="utf-8"))
+    return rows
+
+
+def write_extra_keys(rows: list[list[dict[str, Any]]]) -> None:
+    write_atomically(state_dir() / EXTRA_KEYS_FILE, json.dumps(rows, ensure_ascii=False))
+
+
+def reset_extra_keys() -> None:
+    (state_dir() / EXTRA_KEYS_FILE).unlink(missing_ok=True)

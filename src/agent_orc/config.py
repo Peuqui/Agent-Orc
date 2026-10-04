@@ -46,11 +46,15 @@ class TerminalKey(StrictModel):
     label: str
     send: str | None = None
     modifier: Literal["ctrl", "alt"] | None = None
+    # A text key (macro): Enter follows the text after the submit delay, as for the input field.
+    submit: bool = False
 
     @model_validator(mode="after")
     def send_xor_modifier(self) -> Self:
         if (self.send is None) == (self.modifier is None):
             raise ValueError(f"key {self.label!r} needs exactly one of send or modifier")
+        if self.submit and self.send is None:
+            raise ValueError(f"key {self.label!r} submits, so it needs a text to send")
         return self
 
 
