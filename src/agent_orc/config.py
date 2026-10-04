@@ -10,6 +10,10 @@ from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
 NAME_PLACEHOLDER = "{name}"
 CONVERSATION_PLACEHOLDER = "{conversation}"
+# The model chosen at start, for profiles that offer a choice (AgentProfile.models).
+MODEL_PLACEHOLDER = "{model}"
+# The folder's reasoning effort, in a profile's environment (AgentProfile.env).
+EFFORT_PLACEHOLDER = "{effort}"
 CONFIG_FILE_NAME = "config.yaml"
 CREDENTIALS_FILE_NAME = "credentials.json"
 
@@ -132,6 +136,9 @@ class EffortConfig(StrictModel):
     ultracode: bool = False
     # Without it, a running agent is restarted (resumed) to take a new reasoning.
     live: LiveEffortConfig | None = None
+    # For profiles with a choice of models: prints the levels the chosen model ({model}) takes,
+    # space-separated; nothing means the model gets no level at all (no slider).
+    levels_command: list[str] | None = None
 
     @model_validator(mode="after")
     def default_is_offered(self) -> "EffortConfig":
@@ -177,6 +184,10 @@ class AgentProfile(StrictModel):
     quota: Literal["claude"] | None = None
     # A plain terminal, no agent: it may run in a folder next to that folder's agent.
     terminal: bool = False
+    # Prints the models to choose from at start, one per line; the choice fills {model}.
+    models: list[str] | None = None
+    # Environment of the agent; {effort} is the folder's level (left out when it has none).
+    env: dict[str, str] = {}
 
 
 class Config(StrictModel):

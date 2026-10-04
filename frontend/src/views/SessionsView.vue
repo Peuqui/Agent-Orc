@@ -27,7 +27,6 @@ const stopping = ref<AgentSession | null>(null)
 // A chosen reasoning waiting for confirmation; the control shows it until then.
 const effortChange = ref<{ session: AgentSession; reasoning: Reasoning } | null>(null)
 
-const levels = computed(() => new Map(profiles.value.map((p) => [p.name, p.effort_levels])))
 const permissionModes = computed(() => new Map(profiles.value.map((p) => [p.name, p.permission_modes])))
 const effortLive = computed(() => new Map(profiles.value.map((p) => [p.name, p.effort_live])))
 const ultracodeOffered = computed(() => new Map(profiles.value.map((p) => [p.name, p.ultracode])))
@@ -175,12 +174,18 @@ function confirmStop(): void {
 }
 
 function resume(session: AgentSession): void {
-  // Resume with the effort the agent last reported.
+  // Resume with the effort the agent last reported, and the model it was started with.
   void run(() =>
-    api.startSession(session.profile, session.path, true, {
-      effort: session.effort,
-      ultracode: session.ultracode,
-    }),
+    api.startSession(
+      session.profile,
+      session.path,
+      true,
+      // A model without levels gets none, whatever the agent reports.
+      { effort: session.effort_levels.length ? session.effort : null, ultracode: session.ultracode },
+      null,
+      null,
+      session.chosen_model,
+    ),
   )
 }
 </script>
@@ -296,10 +301,10 @@ function resume(session: AgentSession): void {
             :window="session.context_window"
           />
           <ReasoningControl
-            v-if="session.running && levels.get(session.profile)?.length"
+            v-if="session.running && session.effort_levels.length"
             class="min-w-0 flex-1"
             compact
-            :levels="levels.get(session.profile) ?? []"
+            :levels="session.effort_levels"
             :ultracode-offered="ultracodeOffered.get(session.profile) ?? false"
             :model-value="shownReasoning(session)"
             :disabled="session.effort_pending"

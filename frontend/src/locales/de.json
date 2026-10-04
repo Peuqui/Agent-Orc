@@ -88,7 +88,8 @@
     "hitCount": "{count}× gefunden",
     "inWorktree": "In eigenem Worktree starten",
     "branch": "Name des neuen Branchs",
-    "worktreeHint": "Zweite Arbeitskopie auf einem neuen Branch, in {name} – so kommt sich der Agent nicht mit anderen im selben Projekt in die Quere."
+    "worktreeHint": "Zweite Arbeitskopie auf einem neuen Branch, in {name} – so kommt sich der Agent nicht mit anderen im selben Projekt in die Quere.",
+    "model": "Modell"
   },
   "trash": {
     "empty": "Der Papierkorb ist leer.",

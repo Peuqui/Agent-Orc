@@ -142,6 +142,23 @@ agents:
     label: Aider
     start: [aider]
     resume: [aider, --restore-chat-history]
+  # A profile may offer a choice of models at start: "models" prints them (one per line), the
+  # choice fills {model} in its commands; "effort.levels_command" prints the levels a model takes
+  # (nothing: no level at all), "env" sets the agent's environment ({effort}: the folder's level).
+  # Example, Claude Code on local models through a wrapper script (lclaude, not shipped):
+  #
+  # claude-local:
+  #   label: Claude (local)
+  #   models: [lclaude, --models]
+  #   start: [lclaude, "{model}", --settings, *claude_settings]
+  #   resume: [lclaude, "{model}", --settings, *claude_settings, --continue]
+  #   env: {LCLAUDE_EFFORT: "{effort}"}
+  #   effort:
+  #     levels: [low, medium, high, xhigh, max]
+  #     default: high
+  #     store: claude_project
+  #     levels_command: [lclaude, --levels, "{model}"]
+  #   trust: claude
   shell:
     label: Shell
     # A plain terminal: it may run next to the folder's agent (">_" on its card).

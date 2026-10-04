@@ -87,6 +87,20 @@ def config(home: Path, socket_name: str) -> Config:
                 "resume": ["sh", "-c", "echo resumed {conversation}; sleep 60"],
             },
         },
+        # Offers models; "thinker" takes two levels, "plain" none (as lclaude --levels says).
+        "chooser": {
+            "label": "Chooser",
+            "models": ["printf", "thinker\\nplain\\n"],
+            "start": ["sh", "-c", 'echo "started {model} [$ORC_EFFORT]"; exec cat'],
+            "resume": ["sh", "-c", 'echo "resumed {model} [$ORC_EFFORT]"; exec cat'],
+            "env": {"ORC_EFFORT": "{effort}"},
+            "effort": {
+                "levels": ["low", "medium", "high"],
+                "default": "medium",
+                "store": "claude_project",
+                "levels_command": ["sh", "-c", "[ {model} = thinker ] && echo low high || true"],
+            },
+        },
         "shell": {
             "label": "Shell",
             "start": ["sh", "-c", "echo READY; exec cat"],
@@ -1301,3 +1315,45 @@ def test_extra_keys_arranged_for_every_device(
 
     assert client.delete("/api/terminal/keys").status_code == 204
     assert client.get("/api/terminal").json() == default
+
+
+def test_a_chosen_model_gets_its_levels_and_environment(client: TestClient, home: Path) -> None:
+    assert client.get("/api/agents/chooser/models").json() == ["thinker", "plain"]
+    assert client.get("/api/agents/chooser/levels", params={"model": "thinker"}).json() == [
+        "low",
+        "high",
+    ]
+    assert client.get("/api/agents/chooser/levels", params={"model": "plain"}).json() == []
+    agents = {a["name"]: a["models"] for a in client.get("/api/agents").json()}
+    assert agents["chooser"] is True and agents["sleeper"] is False
+
+    def start(folder: Path, model: str | None, effort: str | None) -> Any:
+        folder.mkdir()
+        body = {
+            "profile": "chooser",
+            "path": str(folder),
+            "model": model,
+            "resume": False,
+            "effort": effort,
+            "ultracode": False,
+            "conversation": None,
+        }
+        return client.post("/api/sessions", json=body)
+
+    thinker = start(home / "projects" / "a", "thinker", "high").json()
+    assert thinker["chosen_model"] == "thinker"
+    assert wait_for_text(client, thinker["id"], "started thinker [high]")
+    plain = start(home / "projects" / "b", "plain", None).json()
+    # No levels for this model: no level stored and no effort in the environment.
+    assert wait_for_text(client, plain["id"], "started plain []")
+    listed = {s["id"]: s["effort_levels"] for s in client.get("/api/sessions").json()}
+    assert listed == {thinker["id"]: ["low", "high"], plain["id"]: []}
+
+    # A level the model does not take, a model the profile does not offer, or none at all.
+    assert start(home / "projects" / "c", "thinker", "medium").status_code == 422
+    assert start(home / "projects" / "d", "other", None).status_code == 422
+    assert start(home / "projects" / "e", None, None).status_code == 422
+
+    # A restart keeps the model and gives the folder's level again.
+    client.post(f"/api/sessions/{thinker['id']}/restart")
+    assert wait_for_text(client, thinker["id"], "resumed thinker [high]")

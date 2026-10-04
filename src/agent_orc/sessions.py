@@ -8,13 +8,20 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
-from agent_orc.config import CONVERSATION_PLACEHOLDER, NAME_PLACEHOLDER, AgentProfile
+from agent_orc.config import (
+    CONVERSATION_PLACEHOLDER,
+    MODEL_PLACEHOLDER,
+    NAME_PLACEHOLDER,
+    AgentProfile,
+)
 
 # Every agent gets its session id in this environment variable, so helpers it runs
 # (e.g. the status line command) know which session they belong to.
 SESSION_ENV = "AGENT_ORC_SESSION"
 PROFILE_OPTION = "@orc_profile"
 PATH_OPTION = "@orc_path"
+# The model chosen at start (profiles with a choice); a restart takes the same.
+MODEL_OPTION = "@orc_model"
 # Marks a folder's terminal apart from its agent in the session name.
 TERMINAL_ID_SUFFIX = "-terminal"
 FIELD_SEPARATOR = "\t"
@@ -23,6 +30,7 @@ LIST_FORMAT = FIELD_SEPARATOR.join(
         "#{session_name}",
         "#{" + PROFILE_OPTION + "}",
         "#{" + PATH_OPTION + "}",
+        "#{" + MODEL_OPTION + "}",
         "#{pane_dead}",
         "#{pane_dead_status}",
         "#{session_created}",
@@ -60,6 +68,8 @@ class AgentSession:
     created: float
     # A plain terminal (profile setting), which may run next to the folder's agent.
     terminal: bool
+    # The model chosen at start, for profiles that offer a choice; None otherwise.
+    chosen_model: str | None
 
 
 def session_id_for(path: Path, terminal: bool) -> str:
@@ -78,8 +88,16 @@ def exact_target(session_id: str) -> str:
     return f"={session_id}:"
 
 
-def build_command(arguments: list[str], name: str) -> list[str]:
-    return [argument.replace(NAME_PLACEHOLDER, name) for argument in arguments]
+def build_command(arguments: list[str], name: str, model: str | None) -> list[str]:
+    command = [argument.replace(NAME_PLACEHOLDER, name) for argument in arguments]
+    if model is None:
+        return command
+    return [argument.replace(MODEL_PLACEHOLDER, model) for argument in command]
+
+
+def environment_options(env: dict[str, str]) -> list[str]:
+    """tmux options setting the agent's environment."""
+    return [option for name, value in env.items() for option in ("-e", f"{name}={value}")]
 
 
 class SessionManager:
@@ -104,7 +122,13 @@ class SessionManager:
         return profile is not None and profile.terminal
 
     def start(
-        self, profile_name: str, path: Path, resume: bool, conversation: str | None = None
+        self,
+        profile_name: str,
+        path: Path,
+        resume: bool,
+        conversation: str | None = None,
+        model: str | None = None,
+        env: dict[str, str] | None = None,
     ) -> AgentSession:
         """Start an agent in `path`; at most one agent session exists per folder, and one
         terminal next to it.
@@ -112,14 +136,16 @@ class SessionManager:
         A session whose agent has already exited is started again in place, so it keeps its
         id (open terminals and workspace columns stay valid). `conversation` resumes that
         earlier conversation (the caller has checked that it exists); `resume` the last one.
+        `model` fills {model} (profiles with a choice of models); `env` is set for the agent.
         """
-        command = self._command(profile_name, path, resume, conversation)
+        env = env or {}
+        command = self._command(profile_name, path, resume, conversation, model)
         terminal = self._is_terminal(profile_name)
         existing = self.find_by_path(path, terminal)
         if existing is not None:
             if existing.running:
                 raise SessionAlreadyRunningError(existing.id)
-            return self._respawn(existing, profile_name, command)
+            return self._respawn(existing, profile_name, command, model, env)
 
         session_id = session_id_for(path, terminal)
         # One tmux invocation, so remain-on-exit is active before the agent can exit
@@ -136,22 +162,29 @@ class SessionManager:
             "set-option", "-g", "set-clipboard", "on", ";",
             "set-option", "-s", "focus-events", "on", ";",
             "new-session", "-d", "-s", session_id, "-c", str(path),
-            "-e", f"{SESSION_ENV}={session_id}", *command, ";",
+            "-e", f"{SESSION_ENV}={session_id}", *environment_options(env), *command, ";",
             "set-option", "-t", exact_target(session_id), PROFILE_OPTION, profile_name, ";",
-            "set-option", "-t", exact_target(session_id), PATH_OPTION, str(path),
+            "set-option", "-t", exact_target(session_id), PATH_OPTION, str(path), ";",
+            "set-option", "-t", exact_target(session_id), MODEL_OPTION, model or "",
         )  # fmt: skip
         session = self.find_by_path(path, terminal)
         if session is None:
             raise SessionError(f"tmux session {session_id} vanished right after start")
         return session
 
-    def restart(self, session: AgentSession) -> AgentSession:
-        """Resume a running agent in its own session (it reads some settings only at start)."""
-        command = self._command(session.profile, session.path, resume=True, conversation=None)
-        return self._respawn(session, session.profile, command)
+    def restart(self, session: AgentSession, env: dict[str, str]) -> AgentSession:
+        """Resume a running agent in its own session (it reads some settings only at start),
+        with the model it was started with."""
+        command = self._command(session.profile, session.path, True, None, session.chosen_model)
+        return self._respawn(session, session.profile, command, session.chosen_model, env)
 
     def _command(
-        self, profile_name: str, path: Path, resume: bool, conversation: str | None
+        self,
+        profile_name: str,
+        path: Path,
+        resume: bool,
+        conversation: str | None,
+        model: str | None,
     ) -> builtins.list[str]:
         # builtins: inside this class, "list" is the method listing the sessions.
         profile = self._agents.get(profile_name)
@@ -164,15 +197,21 @@ class SessionManager:
             ]
         else:
             arguments = profile.resume if resume else profile.start
-        return build_command(arguments, path.name)
+        return build_command(arguments, path.name, model)
 
     def _respawn(
-        self, session: AgentSession, profile_name: str, command: builtins.list[str]
+        self,
+        session: AgentSession,
+        profile_name: str,
+        command: builtins.list[str],
+        model: str | None,
+        env: dict[str, str],
     ) -> AgentSession:
         """Replace the session's process (ending a running one); attached terminals stay."""
         self._tmux(
             "respawn-pane", "-k", "-t", exact_target(session.id), "-c", str(session.path),
-            "-e", f"{SESSION_ENV}={session.id}", *command, ";",
+            "-e", f"{SESSION_ENV}={session.id}", *environment_options(env), *command, ";",
+            "set-option", "-t", exact_target(session.id), MODEL_OPTION, model or "", ";",
             "set-option", "-t", exact_target(session.id), PROFILE_OPTION, profile_name,
         )  # fmt: skip
         respawned = self.find_by_path(session.path, self._is_terminal(profile_name))
@@ -203,7 +242,9 @@ class SessionManager:
             raise SessionNotFoundError(session_id)
 
     def _parse_line(self, line: str) -> AgentSession:
-        session_id, profile, path, pane_dead, dead_status, created = line.split(FIELD_SEPARATOR)
+        session_id, profile, path, model, pane_dead, dead_status, created = line.split(
+            FIELD_SEPARATOR
+        )
         running = pane_dead != "1"
         return AgentSession(
             id=session_id,
@@ -214,6 +255,7 @@ class SessionManager:
             exit_status=int(dead_status) if dead_status else None,
             created=float(created),
             terminal=self._is_terminal(profile),
+            chosen_model=model or None,
         )
 
     def _tmux(self, *arguments: str, check: bool = True) -> subprocess.CompletedProcess[str]:

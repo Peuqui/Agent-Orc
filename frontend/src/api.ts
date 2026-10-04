@@ -13,6 +13,8 @@ export interface AgentProfile {
   permission_modes: string[]
   /** A plain terminal, no agent: it may run next to a folder's agent. */
   terminal: boolean
+  /** Offers a choice of models at start (GET agents/{name}/models). */
+  models: boolean
 }
 
 /** A file the agent changed (git working tree against the last commit); status as git puts it. */
@@ -82,6 +84,10 @@ export interface AgentSession {
   created: number
   /** A plain terminal, next to the folder's agent if it has one. */
   terminal: boolean
+  /** The model chosen at start (profiles with a choice of models). */
+  chosen_model: string | null
+  /** The levels its slider offers: the profile's, or those of the chosen model. */
+  effort_levels: string[]
   /** Reported by the agent itself (Claude: via `agent-orc statusline`); null until it reports. */
   model: string | null
   effort: string | null
@@ -306,10 +312,17 @@ export const api = {
     conversation: string | null = null,
     /** Start in a new git worktree on this new branch. */
     worktree: string | null = null,
+    /** For profiles with a choice of models (AgentProfile.models). */
+    model: string | null = null,
   ) =>
     request<AgentSession>('POST', 'sessions', {
-      body: { profile, path, resume, ...reasoning, conversation, worktree },
+      body: { profile, path, model, resume, ...reasoning, conversation, worktree },
     }),
+  /** The models a profile offers at start (e.g. the local ones of llama-swap). */
+  agentModels: (profile: string) => request<string[]>('GET', `agents/${encodeURIComponent(profile)}/models`),
+  /** The levels the profile takes with this model; empty: no level at all. */
+  agentLevels: (profile: string, model: string) =>
+    request<string[]>('GET', `agents/${encodeURIComponent(profile)}/levels`, { query: { model } }),
   /** Removes the worktree of an ended agent and its card; the branch only if merged. */
   removeWorktree: (sessionId: string) =>
     request<{ branch: string; branch_deleted: boolean }>(

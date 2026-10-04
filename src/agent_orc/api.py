@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import subprocess
 import time
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
@@ -25,7 +26,13 @@ from agent_orc.changes import (
     file_changes,
     file_diff,
 )
-from agent_orc.config import Config, LiveEffortConfig, TerminalKey
+from agent_orc.config import (
+    EFFORT_PLACEHOLDER,
+    MODEL_PLACEHOLDER,
+    Config,
+    LiveEffortConfig,
+    TerminalKey,
+)
 from agent_orc.consumption import claude_consumption
 from agent_orc.context import QUOTA_SOURCES, session_busy, session_status, store_activity
 from agent_orc.dictation import (
@@ -110,11 +117,24 @@ WS_CLOSE_FORBIDDEN_ORIGIN = 4403
 WS_CLOSE_SESSION_NOT_FOUND = 4404
 SECONDS_PER_DAY = 86400
 SECONDS_PER_MINUTE = 60
+# A profile's command (models, levels) may ask a server, e.g. llama-swap.
+PROFILE_COMMAND_TIMEOUT_SECONDS = 15
+# The levels of a model are asked again after this long (the session list is polled often).
+LEVELS_CACHE_SECONDS = 30
+
 # How often the server looks after the agents: effort changes waiting for a busy agent,
 # handover advice, scheduled prompts.
 AGENT_CHECK_SECONDS = 2
 
 logger = logging.getLogger(__name__)
+
+
+class ProfileCommandError(RuntimeError):
+    """A profile's command (its models, a model's levels) failed; its message says why."""
+
+
+class UnknownModelError(ValueError):
+    """Not one of the models the profile offers."""
 
 
 class FolderBusyError(RuntimeError):
@@ -132,6 +152,8 @@ ERROR_STATUS: dict[type[Exception], int] = {
     RestoreConflictError: status.HTTP_409_CONFLICT,
     files.FileConflictError: status.HTTP_409_CONFLICT,
     FolderBusyError: status.HTTP_409_CONFLICT,
+    ProfileCommandError: status.HTTP_503_SERVICE_UNAVAILABLE,
+    UnknownModelError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     SessionAlreadyRunningError: status.HTTP_409_CONFLICT,
     files.InvalidNameError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     InvalidEffortError: status.HTTP_422_UNPROCESSABLE_CONTENT,
@@ -181,6 +203,8 @@ class WriteFileRequest(BaseModel):
 class StartSessionRequest(BaseModel):
     profile: str
     path: str
+    # For profiles with a choice of models (AgentProfile.models).
+    model: str | None = None
     resume: bool
     # Stored as the folder's reasoning; effort None: the agent's own default.
     effort: str | None
@@ -296,6 +320,55 @@ def create_app(
     def find_session(session_id: str) -> AgentSession | None:
         return next((s for s in sessions.list() if s.id == session_id), None)
 
+    def run_profile_command(command: list[str]) -> list[str]:
+        """The command's output, one entry per line (or space-separated word)."""
+        result = subprocess.run(
+            command, capture_output=True, text=True, timeout=PROFILE_COMMAND_TIMEOUT_SECONDS
+        )
+        if result.returncode != 0:
+            raise ProfileCommandError(result.stderr.strip() or " ".join(command))
+        return result.stdout.split()
+
+    def profile_models(profile_name: str) -> list[str]:
+        profile = config.agents.get(profile_name)
+        if profile is None or profile.models is None:
+            return []
+        return run_profile_command(profile.models)
+
+    levels_cache: dict[tuple[str, str | None], tuple[float, list[str]]] = {}
+
+    def effort_levels(profile_name: str, model: str | None) -> list[str]:
+        """The levels the agent takes: the profile's, or those its chosen model takes."""
+        profile = config.agents.get(profile_name)
+        effort = profile.effort if profile else None
+        if effort is None:
+            return []
+        if effort.levels_command is None or model is None:
+            return effort.levels
+        cached = levels_cache.get((profile_name, model))
+        if cached is not None and clock() - cached[0] < LEVELS_CACHE_SECONDS:
+            return cached[1]
+        command = [argument.replace(MODEL_PLACEHOLDER, model) for argument in effort.levels_command]
+        levels = run_profile_command(command)
+        levels_cache[(profile_name, model)] = (clock(), levels)
+        return levels
+
+    def start_env(profile_name: str, folder: Path, model: str | None) -> dict[str, str]:
+        """The agent's environment; {effort} only for a model that takes levels."""
+        profile = config.agents.get(profile_name)
+        if profile is None:
+            return {}
+        effort = (
+            folder_reasoning(profile_name, folder).effort
+            if effort_levels(profile_name, model)
+            else None
+        )
+        return {
+            name: value.replace(EFFORT_PLACEHOLDER, effort or "")
+            for name, value in profile.env.items()
+            if effort is not None or EFFORT_PLACEHOLDER not in value
+        }
+
     def live_effort(profile_name: str) -> LiveEffortConfig | None:
         profile = config.agents.get(profile_name)
         return profile.effort.live if profile and profile.effort else None
@@ -305,7 +378,7 @@ def create_app(
         into a running agent that can switch in place, otherwise by resuming it."""
         pending_effort.pop(session.id, None)
         previous = folder_reasoning(session.profile, session.path)
-        store_effort(session.profile, session.path, reasoning)
+        store_effort(session.profile, session.path, reasoning, session.chosen_model)
         live = live_effort(session.profile)
         if session.running and live is not None:
             submit_delay = config.terminal.submit_delay_ms
@@ -317,7 +390,8 @@ def create_app(
             )
             return session
         settle_permission_mode(session.profile, session.path)
-        restarted = sessions.restart(session)
+        env = start_env(session.profile, session.path, session.chosen_model)
+        restarted = sessions.restart(session, env)
         # The ended agent cannot report that it stopped working.
         store_activity(session.id, busy=False)
         return restarted
@@ -444,19 +518,22 @@ def create_app(
             if session.path.is_relative_to(path):
                 raise FolderBusyError(str(session.path))
 
-    def validate_effort(profile_name: str, reasoning: Reasoning) -> None:
-        """An agent accepts only the levels (and ultracode) its profile offers."""
+    def validate_effort(profile_name: str, reasoning: Reasoning, model: str | None) -> None:
+        """An agent accepts only the levels (and ultracode) its profile, or its model, offers."""
         profile = config.agents.get(profile_name)
         effort = profile.effort if profile else None
+        levels = effort_levels(profile_name, model)
         # An agent with levels always gets one of them; one without gets none.
-        valid = reasoning.effort is None if effort is None else reasoning.effort in effort.levels
+        valid = reasoning.effort is None if not levels else reasoning.effort in levels
         if not valid:
             raise InvalidEffortError(str(reasoning.effort))
         if reasoning.ultracode and not (effort and effort.ultracode):
             raise InvalidEffortError("ultracode")
 
-    def store_effort(profile_name: str, folder: Path, reasoning: Reasoning) -> None:
-        validate_effort(profile_name, reasoning)
+    def store_effort(
+        profile_name: str, folder: Path, reasoning: Reasoning, model: str | None
+    ) -> None:
+        validate_effort(profile_name, reasoning, model)
         profile = config.agents.get(profile_name)
         if profile and profile.effort:
             EFFORT_STORES[profile.effort.store].write(folder, reasoning)
@@ -527,9 +604,20 @@ def create_app(
                 "effort_live": bool(p.effort and p.effort.live),
                 "permission_modes": p.permission.modes if p.permission else [],
                 "terminal": p.terminal,
+                # Offers a choice of models at start (GET /api/agents/{name}/models).
+                "models": p.models is not None,
             }
             for name, p in config.agents.items()
         ]
+
+    @app.get("/api/agents/{name}/models", dependencies=authenticated)
+    def agent_models(name: str) -> list[str]:
+        return profile_models(name)
+
+    @app.get("/api/agents/{name}/levels", dependencies=authenticated)
+    def agent_levels(name: str, model: str | None = None) -> list[str]:
+        """The levels the agent takes with this model; empty: no level at all."""
+        return effort_levels(name, model)
 
     @app.get("/api/terminal", dependencies=authenticated)
     def terminal_settings() -> dict[str, Any]:
@@ -700,6 +788,8 @@ def create_app(
             "handover": asdict(advise(session, config.handover)),
             # Waiting for the user's answer; normally at most one, as Claude asks one at a time.
             "approvals": [asdict(r) for r in requests if r.session == session.id],
+            # The slider's levels: the profile's, or those of the chosen model.
+            "effort_levels": effort_levels(session.profile, session.chosen_model),
             "scheduled": [asdict(p) for p in scheduled if p.session == session.id],
             "effort_pending": pending is not None,
             "pending_effort": pending.effort if pending else None,
@@ -723,13 +813,24 @@ def create_app(
             ids = {c["id"] for c in conversations_of(body.profile, path)}
             if body.conversation not in ids:
                 raise ConversationNotFoundError(body.conversation)
+        if (profile is not None and profile.models is not None) != (body.model is not None):
+            raise UnknownModelError(str(body.model))
+        if body.model is not None and body.model not in profile_models(body.profile):
+            raise UnknownModelError(body.model)
         effort = body.effort
-        if effort is None and profile and profile.effort:
+        if effort is None and effort_levels(body.profile, body.model):
             # Started without a choice: the folder's level, or else the configured one.
             effort = folder_reasoning(body.profile, path).effort
-        store_effort(body.profile, path, Reasoning(effort, body.ultracode))
+        store_effort(body.profile, path, Reasoning(effort, body.ultracode), body.model)
         settle_permission_mode(body.profile, path)
-        return sessions.start(body.profile, path, body.resume, body.conversation)
+        return sessions.start(
+            body.profile,
+            path,
+            body.resume,
+            body.conversation,
+            body.model,
+            start_env(body.profile, path, body.model),
+        )
 
     def conversations_of(profile_name: str, folder: Path) -> list[dict[str, Any]]:
         profile = config.agents.get(profile_name)
@@ -772,9 +873,10 @@ def create_app(
         pending = pending_effort.pop(session_id, None)
         if pending is not None:
             # The agent reads the folder's effort at start: a waiting change comes along.
-            store_effort(session.profile, session.path, pending)
+            store_effort(session.profile, session.path, pending, session.chosen_model)
         settle_permission_mode(session.profile, session.path)
-        restarted = sessions.restart(session)
+        env = start_env(session.profile, session.path, session.chosen_model)
+        restarted = sessions.restart(session, env)
         # The ended agent cannot report that it stopped working.
         store_activity(session_id, busy=False)
         return restarted
@@ -858,7 +960,7 @@ def create_app(
         if session is None:
             raise SessionNotFoundError(session_id)
         reasoning = Reasoning(body.effort, body.ultracode)
-        validate_effort(session.profile, reasoning)
+        validate_effort(session.profile, reasoning, session.chosen_model)
         # Typing into a busy agent would mix with its work: an agent that switches in place
         # always waits for the end of its answer.
         immediately = body.immediately and live_effort(session.profile) is None

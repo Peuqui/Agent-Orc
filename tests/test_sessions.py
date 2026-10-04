@@ -25,6 +25,11 @@ AGENTS = {
     "echo": AgentProfile(
         label="Echo", start=["sh", "-c", "echo started {name}; sleep 60"], resume=["sleep", "60"]
     ),
+    "chooser": AgentProfile(
+        label="Chooser",
+        start=["sh", "-c", 'echo "started {model} $ORC_EFFORT"; sleep 60'],
+        resume=["sh", "-c", 'echo "resumed {model} $ORC_EFFORT"; sleep 60'],
+    ),
     "terminal": AgentProfile(
         label="Terminal", start=["sleep", "60"], resume=["sleep", "60"], terminal=True
     ),
@@ -125,7 +130,7 @@ def test_restart_resumes_a_running_agent_in_its_session(
     manager: SessionManager, workdir: Path, socket_name: str
 ) -> None:
     session = manager.start("sleeper", workdir, resume=False)
-    restarted = manager.restart(session)
+    restarted = manager.restart(session, {})
     assert (restarted.id, restarted.running) == (session.id, True)
     target = f"={session.id}:"
     command = tmux_query(
@@ -159,8 +164,9 @@ def test_session_id_is_tmux_safe_and_unique() -> None:
     assert session_id_for(Path("/a/my.project"), terminal=True) not in (first, second)
 
 
-def test_build_command_replaces_placeholder() -> None:
-    assert build_command(["x", "--name", "{name}"], "demo") == ["x", "--name", "demo"]
+def test_build_command_replaces_placeholders() -> None:
+    assert build_command(["x", "--name", "{name}"], "demo", None) == ["x", "--name", "demo"]
+    assert build_command(["x", "{model}"], "demo", "qwen") == ["x", "qwen"]
 
 
 def test_server_passes_mouse_clipboard_and_focus_on(
@@ -186,3 +192,28 @@ def test_a_terminal_runs_next_to_the_folders_agent(manager: SessionManager, work
         manager.start("terminal", workdir, resume=False)
     assert manager.find_by_path(workdir, terminal=True) == terminal
     assert manager.find_by_path(workdir, terminal=False) == agent
+
+
+def test_chosen_model_and_environment_stay_with_the_session(
+    manager: SessionManager, workdir: Path, socket_name: str
+) -> None:
+    session = manager.start("chooser", workdir, False, None, "qwen", {"ORC_EFFORT": "medium"})
+    assert session.chosen_model == "qwen"
+
+    def screen() -> str:
+        for _ in range(50):
+            text = manager.text(session.id, 50)
+            if "qwen" in text:
+                return text
+            time.sleep(0.1)
+        raise AssertionError("the agent printed nothing")
+
+    assert "started qwen medium" in screen()
+    # A restart takes the same model, and the environment it is given now.
+    restarted = manager.restart(session, {"ORC_EFFORT": "xhigh"})
+    assert restarted.chosen_model == "qwen"
+    for _ in range(50):
+        if "resumed qwen xhigh" in manager.text(session.id, 50):
+            break
+        time.sleep(0.1)
+    assert "resumed qwen xhigh" in manager.text(session.id, 50)

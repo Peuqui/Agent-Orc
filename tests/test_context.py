@@ -37,7 +37,7 @@ def state_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 def session(session_id: str = "demo-abc123") -> AgentSession:
-    return AgentSession(session_id, "claude", Path("/w"), True, None, SESSION_START, False)
+    return AgentSession(session_id, "claude", Path("/w"), True, None, SESSION_START, False, None)
 
 
 def touch(path: Path, mtime: float) -> None:

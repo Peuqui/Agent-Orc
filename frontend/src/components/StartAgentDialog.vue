@@ -61,15 +61,64 @@ const MILLISECONDS_PER_SECOND = 1000
 const { locale } = useI18n()
 
 const profile = computed(() => profiles.value.find((candidate) => candidate.name === selected.value))
-const effortLevels = computed(() => profile.value?.effort_levels ?? [])
-// For the chosen agent: preselect the folder's stored reasoning, list earlier conversations.
+// Profiles with a choice of models (e.g. the local ones): the list, the choice, its levels.
+const models = ref<string[]>([])
+const model = ref<string | null>(null)
+const modelLevels = ref<string[]>([])
+const LAST_MODEL_KEY = 'agent-orc-last-model:'
+const effortLevels = computed(() =>
+  profile.value?.models ? modelLevels.value : (profile.value?.effort_levels ?? []),
+)
+// The folder's stored reasoning, preselected where the agent (or its model) takes it.
+const folderReasoning = ref<Reasoning>(NO_REASONING)
+
+/**
+ * The folder's level where the model takes it; otherwise the next higher one it takes (as
+ * lclaude translates), or its highest. The order is the profile's list of levels.
+ */
+function preselectReasoning(): void {
+  const levels = effortLevels.value
+  const stored = folderReasoning.value
+  const order = profile.value?.effort_levels ?? []
+  const wanted = order.indexOf(stored.effort ?? '')
+  const effort =
+    levels.length === 0
+      ? null
+      : levels.includes(stored.effort ?? '')
+        ? stored.effort
+        : (levels.find((level) => order.indexOf(level) >= wanted) ?? levels[levels.length - 1])
+  reasoning.value = { effort, ultracode: stored.ultracode }
+}
+
+// For the chosen agent: preselect the folder's stored reasoning, list earlier conversations,
+// and offer its models.
 watch(selected, async (name) => {
   reasoning.value = NO_REASONING
   conversations.value = []
+  models.value = []
+  model.value = null
   if (!name) return
   try {
-    reasoning.value = await api.folderReasoning(name, props.path)
+    folderReasoning.value = await api.folderReasoning(name, props.path)
     conversations.value = await api.conversations(name, props.path)
+    if (profile.value?.models) {
+      models.value = await api.agentModels(name)
+      const last = localStorage.getItem(LAST_MODEL_KEY + name)
+      model.value = last !== null && models.value.includes(last) ? last : (models.value[0] ?? null)
+    } else {
+      preselectReasoning()
+    }
+  } catch (error) {
+    toast.error(error)
+  }
+})
+
+watch(model, async (chosen) => {
+  if (chosen === null || !profile.value?.models) return
+  localStorage.setItem(LAST_MODEL_KEY + selected.value, chosen)
+  try {
+    modelLevels.value = await api.agentLevels(selected.value, chosen)
+    preselectReasoning()
   } catch (error) {
     toast.error(error)
   }
@@ -90,6 +139,7 @@ async function start(resume: boolean, conversation: string | null = null): Promi
       reasoning.value,
       conversation,
       inWorktree.value ? branch.value.trim() : null,
+      model.value,
     )
     await refresh()
     emit('started', session.id)
@@ -115,6 +165,12 @@ async function start(resume: boolean, conversation: string | null = null): Promi
         {{ profile.label }}
       </label>
     </fieldset>
+    <label v-if="profile?.models" class="mb-5 flex flex-col gap-1 text-sm text-slate-400">
+      {{ $t('agent.model') }}
+      <select v-model="model" class="input text-sm text-slate-200">
+        <option v-for="choice in models" :key="choice" :value="choice">{{ choice }}</option>
+      </select>
+    </label>
     <ReasoningControl
       v-if="effortLevels.length"
       v-model="reasoning"
@@ -132,10 +188,10 @@ async function start(resume: boolean, conversation: string | null = null): Promi
       </template>
     </div>
     <div class="flex flex-col gap-2">
-      <button class="btn-primary" :disabled="busy || !selected" @click="start(false)">
+      <button class="btn-primary" :disabled="busy || !selected || (profile?.models && !model)" @click="start(false)">
         {{ $t('agent.startNew') }}
       </button>
-      <button class="btn-secondary" :disabled="busy || !selected" @click="start(true)">
+      <button class="btn-secondary" :disabled="busy || !selected || (profile?.models && !model)" @click="start(true)">
         {{ $t('agent.resume') }}
       </button>
       <button class="btn" @click="emit('close')">{{ $t('common.cancel') }}</button>

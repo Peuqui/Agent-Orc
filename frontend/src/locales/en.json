@@ -88,7 +88,8 @@
     "hitCount": "found {count}×",
     "inWorktree": "Start in a worktree of its own",
     "branch": "Name of the new branch",
-    "worktreeHint": "A second working copy on a new branch, in {name} – so the agent does not get in the way of others in the same project."
+    "worktreeHint": "A second working copy on a new branch, in {name} – so the agent does not get in the way of others in the same project.",
+    "model": "Model"
   },
   "trash": {
     "empty": "The trash is empty.",
