@@ -50,6 +50,8 @@ detaches: the agents keep working, and you pick them up again from any device.
   handy for spreading workspaces over several monitors. On the phone the bar switches in place.
 - Shortcuts on a computer: Alt+Shift+1 … 9 for the columns, Alt+Shift+← / → for the
   workspaces.
+- On a phone one column at a time: a sideways swipe in the terminal brings the next; a
+  fullscreen shows terminal and input field only, and the extra keys fold away.
 
 <p align="center">
   <img src="docs/screenshots/workspace-en.png" alt="Workspace with two agents side by side" width="860">

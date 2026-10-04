@@ -12,7 +12,8 @@
     "files": "Dateien",
     "trash": "Papierkorb",
     "workspace": "Arbeitsfläche",
-    "consumption": "Verbrauch"
+    "consumption": "Verbrauch",
+    "menu": "Seiten"
   },
   "common": {
     "cancel": "Abbrechen",
@@ -188,7 +189,10 @@
     "confirmDelete": "Arbeitsfläche „{name}“ löschen? Die Agenten laufen weiter.",
     "new": "Neue Arbeitsfläche",
     "switchHere": "In diesem Tab hierher wechseln (Mittelklick: neuer Tab)",
-    "openElsewhere": "In einem anderen Tab offen – springt dorthin"
+    "openElsewhere": "In einem anderen Tab offen – springt dorthin",
+    "others": "Andere Arbeitsflächen",
+    "fullscreen": "Vollbild: nur Terminal und Eingabe",
+    "leaveFullscreen": "Vollbild verlassen"
   },
   "settings": {
     "title": "Einstellungen",
@@ -249,7 +253,10 @@
           "„+“ fügt einen laufenden Agenten als Spalte hinzu, „− n +“ legt fest, wie viele Spalten den Bildschirm füllen.",
           "Spaltenkopf ziehen sortiert die Spalten; den Trenner am rechten Rand ziehen ändert die Breite, Doppelklick setzt sie zurück.",
           "Tastenkürzel am Rechner: Alt+Umschalt+1 … 9 springt in die Spalte, Alt+Umschalt+← / → zur vorigen oder nächsten Arbeitsfläche.",
-          "Am Handy zeigt die Arbeitsfläche eine Spalte auf einmal; seitlich im Terminal wischen holt die nächste (nach links) oder vorige (nach rechts), senkrecht wischen scrollt."
+          "Am Handy zeigt die Arbeitsfläche eine Spalte auf einmal; seitlich im Terminal wischen holt die nächste (nach links) oder vorige (nach rechts), senkrecht wischen scrollt.",
+          "Kachel-Symbol oben links: alle Seiten (Agenten, Dateien, Verbrauch …) – die Arbeitsfläche hat keine Leiste unten, damit das Terminal den Platz bekommt.",
+          "Vollbild (Symbol mit vier Ecken): nur noch Terminal und Eingabefeld, wo möglich auch ohne Browserleisten; der kleine Knopf oben rechts holt alles zurück.",
+          "Am Handy steht der Kopf in einer Zeile; die anderen Arbeitsflächen liegen hinter dem Pfeil neben dem Namen, und die Terminalleiste nennt die Spalte und schließt sie mit ×."
         ]
       },
       {
@@ -263,7 +270,8 @@
           "Die Tastenleiste schickt Esc, Tab, Pfeile, Ctrl usw. – Ctrl und Alt gelten für die nächste Taste.",
           "Vorlagen (in der Büroklammer): häufige Anweisungen mit einem Tipp ins Eingabefeld setzen; „Vorlagen verwalten“ legt sie an, für alle Geräte.",
           "Dateipfade in der Ausgabe (z. B. src/main.py:42) sind anklickbar, wenn es sie gibt: Dateien öffnen im Editor an der genannten Zeile, Ordner in der Dateiansicht. Das Ordner-Symbol oben öffnet den Projektordner.",
-          "Editor: Markdown erscheint als Seite (Stift: bearbeiten), Bilder als Bild; andere Dateien, die keine Textdateien sind, lassen sich herunterladen. „Zurück“ führt dorthin, woher die Datei geöffnet wurde."
+          "Editor: Markdown erscheint als Seite (Stift: bearbeiten), Bilder als Bild; andere Dateien, die keine Textdateien sind, lassen sich herunterladen. „Zurück“ führt dorthin, woher die Datei geöffnet wurde.",
+          "Sondertasten: der Pfeil am Ende der ersten Reihe klappt die übrigen Reihen ein oder aus (gilt für alle Terminals des Geräts); welche Tasten in der ersten Reihe stehen, legt die Config fest."
         ]
       },
       {
@@ -392,5 +400,9 @@
   },
   "terminalButton": {
     "title": "Terminal in diesem Ordner (ohne Agent)"
+  },
+  "keys": {
+    "fold": "Weniger Sondertasten",
+    "unfold": "Alle Sondertasten"
   }
 }

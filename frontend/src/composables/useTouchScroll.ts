@@ -3,8 +3,6 @@
 // scroll keeps going at the finger's speed and slows down, like native scrolling on a phone.
 
 const PIXELS_PER_STEP = 24
-// Sent by a terminal in a workspace column on a sideways swipe; detail: 1 next, -1 previous.
-export const COLUMN_SWIPE_EVENT = 'agent-orc-column-swipe'
 // Weight of the newest movement in the measured speed; the rest is the speed so far, which
 // smooths out jittery touch events.
 const NEWEST_SPEED_WEIGHT = 0.7

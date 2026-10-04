@@ -57,6 +57,8 @@ aus wieder aufnehmen.
   wechselt die Leiste im selben Fenster.
 - Tastenkürzel am Rechner: Alt+Umschalt+1 … 9 für die Spalten, Alt+Umschalt+← / → für die
   Arbeitsflächen.
+- Am Handy eine Spalte auf einmal: seitlich im Terminal wischen holt die nächste; ein Vollbild
+  zeigt nur Terminal und Eingabefeld, die Sondertasten lassen sich einklappen.
 
 <p align="center">
   <img src="docs/screenshots/workspace-de.png" alt="Arbeitsfläche mit zwei Agenten nebeneinander" width="860">

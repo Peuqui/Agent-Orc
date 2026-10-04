@@ -19,6 +19,7 @@ import KeyBar from '../components/KeyBar.vue'
 import MessageInput from '../components/MessageInput.vue'
 import { registerFileLinks } from '../composables/useFileLinks'
 import { sessionName, useSessions } from '../composables/useSessions'
+import { PHONE_WIDTH } from '../device'
 import { useToast } from '../composables/useToast'
 import {
   FONT_SAMPLE,
@@ -28,7 +29,8 @@ import {
   type TerminalFont,
   useSettings,
 } from '../composables/useSettings'
-import { COLUMN_SWIPE_EVENT, useTouchScroll } from '../composables/useTouchScroll'
+import { COLUMN_CLOSE_EVENT, COLUMN_FULLSCREEN_EVENT, COLUMN_SWIPE_EVENT } from '../columns'
+import { useTouchScroll } from '../composables/useTouchScroll'
 
 const props = defineProps<{ id: string; embedded: boolean }>()
 
@@ -82,6 +84,25 @@ async function copyPlainText(): Promise<void> {
 
 const session = computed(() => sessions.value.find((candidate) => candidate.id === props.id))
 const name = computed(() => (session.value ? sessionName(session.value) : props.id))
+
+// A workspace column on a phone has no tab of its own: the bar names it and closes it.
+const phone = ref(PHONE_WIDTH.matches)
+const followPhoneWidth = (event: MediaQueryListEvent): void => {
+  phone.value = event.matches
+}
+PHONE_WIDTH.addEventListener('change', followPhoneWidth)
+const ownTab = computed(() => !props.embedded || phone.value)
+
+function closeColumn(): void {
+  window.dispatchEvent(new CustomEvent(COLUMN_CLOSE_EVENT))
+}
+
+// The workspace's fullscreen: terminal and input field only.
+const fullscreen = ref(false)
+const followFullscreen = (event: Event): void => {
+  fullscreen.value = (event as CustomEvent<boolean>).detail
+}
+window.addEventListener(COLUMN_FULLSCREEN_EVENT, followFullscreen)
 
 const terminal = new Terminal({
   fontSize: fontSize.value,
@@ -287,6 +308,8 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  PHONE_WIDTH.removeEventListener('change', followPhoneWidth)
+  window.removeEventListener(COLUMN_FULLSCREEN_EVENT, followFullscreen)
   unmounted = true
   window.clearTimeout(reconnectTimer)
   touchScroll.stopGlide()
@@ -298,7 +321,11 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="flex h-dvh flex-col bg-slate-900">
-    <header class="flex items-center gap-1 border-b border-slate-800 px-1 py-1">
+    <!-- Compact buttons on phones, so name and all buttons fit in one row. -->
+    <header
+      v-if="!fullscreen"
+      class="flex items-center gap-1 border-b border-slate-800 px-1 py-1 max-md:[&_.btn-icon]:size-8"
+    >
       <button
         v-if="!embedded"
         class="btn-icon"
@@ -315,8 +342,8 @@ onBeforeUnmount(() => {
         :window="session.context_window"
       />
       <span class="mx-1 size-2.5 shrink-0 rounded-full" :class="connected ? 'bg-red-500' : 'bg-slate-600'" />
-      <!-- Embedded in the workspace, the column's tab names the agent already. -->
-      <h1 class="min-w-0 flex-1 truncate font-semibold">{{ embedded ? '' : name }}</h1>
+      <!-- Embedded in the workspace, the column's tab names the agent already (not on phones). -->
+      <h1 class="min-w-0 flex-1 truncate font-semibold">{{ ownTab ? name : '' }}</h1>
       <RestartButton v-if="session?.running" :session="session" button-class="btn-icon" />
       <TerminalButton v-if="session && !session.terminal" :path="session.path" button-class="btn-icon" />
       <!-- The agent's project in the file view; in the workspace within the column (back returns). -->
@@ -343,6 +370,9 @@ onBeforeUnmount(() => {
       </button>
       <button class="btn-icon text-sm" :aria-label="$t('terminal.smaller')" @click="changeFontSize(-1)">A−</button>
       <button class="btn-icon text-base" :aria-label="$t('terminal.larger')" @click="changeFontSize(1)">A+</button>
+      <button v-if="embedded && phone" class="btn-icon" :aria-label="$t('workspace.close')" :title="$t('workspace.close')" @click="closeColumn">
+        ×
+      </button>
     </header>
 
     <div v-if="plainText !== null" class="fixed inset-0 z-40 flex flex-col bg-slate-900">
@@ -376,7 +406,7 @@ onBeforeUnmount(() => {
     <MessageInput ref="messageInput" :session-id="id" @submit="submitText" />
 
     <KeyBar
-      v-if="settings"
+      v-if="settings && !fullscreen"
       :rows="settings.keys"
       :active="modifiers"
       @send="(sequence) => sendInput(withModifiers(sequence))"

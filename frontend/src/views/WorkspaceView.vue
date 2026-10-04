@@ -3,12 +3,13 @@ import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { api, type Workspace } from '../api'
+import { COLUMN_CLOSE_EVENT, COLUMN_FULLSCREEN_EVENT, COLUMN_SWIPE_EVENT } from '../columns'
 import AppIcon from '../components/AppIcon.vue'
 import HelpButton from '../components/HelpButton.vue'
+import NavMenu from '../components/NavMenu.vue'
 import QuotaPanel from '../components/QuotaPanel.vue'
 import { moveInList, useReorder } from '../composables/useReorder'
 import { sessionName, useSessions } from '../composables/useSessions'
-import { COLUMN_SWIPE_EVENT } from '../composables/useTouchScroll'
 import { useToast } from '../composables/useToast'
 import {
   announceWorkspace,
@@ -61,6 +62,7 @@ const heads = ref<HTMLElement[]>([])
 const resize = ref<Resize | null>(null)
 const row = ref<HTMLElement>()
 const picking = ref(false)
+const choosingWorkspace = ref(false)
 const otherTabs = useOtherTabs()
 // Names given in other tabs since this one loaded join in as they are announced.
 const otherNames = computed(() =>
@@ -79,6 +81,33 @@ const followPhoneWidth = (event: MediaQueryListEvent): void => {
 }
 PHONE_WIDTH.addEventListener('change', followPhoneWidth)
 onBeforeUnmount(() => PHONE_WIDTH.removeEventListener('change', followPhoneWidth))
+
+// Only terminal and input field: no header, tabs, terminal bar or extra keys (the columns hear
+// it as an event); where the browser offers it, its own fullscreen too.
+const fullscreen = ref(false)
+
+function tellColumns(frame: HTMLIFrameElement | undefined): void {
+  frame?.contentWindow?.dispatchEvent(
+    new CustomEvent(COLUMN_FULLSCREEN_EVENT, { detail: fullscreen.value }),
+  )
+}
+
+watch(fullscreen, async (on) => {
+  frames.value.forEach(tellColumns)
+  if (!document.fullscreenEnabled) return
+  // Leaving the browser's fullscreen by its own means (Esc, back gesture) ends ours as well.
+  if (on && !document.fullscreenElement) await document.documentElement.requestFullscreen()
+  if (!on && document.fullscreenElement) await document.exitFullscreen()
+})
+
+const followBrowserFullscreen = (): void => {
+  if (!document.fullscreenElement) fullscreen.value = false
+}
+document.addEventListener('fullscreenchange', followBrowserFullscreen)
+onBeforeUnmount(() => document.removeEventListener('fullscreenchange', followBrowserFullscreen))
+
+// Phones have no room for a tab above each column: the terminal bar names it (and closes it).
+const showTabs = computed(() => !phone.value && !fullscreen.value)
 
 function widthShare(id: string): number {
   if (phone.value) return 1
@@ -112,11 +141,11 @@ function frameOf(id: string): HTMLIFrameElement | undefined {
   return frames.value.find((frame) => frame.dataset.tab === id)
 }
 
-/** Make a tab the active one and scroll its column into view. */
+/** Make a tab the active one and scroll its column into view (its tab may be hidden). */
 async function activate(id: string): Promise<void> {
   workspace.value.active = id
   await nextTick()
-  headOf(id)?.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' })
+  frameOf(id)?.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' })
 }
 
 function open(id: string): void {
@@ -197,6 +226,9 @@ function onFrameLoad(id: string): void {
     const neighbour = workspace.value.tabs[workspace.value.tabs.indexOf(id) + direction]
     if (neighbour !== undefined) void activate(neighbour)
   })
+  frameWindow?.addEventListener(COLUMN_CLOSE_EVENT, () => closeTab(id))
+  // A column loaded later (or reloaded) learns the current state.
+  tellColumns(frameOf(id))
 }
 
 // Desktop shortcuts: Alt+Shift+1…9 goes to that column, Alt+Shift+←/→ to the previous or next
@@ -336,17 +368,19 @@ async function rename(): Promise<void> {
 <template>
   <div class="flex h-dvh flex-col bg-slate-900">
     <!-- Compact buttons below md, so name, workspaces and usage fit on a phone. -->
-    <header class="flex flex-wrap items-center gap-1 border-b border-slate-800 px-1 py-1 max-md:[&_.btn-icon]:size-8">
-      <button class="btn-icon" :aria-label="$t('terminal.back')" @click="router.push('/sessions')">
-        <AppIcon name="up" class="-rotate-90" />
-      </button>
-      <!-- Phones and narrow windows: the name and the workspaces move to a second row (this
-           break starts it). -->
-      <div class="order-last h-0 basis-full md:hidden" />
+    <header
+      v-if="!fullscreen"
+      class="flex flex-wrap items-center gap-1 border-b border-slate-800 px-1 py-1 max-md:[&_.btn-icon]:size-8"
+    >
+      <NavMenu />
+      <!-- Narrow windows (not phones, which keep one row): name and workspaces move to a second
+           row (this break starts it). -->
+      <div v-if="!phone" class="order-last h-0 basis-full md:hidden" />
       <input
         v-model="nameInput"
         size="12"
-        class="w-28 min-w-0 shrink rounded-md bg-transparent max-md:order-last lg:w-44 px-2 py-1 font-semibold placeholder:font-normal placeholder:text-slate-500 hover:bg-slate-800 focus:bg-slate-800 focus:outline-none"
+        class="min-w-0 shrink rounded-md bg-transparent px-2 py-1 font-semibold placeholder:font-normal placeholder:text-slate-500 hover:bg-slate-800 focus:bg-slate-800 focus:outline-none"
+        :class="phone ? 'flex-1' : 'w-28 max-md:order-last lg:w-44'"
         :placeholder="$t('workspace.unnamed')"
         :title="$t('workspace.nameHint')"
         :aria-label="$t('workspace.nameHint')"
@@ -356,8 +390,32 @@ async function rename(): Promise<void> {
       />
       <!-- The other workspaces, one click away: in their own tab if one shows them, otherwise
            here; a middle click opens a new tab. -->
-      <!-- Phones and narrow windows: in the second row next to the name, swipeable. -->
+      <!-- Phones: in a list behind the name, so everything fits in one row. -->
+      <div v-if="phone" class="relative">
+        <button class="btn-icon" :aria-label="$t('workspace.others')" :title="$t('workspace.others')" @click="choosingWorkspace = !choosingWorkspace">
+          <AppIcon name="chevron" />
+        </button>
+        <div v-if="choosingWorkspace" class="fixed inset-0 z-30" @click="choosingWorkspace = false" />
+        <div v-if="choosingWorkspace" class="card absolute top-full left-0 z-40 mt-1 flex w-56 flex-col p-1 shadow-xl">
+          <button
+            v-for="other in otherNames"
+            :key="other"
+            class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-slate-300 hover:bg-slate-700"
+            @click="((choosingWorkspace = false), jumpToWorkspace(router, other))"
+          >
+            <AppIcon name="workspace" />{{ other }}
+          </button>
+          <button
+            class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-slate-400 hover:bg-slate-700"
+            @click="((choosingWorkspace = false), openWorkspace(router, null))"
+          >
+            <AppIcon name="plus" />{{ $t('workspace.new') }}
+          </button>
+        </div>
+      </div>
+      <!-- Narrow windows: in the second row next to the name, swipeable. -->
       <nav
+        v-else
         class="flex min-w-0 items-center gap-1 overflow-x-auto [scrollbar-width:none] max-md:order-last max-md:flex-1 md:shrink-0"
       >
         <a
@@ -380,8 +438,8 @@ async function rename(): Promise<void> {
         </button>
       </nav>
       <!-- Claude's usage, centred in the room between the workspaces and the buttons; it shrinks
-           with the window. -->
-      <QuotaPanel compact class="min-w-0 flex-1 sm:px-3" />
+           with the window. Not on phones: the name gets the room (the overview shows it). -->
+      <QuotaPanel v-if="!phone" compact class="min-w-0 flex-1 overflow-hidden sm:px-3" />
       <div class="relative">
         <button
           class="flex size-8 items-center justify-center rounded-md border border-slate-600 text-slate-300 hover:bg-slate-700"
@@ -419,8 +477,21 @@ async function rename(): Promise<void> {
         <span class="flex w-7 items-center justify-center text-slate-400">{{ workspace.visible }}</span>
         <button class="w-7 hover:bg-slate-700" :aria-label="$t('workspace.moreColumns')" @click="changeVisible(1)">+</button>
       </div>
+      <button class="btn-icon" :aria-label="$t('workspace.fullscreen')" :title="$t('workspace.fullscreen')" @click="fullscreen = true">
+        <AppIcon name="expand" />
+      </button>
       <HelpButton />
     </header>
+    <!-- The way back from fullscreen, small in the corner above the columns. -->
+    <button
+      v-if="fullscreen"
+      class="fixed top-1 right-1 z-40 flex size-8 items-center justify-center rounded-md border border-slate-600 bg-slate-900/80 text-slate-300"
+      :aria-label="$t('workspace.leaveFullscreen')"
+      :title="$t('workspace.leaveFullscreen')"
+      @click="fullscreen = false"
+    >
+      <AppIcon name="shrink" class="size-4" />
+    </button>
 
     <p v-if="ready && workspace.tabs.length === 0" class="p-6 text-center text-slate-400">{{ $t('workspace.empty') }}</p>
 
@@ -428,12 +499,12 @@ async function rename(): Promise<void> {
     <div
       ref="row"
       class="min-h-0 flex-1 overflow-x-auto"
-      :class="{ 'snap-x snap-mandatory': resize === null }"
+      :class="{ 'snap-x snap-mandatory': resize === null, '[scrollbar-width:none]': phone }"
       style="container-type: inline-size"
     >
       <div class="grid h-full grid-rows-[auto_minmax(0,1fr)]" :style="gridStyle">
         <div
-          v-for="id in workspace.tabs"
+          v-for="id in showTabs ? workspace.tabs : []"
           :key="`head-${id}`"
           ref="heads"
           :data-tab-id="id"
@@ -473,7 +544,7 @@ async function rename(): Promise<void> {
           :data-active="workspace.active === id"
           :src="frameUrl(id)"
           :title="tabName(id)"
-          class="h-full w-full bg-slate-900"
+          class="h-full w-full snap-start bg-slate-900"
           :style="{ gridColumn: column(id), gridRow: '2' }"
           allow="microphone; clipboard-write"
           @load="onFrameLoad(id)"
@@ -481,7 +552,7 @@ async function rename(): Promise<void> {
         <!-- Divider on each column's right edge, above the iframes (which would swallow it); on
              phones every column fills the screen, so there is nothing to divide. -->
         <div
-          v-for="id in phone ? [] : workspace.tabs"
+          v-for="id in showTabs ? workspace.tabs : []"
           :key="`divider-${id}`"
           class="z-10 w-2 cursor-col-resize touch-none justify-self-end border-r border-slate-700 hover:bg-red-500/30"
           :class="{ 'bg-red-500/40': resize?.id === id }"

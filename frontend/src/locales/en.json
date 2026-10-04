@@ -12,7 +12,8 @@
     "files": "Files",
     "trash": "Trash",
     "workspace": "Workspace",
-    "consumption": "Consumption"
+    "consumption": "Consumption",
+    "menu": "Pages"
   },
   "common": {
     "cancel": "Cancel",
@@ -188,7 +189,10 @@
     "confirmDelete": "Delete workspace \"{name}\"? The agents keep running.",
     "new": "New workspace",
     "switchHere": "Switch to it in this tab (middle click: new tab)",
-    "openElsewhere": "Open in another tab – jumps there"
+    "openElsewhere": "Open in another tab – jumps there",
+    "others": "Other workspaces",
+    "fullscreen": "Fullscreen: terminal and input only",
+    "leaveFullscreen": "Leave fullscreen"
   },
   "settings": {
     "title": "Settings",
@@ -249,7 +253,10 @@
           "“+” adds a running agent as a column, “− n +” sets how many columns fill the screen.",
           "Dragging a column head sorts the columns; dragging the divider on its right edge changes the width, a double click resets it.",
           "Shortcuts on a computer: Alt+Shift+1 … 9 jumps to that column, Alt+Shift+← / → to the previous or next workspace.",
-          "On a phone the workspace shows one column at a time; a sideways swipe in the terminal brings the next (to the left) or previous one (to the right), up and down scrolls."
+          "On a phone the workspace shows one column at a time; a sideways swipe in the terminal brings the next (to the left) or previous one (to the right), up and down scrolls.",
+          "Tile icon at the top left: all pages (agents, files, consumption …) – the workspace has no bar at the bottom, so the terminal gets the room.",
+          "Fullscreen (four-corner icon): terminal and input field only, where possible without the browser bars too; the small button at the top right brings everything back.",
+          "On a phone the header is one row; the other workspaces sit behind the arrow next to the name, and the terminal bar names the column and closes it with ×."
         ]
       },
       {
@@ -263,7 +270,8 @@
           "The key bar sends Esc, Tab, arrows, Ctrl and so on – Ctrl and Alt apply to the next key.",
           "Templates (in the paperclip menu): put frequent prompts into the input field with a tap; “Manage templates” creates them, for all devices.",
           "File paths in the output (e.g. src/main.py:42) are clickable when they exist: files open in the editor at that line, folders in the file view. The folder icon at the top opens the project folder.",
-          "Editor: Markdown shows as a page (pencil: edit), pictures as pictures; other files that are not text can be downloaded. “Back” returns to where the file was opened from."
+          "Editor: Markdown shows as a page (pencil: edit), pictures as pictures; other files that are not text can be downloaded. “Back” returns to where the file was opened from.",
+          "Extra keys: the arrow at the end of the first row folds or unfolds the other rows (for every terminal of the device); which keys the first row holds is set in the config."
         ]
       },
       {
@@ -392,5 +400,9 @@
   },
   "terminalButton": {
     "title": "Terminal in this folder (no agent)"
+  },
+  "keys": {
+    "fold": "Fewer extra keys",
+    "unfold": "All extra keys"
   }
 }

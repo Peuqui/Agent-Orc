@@ -58,6 +58,9 @@ const terminalFont = setting<TerminalFont>(
 /** Speech recognition engine of the Whisper service for dictation; empty: the service's default. */
 const dictationEngine = setting('agent-orc-dictation-engine', '', String)
 
+/** All rows of extra keys; folded, only the first (the config orders them). */
+const extraKeysUnfolded = setting('agent-orc-extra-keys-unfolded', false, (stored) => stored === 'true')
+
 export function useSettings() {
-  return { scrollLines, lineHeight, fontSize, terminalFont, dictationEngine }
+  return { scrollLines, lineHeight, fontSize, terminalFont, dictationEngine, extraKeysUnfolded }
 }
