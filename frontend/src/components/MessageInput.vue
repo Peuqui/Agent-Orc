@@ -30,8 +30,14 @@ const {
   toggleDevice,
   toggleMicrophone,
   toggleBrowser,
-} = useDictation((dictated) => {
+} = useDictation(async (dictated) => {
   text.value = text.value ? `${text.value} ${dictated}` : dictated
+  // Ready to send with Enter (or to correct), without clicking into the field first.
+  await nextTick()
+  const input = field.value
+  if (!input) return
+  input.focus()
+  input.setSelectionRange(input.value.length, input.value.length)
 }, toast.error)
 
 // Without Whisper the microphone itself listens through the browser.
