@@ -145,7 +145,8 @@ agents:
   # A profile may offer a choice of models at start: "models" prints them (one per line), the
   # choice fills {model} in its commands; "effort.levels_command" prints the levels a model takes
   # (nothing: no level at all), "env" sets the agent's environment ({effort}: the folder's level).
-  # Example, Claude Code on local models through a wrapper script (lclaude, not shipped):
+  # Example, Claude Code on local models through a wrapper script (lclaude, not shipped); a
+  # script for a cloud service with its own models (e.g. Qwen on DashScope) works the same way:
   #
   # claude-local:
   #   label: Claude (local)
