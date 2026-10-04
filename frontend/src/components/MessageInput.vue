@@ -177,7 +177,7 @@ function onKeydown(event: KeyboardEvent): void {
     />
     <button
       type="submit"
-      class="btn-primary size-10 px-0"
+      class="btn-primary ml-1.5 size-10 px-0"
       :disabled="!text"
       :aria-label="$t('terminal.send')"
       :title="$t('terminal.send')"
