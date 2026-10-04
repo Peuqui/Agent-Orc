@@ -162,15 +162,14 @@
     "move": "Ziehen zum Verschieben",
     "empty": "Noch kein Agent offen – über „+“ oben einen hinzufügen.",
     "resize": "Ziehen ändert die Breite, Doppelklick setzt sie zurück",
-    "unnamed": "Arbeitsfläche ohne Namen",
+    "unnamed": "Ohne Namen",
     "nameHint": "Name eingeben speichert die Arbeitsfläche, dann lässt sie sich aus der Übersicht wieder öffnen",
     "nameTaken": "Eine Arbeitsfläche „{name}“ gibt es schon.",
     "delete": "Arbeitsfläche löschen",
     "confirmDelete": "Arbeitsfläche „{name}“ löschen? Die Agenten laufen weiter.",
-    "switch": "Andere Arbeitsfläche",
-    "openInTab": "In eigenem Browser-Tab öffnen",
-    "noOthers": "Keine weiteren benannten Arbeitsflächen.",
-    "new": "Neue Arbeitsfläche"
+    "new": "Neue Arbeitsfläche",
+    "switchHere": "In diesem Tab hierher wechseln (Mittelklick: neuer Tab)",
+    "openElsewhere": "In einem anderen Tab offen – springt dorthin"
   },
   "settings": {
     "title": "Einstellungen",

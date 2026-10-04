@@ -162,15 +162,14 @@
     "move": "Drag to move",
     "empty": "No agent open yet – add one with “+” above.",
     "resize": "Drag to change the width, double-click to reset it",
-    "unnamed": "Unnamed workspace",
+    "unnamed": "Unnamed",
     "nameHint": "Entering a name saves the workspace, so it can be opened again from the overview",
     "nameTaken": "A workspace \"{name}\" exists already.",
     "delete": "Delete workspace",
     "confirmDelete": "Delete workspace \"{name}\"? The agents keep running.",
-    "switch": "Other workspace",
-    "openInTab": "Open in its own browser tab",
-    "noOthers": "No other named workspaces.",
-    "new": "New workspace"
+    "new": "New workspace",
+    "switchHere": "Switch to it in this tab (middle click: new tab)",
+    "openElsewhere": "Open in another tab – jumps there"
   },
   "settings": {
     "title": "Settings",

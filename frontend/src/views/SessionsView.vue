@@ -12,7 +12,7 @@ import QuotaPanel from '../components/QuotaPanel.vue'
 import { moveInList, useReorder } from '../composables/useReorder'
 import { useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
-import { openWorkspace } from '../composables/useWorkspaceTab'
+import { openWorkspace, useOtherTabs } from '../composables/useWorkspaceTab'
 import { baseName } from '../format'
 
 const { sessions, profiles, refresh } = useSessions()
@@ -95,6 +95,7 @@ const drag = reorder.drag
 // Named workspaces, opened again with one tap; the unnamed one of a browser tab is not listed.
 const workspaceNames = ref<string[]>([])
 const deletingWorkspace = ref<string | null>(null)
+const otherTabs = useOtherTabs()
 
 function loadWorkspaceNames(): void {
   api.workspaces().then((named) => (workspaceNames.value = Object.keys(named).sort()), toast.error)
@@ -148,9 +149,11 @@ function resume(session: AgentSession): void {
         <a
           :href="router.resolve({ path: '/workspace', query: { name: workspace } }).href"
           class="flex items-center gap-1.5 py-1.5 pl-3 text-sm hover:text-slate-100"
+          :title="otherTabs.has(workspace) ? $t('workspace.openElsewhere') : undefined"
           @click.prevent="openWorkspace(router, workspace)"
         >
           <AppIcon name="workspace" />{{ workspace }}
+          <AppIcon v-if="otherTabs.has(workspace)" name="external" class="size-3.5 text-slate-500" />
         </a>
         <button
           class="px-2.5 py-1.5 text-slate-500 hover:text-slate-200"

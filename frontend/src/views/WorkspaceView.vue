@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { api, type Workspace } from '../api'
@@ -8,14 +8,15 @@ import { moveInList, useReorder } from '../composables/useReorder'
 import { useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
 import {
+  announceWorkspace,
   emptyWorkspace,
+  jumpToWorkspace,
   loadTabState,
   MIN_VISIBLE,
   nameWindow,
-  openWorkspaceTab,
-  ownTabs,
+  openWorkspace,
   saveTabState,
-  switchWorkspace,
+  useOtherTabs,
 } from '../composables/useWorkspaceTab'
 import { baseName } from '../format'
 
@@ -57,8 +58,11 @@ const heads = ref<HTMLElement[]>([])
 const resize = ref<Resize | null>(null)
 const row = ref<HTMLElement>()
 const picking = ref(false)
-const switching = ref(false)
-const otherNames = computed(() => savedNames.value.filter((saved) => saved !== name.value).sort())
+const otherTabs = useOtherTabs()
+// Names given in other tabs since this one loaded join in as they are announced.
+const otherNames = computed(() =>
+  [...new Set([...savedNames.value, ...otherTabs.value])].filter((saved) => saved !== name.value).sort(),
+)
 
 const notOpen = computed(() =>
   sessions.value.filter((session) => session.running && !workspace.value.tabs.includes(session.id)),
@@ -191,7 +195,10 @@ function persist(): void {
   tabState.name = name.value
   saveTabState(tabState)
   nameWindow(name.value)
+  announceWorkspace(name.value)
 }
+
+onBeforeUnmount(() => announceWorkspace(null))
 
 watch(workspace, persist, { deep: true })
 watch(resize, persist)
@@ -245,17 +252,6 @@ watch(
   },
 )
 
-/** From the switcher: another workspace in this window. */
-function switchTo(other: string | null): void {
-  switching.value = false
-  switchWorkspace(router, other)
-}
-
-function openInOwnTab(other: string | null): void {
-  switching.value = false
-  openWorkspaceTab(router, other)
-}
-
 /** Naming stores the workspace on the server; renaming moves it there. */
 async function rename(): Promise<void> {
   const wanted = nameInput.value.trim()
@@ -293,7 +289,8 @@ async function rename(): Promise<void> {
       </button>
       <input
         v-model="nameInput"
-        class="min-w-0 flex-1 rounded-md bg-transparent px-2 py-1 font-semibold placeholder:font-normal placeholder:text-slate-500 hover:bg-slate-800 focus:bg-slate-800 focus:outline-none"
+        size="12"
+        class="w-28 min-w-0 shrink rounded-md bg-transparent sm:w-44 px-2 py-1 font-semibold placeholder:font-normal placeholder:text-slate-500 hover:bg-slate-800 focus:bg-slate-800 focus:outline-none"
         :placeholder="$t('workspace.unnamed')"
         :title="$t('workspace.nameHint')"
         :aria-label="$t('workspace.nameHint')"
@@ -301,39 +298,28 @@ async function rename(): Promise<void> {
         @keydown.enter="($event.target as HTMLInputElement).blur()"
         @change="rename"
       />
-      <div class="relative">
+      <!-- The other workspaces, one click away: in their own tab if one shows them, otherwise
+           here; a middle click opens a new tab. -->
+      <nav class="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto [scrollbar-width:none]">
+        <a
+          v-for="other in otherNames"
+          :key="other"
+          :href="router.resolve({ path: '/workspace', query: { name: other } }).href"
+          class="flex shrink-0 items-center gap-1 rounded-md border border-slate-700 px-2 py-0.5 text-sm text-slate-300 hover:bg-slate-800 hover:text-slate-100"
+          :title="otherTabs.has(other) ? $t('workspace.openElsewhere') : $t('workspace.switchHere')"
+          @click.prevent="jumpToWorkspace(router, other)"
+        >
+          {{ other }}<AppIcon v-if="otherTabs.has(other)" name="external" class="size-3.5 text-slate-500" />
+        </a>
         <button
-          class="btn-icon"
-          :aria-label="$t('workspace.switch')"
-          :title="$t('workspace.switch')"
-          @click="switching = !switching"
+          class="flex shrink-0 items-center gap-1 rounded-md border border-dashed border-slate-700 px-2 py-0.5 text-sm text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+          :title="$t('workspace.new')"
+          :aria-label="$t('workspace.new')"
+          @click="openWorkspace(router, null)"
         >
-          <AppIcon name="chevron" />
+          <AppIcon name="plus" class="size-3.5" /><AppIcon name="workspace" class="size-4" />
         </button>
-        <div
-          v-if="switching"
-          class="card absolute top-full right-0 z-20 mt-1 flex w-64 flex-col gap-1 p-2 shadow-xl"
-        >
-          <div v-for="other in otherNames" :key="other" class="flex items-center rounded-md hover:bg-slate-700">
-            <button class="flex min-w-0 flex-1 items-center gap-2 px-3 py-2 text-left" @click="switchTo(other)">
-              <AppIcon name="workspace" /><span class="truncate">{{ other }}</span>
-            </button>
-            <button
-              v-if="ownTabs"
-              class="px-3 py-2 text-slate-400 hover:text-slate-100"
-              :aria-label="$t('workspace.openInTab')"
-              :title="$t('workspace.openInTab')"
-              @click="openInOwnTab(other)"
-            >
-              <AppIcon name="external" />
-            </button>
-          </div>
-          <p v-if="otherNames.length === 0" class="px-3 py-2 text-sm text-slate-500">{{ $t('workspace.noOthers') }}</p>
-          <button class="btn-secondary mt-1" @click="ownTabs ? openInOwnTab(null) : switchTo(null)">
-            <AppIcon name="plus" />{{ $t('workspace.new') }}
-          </button>
-        </div>
-      </div>
+      </nav>
       <div class="relative">
         <button class="btn-icon" :aria-label="$t('workspace.add')" :title="$t('workspace.add')" @click="picking = !picking">
           <AppIcon name="plus" />
