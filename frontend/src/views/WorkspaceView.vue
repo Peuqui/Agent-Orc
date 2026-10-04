@@ -148,10 +148,15 @@ async function activate(id: string): Promise<void> {
   frameOf(id)?.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' })
 }
 
-function open(id: string): void {
+/** Open a column at the end, or right after the column `after` (e.g. a terminal next to its
+ * agent); an open one only becomes the active column. */
+function open(id: string, after: string | null = null): void {
   picking.value = false
-  if (!workspace.value.tabs.includes(id)) {
-    workspace.value.tabs.push(id)
+  const { tabs } = workspace.value
+  if (!tabs.includes(id)) {
+    const position = after === null ? -1 : tabs.indexOf(after)
+    if (position === -1) tabs.push(id)
+    else tabs.splice(position + 1, 0, id)
     frameIds.value.push(id)
   }
   void activate(id)
@@ -296,7 +301,8 @@ function showName(): void {
 function openRequested(): void {
   const id = route.query.open
   if (typeof id !== 'string') return
-  open(id)
+  const after = route.query.after
+  open(id, typeof after === 'string' ? after : null)
   showName()
 }
 

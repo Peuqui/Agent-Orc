@@ -345,7 +345,7 @@ onBeforeUnmount(() => {
       <!-- Embedded in the workspace, the column's tab names the agent already (not on phones). -->
       <h1 class="min-w-0 flex-1 truncate font-semibold">{{ ownTab ? name : '' }}</h1>
       <RestartButton v-if="session?.running" :session="session" button-class="btn-icon" />
-      <TerminalButton v-if="session && !session.terminal" :path="session.path" button-class="btn-icon" />
+      <TerminalButton v-if="session && !session.terminal" :path="session.path" :agent-id="session.id" button-class="btn-icon" />
       <!-- The agent's project in the file view; in the workspace within the column (back returns). -->
       <RouterLink
         v-if="session"

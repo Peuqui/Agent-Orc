@@ -8,7 +8,8 @@ import AppIcon from './AppIcon.vue'
 
 // ">_": a plain terminal in the folder, next to its agent; opens the running one if there is.
 // What is started in it is the user's business (no second agent in the same folder).
-const props = defineProps<{ path: string; buttonClass: string }>()
+// agentId: the agent's session, whose workspace column the terminal opens right after.
+const props = defineProps<{ path: string; agentId: string; buttonClass: string }>()
 const router = useRouter()
 const toast = useToast()
 const { terminalByPath, terminalProfile, refresh } = useSessions()
@@ -25,7 +26,7 @@ async function open(): Promise<void> {
         })
     await refresh()
     // In a workspace column, the router hands this to the tab's workspace.
-    await router.push({ path: '/workspace', query: { open: terminal.id } })
+    await router.push({ path: '/workspace', query: { open: terminal.id, after: props.agentId } })
   } catch (error) {
     toast.error(error)
   }

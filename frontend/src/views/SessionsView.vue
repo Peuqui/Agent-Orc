@@ -396,7 +396,7 @@ function resume(session: AgentSession): void {
             <!-- The icon only (its name in the tooltip), so the row stays one line. -->
             <AppIcon name="diff" />
           </RouterLink>
-          <TerminalButton v-if="!session.terminal" :path="session.path" button-class="btn-secondary btn-small-icon" />
+          <TerminalButton v-if="!session.terminal" :path="session.path" :agent-id="session.id" button-class="btn-secondary btn-small-icon" />
           <ScheduleButton v-if="session.running" :session="session" button-class="btn-secondary btn-small-icon" />
           <RestartButton v-if="session.running" :session="session" button-class="btn-secondary btn-small-icon" />
           <button
