@@ -69,10 +69,10 @@ function onKeydown(event: KeyboardEvent): void {
     >
       {{ state === 'listening' ? $t('dictation.browserStop') : $t('dictation.browser') }}
     </button>
-    <div v-if="microphone" class="flex flex-col items-center">
+    <template v-if="microphone">
       <button
         type="button"
-        class="btn-icon min-h-10"
+        class="btn-icon size-10"
         :class="{ 'animate-pulse text-red-500': microphoneActive, 'opacity-50': microphoneBusy }"
         :disabled="microphoneBusy"
         :aria-label="microphoneActive ? $t('dictation.stop') : $t('dictation.start')"
@@ -81,17 +81,18 @@ function onKeydown(event: KeyboardEvent): void {
       >
         <AppIcon name="mic" />
       </button>
+      <!-- Beside the microphone rather than under it, with its own space: no mistaken taps. -->
       <button
         v-if="whisper"
         type="button"
-        class="rounded border border-slate-600 px-1 text-[0.6rem] font-semibold tracking-wide text-slate-300 hover:border-slate-400"
+        class="mr-1 mb-1.5 h-7 rounded border border-slate-600 px-1.5 text-[0.65rem] font-semibold tracking-wide text-slate-300 hover:border-slate-400"
         :title="$t('dictation.device')"
         :disabled="state !== 'idle'"
         @click="toggleDevice"
       >
         {{ device === 'cuda' ? 'GPU' : 'CPU' }}
       </button>
-    </div>
+    </template>
     <textarea
       ref="field"
       v-model="text"
@@ -101,8 +102,14 @@ function onKeydown(event: KeyboardEvent): void {
       enterkeyhint="send"
       @keydown="onKeydown"
     />
-    <button type="submit" class="btn-primary min-h-10 px-3" :disabled="!text">
-      {{ $t('terminal.send') }}
+    <button
+      type="submit"
+      class="btn-primary size-10 px-0"
+      :disabled="!text"
+      :aria-label="$t('terminal.send')"
+      :title="$t('terminal.send')"
+    >
+      <AppIcon name="send" />
     </button>
   </form>
 </template>
