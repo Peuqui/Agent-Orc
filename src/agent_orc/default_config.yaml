@@ -149,6 +149,7 @@ agents:
   #
   # claude-local:
   #   label: Claude (local)
+  #   hint: Stop other users of the GPUs first, or the models push each other out.
   #   models: [lclaude, --models]
   #   start: [lclaude, "{model}", --settings, *claude_settings]
   #   resume: [lclaude, "{model}", --settings, *claude_settings, --continue]

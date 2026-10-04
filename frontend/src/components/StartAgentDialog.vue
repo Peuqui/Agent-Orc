@@ -165,6 +165,9 @@ async function start(resume: boolean, conversation: string | null = null): Promi
         {{ profile.label }}
       </label>
     </fieldset>
+    <p v-if="profile?.hint" class="mb-4 rounded-lg border border-amber-700 bg-amber-950/40 px-3 py-2 text-sm text-amber-200">
+      {{ profile.hint }}
+    </p>
     <label v-if="profile?.models" class="mb-5 flex flex-col gap-1 text-sm text-slate-400">
       {{ $t('agent.model') }}
       <select v-model="model" class="input text-sm text-slate-200">

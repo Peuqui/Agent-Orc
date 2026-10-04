@@ -15,6 +15,8 @@ export interface AgentProfile {
   terminal: boolean
   /** Offers a choice of models at start (GET agents/{name}/models). */
   models: boolean
+  /** Shown in the start dialog when this profile is chosen; from the config. */
+  hint: string | null
 }
 
 /** A file the agent changed (git working tree against the last commit); status as git puts it. */

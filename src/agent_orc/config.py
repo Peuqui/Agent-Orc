@@ -188,6 +188,8 @@ class AgentProfile(StrictModel):
     models: list[str] | None = None
     # Environment of the agent; {effort} is the folder's level (left out when it has none).
     env: dict[str, str] = {}
+    # Shown in the start dialog when this profile is chosen (e.g. what to stop first).
+    hint: str | None = None
 
 
 class Config(StrictModel):

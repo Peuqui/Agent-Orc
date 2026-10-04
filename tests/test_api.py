@@ -90,6 +90,7 @@ def config(home: Path, socket_name: str) -> Config:
         # Offers models; "thinker" takes two levels, "plain" none (as lclaude --levels says).
         "chooser": {
             "label": "Chooser",
+            "hint": "Stop the other model first.",
             "models": ["printf", "thinker\\nplain\\n"],
             "start": ["sh", "-c", 'echo "started {model} [$ORC_EFFORT]"; exec cat'],
             "resume": ["sh", "-c", 'echo "resumed {model} [$ORC_EFFORT]"; exec cat'],
@@ -1324,8 +1325,10 @@ def test_a_chosen_model_gets_its_levels_and_environment(client: TestClient, home
         "high",
     ]
     assert client.get("/api/agents/chooser/levels", params={"model": "plain"}).json() == []
-    agents = {a["name"]: a["models"] for a in client.get("/api/agents").json()}
-    assert agents["chooser"] is True and agents["sleeper"] is False
+    agents = {a["name"]: a for a in client.get("/api/agents").json()}
+    assert agents["chooser"]["models"] is True and agents["sleeper"]["models"] is False
+    assert agents["chooser"]["hint"] == "Stop the other model first."
+    assert agents["sleeper"]["hint"] is None
 
     def start(folder: Path, model: str | None, effort: str | None) -> Any:
         folder.mkdir()

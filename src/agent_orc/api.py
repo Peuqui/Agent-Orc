@@ -606,6 +606,7 @@ def create_app(
                 "terminal": p.terminal,
                 # Offers a choice of models at start (GET /api/agents/{name}/models).
                 "models": p.models is not None,
+                "hint": p.hint,
             }
             for name, p in config.agents.items()
         ]
