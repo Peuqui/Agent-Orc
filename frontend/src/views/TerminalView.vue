@@ -9,6 +9,7 @@ import { useRouter } from 'vue-router'
 import { api, terminalUrl, type Modifier, type TerminalSettings } from '../api'
 import AppIcon from '../components/AppIcon.vue'
 import ContextMeter from '../components/ContextMeter.vue'
+import JogScroller from '../components/JogScroller.vue'
 import KeyBar from '../components/KeyBar.vue'
 import MessageInput from '../components/MessageInput.vue'
 import { useSessions } from '../composables/useSessions'
@@ -108,12 +109,13 @@ watch(lineHeight, (height) => {
 // Events dispatched here pass the wheel handler below untouched.
 const ownWheelEvents = new WeakSet<Event>()
 
-function scrollTerminal(steps: number, x: number, y: number): void {
+/** Scroll by single-line wheel events; x and y place them on the terminal. */
+function scrollLinesBy(lines: number, x: number, y: number): void {
   const element = terminal.element
   if (!element) return
-  for (let index = 0; index < Math.abs(steps) * scrollLines.value; index++) {
+  for (let index = 0; index < Math.abs(lines); index++) {
     const event = new WheelEvent('wheel', {
-      deltaY: Math.sign(steps),
+      deltaY: Math.sign(lines),
       deltaMode: WheelEvent.DOM_DELTA_LINE,
       clientX: x,
       clientY: y,
@@ -123,6 +125,17 @@ function scrollTerminal(steps: number, x: number, y: number): void {
     ownWheelEvents.add(event)
     element.dispatchEvent(event)
   }
+}
+
+/** A wheel notch or swipe step scrolls the user's number of lines. */
+function scrollTerminal(steps: number, x: number, y: number): void {
+  scrollLinesBy(steps * scrollLines.value, x, y)
+}
+
+/** The jog scroller sends lines directly; they land in the middle of the terminal. */
+function onJog(lines: number): void {
+  const box = container.value?.getBoundingClientRect()
+  if (box) scrollLinesBy(lines, box.left + box.width / 2, box.top + box.height / 2)
 }
 
 function onWheel(event: WheelEvent): void {
@@ -266,8 +279,9 @@ onBeforeUnmount(() => {
       >
     </div>
 
-    <div class="relative min-h-0 flex-1 px-1 pt-1">
-      <div ref="container" class="h-full w-full" />
+    <div class="relative flex min-h-0 flex-1 pt-1 pl-1">
+      <div ref="container" class="h-full min-w-0 flex-1" />
+      <JogScroller @scroll="onJog" />
       <div
         v-if="!connected"
         class="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-900/85"

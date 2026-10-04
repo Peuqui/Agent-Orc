@@ -100,7 +100,8 @@
     "plainText": "Als Text (markieren & kopieren)",
     "copyAll": "Alles kopieren",
     "close": "Schließen",
-    "copied": "In die Zwischenablage kopiert."
+    "copied": "In die Zwischenablage kopiert.",
+    "jog": "Schnell scrollen: Griff nach oben oder unten ziehen – je weiter, desto schneller"
   },
   "editor": {
     "search": "Suchen",

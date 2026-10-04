@@ -100,7 +100,8 @@
     "plainText": "As text (select & copy)",
     "copyAll": "Copy all",
     "close": "Close",
-    "copied": "Copied to the clipboard."
+    "copied": "Copied to the clipboard.",
+    "jog": "Fast scrolling: pull the grip up or down – the further, the faster"
   },
   "editor": {
     "search": "Search",
