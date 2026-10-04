@@ -239,7 +239,8 @@
           "Paperclip: take a photo, pick a picture or screenshot from the gallery, capture the screen (desktop) or attach a file – it lands in the project folder and it shows as a small preview above the input field (× removes it) and goes to the agent with the next message. A screenshot from the clipboard can also simply be pasted into the input field (Ctrl+V).",
           "Grip on the right (jog): pull up or down to scroll, the further the faster. Mouse wheel and swiping scroll as well.",
           "A− / A+ changes the font size of this terminal only; the text view shows the screen for selecting and copying.",
-          "The key bar sends Esc, Tab, arrows, Ctrl and so on – Ctrl and Alt apply to the next key."
+          "The key bar sends Esc, Tab, arrows, Ctrl and so on – Ctrl and Alt apply to the next key.",
+          "Templates (list icon next to the paperclip): put frequent prompts into the input field with a tap; “Manage templates” creates them, for all devices."
         ]
       },
       {
@@ -325,5 +326,14 @@
       "output": "Output",
       "messages": "Answers"
     }
+  },
+  "templates": {
+    "title": "Templates",
+    "none": "No templates yet.",
+    "manage": "Manage templates",
+    "label": "Name",
+    "text": "Template text",
+    "remove": "Remove template",
+    "add": "Add template"
   }
 }

@@ -64,7 +64,14 @@ from agent_orc.sessions import (
     SessionNotFoundError,
     UnknownProfileError,
 )
-from agent_orc.state import read_card_order, read_workspaces, write_card_order, write_workspaces
+from agent_orc.state import (
+    read_card_order,
+    read_prompt_templates,
+    read_workspaces,
+    write_card_order,
+    write_prompt_templates,
+    write_workspaces,
+)
 from agent_orc.terminal import bridge
 from agent_orc.trash import RestoreConflictError, Trash, TrashEntryNotFoundError, home_trash_dir
 from agent_orc.trust import FOLDER_TRUST
@@ -165,6 +172,11 @@ class PushSubscription(BaseModel):
 
     endpoint: str
     keys: PushKeys
+
+
+class PromptTemplate(BaseModel):
+    label: str
+    text: str
 
 
 class HandoverAutoRequest(BaseModel):
@@ -494,6 +506,19 @@ def create_app(
         """A sample "finished" message to every subscribed device."""
         message = agent_message("test", "", "Agent-Orc", "")
         return {"delivered": send_to_all(message, config.push)}
+
+    @app.get("/api/prompt-templates", dependencies=authenticated)
+    def prompt_templates() -> list[dict[str, str]]:
+        """Kept on the server, so every device offers the same ones."""
+        return read_prompt_templates()
+
+    @app.put(
+        "/api/prompt-templates",
+        dependencies=authenticated,
+        status_code=status.HTTP_204_NO_CONTENT,
+    )
+    def store_prompt_templates(body: list[PromptTemplate]) -> None:
+        write_prompt_templates([template.model_dump() for template in body])
 
     @app.get("/api/consumption", dependencies=authenticated)
     def consumption() -> list[dict[str, Any]]:

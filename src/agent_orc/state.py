@@ -7,6 +7,7 @@ from typing import Any
 
 CARD_ORDER_FILE = "card-order.json"
 WORKSPACES_FILE = "workspaces.json"
+PROMPT_TEMPLATES_FILE = "prompt-templates.json"
 
 
 def state_dir() -> Path:
@@ -47,3 +48,16 @@ def read_workspaces() -> dict[str, Any]:
 
 def write_workspaces(workspaces: dict[str, Any]) -> None:
     write_atomically(state_dir() / WORKSPACES_FILE, json.dumps(workspaces))
+
+
+def read_prompt_templates() -> list[dict[str, str]]:
+    """The user's prompt templates ({"label", "text"}) in their order; empty until one is made."""
+    path = state_dir() / PROMPT_TEMPLATES_FILE
+    if not path.is_file():
+        return []
+    templates: list[dict[str, str]] = json.loads(path.read_text(encoding="utf-8"))
+    return templates
+
+
+def write_prompt_templates(templates: list[dict[str, str]]) -> None:
+    write_atomically(state_dir() / PROMPT_TEMPLATES_FILE, json.dumps(templates))

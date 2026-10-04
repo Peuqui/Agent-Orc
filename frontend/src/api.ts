@@ -26,6 +26,12 @@ export interface FileDiff {
   truncated: boolean
 }
 
+/** A text the user keeps for prompts used again and again. */
+export interface PromptTemplate {
+  label: string
+  text: string
+}
+
 /** Claude's token consumption of one day, project and model. */
 export interface ConsumptionRow {
   /** YYYY-MM-DD, local time. */
@@ -294,6 +300,9 @@ export const api = {
     request<FileChange[]>('GET', `sessions/${encodeURIComponent(sessionId)}/changes`),
   changeDiff: (sessionId: string, path: string) =>
     request<FileDiff>('GET', `sessions/${encodeURIComponent(sessionId)}/changes/diff`, { query: { path } }),
+  promptTemplates: () => request<PromptTemplate[]>('GET', 'prompt-templates'),
+  storePromptTemplates: (templates: PromptTemplate[]) =>
+    request<void>('PUT', 'prompt-templates', { body: templates }),
   consumption: () => request<ConsumptionRow[]>('GET', 'consumption'),
   /** Types the handover request into the agent. */
   requestHandover: (sessionId: string) =>

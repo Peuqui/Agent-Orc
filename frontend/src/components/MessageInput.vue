@@ -4,6 +4,7 @@ import { api } from '../api'
 import { useDictation } from '../composables/useDictation'
 import { useToast } from '../composables/useToast'
 import AppIcon from './AppIcon.vue'
+import PromptTemplates from './PromptTemplates.vue'
 
 const props = defineProps<{ sessionId: string }>()
 const emit = defineEmits<{ submit: [text: string] }>()
@@ -114,6 +115,12 @@ async function captureScreen(): Promise<void> {
   stream.getTracks().forEach((track) => track.stop())
   const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'))
   if (blob) await attachFile(new File([blob], SCREENSHOT_NAME, { type: 'image/png' }))
+}
+
+/** A template goes into the field, after what is there already. */
+function insertTemplate(template: string): void {
+  text.value = text.value ? `${text.value}\n${template}` : template
+  field.value?.focus()
 }
 
 /**
@@ -259,6 +266,7 @@ function onKeydown(event: KeyboardEvent): void {
       <input ref="imageInput" type="file" accept="image/*" class="hidden" @change="onFileChosen" />
       <input ref="fileInput" type="file" class="hidden" @change="onFileChosen" />
     </div>
+    <PromptTemplates @insert="insertTemplate" />
     <template v-if="microphone">
       <!-- Device switch first and small, the microphone right beside the text field and large:
            the one used most is the easiest to hit. -->
