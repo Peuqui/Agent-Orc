@@ -2,6 +2,7 @@ import { createRouter, createWebHashHistory } from 'vue-router'
 import FilesView from './views/FilesView.vue'
 import SessionsView from './views/SessionsView.vue'
 import TrashView from './views/TrashView.vue'
+import ConsumptionView from './views/ConsumptionView.vue'
 
 // Editor and terminal bring large libraries (CodeMirror, xterm.js), so they load on demand.
 const EditorView = () => import('./views/EditorView.vue')
@@ -17,6 +18,7 @@ export const router = createRouter({
     { path: '/sessions', component: SessionsView },
     { path: '/files', component: FilesView },
     { path: '/trash', component: TrashView },
+    { path: '/consumption', component: ConsumptionView },
     // Full screen: the terminal needs every pixel, especially with the keyboard open.
     { path: '/workspace', component: WorkspaceView, meta: { fullscreen: true } },
     // One agent's terminal; the workspace shows it embedded (?embedded) in an iframe.

@@ -30,6 +30,8 @@ detaches: the agents keep working, and you pick them up again from any device.
   ultracode switch (Claude, per project folder).
 - Claude's 5-hour and weekly usage at the top; cards can be dragged into your own order.
 - What an agent changed in its project: changed, new and deleted files with their diffs (git).
+- Token consumption of all Claude conversations per day, project and model; search in earlier
+  conversations; a handover advice once an agent's context grows large.
 - Notifications on your phone or desktop when an agent is done or waits for a permission or an
   answer (Web Push, switched on per device); tapping one opens the agent.
 - The permission mode an agent starts in, per project (ask, edit, auto, plan; auto by default).

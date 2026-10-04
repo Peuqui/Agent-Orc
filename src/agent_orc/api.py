@@ -26,6 +26,7 @@ from agent_orc.changes import (
     file_diff,
 )
 from agent_orc.config import Config, LiveEffortConfig, TerminalConfig
+from agent_orc.consumption import claude_consumption
 from agent_orc.context import QUOTA_SOURCES, session_busy, session_status, store_activity
 from agent_orc.dictation import (
     Device,
@@ -493,6 +494,14 @@ def create_app(
         """A sample "finished" message to every subscribed device."""
         message = agent_message("test", "", "Agent-Orc", "")
         return {"delivered": send_to_all(message, config.push)}
+
+    @app.get("/api/consumption", dependencies=authenticated)
+    def consumption() -> list[dict[str, Any]]:
+        """Claude's token consumption by day, project and model (all its conversations)."""
+        return [
+            {"day": day, "project": project, "model": model, **asdict(tokens)}
+            for (day, project, model), tokens in sorted(claude_consumption(home).items())
+        ]
 
     @app.get("/api/quota", dependencies=authenticated)
     def quota() -> list[dict[str, Any]]:

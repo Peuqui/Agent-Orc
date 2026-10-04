@@ -10,7 +10,8 @@
     "sessions": "Agents",
     "files": "Files",
     "trash": "Trash",
-    "workspace": "Workspace"
+    "workspace": "Workspace",
+    "consumption": "Consumption"
   },
   "common": {
     "cancel": "Cancel",
@@ -242,6 +243,12 @@
         ]
       },
       {
+        "title": "Consumption",
+        "items": [
+          "Tokens from all Claude conversations on this machine, per day, project and model, for 7, 14 or 30 days – from the terminal, VS Code and subagents too."
+        ]
+      },
+      {
         "title": "Settings (gear)",
         "items": [
           "Font, font size, line spacing and lines per scroll step – stored on this device.",
@@ -300,5 +307,23 @@
     "requestHint": "Types the request for a handover document into the agent",
     "auto": "Ask for handovers automatically",
     "autoHint": "When an idle agent's context is large, Agent-Orc asks it for a handover document itself – also when no device is open."
+  },
+  "consumption": {
+    "title": "Consumption",
+    "days": "{count} days",
+    "hint": "Tokens from all Claude conversations on this machine – from Agent-Orc, the terminal and VS Code, subagents included.",
+    "loading": "Counting …",
+    "perDay": "Per day (all tokens)",
+    "perProject": "By project",
+    "perProjectColumn": "Project",
+    "perModel": "By model",
+    "perModelColumn": "Model",
+    "kind": {
+      "input": "Input",
+      "cache_write": "Cache written",
+      "cache_read": "Cache read",
+      "output": "Output",
+      "messages": "Answers"
+    }
   }
 }

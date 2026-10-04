@@ -28,9 +28,11 @@ export function formatDate(date: Date, locale: string): string {
 
 const THOUSAND = 1000
 const MILLION = 1_000_000
+const BILLION = 1_000_000_000
 
 /** Token counts in short form: 950, 675k, 1M, 1.2M. */
 export function formatTokens(tokens: number): string {
+  if (tokens >= BILLION) return `${Number((tokens / BILLION).toFixed(1))}B`
   if (tokens >= MILLION) return `${Number((tokens / MILLION).toFixed(1))}M`
   if (tokens >= THOUSAND) return `${Math.round(tokens / THOUSAND)}k`
   return String(tokens)

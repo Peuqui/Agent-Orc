@@ -26,6 +26,21 @@ export interface FileDiff {
   truncated: boolean
 }
 
+/** Claude's token consumption of one day, project and model. */
+export interface ConsumptionRow {
+  /** YYYY-MM-DD, local time. */
+  day: string
+  /** The folder the conversation ran in. */
+  project: string
+  model: string
+  input: number
+  cache_write: number
+  cache_read: number
+  output: number
+  /** Answers. */
+  messages: number
+}
+
 /** A permission request of an agent, waiting for the user (also asked in its terminal). */
 export interface Approval {
   id: string
@@ -279,6 +294,7 @@ export const api = {
     request<FileChange[]>('GET', `sessions/${encodeURIComponent(sessionId)}/changes`),
   changeDiff: (sessionId: string, path: string) =>
     request<FileDiff>('GET', `sessions/${encodeURIComponent(sessionId)}/changes/diff`, { query: { path } }),
+  consumption: () => request<ConsumptionRow[]>('GET', 'consumption'),
   /** Types the handover request into the agent. */
   requestHandover: (sessionId: string) =>
     request<void>('POST', `sessions/${encodeURIComponent(sessionId)}/handover`),

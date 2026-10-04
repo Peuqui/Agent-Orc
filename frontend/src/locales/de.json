@@ -10,7 +10,8 @@
     "sessions": "Agenten",
     "files": "Dateien",
     "trash": "Papierkorb",
-    "workspace": "Arbeitsfläche"
+    "workspace": "Arbeitsfläche",
+    "consumption": "Verbrauch"
   },
   "common": {
     "cancel": "Abbrechen",
@@ -242,6 +243,12 @@
         ]
       },
       {
+        "title": "Verbrauch",
+        "items": [
+          "Tokens aus allen Claude-Gesprächen auf diesem Rechner, pro Tag, Projekt und Modell, für 7, 14 oder 30 Tage – auch aus dem Terminal, VS Code und von Hilfsagenten."
+        ]
+      },
+      {
         "title": "Einstellungen (Zahnrad)",
         "items": [
           "Schrift, Schriftgröße, Zeilenabstand und Scroll-Zeilen pro Schritt – gespeichert auf diesem Gerät.",
@@ -300,5 +307,23 @@
     "requestHint": "Tippt dem Agenten die Bitte um ein Übergabe-Dokument ein",
     "auto": "Übergabe automatisch anstoßen",
     "autoHint": "Ist der Kontext eines untätigen Agenten groß, bittet Agent-Orc ihn selbst um ein Übergabe-Dokument – auch wenn kein Gerät offen ist."
+  },
+  "consumption": {
+    "title": "Verbrauch",
+    "days": "{count} Tage",
+    "hint": "Tokens aus allen Claude-Gesprächen auf diesem Rechner – aus Agent-Orc, dem Terminal und VS Code, mit Hilfsagenten.",
+    "loading": "Wird ausgewertet …",
+    "perDay": "Pro Tag (alle Tokens)",
+    "perProject": "Nach Projekt",
+    "perProjectColumn": "Projekt",
+    "perModel": "Nach Modell",
+    "perModelColumn": "Modell",
+    "kind": {
+      "input": "Eingabe",
+      "cache_write": "Cache geschrieben",
+      "cache_read": "Cache gelesen",
+      "output": "Ausgabe",
+      "messages": "Antworten"
+    }
   }
 }

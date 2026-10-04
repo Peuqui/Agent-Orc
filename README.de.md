@@ -34,6 +34,8 @@ aus wieder aufnehmen.
   Reihenfolge ziehen.
 - Was ein Agent im Projekt geändert hat: geänderte, neue und gelöschte Dateien mit ihrem Diff
   (git).
+- Token-Verbrauch aller Claude-Gespräche pro Tag, Projekt und Modell; Suche in früheren
+  Gesprächen; eine Übergabe-Empfehlung, sobald der Kontext eines Agenten groß wird.
 - Benachrichtigungen aufs Handy oder den Rechner, wenn ein Agent fertig ist oder auf eine
   Freigabe oder Antwort wartet (Web Push, pro Gerät einschaltbar); Antippen öffnet den Agenten.
 - Der Freigabe-Modus, in dem ein Agent startet, pro Projekt (Fragen, Bearbeiten, Auto, Planen;
