@@ -139,7 +139,8 @@
     "device": "Whisper auf GPU (sofort) oder CPU (langsamer, immer verfügbar)",
     "transcribing": "Wird transkribiert …",
     "browser": "Browser",
-    "browserHint": "Whisper ging nicht: Spracherkennung des Browsers nutzen (Chrome schickt das Audio an Google)"
+    "browserHint": "Whisper ging nicht: Spracherkennung des Browsers nutzen (Chrome schickt das Audio an Google)",
+    "browserStop": "Stopp"
   },
   "quota": {
     "title": "Kontingent {agent}:",

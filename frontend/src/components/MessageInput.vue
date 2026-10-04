@@ -58,6 +58,17 @@ function onKeydown(event: KeyboardEvent): void {
 
 <template>
   <form class="flex items-end gap-1 border-t border-slate-800 p-1" @submit.prevent="submit">
+    <button
+      v-if="browserFallback"
+      type="button"
+      class="btn-secondary min-h-10 px-1.5 text-xs"
+      :class="{ 'animate-pulse text-red-400': state === 'listening' }"
+      :disabled="state === 'recording' || state === 'transcribing'"
+      :title="$t('dictation.browserHint')"
+      @click="toggleBrowser"
+    >
+      {{ state === 'listening' ? $t('dictation.browserStop') : $t('dictation.browser') }}
+    </button>
     <div v-if="microphone" class="flex flex-col items-center">
       <button
         type="button"
@@ -81,17 +92,6 @@ function onKeydown(event: KeyboardEvent): void {
         {{ device === 'cuda' ? 'GPU' : 'CPU' }}
       </button>
     </div>
-    <button
-      v-if="browserFallback"
-      type="button"
-      class="btn-secondary min-h-10 px-2 text-xs"
-      :class="{ 'animate-pulse text-red-400': state === 'listening' }"
-      :disabled="state === 'recording' || state === 'transcribing'"
-      :title="$t('dictation.browserHint')"
-      @click="toggleBrowser"
-    >
-      {{ state === 'listening' ? $t('dictation.stop') : $t('dictation.browser') }}
-    </button>
     <textarea
       ref="field"
       v-model="text"

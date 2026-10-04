@@ -139,7 +139,8 @@
     "device": "Whisper on GPU (instant) or CPU (slower, always available)",
     "transcribing": "Transcribing …",
     "browser": "Browser",
-    "browserHint": "Whisper failed: use the browser's speech recognition (Chrome sends the audio to Google)"
+    "browserHint": "Whisper failed: use the browser's speech recognition (Chrome sends the audio to Google)",
+    "browserStop": "Stop"
   },
   "quota": {
     "title": "{agent} usage:",
