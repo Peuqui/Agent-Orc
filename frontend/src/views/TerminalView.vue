@@ -16,7 +16,7 @@ import { useToast } from '../composables/useToast'
 import { PIXELS_PER_STEP, useTouchScroll } from '../composables/useTouchScroll'
 import { baseName } from '../format'
 
-const props = defineProps<{ id: string }>()
+const props = defineProps<{ id: string; embedded: boolean }>()
 
 const FONT_SIZE_KEY = 'agent-orc-terminal-font-size'
 const DEFAULT_FONT_SIZE = 14
@@ -196,7 +196,12 @@ onBeforeUnmount(() => {
 <template>
   <div class="flex h-dvh flex-col bg-slate-900">
     <header class="flex items-center gap-1 border-b border-slate-800 px-1 py-1">
-      <button class="btn-icon" :aria-label="$t('terminal.back')" @click="router.push('/sessions')">
+      <button
+        v-if="!embedded"
+        class="btn-icon"
+        :aria-label="$t('terminal.back')"
+        @click="router.push('/sessions')"
+      >
         <AppIcon name="up" class="-rotate-90" />
       </button>
       <h1 class="min-w-0 flex-1 truncate font-semibold">{{ name }}</h1>

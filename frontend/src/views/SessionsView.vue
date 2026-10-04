@@ -156,7 +156,11 @@ function resume(session: AgentSession): void {
           </button>
         </div>
         <div class="flex flex-wrap gap-2">
-          <RouterLink v-if="session.running" :to="`/terminal/${session.id}`" class="btn-primary">
+          <RouterLink
+            v-if="session.running"
+            :to="{ path: '/workspace', query: { open: session.id } }"
+            class="btn-primary"
+          >
             <AppIcon name="agents" />{{ $t('sessions.terminal') }}
           </RouterLink>
           <button v-if="!session.running" class="btn-primary" @click="resume(session)">

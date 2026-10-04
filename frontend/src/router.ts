@@ -6,6 +6,7 @@ import TrashView from './views/TrashView.vue'
 // Editor and terminal bring large libraries (CodeMirror, xterm.js), so they load on demand.
 const EditorView = () => import('./views/EditorView.vue')
 const TerminalView = () => import('./views/TerminalView.vue')
+const WorkspaceView = () => import('./views/WorkspaceView.vue')
 
 // Hash history: no server-side routing needed, also under a reverse-proxy sub-path.
 export const router = createRouter({
@@ -16,7 +17,14 @@ export const router = createRouter({
     { path: '/files', component: FilesView },
     { path: '/trash', component: TrashView },
     // Full screen: the terminal needs every pixel, especially with the keyboard open.
-    { path: '/terminal/:id', component: TerminalView, props: true, meta: { fullscreen: true } },
+    { path: '/workspace', component: WorkspaceView, meta: { fullscreen: true } },
+    // One agent's terminal; the workspace shows it embedded (?embedded) in an iframe.
+    {
+      path: '/terminal/:id',
+      component: TerminalView,
+      props: (route) => ({ id: route.params.id, embedded: 'embedded' in route.query }),
+      meta: { fullscreen: true },
+    },
     {
       path: '/edit',
       component: EditorView,

@@ -142,5 +142,12 @@
     "seven_day": "Woche",
     "detail": "{percent} % · zurückgesetzt {when}",
     "none": "Noch keine Angaben – erscheinen, sobald eine Sitzung gearbeitet hat."
+  },
+  "workspace": {
+    "close": "Tab schließen",
+    "columns": "Spalten",
+    "fewerColumns": "Eine Spalte weniger",
+    "moreColumns": "Eine Spalte mehr",
+    "empty": "Leere Spalte – oben einen Agenten antippen"
   }
 }

@@ -252,6 +252,9 @@ def test_serves_pwa_next_to_api(config: Config, clock: FakeClock, tmp_path: Path
     assert me.status_code == 401
     # Also on API answers, which an open app keeps polling.
     assert me.headers[BUILD_ID_HEADER] == "build-1"
+    # An update replaced the files while the server kept running.
+    (static / BUILD_ID_FILE).write_text("build-2")
+    assert client.get("/api/me").headers[BUILD_ID_HEADER] == "build-2"
 
 
 ORIGIN = {"origin": "http://testserver"}

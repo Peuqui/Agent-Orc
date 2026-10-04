@@ -473,14 +473,16 @@ def create_app(
         trash.empty()
 
     if static_dir is not None:
-        build_id = (static_dir / BUILD_ID_FILE).read_text(encoding="utf-8")
+        build_id_file = static_dir / BUILD_ID_FILE
 
         @app.middleware("http")
         async def send_build_id(
             request: Request, call_next: Callable[[Request], Awaitable[Response]]
         ) -> Response:
             response = await call_next(request)
-            response.headers[BUILD_ID_HEADER] = build_id
+            # Read every time: an update may replace the files while this server runs, and the
+            # header must name the build a reload would actually get.
+            response.headers[BUILD_ID_HEADER] = build_id_file.read_text(encoding="utf-8")
             return response
 
         # Mounted last, so the API routes above take precedence.

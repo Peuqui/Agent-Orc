@@ -142,5 +142,12 @@
     "seven_day": "Week",
     "detail": "{percent} % · resets {when}",
     "none": "No data yet – appears once a session has worked."
+  },
+  "workspace": {
+    "close": "Close tab",
+    "columns": "Columns",
+    "fewerColumns": "One column less",
+    "moreColumns": "One more column",
+    "empty": "Empty column – tap an agent above"
   }
 }
