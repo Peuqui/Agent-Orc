@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { formatTokens } from '../format'
-import { usageTone } from '../usage'
 import ContextRing from './ContextRing.vue'
 
 const props = defineProps<{ tokens: number; window: number; compact?: boolean }>()
@@ -14,10 +13,10 @@ const detail = computed(() => ({
 }))
 </script>
 
+<!-- Only the ring shows the warning colour: coloured text looked larger than the grey rows. -->
 <template>
   <span
-    class="inline-flex shrink-0 items-center gap-1.5 text-xs"
-    :class="usageTone(percent).text"
+    class="inline-flex shrink-0 items-center gap-1.5 text-xs text-slate-400"
     :title="$t('sessions.context', detail)"
   >
     <ContextRing :percent="percent" />
