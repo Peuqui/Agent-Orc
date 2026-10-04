@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { api } from '../api'
+import { useDismiss } from '../composables/useDismiss'
 import { useToast } from '../composables/useToast'
 import { useI18n } from 'vue-i18n'
 import {
@@ -22,6 +23,8 @@ import PushSettings from './PushSettings.vue'
 const { scrollLines, lineHeight, fontSize, stepFontSize, terminalFont, dictationEngine } = useSettings()
 const toast = useToast()
 const open = ref(false)
+const root = ref<HTMLElement>()
+useDismiss(root, () => open.value, () => (open.value = false))
 // The extra-keys editor stays open after the menu has closed.
 const editingKeys = ref(false)
 // The engines the Whisper service offers; asked when the menu opens.
@@ -50,7 +53,7 @@ function changeScrollLines(delta: number): void {
 </script>
 
 <template>
-  <div class="relative">
+  <div ref="root" class="relative">
     <button class="btn-icon" :title="$t('settings.title')" :aria-label="$t('settings.title')" @click="open = !open">
       <AppIcon name="menu" />
     </button>

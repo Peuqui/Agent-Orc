@@ -47,7 +47,7 @@ function setting<T>(key: string, initial: T, parse: (stored: string) => T): Ref<
 const scrollLines = setting('agent-orc-scroll-lines', DEFAULT_SCROLL_LINES, Number)
 /** Line spacing of the terminal, as a multiple of the font size. */
 const lineHeight = setting('agent-orc-line-height', DEFAULT_LINE_HEIGHT, Number)
-/** Font size of every terminal, unless A−/A+ set one larger or smaller. */
+/** Font size of every terminal of this device. */
 const fontSize = setting('agent-orc-font-size', DEFAULT_FONT_SIZE, Number)
 const terminalFont = setting<TerminalFont>(
   'agent-orc-terminal-font',

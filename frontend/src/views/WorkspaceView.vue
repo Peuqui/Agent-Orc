@@ -9,6 +9,7 @@ import HelpButton from '../components/HelpButton.vue'
 import NavMenu from '../components/NavMenu.vue'
 import QuotaPanel from '../components/QuotaPanel.vue'
 import SettingsMenu from '../components/SettingsMenu.vue'
+import { useDismiss } from '../composables/useDismiss'
 import { moveInList, useReorder } from '../composables/useReorder'
 import { sessionName, useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
@@ -64,6 +65,8 @@ const resize = ref<Resize | null>(null)
 const row = ref<HTMLElement>()
 const picking = ref(false)
 const choosingWorkspace = ref(false)
+const workspaceChooser = ref<HTMLElement>()
+useDismiss(workspaceChooser, () => choosingWorkspace.value, () => (choosingWorkspace.value = false))
 const otherTabs = useOtherTabs()
 // Names given in other tabs since this one loaded join in as they are announced.
 const otherNames = computed(() =>
@@ -398,11 +401,10 @@ async function rename(): Promise<void> {
       <!-- The other workspaces, one click away: in their own tab if one shows them, otherwise
            here; a middle click opens a new tab. -->
       <!-- Phones: in a list behind the name, so everything fits in one row. -->
-      <div v-if="phone" class="relative">
+      <div v-if="phone" ref="workspaceChooser" class="relative">
         <button class="btn-icon" :aria-label="$t('workspace.others')" :title="$t('workspace.others')" @click="choosingWorkspace = !choosingWorkspace">
           <AppIcon name="chevron" />
         </button>
-        <div v-if="choosingWorkspace" class="fixed inset-0 z-30" @click="choosingWorkspace = false" />
         <div v-if="choosingWorkspace" class="card absolute top-full left-0 z-40 mt-1 flex w-56 flex-col p-1 shadow-xl">
           <button
             v-for="other in otherNames"

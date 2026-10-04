@@ -17,6 +17,7 @@ import TerminalButton from '../components/TerminalButton.vue'
 import JogScroller from '../components/JogScroller.vue'
 import KeyBar from '../components/KeyBar.vue'
 import MessageInput from '../components/MessageInput.vue'
+import { useDismiss } from '../composables/useDismiss'
 import { registerFileLinks } from '../composables/useFileLinks'
 import { sessionName, useSessions } from '../composables/useSessions'
 import { PHONE_WIDTH } from '../device'
@@ -48,7 +49,6 @@ const messageInput = ref<InstanceType<typeof MessageInput>>()
 const settings = ref<TerminalSettings | null>(null)
 const modifiers = ref(new Set<Modifier>())
 const connected = ref(false)
-// A−/A+ give this terminal its own size; otherwise it follows the size set in the settings.
 // One font size for every terminal of this device (settings menu, or ⋯ on phones).
 const { lineHeight, fontSize, stepFontSize, terminalFont, extraKeysVersion } = useSettings()
 
@@ -97,6 +97,8 @@ const followPhoneWidth = (event: MediaQueryListEvent): void => {
 PHONE_WIDTH.addEventListener('change', followPhoneWidth)
 const ownTab = computed(() => !props.embedded || phone.value)
 const actionsOpen = ref(false)
+const actionsMenu = ref<HTMLElement>()
+useDismiss(actionsMenu, () => actionsOpen.value, () => (actionsOpen.value = false))
 const actionClass = computed(() =>
   phone.value
     ? 'flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-slate-300 hover:bg-slate-700'
@@ -351,7 +353,7 @@ onBeforeUnmount(() => {
       <!-- In the light bulb's amber, set off from the usage figure. -->
       <h1 class="ml-2 min-w-0 flex-1 truncate font-semibold text-amber-300">{{ ownTab ? name : '' }}</h1>
       <!-- The actions: side by side on computers, behind ⋯ on phones so the name has room. -->
-      <div class="relative flex items-center">
+      <div ref="actionsMenu" class="relative flex items-center">
         <button
           v-if="phone"
           class="btn-icon"
@@ -361,7 +363,6 @@ onBeforeUnmount(() => {
         >
           <AppIcon name="more" />
         </button>
-        <div v-if="phone && actionsOpen" class="fixed inset-0 z-30" @click="actionsOpen = false" />
         <div
           v-if="!phone || actionsOpen"
           :class="

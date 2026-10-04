@@ -206,7 +206,7 @@
     "lineHeightHint": "Vielfaches der Schriftgröße; 1,00 ist ganz ohne Abstand.",
     "font": "Schrift im Terminal",
     "fontSize": "Schriftgröße",
-    "fontSizeHint": "Standard für alle Terminals; A−/A+ im Terminal stellt nur dieses um.",
+    "fontSizeHint": "Gilt für alle Terminals auf diesem Gerät.",
     "dictationEngine": "Diktat-Engine",
     "engineDefault": "Standard",
     "dictationEngineHint": "Spracherkennung des Whisper-Dienstes; „Standard“ nimmt, was der Dienst vorgibt. Gilt für dieses Gerät.",

@@ -206,7 +206,7 @@
     "lineHeightHint": "Multiple of the font size; 1.00 means no spacing at all.",
     "font": "Terminal font",
     "fontSize": "Font size",
-    "fontSizeHint": "Default for all terminals; A−/A+ in a terminal changes only that one.",
+    "fontSizeHint": "For all terminals on this device.",
     "dictationEngine": "Dictation engine",
     "engineDefault": "Default",
     "dictationEngineHint": "Speech recognition of the Whisper service; “Default” takes what the service sets. Applies to this device.",

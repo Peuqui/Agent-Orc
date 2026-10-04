@@ -30,6 +30,7 @@ const sections = computed(() =>
   <Teleport v-if="open" to="body">
     <div
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-2"
+      data-modal
       @click.self="open = false"
       @keydown.esc="open = false"
     >

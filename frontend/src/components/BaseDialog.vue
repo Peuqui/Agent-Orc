@@ -42,6 +42,7 @@ onBeforeUnmount(() => resizes.disconnect())
   <Teleport to="body">
     <div
       class="fixed inset-0 z-40 flex justify-center bg-black/60"
+      data-modal
       :class="anchor ? '' : 'items-end sm:items-center'"
       @click.self="emit('close')"
       @keydown.esc="emit('close')"

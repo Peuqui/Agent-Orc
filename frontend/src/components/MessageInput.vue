@@ -2,6 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { api } from '../api'
 import { useDictation } from '../composables/useDictation'
+import { useDismiss } from '../composables/useDismiss'
 import { useToast } from '../composables/useToast'
 import { TOUCH_FIRST } from '../device'
 import AppIcon from './AppIcon.vue'
@@ -127,6 +128,15 @@ async function captureScreen(): Promise<void> {
 }
 
 const templates = ref<InstanceType<typeof PromptTemplates>>()
+const attachMenu = ref<HTMLElement>()
+useDismiss(
+  attachMenu,
+  () => attaching.value || Boolean(templates.value?.open),
+  () => {
+    attaching.value = false
+    if (templates.value) templates.value.open = false
+  },
+)
 
 /** The paperclip also closes the open template list, which has no button of its own. */
 function toggleAttachMenu(): void {
@@ -259,7 +269,7 @@ function onKeydown(event: KeyboardEvent): void {
     >
       {{ state === 'listening' ? $t('dictation.browserStop') : $t('dictation.browser') }}
     </button>
-    <div class="relative">
+    <div ref="attachMenu" class="relative">
       <button
         type="button"
         class="btn-icon size-10"
