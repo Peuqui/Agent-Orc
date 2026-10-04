@@ -234,7 +234,8 @@
           "⟳ (Karte und Terminalleiste) startet den Agenten neu und setzt das Gespräch fort, etwa wenn er hängt oder geänderte Einstellungen lesen soll. Vorher kommt eine Rückfrage; eine laufende Antwort und Hintergrundaufgaben enden dabei.",
           "Uhr auf der Karte: einen Prompt für später planen, etwa „Tests laufen lassen und berichten“ um 7 Uhr. Er wird zur Zeit eingetippt, sobald der Agent fertig ist; geplante Prompts stehen auf der Karte und lassen sich mit × entfernen.",
           "Läuft ein Claude-Agent ins Nutzungslimit, plant Agent-Orc das Weitermachen zur nächsten Rücksetzung des Kontingents (gelber Eintrag auf der Karte). Ist er dann noch gesperrt, kommt der nächste Termin.",
-          "„An mehrere“ (neben den Arbeitsflächen, ab zwei laufenden Agenten): denselben Prompt an mehrere Agenten schicken, etwa „committe und pushe“."
+          "„An mehrere“ (neben den Arbeitsflächen, ab zwei laufenden Agenten): denselben Prompt an mehrere Agenten schicken, etwa „committe und pushe“.",
+          "„>_“ (Karte und Terminalleiste) öffnet ein normales Terminal im Projektordner, auch neben dem laufenden Agenten; läuft schon eins, öffnet es dieses. Darin bitte keinen zweiten Agenten im selben Ordner starten."
         ]
       },
       {
@@ -387,5 +388,8 @@
     "text": "Nachricht an alle gewählten Agenten …",
     "send": "An {count} senden",
     "sent": "An {count} Agenten gesendet"
+  },
+  "terminalButton": {
+    "title": "Terminal in diesem Ordner (ohne Agent)"
   }
 }

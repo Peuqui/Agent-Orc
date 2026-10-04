@@ -2,9 +2,9 @@
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { api, type AgentSession } from '../api'
-import { useSessions } from '../composables/useSessions'
+import { sessionName, useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
-import { baseName, formatMoment } from '../format'
+import { formatMoment } from '../format'
 import AppIcon from './AppIcon.vue'
 import BaseDialog from './BaseDialog.vue'
 
@@ -39,7 +39,7 @@ async function plan(): Promise<void> {
   try {
     await api.schedulePrompt(props.session.id, text.value.trim(), at.getTime() / MILLISECONDS_PER_SECOND)
     planning.value = false
-    toast.info(t('schedule.done', { name: baseName(props.session.path), when: formatMoment(at, locale.value) }))
+    toast.info(t('schedule.done', { name: sessionName(props.session), when: formatMoment(at, locale.value) }))
   } catch (error) {
     toast.error(error)
   }

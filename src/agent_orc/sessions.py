@@ -15,6 +15,8 @@ from agent_orc.config import CONVERSATION_PLACEHOLDER, NAME_PLACEHOLDER, AgentPr
 SESSION_ENV = "AGENT_ORC_SESSION"
 PROFILE_OPTION = "@orc_profile"
 PATH_OPTION = "@orc_path"
+# Marks a folder's terminal apart from its agent in the session name.
+TERMINAL_ID_SUFFIX = "-terminal"
 FIELD_SEPARATOR = "\t"
 LIST_FORMAT = FIELD_SEPARATOR.join(
     [
@@ -56,17 +58,19 @@ class AgentSession:
     exit_status: int | None
     # Unix time the tmux session was created.
     created: float
+    # A plain terminal (profile setting), which may run next to the folder's agent.
+    terminal: bool
 
 
-def session_id_for(path: Path) -> str:
-    """Readable, unique tmux session name for a folder.
+def session_id_for(path: Path, terminal: bool) -> str:
+    """Readable, unique tmux session name for a folder's agent or its terminal.
 
     tmux forbids '.' and ':' in session names, and folder names alone are not
     unique across nested directories, hence the sanitized name plus a path hash.
     """
     readable = re.sub(r"[^A-Za-z0-9_-]", "_", path.name)
     digest = hashlib.sha1(str(path).encode()).hexdigest()[:6]
-    return f"{readable}-{digest}"
+    return f"{readable}-{digest}{TERMINAL_ID_SUFFIX if terminal else ''}"
 
 
 def exact_target(session_id: str) -> str:
@@ -91,26 +95,33 @@ class SessionManager:
             raise SessionError(result.stderr.strip())
         return [self._parse_line(line) for line in result.stdout.splitlines()]
 
-    def find_by_path(self, path: Path) -> AgentSession | None:
-        return next((s for s in self.list() if s.path == path), None)
+    def find_by_path(self, path: Path, terminal: bool) -> AgentSession | None:
+        """The folder's agent, or its terminal: at most one of each per folder."""
+        return next((s for s in self.list() if s.path == path and s.terminal == terminal), None)
+
+    def _is_terminal(self, profile_name: str) -> bool:
+        profile = self._agents.get(profile_name)
+        return profile is not None and profile.terminal
 
     def start(
         self, profile_name: str, path: Path, resume: bool, conversation: str | None = None
     ) -> AgentSession:
-        """Start an agent in `path`; at most one agent session exists per folder.
+        """Start an agent in `path`; at most one agent session exists per folder, and one
+        terminal next to it.
 
         A session whose agent has already exited is started again in place, so it keeps its
         id (open terminals and workspace columns stay valid). `conversation` resumes that
         earlier conversation (the caller has checked that it exists); `resume` the last one.
         """
         command = self._command(profile_name, path, resume, conversation)
-        existing = self.find_by_path(path)
+        terminal = self._is_terminal(profile_name)
+        existing = self.find_by_path(path, terminal)
         if existing is not None:
             if existing.running:
                 raise SessionAlreadyRunningError(existing.id)
             return self._respawn(existing, profile_name, command)
 
-        session_id = session_id_for(path)
+        session_id = session_id_for(path, terminal)
         # One tmux invocation, so remain-on-exit is active before the agent can exit
         # and its exit status stays visible. The status bar would only repeat what the
         # app shows and costs a terminal line on small screens. Mouse mode turns wheel
@@ -129,7 +140,7 @@ class SessionManager:
             "set-option", "-t", exact_target(session_id), PROFILE_OPTION, profile_name, ";",
             "set-option", "-t", exact_target(session_id), PATH_OPTION, str(path),
         )  # fmt: skip
-        session = self.find_by_path(path)
+        session = self.find_by_path(path, terminal)
         if session is None:
             raise SessionError(f"tmux session {session_id} vanished right after start")
         return session
@@ -164,7 +175,7 @@ class SessionManager:
             "-e", f"{SESSION_ENV}={session.id}", *command, ";",
             "set-option", "-t", exact_target(session.id), PROFILE_OPTION, profile_name,
         )  # fmt: skip
-        respawned = self.find_by_path(session.path)
+        respawned = self.find_by_path(session.path, self._is_terminal(profile_name))
         if respawned is None:
             raise SessionError(f"tmux session {session.id} vanished right after restart")
         return respawned
@@ -202,6 +213,7 @@ class SessionManager:
             # Empty when the process died from a signal, or tmux has not collected it yet.
             exit_status=int(dead_status) if dead_status else None,
             created=float(created),
+            terminal=self._is_terminal(profile),
         )
 
     def _tmux(self, *arguments: str, check: bool = True) -> subprocess.CompletedProcess[str]:

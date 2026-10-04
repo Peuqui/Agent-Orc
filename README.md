@@ -40,6 +40,7 @@ detaches: the agents keep working, and you pick them up again from any device.
 - Restart (⟳) with the conversation resumed, schedule prompts for later, and carry on by
   itself after the usage limit once the quota is reset.
 - Send the same prompt to several agents at once.
+- A plain terminal in the project folder (“>_”), also next to the running agent.
 
 **Workspaces**
 - Several agents side by side as columns; drag the column heads to sort them and the dividers

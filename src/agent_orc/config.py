@@ -171,6 +171,8 @@ class AgentProfile(StrictModel):
     trust: Literal["claude"] | None = None
     # Where the account's usage limits come from (see context.QUOTA_SOURCES).
     quota: Literal["claude"] | None = None
+    # A plain terminal, no agent: it may run in a folder next to that folder's agent.
+    terminal: bool = False
 
 
 class Config(StrictModel):

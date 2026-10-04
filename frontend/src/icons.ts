@@ -1,6 +1,7 @@
 // Simple stroke icons on a 24×24 grid, drawn for Agent-Orc.
 export const ICONS = {
   agents: 'M4 5h16v14H4z M7 9l3 3-3 3 M12 15h5',
+  prompt: 'M5 7l5 5-5 5 M12 17h7',
   folder: 'M3 6h6l2 2h10v11H3z',
   file: 'M6 3h8l4 4v14H6z M14 3v4h4',
   trash: 'M4 7h16 M9 7V4h6v3 M6 7l1 13h10l1-13',

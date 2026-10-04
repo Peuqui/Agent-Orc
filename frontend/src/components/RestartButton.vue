@@ -2,9 +2,8 @@
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { api, type AgentSession } from '../api'
-import { useSessions } from '../composables/useSessions'
+import { sessionName, useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
-import { baseName } from '../format'
 import AppIcon from './AppIcon.vue'
 import ConfirmDialog from './ConfirmDialog.vue'
 
@@ -20,7 +19,7 @@ async function restart(): Promise<void> {
   asking.value = false
   try {
     await api.restartSession(props.session.id)
-    toast.info(t('restart.done', { name: baseName(props.session.path) }))
+    toast.info(t('restart.done', { name: sessionName(props.session) }))
   } catch (error) {
     toast.error(error)
   }
@@ -35,7 +34,7 @@ async function restart(): Promise<void> {
   <ConfirmDialog
     v-if="asking"
     :title="$t('restart.title')"
-    :message="$t(session.busy ? 'restart.confirmBusy' : 'restart.confirm', { name: baseName(session.path) })"
+    :message="$t(session.busy ? 'restart.confirmBusy' : 'restart.confirm', { name: sessionName(session) })"
     :confirm-label="$t('restart.title')"
     :danger="session.busy"
     @confirm="restart"

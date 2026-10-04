@@ -25,6 +25,9 @@ AGENTS = {
     "echo": AgentProfile(
         label="Echo", start=["sh", "-c", "echo started {name}; sleep 60"], resume=["sleep", "60"]
     ),
+    "terminal": AgentProfile(
+        label="Terminal", start=["sleep", "60"], resume=["sleep", "60"], terminal=True
+    ),
 }
 
 
@@ -48,7 +51,7 @@ def tmux_query(socket_name: str, *arguments: str) -> str:
 
 def wait_until_exited(manager: SessionManager, path: Path) -> AgentSession:
     for _ in range(50):
-        session = manager.find_by_path(path)
+        session = manager.find_by_path(path, terminal=False)
         assert session is not None
         if not session.running:
             return session
@@ -148,10 +151,12 @@ def test_stop_unknown_session(manager: SessionManager) -> None:
 
 
 def test_session_id_is_tmux_safe_and_unique() -> None:
-    first = session_id_for(Path("/a/my.project"))
-    second = session_id_for(Path("/b/my.project"))
+    first = session_id_for(Path("/a/my.project"), terminal=False)
+    second = session_id_for(Path("/b/my.project"), terminal=False)
     assert first != second
     assert "." not in first and ":" not in first
+    # The folder's terminal is a session of its own next to the agent.
+    assert session_id_for(Path("/a/my.project"), terminal=True) not in (first, second)
 
 
 def test_build_command_replaces_placeholder() -> None:
@@ -166,3 +171,18 @@ def test_server_passes_mouse_clipboard_and_focus_on(
     assert tmux_query(socket_name, "show-options", "-gv", "mouse") == "on"
     assert tmux_query(socket_name, "show-options", "-gv", "set-clipboard") == "on"
     assert tmux_query(socket_name, "show-options", "-sv", "focus-events") == "on"
+
+
+def test_a_terminal_runs_next_to_the_folders_agent(manager: SessionManager, workdir: Path) -> None:
+    agent = manager.start("sleeper", workdir, resume=False)
+    terminal = manager.start("terminal", workdir, resume=False)
+    assert (agent.terminal, terminal.terminal) == (False, True)
+    assert agent.id != terminal.id
+    assert {s.id for s in manager.list()} == {agent.id, terminal.id}
+    # Still one of each per folder.
+    with pytest.raises(SessionAlreadyRunningError):
+        manager.start("echo", workdir, resume=False)
+    with pytest.raises(SessionAlreadyRunningError):
+        manager.start("terminal", workdir, resume=False)
+    assert manager.find_by_path(workdir, terminal=True) == terminal
+    assert manager.find_by_path(workdir, terminal=False) == agent

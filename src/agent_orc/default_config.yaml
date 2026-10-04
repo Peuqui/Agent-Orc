@@ -144,6 +144,8 @@ agents:
     resume: [aider, --restore-chat-history]
   shell:
     label: Shell
+    # A plain terminal: it may run next to the folder's agent (">_" on its card).
+    terminal: true
     # A plain shell in the folder; it has no conversation to resume, resuming opens a new one.
     start: [bash]
     resume: [bash]

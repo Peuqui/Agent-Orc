@@ -12,12 +12,12 @@ import ReasoningControl from '../components/ReasoningControl.vue'
 import QuotaPanel from '../components/QuotaPanel.vue'
 import RestartButton from '../components/RestartButton.vue'
 import ScheduleButton from '../components/ScheduleButton.vue'
+import TerminalButton from '../components/TerminalButton.vue'
 import ScheduledList from '../components/ScheduledList.vue'
 import { moveInList, useReorder } from '../composables/useReorder'
-import { useSessions } from '../composables/useSessions'
+import { cardKey, sessionName, useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
 import { openWorkspace, useOtherTabs } from '../composables/useWorkspaceTab'
-import { baseName } from '../format'
 
 const { sessions, profiles, refresh } = useSessions()
 const toast = useToast()
@@ -78,13 +78,13 @@ const cardOrder = ref<string[]>([])
 api.cardOrder().then((order) => (cardOrder.value = order), toast.error)
 
 function rank(session: AgentSession): number {
-  const index = cardOrder.value.indexOf(session.path)
+  const index = cardOrder.value.indexOf(cardKey(session))
   return index === -1 ? Number.MAX_SAFE_INTEGER : index
 }
 
 const sorted = computed(() =>
   [...sessions.value].sort(
-    (a, b) => rank(a) - rank(b) || baseName(a.path).localeCompare(baseName(b.path)),
+    (a, b) => rank(a) - rank(b) || sessionName(a).localeCompare(sessionName(b)),
   ),
 )
 
@@ -97,7 +97,7 @@ const reorder = useReorder({
       .map((element) => element.closest<HTMLElement>('[data-card]')?.dataset.card)
       .find((folder) => folder !== undefined) ?? null,
   onDrop: (folder, target) => {
-    const folders = sorted.value.map((session) => session.path)
+    const folders = sorted.value.map(cardKey)
     moveInList(folders, folder, target)
     cardOrder.value = folders
     void run(() => api.arrangeCards(folders))
@@ -155,7 +155,7 @@ function answerApproval(session: AgentSession, approval: Approval, allow: boolea
 function changePermissionMode(session: AgentSession, mode: string): void {
   void run(async () => {
     await api.changePermissionMode(session.id, mode)
-    if (session.running) toast.info(t('permission.changed', { name: baseName(session.path) }))
+    if (session.running) toast.info(t('permission.changed', { name: sessionName(session) }))
   })
 }
 
@@ -227,13 +227,13 @@ function resume(session: AgentSession): void {
       <li
         v-for="session in sorted"
         :key="session.id"
-        :data-card="session.path"
+        :data-card="cardKey(session)"
         class="card flex touch-pan-y flex-col gap-2 px-4 py-3 select-none [-webkit-touch-callout:none]"
         :class="[
-          drag?.active && drag.target === session.path && drag.id !== session.path ? 'ring-2 ring-amber-400' : '',
-          drag?.active && drag.id === session.path ? 'opacity-50' : '',
+          drag?.active && drag.target === cardKey(session) && drag.id !== cardKey(session) ? 'ring-2 ring-amber-400' : '',
+          drag?.active && drag.id === cardKey(session) ? 'opacity-50' : '',
         ]"
-        @pointerdown="reorder.onPointerDown($event, session.path)"
+        @pointerdown="reorder.onPointerDown($event, cardKey(session))"
         @pointermove="reorder.onPointerMove"
         @pointerup="reorder.onPointerUp"
         @pointercancel="reorder.cancel"
@@ -242,32 +242,52 @@ function resume(session: AgentSession): void {
       >
         <div class="flex items-center gap-3">
           <div class="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-3">
-            <h2 class="font-semibold">{{ baseName(session.path) }}</h2>
+            <h2 class="font-semibold">{{ sessionName(session) }}</h2>
             <span class="min-w-0 truncate text-xs text-slate-500">{{ session.path }}</span>
             <span class="text-sm text-slate-400">
               {{ labels.get(session.profile) ?? session.profile }}
               <span v-if="session.model" class="text-slate-500"> · {{ session.model }}</span>
             </span>
           </div>
-          <span
-            v-if="session.running && session.busy"
-            class="shrink-0 animate-pulse rounded-full bg-amber-900/40 px-2.5 py-0.5 text-xs font-medium text-amber-300"
-          >
-            {{ $t('sessions.working') }}
-          </span>
-          <span
-            v-else
-            class="shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium"
-            :class="session.running ? 'bg-red-900/40 text-red-300' : 'bg-slate-700 text-slate-300'"
-          >
-            {{
-              session.running
-                ? $t('sessions.running')
-                : session.exit_status === null
-                  ? $t('sessions.ended')
-                  : $t('sessions.exited', { code: session.exit_status })
-            }}
-          </span>
+          <!-- Status and the mode the next start uses, on the right: the action row below stays
+               one line also on phones. -->
+          <div class="flex shrink-0 flex-col items-end gap-1">
+            <span
+              v-if="session.running && session.busy"
+              class="shrink-0 animate-pulse rounded-full bg-amber-900/40 px-2.5 py-0.5 text-xs font-medium text-amber-300"
+            >
+              {{ $t('sessions.working') }}
+            </span>
+            <span
+              v-else
+              class="shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium"
+              :class="session.running ? 'bg-red-900/40 text-red-300' : 'bg-slate-700 text-slate-300'"
+            >
+              {{
+                session.running
+                  ? $t('sessions.running')
+                  : session.exit_status === null
+                    ? $t('sessions.ended')
+                    : $t('sessions.exited', { code: session.exit_status })
+              }}
+            </span>
+            <label
+              v-if="permissionModes.get(session.profile)?.length"
+              class="flex items-center gap-1 text-xs text-slate-400"
+              :title="$t('permission.title')"
+            >
+              <select
+                class="h-7 rounded-lg border border-slate-600 bg-slate-800 pr-1 pl-1.5 text-xs text-slate-200"
+                :aria-label="$t('permission.label')"
+                :value="session.permission_mode"
+                @change="changePermissionMode(session, ($event.target as HTMLSelectElement).value)"
+              >
+                <option v-for="mode in permissionModes.get(session.profile)" :key="mode" :value="mode">
+                  {{ permissionLabel(mode) }}
+                </option>
+              </select>
+            </label>
+          </div>
         </div>
         <div class="flex items-center gap-x-3">
           <ContextMeter
@@ -376,6 +396,7 @@ function resume(session: AgentSession): void {
             <!-- The icon only (its name in the tooltip), so the row stays one line. -->
             <AppIcon name="diff" />
           </RouterLink>
+          <TerminalButton v-if="!session.terminal" :path="session.path" button-class="btn-secondary btn-small-icon" />
           <ScheduleButton v-if="session.running" :session="session" button-class="btn-secondary btn-small-icon" />
           <RestartButton v-if="session.running" :session="session" button-class="btn-secondary btn-small-icon" />
           <button
@@ -386,22 +407,6 @@ function resume(session: AgentSession): void {
           >
             <AppIcon name="stop" />
           </button>
-          <label
-            v-if="permissionModes.get(session.profile)?.length"
-            class="ml-auto flex items-center gap-1 text-xs text-slate-400"
-            :title="$t('permission.title')"
-          >
-            <select
-              class="h-7 rounded-lg border border-slate-600 bg-slate-800 pr-1 pl-1.5 text-xs text-slate-200"
-              :aria-label="$t('permission.label')"
-              :value="session.permission_mode"
-              @change="changePermissionMode(session, ($event.target as HTMLSelectElement).value)"
-            >
-              <option v-for="mode in permissionModes.get(session.profile)" :key="mode" :value="mode">
-                {{ permissionLabel(mode) }}
-              </option>
-            </select>
-          </label>
         </div>
       </li>
     </ul>
@@ -410,7 +415,7 @@ function resume(session: AgentSession): void {
       <p class="mb-5 text-slate-300">
         {{
           $t(effortMessage(effortChange.session), {
-            name: baseName(effortChange.session.path),
+            name: sessionName(effortChange.session),
             effort: reasoningLabel(effortChange.reasoning),
           })
         }}
@@ -432,7 +437,7 @@ function resume(session: AgentSession): void {
     <ConfirmDialog
       v-if="stopping"
       :title="$t('sessions.stop')"
-      :message="$t('sessions.confirmStop', { name: baseName(stopping.path) })"
+      :message="$t('sessions.confirmStop', { name: sessionName(stopping) })"
       :confirm-label="$t('sessions.stop')"
       danger
       @confirm="confirmStop"
@@ -441,7 +446,7 @@ function resume(session: AgentSession): void {
     <ConfirmDialog
       v-if="removingWorktree"
       :title="$t('worktree.remove')"
-      :message="$t('worktree.confirm', { name: baseName(removingWorktree.path) })"
+      :message="$t('worktree.confirm', { name: sessionName(removingWorktree) })"
       :confirm-label="$t('worktree.remove')"
       danger
       @confirm="confirmRemoveWorktree"

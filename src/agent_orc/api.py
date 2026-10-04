@@ -523,6 +523,7 @@ def create_app(
                 # Switches its reasoning in place, without a restart.
                 "effort_live": bool(p.effort and p.effort.live),
                 "permission_modes": p.permission.modes if p.permission else [],
+                "terminal": p.terminal,
             }
             for name, p in config.agents.items()
         ]

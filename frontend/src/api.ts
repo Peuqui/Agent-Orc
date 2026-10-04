@@ -11,6 +11,8 @@ export interface AgentProfile {
   effort_live: boolean
   /** Permission modes a session may start in; empty if the agent has none. */
   permission_modes: string[]
+  /** A plain terminal, no agent: it may run next to a folder's agent. */
+  terminal: boolean
 }
 
 /** A file the agent changed (git working tree against the last commit); status as git puts it. */
@@ -78,6 +80,8 @@ export interface AgentSession {
   running: boolean
   exit_status: number | null
   created: number
+  /** A plain terminal, next to the folder's agent if it has one. */
+  terminal: boolean
   /** Reported by the agent itself (Claude: via `agent-orc statusline`); null until it reports. */
   model: string | null
   effort: string | null

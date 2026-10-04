@@ -13,11 +13,12 @@ import { api, terminalUrl, type Modifier, type TerminalSettings } from '../api'
 import AppIcon from '../components/AppIcon.vue'
 import ContextMeter from '../components/ContextMeter.vue'
 import RestartButton from '../components/RestartButton.vue'
+import TerminalButton from '../components/TerminalButton.vue'
 import JogScroller from '../components/JogScroller.vue'
 import KeyBar from '../components/KeyBar.vue'
 import MessageInput from '../components/MessageInput.vue'
 import { registerFileLinks } from '../composables/useFileLinks'
-import { useSessions } from '../composables/useSessions'
+import { sessionName, useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
 import {
   FONT_SAMPLE,
@@ -28,7 +29,6 @@ import {
   useSettings,
 } from '../composables/useSettings'
 import { useTouchScroll } from '../composables/useTouchScroll'
-import { baseName } from '../format'
 
 const props = defineProps<{ id: string; embedded: boolean }>()
 
@@ -81,7 +81,7 @@ async function copyPlainText(): Promise<void> {
 }
 
 const session = computed(() => sessions.value.find((candidate) => candidate.id === props.id))
-const name = computed(() => (session.value ? baseName(session.value.path) : props.id))
+const name = computed(() => (session.value ? sessionName(session.value) : props.id))
 
 const terminal = new Terminal({
   fontSize: fontSize.value,
@@ -312,6 +312,7 @@ onBeforeUnmount(() => {
       <!-- Embedded in the workspace, the column's tab names the agent already. -->
       <h1 class="min-w-0 flex-1 truncate font-semibold">{{ embedded ? '' : name }}</h1>
       <RestartButton v-if="session?.running" :session="session" button-class="btn-icon" />
+      <TerminalButton v-if="session && !session.terminal" :path="session.path" button-class="btn-icon" />
       <!-- The agent's project in the file view; in the workspace within the column (back returns). -->
       <RouterLink
         v-if="session"

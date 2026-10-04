@@ -2,9 +2,8 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { api } from '../api'
-import { useSessions } from '../composables/useSessions'
+import { sessionName, useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
-import { baseName } from '../format'
 import AppIcon from './AppIcon.vue'
 import BaseDialog from './BaseDialog.vue'
 
@@ -50,7 +49,7 @@ async function send(): Promise<void> {
           class="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-slate-700"
         >
           <input v-model="chosen" type="checkbox" :value="session.id" class="size-4" />
-          <span class="font-medium">{{ baseName(session.path) }}</span>
+          <span class="font-medium">{{ sessionName(session) }}</span>
           <span v-if="session.busy" class="text-xs text-amber-300">{{ $t('sessions.working') }}</span>
         </label>
       </div>

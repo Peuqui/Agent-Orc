@@ -7,7 +7,7 @@ import AppIcon from '../components/AppIcon.vue'
 import HelpButton from '../components/HelpButton.vue'
 import QuotaPanel from '../components/QuotaPanel.vue'
 import { moveInList, useReorder } from '../composables/useReorder'
-import { useSessions } from '../composables/useSessions'
+import { sessionName, useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
 import {
   announceWorkspace,
@@ -20,7 +20,6 @@ import {
   saveTabState,
   useOtherTabs,
 } from '../composables/useWorkspaceTab'
-import { baseName } from '../format'
 
 // Several agents side by side. Every open agent is one column: its tab is the head of that
 // column, both in one grid, so tab order and column order can never differ. The user picks
@@ -82,7 +81,7 @@ const gridStyle = computed(() => ({
 
 function tabName(id: string): string {
   const session = sessions.value.find((candidate) => candidate.id === id)
-  return session ? baseName(session.path) : id
+  return session ? sessionName(session) : id
 }
 
 function frameUrl(id: string): string {
@@ -383,7 +382,7 @@ async function rename(): Promise<void> {
             class="rounded-md px-3 py-2 text-left hover:bg-slate-700"
             @click="open(session.id)"
           >
-            {{ baseName(session.path) }}
+            {{ sessionName(session) }}
           </button>
           <p v-if="notOpen.length === 0" class="px-3 py-2 text-sm text-slate-500">{{ $t('workspace.allOpen') }}</p>
           <RouterLink :to="{ path: '/files', query: { workspace: '1' } }" class="btn-primary mt-1">

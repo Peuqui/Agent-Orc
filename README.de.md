@@ -46,6 +46,7 @@ aus wieder aufnehmen.
 - Neu starten (⟳) mit fortgesetztem Gespräch, Prompts für später planen, und nach dem
   Nutzungslimit automatisch weitermachen, sobald das Kontingent zurückgesetzt ist.
 - Denselben Prompt an mehrere Agenten auf einmal schicken.
+- Ein normales Terminal im Projektordner („>_“), auch neben dem laufenden Agenten.
 
 **Arbeitsflächen**
 - Mehrere Agenten als Spalten nebeneinander; Spaltenköpfe ziehen sortiert, die Trenner ziehen

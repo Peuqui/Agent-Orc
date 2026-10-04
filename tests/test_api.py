@@ -91,6 +91,7 @@ def config(home: Path, socket_name: str) -> Config:
             "label": "Shell",
             "start": ["sh", "-c", "echo READY; exec cat"],
             "resume": ["true"],
+            "terminal": True,
         },
     }
     return Config.model_validate(raw)
@@ -1248,3 +1249,24 @@ def test_agent_from_before_the_mode_choice_shows_and_gets_the_configured_one(
     assert client.get("/api/sessions").json()[0]["permission_mode"] == "plan"
     client.post(f"/api/sessions/{session_id}/restart")
     assert json.loads(settings_file.read_text())["permissions"] == {"defaultMode": "plan"}
+
+
+def test_a_terminal_opens_next_to_the_folders_agent(client: TestClient, home: Path) -> None:
+    folder = home / "projects"
+    agent = {
+        "profile": "sleeper",
+        "path": str(folder),
+        "resume": False,
+        "effort": None,
+        "ultracode": False,
+        "conversation": None,
+    }
+    agent_id = client.post("/api/sessions", json=agent).json()["id"]
+    terminal_id = start_shell(client, folder)
+    listed = {s["id"]: s["terminal"] for s in client.get("/api/sessions").json()}
+    assert listed == {agent_id: False, terminal_id: True}
+    agents = {a["name"]: a["terminal"] for a in client.get("/api/agents").json()}
+    assert agents["shell"] is True and agents["sleeper"] is False
+    # A second agent stays refused, the terminal is only one per folder as well.
+    assert client.post("/api/sessions", json=agent).status_code == 409
+    assert client.post("/api/sessions", json={**agent, "profile": "shell"}).status_code == 409

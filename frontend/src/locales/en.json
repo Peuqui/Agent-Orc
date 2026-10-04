@@ -234,7 +234,8 @@
           "⟳ (card and terminal bar) restarts the agent and resumes its conversation, e.g. when it hangs or should read changed settings. It asks first; a running answer and background tasks end.",
           "Clock on the card: schedule a prompt for later, e.g. “run the tests and report” at 7 am. It is typed in at that time once the agent is idle; scheduled prompts are listed on the card and removed with ×.",
           "When a Claude agent runs into its usage limit, Agent-Orc schedules the resume for the next reset of the quota (yellow entry on the card). Is it still limited then, the next reset follows.",
-          "“To several” (next to the workspaces, from two running agents on): send the same prompt to several agents, e.g. “commit and push”."
+          "“To several” (next to the workspaces, from two running agents on): send the same prompt to several agents, e.g. “commit and push”.",
+          "“>_” (card and terminal bar) opens a plain terminal in the project folder, also next to the running agent; if one runs already, it opens that one. Please do not start a second agent in the same folder there."
         ]
       },
       {
@@ -387,5 +388,8 @@
     "text": "Message to all chosen agents …",
     "send": "Send to {count}",
     "sent": "Sent to {count} agents"
+  },
+  "terminalButton": {
+    "title": "Terminal in this folder (no agent)"
   }
 }
