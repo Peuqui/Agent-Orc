@@ -145,6 +145,16 @@ export interface Conversation {
   recently_active: boolean
 }
 
+/** An earlier conversation whose messages contain the searched words. */
+export interface ConversationHit {
+  id: string
+  title: string
+  modified: number
+  /** Where the words were found first, with some context. */
+  excerpt: string
+  matches: number
+}
+
 export class ApiError extends Error {
   constructor(
     readonly status: number,
@@ -246,6 +256,8 @@ export const api = {
     }),
   conversations: (profile: string, path: string) =>
     request<Conversation[]>('GET', 'conversations', { query: { profile, path } }),
+  searchConversations: (profile: string, path: string, query: string) =>
+    request<ConversationHit[]>('GET', 'conversations/search', { query: { profile, path, query } }),
   folderReasoning: (profile: string, path: string) =>
     request<Reasoning>('GET', 'effort', { query: { profile, path } }),
   /**

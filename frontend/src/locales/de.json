@@ -79,7 +79,10 @@
     "faster": "Schneller",
     "smarter": "Intelligenter",
     "ultracode": "Ultracode",
-    "ultracodeHint": "Claude plant für größere Aufgaben selbst Workflows mit mehreren Agenten"
+    "ultracodeHint": "Claude plant für größere Aufgaben selbst Workflows mit mehreren Agenten",
+    "searchConversations": "In früheren Gesprächen suchen …",
+    "noHits": "Nichts gefunden.",
+    "hitCount": "{count}× gefunden"
   },
   "trash": {
     "empty": "Der Papierkorb ist leer.",

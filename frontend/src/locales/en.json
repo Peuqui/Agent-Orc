@@ -79,7 +79,10 @@
     "faster": "Faster",
     "smarter": "Smarter",
     "ultracode": "Ultracode",
-    "ultracodeHint": "Claude plans multi-agent workflows for larger tasks by itself"
+    "ultracodeHint": "Claude plans multi-agent workflows for larger tasks by itself",
+    "searchConversations": "Search earlier conversations …",
+    "noHits": "Nothing found.",
+    "hitCount": "found {count}×"
   },
   "trash": {
     "empty": "The trash is empty.",

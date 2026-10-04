@@ -42,7 +42,11 @@ from agent_orc.effort import (
     Reasoning,
     set_reasoning_live,
 )
-from agent_orc.history import CONVERSATION_SOURCES, ConversationNotFoundError
+from agent_orc.history import (
+    CONVERSATION_SEARCHES,
+    CONVERSATION_SOURCES,
+    ConversationNotFoundError,
+)
 from agent_orc.push import (
     add_subscription,
     agent_message,
@@ -547,6 +551,15 @@ def create_app(
     @app.get("/api/conversations", dependencies=authenticated)
     def list_conversations(profile: str, path: str) -> list[dict[str, Any]]:
         return conversations_of(profile, scope.resolve(path))
+
+    @app.get("/api/conversations/search", dependencies=authenticated)
+    def search_conversations(profile: str, path: str, query: str) -> list[dict[str, Any]]:
+        """Earlier conversations in the folder whose messages contain the query."""
+        agent = config.agents.get(profile)
+        if agent is None or agent.conversations is None:
+            return []
+        search = CONVERSATION_SEARCHES[agent.conversations.source]
+        return [asdict(hit) for hit in search(home, scope.resolve(path), query)]
 
     @app.post(
         "/api/sessions/{session_id}/approval",

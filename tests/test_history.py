@@ -8,6 +8,7 @@ from agent_orc.history import (
     RECENTLY_ACTIVE_SECONDS,
     claude_project_dir,
     list_claude_conversations,
+    search_claude_conversations,
 )
 from tests.conftest import FakeClock
 
@@ -22,7 +23,8 @@ def write_conversation(
     directory = claude_project_dir(home, FOLDER)
     directory.mkdir(parents=True, exist_ok=True)
     path = directory / f"{conversation_id}.jsonl"
-    path.write_text("".join(json.dumps(entry) + "\n" for entry in entries))
+    # As Claude Code writes them: UTF-8, not \u escapes.
+    path.write_text("".join(json.dumps(entry, ensure_ascii=False) + "\n" for entry in entries))
     os.utime(path, (mtime, mtime))
     return path
 
@@ -83,3 +85,44 @@ def test_only_conversation_files_are_listed(tmp_path: Path, clock: FakeClock) ->
 
 def test_folder_without_conversations(tmp_path: Path, clock: FakeClock) -> None:
     assert list_claude_conversations(tmp_path, FOLDER, clock) == []
+
+
+def assistant(text: str) -> dict[str, Any]:
+    return {"type": "assistant", "message": {"content": [{"type": "text", "text": text}]}}
+
+
+def test_search_finds_words_in_messages_with_an_excerpt(tmp_path: Path) -> None:
+    write_conversation(
+        tmp_path,
+        FIRST,
+        [
+            user("Bau eine kleine Glühbirne in die Kopfzeile"),
+            assistant("Die GLÜHBIRNE sitzt rechts."),
+        ],
+        mtime=1000,
+    )
+    write_conversation(tmp_path, SECOND, [user("Etwas anderes")], mtime=2000)
+    [hit] = search_claude_conversations(tmp_path, FOLDER, "glühbirne")
+    assert (hit.id, hit.matches) == (FIRST, 2)
+    assert "Glühbirne" in hit.excerpt
+
+
+def test_search_leaves_out_tool_output_and_commands(tmp_path: Path) -> None:
+    tool_result = {
+        "type": "user",
+        "message": {"content": [{"type": "tool_result", "content": "secret-word in a log"}]},
+    }
+    write_conversation(
+        tmp_path, FIRST, [tool_result, user("<command-name>secret-word</command-name>")], mtime=1000
+    )
+    assert search_claude_conversations(tmp_path, FOLDER, "secret-word") == []
+
+
+def test_search_newest_first_and_long_texts_cut_around_the_hit(tmp_path: Path) -> None:
+    long_text = "a " * 200 + "needle" + " b" * 200
+    write_conversation(tmp_path, FIRST, [user(long_text)], mtime=1000)
+    write_conversation(tmp_path, SECOND, [assistant("needle")], mtime=2000)
+    hits = search_claude_conversations(tmp_path, FOLDER, "needle")
+    assert [hit.id for hit in hits] == [SECOND, FIRST]
+    assert hits[1].excerpt.startswith("…") and hits[1].excerpt.endswith("…")
+    assert len(hits[1].excerpt) < len(long_text)

@@ -23,6 +23,10 @@ TITLE_SCAN_BYTES = 4 * 1024 * 1024
 TITLE_MAX_CHARS = 100
 # Written to this recently: probably still open elsewhere (e.g. in VS Code).
 RECENTLY_ACTIVE_SECONDS = 120
+# A search lists at most this many conversations, the newest first.
+SEARCH_RESULTS = 30
+# Characters of context on each side of a hit in its excerpt.
+EXCERPT_CONTEXT_CHARS = 60
 
 
 class ConversationNotFoundError(LookupError):
@@ -107,7 +111,82 @@ def list_claude_conversations(home: Path, folder: Path, clock: Clock) -> list[Co
     return sorted(conversations, key=lambda conversation: conversation.modified, reverse=True)
 
 
-# Per agent profile setting "conversations.source".
+@dataclass(frozen=True)
+class SearchHit:
+    id: str
+    title: str
+    modified: float
+    # Where the words were found first, with some context around them.
+    excerpt: str
+    # How often they occur in the conversation's messages.
+    matches: int
+
+
+def _message_texts(entry: dict[str, Any]) -> Iterator[str]:
+    """What the user and Claude wrote in a transcript entry; tool calls and results are left
+    out, as are commands and notices ("<...>")."""
+    if entry.get("type") not in ("user", "assistant"):
+        return
+    content = entry.get("message", {}).get("content")
+    if isinstance(content, str):
+        if not content.startswith("<"):
+            yield content
+        return
+    if isinstance(content, list):
+        for part in content:
+            if isinstance(part, dict) and part.get("type") == "text":
+                yield str(part.get("text", ""))
+
+
+def _excerpt(text: str, start: int, length: int) -> str:
+    begin = max(0, start - EXCERPT_CONTEXT_CHARS)
+    end = min(len(text), start + length + EXCERPT_CONTEXT_CHARS)
+    excerpt = " ".join(text[begin:end].split())
+    return ("…" if begin > 0 else "") + excerpt + ("…" if end < len(text) else "")
+
+
+def search_claude_conversations(home: Path, folder: Path, query: str) -> list[SearchHit]:
+    """Conversations of the folder whose messages contain the query (any case), newest first."""
+    directory = claude_project_dir(home, folder)
+    needle = query.casefold()
+    if not needle or not directory.is_dir():
+        return []
+    hits = []
+    for path in directory.glob("*.jsonl"):
+        if not CONVERSATION_ID.match(path.stem):
+            continue
+        matches = 0
+        excerpt = ""
+        with path.open(encoding="utf-8", errors="replace") as handle:
+            for line in handle:
+                # Cheap check on the raw line first; only lines with the words are parsed.
+                if needle not in line.casefold():
+                    continue
+                for text in _message_texts(json.loads(line)):
+                    folded = text.casefold()
+                    found = folded.find(needle)
+                    if found < 0:
+                        continue
+                    matches += folded.count(needle)
+                    excerpt = excerpt or _excerpt(text, found, len(needle))
+        if matches:
+            hits.append(
+                SearchHit(
+                    id=path.stem,
+                    title=_claude_title(path)[:TITLE_MAX_CHARS],
+                    modified=path.stat().st_mtime,
+                    excerpt=excerpt,
+                    matches=matches,
+                )
+            )
+    hits.sort(key=lambda hit: hit.modified, reverse=True)
+    return hits[:SEARCH_RESULTS]
+
+
+# Per agent profile setting "conversations.source": listing and searching.
 CONVERSATION_SOURCES: dict[str, Callable[[Path, Path, Clock], list[Conversation]]] = {
     "claude": list_claude_conversations,
+}
+CONVERSATION_SEARCHES: dict[str, Callable[[Path, Path, str], list[SearchHit]]] = {
+    "claude": search_claude_conversations,
 }

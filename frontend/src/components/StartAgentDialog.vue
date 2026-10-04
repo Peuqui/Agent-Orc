@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { api, type Conversation, type Reasoning } from '../api'
+import { api, type Conversation, type ConversationHit, type Reasoning } from '../api'
 import { useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
 import { baseName, formatDate, formatSize } from '../format'
@@ -18,6 +18,35 @@ const NO_REASONING: Reasoning = { effort: null, ultracode: false }
 const reasoning = ref<Reasoning>(NO_REASONING)
 const busy = ref(false)
 const conversations = ref<Conversation[]>([])
+// Searching the earlier conversations' messages; shorter queries just show the list.
+const MIN_QUERY_CHARS = 2
+const SEARCH_DELAY_MS = 300
+const query = ref('')
+const hits = ref<ConversationHit[] | null>(null)
+let searchTimer: number | undefined
+
+watch(query, (current) => {
+  window.clearTimeout(searchTimer)
+  if (current.trim().length < MIN_QUERY_CHARS) {
+    hits.value = null
+    return
+  }
+  searchTimer = window.setTimeout(async () => {
+    try {
+      hits.value = await api.searchConversations(selected.value, props.path, current.trim())
+    } catch (error) {
+      toast.error(error)
+    }
+  }, SEARCH_DELAY_MS)
+})
+
+/** The excerpt in three parts, so the found words can be marked. */
+function marked(excerpt: string): [string, string, string] {
+  const words = query.value.trim()
+  const at = excerpt.toLocaleLowerCase().indexOf(words.toLocaleLowerCase())
+  if (at < 0) return [excerpt, '', '']
+  return [excerpt.slice(0, at), excerpt.slice(at, at + words.length), excerpt.slice(at + words.length)]
+}
 const MILLISECONDS_PER_SECOND = 1000
 const { locale } = useI18n()
 
@@ -93,7 +122,33 @@ async function start(resume: boolean, conversation: string | null = null): Promi
     </div>
     <div v-if="conversations.length" class="mt-5 border-t border-slate-700 pt-4">
       <h3 class="mb-2 text-sm text-slate-400">{{ $t('agent.earlier') }}</h3>
-      <ul class="flex max-h-64 flex-col gap-1 overflow-y-auto">
+      <input
+        v-model="query"
+        type="search"
+        class="input mb-2 w-full text-sm"
+        :placeholder="$t('agent.searchConversations')"
+        :aria-label="$t('agent.searchConversations')"
+      />
+      <ul v-if="hits" class="flex max-h-64 flex-col gap-1 overflow-y-auto">
+        <li v-if="hits.length === 0" class="px-3 py-2 text-sm text-slate-500">{{ $t('agent.noHits') }}</li>
+        <li v-for="hit in hits" :key="hit.id">
+          <button
+            class="flex w-full flex-col items-start gap-0.5 rounded-lg px-3 py-2 text-left hover:bg-slate-700"
+            :disabled="busy"
+            @click="start(true, hit.id)"
+          >
+            <span class="w-full truncate text-sm text-slate-100">{{ hit.title || $t('agent.untitled') }}</span>
+            <span class="line-clamp-2 text-xs text-slate-400">
+              {{ marked(hit.excerpt)[0] }}<mark class="rounded bg-amber-400/30 px-0.5 text-amber-200">{{ marked(hit.excerpt)[1] }}</mark>{{ marked(hit.excerpt)[2] }}
+            </span>
+            <span class="text-xs text-slate-500">
+              {{ formatDate(new Date(hit.modified * MILLISECONDS_PER_SECOND), locale) }}
+              · {{ $t('agent.hitCount', { count: hit.matches }) }}
+            </span>
+          </button>
+        </li>
+      </ul>
+      <ul v-else class="flex max-h-64 flex-col gap-1 overflow-y-auto">
         <li v-for="conversation in conversations" :key="conversation.id">
           <button
             class="flex w-full flex-col items-start rounded-lg px-3 py-2 text-left hover:bg-slate-700"
