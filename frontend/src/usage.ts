@@ -9,8 +9,9 @@ export function usageTone(percent: number): { bar: string; text: string; ring: s
     return { bar: 'bg-red-500', text: 'text-red-400', ring: 'stroke-red-500' }
   }
   if (percent >= WARN_PERCENT) {
-    return { bar: 'bg-amber-500', text: 'text-amber-400', ring: 'stroke-orange-600' }
+    return { bar: 'bg-amber-500', text: 'text-amber-400', ring: 'stroke-amber-500' }
   }
-  // The context ring fills in orange from the start, like Claude Code's.
-  return { bar: 'bg-slate-400', text: 'text-slate-400', ring: 'stroke-orange-400' }
+  // The context ring is coloured from the start, like Claude Code's, in the amber of the
+  // "working" badge.
+  return { bar: 'bg-slate-400', text: 'text-slate-400', ring: 'stroke-amber-300' }
 }
