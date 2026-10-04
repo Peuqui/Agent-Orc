@@ -79,7 +79,8 @@
     "faster": "Schneller",
     "smarter": "Intelligenter",
     "ultracode": "Ultracode",
-    "ultracodeHint": "Claude plant für größere Aufgaben selbst Workflows mit mehreren Agenten"
+    "ultracodeHint": "Claude plant für größere Aufgaben selbst Workflows mit mehreren Agenten",
+    "effortShort": "Aufwand"
   },
   "trash": {
     "empty": "Der Papierkorb ist leer.",

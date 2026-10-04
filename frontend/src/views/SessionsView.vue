@@ -95,26 +95,25 @@ function resume(session: AgentSession): void {
     <p v-if="sorted.length === 0" class="card p-6 text-center text-slate-400">{{ $t('sessions.empty') }}</p>
 
     <ul class="flex flex-col gap-3">
-      <li v-for="session in sorted" :key="session.id" class="card p-4">
-        <div class="mb-3 flex items-start justify-between gap-3">
-          <div class="min-w-0">
-            <h2 class="truncate font-semibold">{{ baseName(session.path) }}</h2>
-            <p class="truncate text-xs text-slate-500">{{ session.path }}</p>
-            <p class="mt-1 text-sm text-slate-400">
+      <li v-for="session in sorted" :key="session.id" class="card flex flex-col gap-2 px-4 py-3">
+        <div class="flex items-center gap-3">
+          <div class="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-3">
+            <h2 class="font-semibold">{{ baseName(session.path) }}</h2>
+            <span class="min-w-0 truncate text-xs text-slate-500">{{ session.path }}</span>
+            <span class="text-sm text-slate-400">
               {{ labels.get(session.profile) ?? session.profile }}
               <span v-if="session.model" class="text-slate-500"> · {{ session.model }}</span>
-              <span v-if="session.effort" class="text-slate-500"> · {{ session.effort }}</span>
-            </p>
+            </span>
           </div>
           <span
             v-if="session.running && session.busy"
-            class="shrink-0 animate-pulse rounded-full bg-amber-900/40 px-2.5 py-1 text-xs font-medium text-amber-300"
+            class="shrink-0 animate-pulse rounded-full bg-amber-900/40 px-2.5 py-0.5 text-xs font-medium text-amber-300"
           >
             {{ $t('sessions.working') }}
           </span>
           <span
             v-else
-            class="shrink-0 rounded-full px-2.5 py-1 text-xs font-medium"
+            class="shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium"
             :class="session.running ? 'bg-red-900/40 text-red-300' : 'bg-slate-700 text-slate-300'"
           >
             {{
@@ -126,24 +125,27 @@ function resume(session: AgentSession): void {
             }}
           </span>
         </div>
-        <ContextMeter
-          v-if="session.context_tokens != null && session.context_window != null"
-          class="mb-3"
-          :tokens="session.context_tokens"
-          :window="session.context_window"
-        />
-        <ReasoningControl
-          v-if="session.running && levels.get(session.profile)?.length"
-          class="mb-3"
-          :levels="levels.get(session.profile) ?? []"
-          :ultracode-offered="ultracodeOffered.get(session.profile) ?? false"
-          :model-value="shownReasoning(session)"
-          :disabled="session.effort_pending"
-          @update:model-value="(reasoning) => (effortChange = { session, reasoning })"
-        />
+        <div class="flex flex-col gap-x-6 gap-y-2 md:flex-row md:items-center">
+          <ContextMeter
+            v-if="session.context_tokens != null && session.context_window != null"
+            class="md:flex-1"
+            :tokens="session.context_tokens"
+            :window="session.context_window"
+          />
+          <ReasoningControl
+            v-if="session.running && levels.get(session.profile)?.length"
+            class="md:max-w-xl md:flex-1"
+            compact
+            :levels="levels.get(session.profile) ?? []"
+            :ultracode-offered="ultracodeOffered.get(session.profile) ?? false"
+            :model-value="shownReasoning(session)"
+            :disabled="session.effort_pending"
+            @update:model-value="(reasoning) => (effortChange = { session, reasoning })"
+          />
+        </div>
         <div
           v-if="session.effort_pending"
-          class="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-amber-700 bg-amber-950/40 px-3 py-2 text-sm text-amber-200"
+          class="flex flex-wrap items-center gap-2 rounded-lg border border-amber-700 bg-amber-950/40 px-3 py-2 text-sm text-amber-200"
         >
           <span class="flex-1">
             {{
