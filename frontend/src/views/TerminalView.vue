@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { FitAddon } from '@xterm/addon-fit'
 import { Unicode11Addon } from '@xterm/addon-unicode11'
+import { WebglAddon } from '@xterm/addon-webgl'
 import { Terminal } from '@xterm/xterm'
 import '@xterm/xterm/css/xterm.css'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
@@ -14,16 +15,18 @@ import KeyBar from '../components/KeyBar.vue'
 import MessageInput from '../components/MessageInput.vue'
 import { useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
-import { useSettings } from '../composables/useSettings'
+import {
+  MAX_FONT_SIZE,
+  MIN_FONT_SIZE,
+  TERMINAL_FONTS,
+  type TerminalFont,
+  useSettings,
+} from '../composables/useSettings'
 import { useTouchScroll } from '../composables/useTouchScroll'
 import { baseName } from '../format'
 
 const props = defineProps<{ id: string; embedded: boolean }>()
 
-const FONT_SIZE_KEY = 'agent-orc-terminal-font-size'
-const DEFAULT_FONT_SIZE = 14
-const MIN_FONT_SIZE = 8
-const MAX_FONT_SIZE = 28
 const SCROLLBACK_LINES = 5000
 const ESC = '\x1b'
 // Ctrl+letter is the letter's code minus 64 ('@'): Ctrl+C = 0x03.
@@ -40,7 +43,12 @@ const messageInput = ref<InstanceType<typeof MessageInput>>()
 const settings = ref<TerminalSettings | null>(null)
 const modifiers = ref(new Set<Modifier>())
 const connected = ref(false)
-const fontSize = ref(Number(localStorage.getItem(FONT_SIZE_KEY)) || DEFAULT_FONT_SIZE)
+// A−/A+ give this terminal its own size; otherwise it follows the size set in the settings.
+const ownFontSizeKey = `agent-orc-font-size:${props.id}`
+const storedOwnFontSize = localStorage.getItem(ownFontSizeKey)
+const ownFontSize = ref(storedOwnFontSize === null ? null : Number(storedOwnFontSize))
+const { lineHeight, fontSize: defaultFontSize, terminalFont } = useSettings()
+const fontSize = computed(() => ownFontSize.value ?? defaultFontSize.value)
 
 // Plain-text view: the canvas terminal cannot be selected on a phone, ordinary text can.
 const plainText = ref<string | null>(null)
@@ -70,12 +78,10 @@ async function copyPlainText(): Promise<void> {
 const session = computed(() => sessions.value.find((candidate) => candidate.id === props.id))
 const name = computed(() => (session.value ? baseName(session.value.path) : props.id))
 
-const { lineHeight } = useSettings()
-
 const terminal = new Terminal({
   fontSize: fontSize.value,
   lineHeight: lineHeight.value,
-  fontFamily: 'ui-monospace, "Cascadia Mono", "DejaVu Sans Mono", monospace',
+  fontFamily: TERMINAL_FONTS[terminalFont.value],
   cursorBlink: true,
   scrollback: SCROLLBACK_LINES,
   // The unicode API of the addon below is still marked as proposed.
@@ -102,10 +108,19 @@ const resizeObserver = new ResizeObserver(() => fit.fit())
 // every swipe step becomes exactly the user's number of single-line wheel events.
 const { scrollLines } = useSettings()
 
-watch(lineHeight, (height) => {
+// Settings changed here or in another column take effect at once.
+watch([fontSize, lineHeight, terminalFont], async ([size, height, font]) => {
+  await loadFont(font, size)
+  terminal.options.fontSize = size
   terminal.options.lineHeight = height
+  terminal.options.fontFamily = TERMINAL_FONTS[font]
   fit.fit()
 })
+
+/** xterm.js measures the characters once: the font must be loaded before it does. */
+async function loadFont(font: TerminalFont, size: number): Promise<void> {
+  await document.fonts.load(`${size}px ${TERMINAL_FONTS[font]}`)
+}
 // Events dispatched here pass the wheel handler below untouched.
 const ownWheelEvents = new WeakSet<Event>()
 
@@ -184,10 +199,8 @@ function submitText(text: string): void {
 }
 
 function changeFontSize(delta: number): void {
-  fontSize.value = Math.min(MAX_FONT_SIZE, Math.max(MIN_FONT_SIZE, fontSize.value + delta))
-  localStorage.setItem(FONT_SIZE_KEY, String(fontSize.value))
-  terminal.options.fontSize = fontSize.value
-  fit.fit()
+  ownFontSize.value = Math.min(MAX_FONT_SIZE, Math.max(MIN_FONT_SIZE, fontSize.value + delta))
+  localStorage.setItem(ownFontSizeKey, String(ownFontSize.value))
 }
 
 function connect(): void {
@@ -218,7 +231,15 @@ onMounted(async () => {
     toast.error(error)
   }
   if (!container.value) return
+  await loadFont(terminalFont.value, fontSize.value)
   terminal.open(container.value)
+  // The GPU renderer draws box and block characters itself (customGlyphs), so the agents'
+  // frames stay closed with any font and line spacing; the DOM renderer takes them from the
+  // font. If the browser takes the graphics context away (driver reset, too many contexts),
+  // xterm.js advises dropping the addon: the terminal then draws with its DOM renderer again.
+  const webgl = new WebglAddon()
+  webgl.onContextLoss(() => webgl.dispose())
+  terminal.loadAddon(webgl)
   fit.fit()
   resizeObserver.observe(container.value)
   // Capture phase: the notch is resized before xterm.js sees it.

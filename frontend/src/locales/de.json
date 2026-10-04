@@ -170,6 +170,9 @@
     "less": "Weniger",
     "more": "Mehr",
     "lineHeight": "Zeilenabstand im Terminal",
-    "lineHeightHint": "Vielfaches der Schriftgröße; 1,00 ist ganz ohne Abstand."
+    "lineHeightHint": "Vielfaches der Schriftgröße; 1,00 ist ganz ohne Abstand.",
+    "font": "Schrift im Terminal",
+    "fontSize": "Schriftgröße",
+    "fontSizeHint": "Standard für alle Terminals; A−/A+ im Terminal stellt nur dieses um."
   }
 }

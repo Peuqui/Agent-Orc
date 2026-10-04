@@ -3,6 +3,8 @@ import { registerSW } from 'virtual:pwa-register'
 import App from './App.vue'
 import { i18n } from './i18n'
 import { router } from './router'
+// The terminal font, shipped with the app (see TERMINAL_FONTS).
+import '@fontsource-variable/jetbrains-mono'
 import './style.css'
 
 registerSW({ immediate: true })

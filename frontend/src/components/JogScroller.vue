@@ -8,8 +8,11 @@ const emit = defineEmits<{ scroll: [lines: number] }>()
 
 // Pulls shorter than this do nothing, so a grip that is merely touched stays still.
 const DEAD_ZONE_PX = 6
-// At the end of the track the history flies by at this many lines per second.
-const MAX_LINES_PER_SECOND = 300
+// At the end of the track the history moves at this many lines per second; kept moderate, as
+// a jog overshoots easily.
+const MAX_LINES_PER_SECOND = 100
+// Cubic: slow over most of the way, fast only near the end of the track.
+const SPEED_CURVE = 3
 const MILLISECONDS_PER_SECOND = 1000
 
 const track = ref<HTMLElement>()
@@ -24,8 +27,7 @@ function speed(): number {
   const reach = (track.value?.clientHeight ?? 0) / 2
   const pull = Math.abs(offset.value) - DEAD_ZONE_PX
   if (reach <= DEAD_ZONE_PX || pull <= 0) return 0
-  // Quadratic: fine control near the middle, very fast at the end.
-  return Math.sign(offset.value) * (pull / (reach - DEAD_ZONE_PX)) ** 2 * MAX_LINES_PER_SECOND
+  return Math.sign(offset.value) * (pull / (reach - DEAD_ZONE_PX)) ** SPEED_CURVE * MAX_LINES_PER_SECOND
 }
 
 function run(): void {

@@ -1,10 +1,8 @@
 import { type Ref, ref, watch } from 'vue'
 
-// Settings of this device (a phone scrolls differently than a mouse wheel), kept in the
+// Settings of this device (a phone scrolls and reads differently than a desktop), kept in the
 // browser. The workspace's iframes share the storage; the storage event tells them about a
 // change made in another document.
-const SCROLL_LINES_KEY = 'agent-orc-scroll-lines'
-const LINE_HEIGHT_KEY = 'agent-orc-line-height'
 export const DEFAULT_SCROLL_LINES = 3
 export const MIN_SCROLL_LINES = 1
 export const MAX_SCROLL_LINES = 20
@@ -13,26 +11,45 @@ export const DEFAULT_LINE_HEIGHT = 1.2
 export const MIN_LINE_HEIGHT = 1
 export const MAX_LINE_HEIGHT = 1.6
 export const LINE_HEIGHT_STEP = 0.05
+export const DEFAULT_FONT_SIZE = 14
+export const MIN_FONT_SIZE = 8
+export const MAX_FONT_SIZE = 28
 
-/** Lines one wheel notch or swipe step scrolls in the terminal. */
-const scrollLines = ref(Number(localStorage.getItem(SCROLL_LINES_KEY)) || DEFAULT_SCROLL_LINES)
+/** Terminal fonts: monospace, as the agents draw tables and frames from characters. */
+export const TERMINAL_FONTS = {
+  // Shipped with the app (OFL), so every device shows the same font made for screens.
+  jetbrains: '"JetBrains Mono Variable", ui-monospace, monospace',
+  system: 'ui-monospace, "Cascadia Mono", "DejaVu Sans Mono", monospace',
+} as const
+export type TerminalFont = keyof typeof TERMINAL_FONTS
 
-/** Line spacing of the terminal, as a multiple of the font size. */
-const lineHeight = ref(Number(localStorage.getItem(LINE_HEIGHT_KEY)) || DEFAULT_LINE_HEIGHT)
-
-watch(scrollLines, (lines) => localStorage.setItem(SCROLL_LINES_KEY, String(lines)))
-watch(lineHeight, (height) => localStorage.setItem(LINE_HEIGHT_KEY, String(height)))
-
-const SETTINGS_BY_KEY: Record<string, Ref<number>> = {
-  [SCROLL_LINES_KEY]: scrollLines,
-  [LINE_HEIGHT_KEY]: lineHeight,
-}
+const updatersByKey = new Map<string, (stored: string) => void>()
 
 window.addEventListener('storage', (event) => {
-  const setting = event.key === null ? undefined : SETTINGS_BY_KEY[event.key]
-  if (setting && event.newValue) setting.value = Number(event.newValue)
+  if (event.key !== null && event.newValue !== null) updatersByKey.get(event.key)?.(event.newValue)
 })
 
+/** A setting stored under key; parse turns the stored text back into its value. */
+function setting<T>(key: string, initial: T, parse: (stored: string) => T): Ref<T> {
+  const stored = localStorage.getItem(key)
+  const value = ref(stored === null ? initial : parse(stored)) as Ref<T>
+  watch(value, (current) => localStorage.setItem(key, String(current)))
+  updatersByKey.set(key, (text) => (value.value = parse(text)))
+  return value
+}
+
+/** Lines one wheel notch or swipe step scrolls in the terminal. */
+const scrollLines = setting('agent-orc-scroll-lines', DEFAULT_SCROLL_LINES, Number)
+/** Line spacing of the terminal, as a multiple of the font size. */
+const lineHeight = setting('agent-orc-line-height', DEFAULT_LINE_HEIGHT, Number)
+/** Font size of every terminal, unless A−/A+ set one larger or smaller. */
+const fontSize = setting('agent-orc-font-size', DEFAULT_FONT_SIZE, Number)
+const terminalFont = setting<TerminalFont>(
+  'agent-orc-terminal-font',
+  'jetbrains',
+  (stored) => stored as TerminalFont,
+)
+
 export function useSettings() {
-  return { scrollLines, lineHeight }
+  return { scrollLines, lineHeight, fontSize, terminalFont }
 }
