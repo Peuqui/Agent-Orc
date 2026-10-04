@@ -4,6 +4,8 @@ import App from './App.vue'
 import { i18n } from './i18n'
 import { router } from './router'
 import { reloadToNewVersion } from './update'
+// Watches presses from the start, so every dialog knows the control that opened it.
+import './trigger'
 // The terminal font, shipped with the app (see TERMINAL_FONTS).
 import '@fontsource-variable/jetbrains-mono'
 // Symbol fallback for the terminal fonts (see TERMINAL_FONTS), all of its parts.

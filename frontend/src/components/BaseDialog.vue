@@ -1,20 +1,46 @@
 <script setup lang="ts">
-// top: just below the bar of the button that opened it (e.g. a terminal's bar), instead of a
-// sheet from the bottom on narrow screens and centred on wide ones.
-defineProps<{ title: string; top?: boolean }>()
+import { nextTick, onMounted, ref } from 'vue'
+import { triggerRect } from '../trigger'
+
+// Opens right beside the control that opened it: below, or above where there is no room
+// below. Without one (none pressed) it is centred, a sheet from the bottom on phones.
+defineProps<{ title: string }>()
 const emit = defineEmits<{ close: [] }>()
+
+const MARGIN = 8
+const card = ref<HTMLElement>()
+const anchor = triggerRect()
+const place = ref<{ left: string; top: string } | null>(null)
+
+onMounted(async () => {
+  await nextTick()
+  if (!anchor || !card.value) return
+  const { width, height } = card.value.getBoundingClientRect()
+  const centred = anchor.left + anchor.width / 2 - width / 2
+  const left = Math.min(Math.max(MARGIN, centred), window.innerWidth - width - MARGIN)
+  const below = anchor.bottom + MARGIN
+  const fitsBelow = below + height <= window.innerHeight - MARGIN
+  const top = fitsBelow ? below : Math.max(MARGIN, anchor.top - MARGIN - height)
+  place.value = { left: `${left}px`, top: `${top}px` }
+})
 </script>
 
 <template>
   <div
     class="fixed inset-0 z-40 flex justify-center bg-black/60"
-    :class="top ? 'items-start px-2 pt-14' : 'items-end sm:items-center'"
+    :class="anchor ? '' : 'items-end sm:items-center'"
     @click.self="emit('close')"
     @keydown.esc="emit('close')"
   >
     <div
-      class="card w-full max-w-md p-5"
-      :class="{ 'rounded-b-none sm:rounded-b-xl': !top }"
+      ref="card"
+      class="card p-5"
+      :class="
+        anchor
+          ? 'fixed max-h-[calc(100dvh-1rem)] w-[min(28rem,calc(100vw-1rem))] overflow-y-auto'
+          : 'w-full max-w-md rounded-b-none sm:rounded-b-xl'
+      "
+      :style="anchor ? (place ?? { visibility: 'hidden' }) : undefined"
       role="dialog"
       :aria-label="title"
     >
