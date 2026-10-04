@@ -69,7 +69,10 @@ detaches: the agents keep working, and you pick them up again from any device.
   clickable links.
 
 **Files and more**
-- Browse, edit and trash files in your project folders.
+- Browse, edit and trash files in your project folders; Markdown as a preview, pictures as
+  pictures, other files to download.
+- File paths in an agent's output are clickable and open the file (at the line named) or the
+  folder.
 - Settings per device (font, size, line spacing, scroll speed) and a help dialog (light bulb).
 - Claude Code sessions start with Remote Control, so they also show up in the Claude app.
 

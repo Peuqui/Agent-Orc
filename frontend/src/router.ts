@@ -38,8 +38,8 @@ export const router = createRouter({
     {
       path: '/edit',
       component: EditorView,
-      props: (route) => ({ path: route.query.path }),
-      meta: { fullscreen: true },
+      props: (route) => ({ path: route.query.path, line: Number(route.query.line) || null }),
+      meta: { fullscreen: true, perQuery: true },
     },
   ],
 })

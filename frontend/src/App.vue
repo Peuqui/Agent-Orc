@@ -46,7 +46,11 @@ watch(authenticated, (isAuthenticated) => {
     <button class="btn-primary" @click="checkLogin">{{ $t('app.retry') }}</button>
   </div>
   <LoginView v-else-if="authenticated === false" />
-  <RouterView v-else-if="authenticated && route.meta.fullscreen" />
+  <!-- A page per address path; the editor also per file (its query), so a link from one file to
+       another loads the other instead of keeping the first. -->
+  <RouterView v-else-if="authenticated && route.meta.fullscreen" v-slot="{ Component }">
+    <component :is="Component" :key="route.meta.perQuery ? route.fullPath : route.path" />
+  </RouterView>
   <div v-else-if="authenticated" class="min-h-dvh pb-20 md:pb-4">
     <AppHeader />
     <main class="page-width py-4">

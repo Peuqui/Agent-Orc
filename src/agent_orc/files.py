@@ -84,6 +84,19 @@ def rename(path: Path, new_name: str, pattern: str) -> Path:
     return path.rename(target)
 
 
+def existing_paths(base: Path, candidates: list[str]) -> dict[str, Path]:
+    """Which of the paths an agent mentioned exist, by the text it wrote: absolute, from ~ or
+    relative to its folder (base)."""
+    found = {}
+    for candidate in candidates:
+        path = Path(candidate).expanduser()
+        if not path.is_absolute():
+            path = base / path
+        if path.exists():
+            found[candidate] = path.resolve()
+    return found
+
+
 def read_text(path: Path, max_bytes: int) -> TextFile:
     stat = path.stat()
     if stat.st_size > max_bytes:

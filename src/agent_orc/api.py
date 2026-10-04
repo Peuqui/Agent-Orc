@@ -11,7 +11,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response, WebSocket, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -251,6 +251,12 @@ class ScheduledPromptRequest(BaseModel):
 class BroadcastRequest(BaseModel):
     sessions: list[str]
     text: str
+
+
+class ExistingPathsRequest(BaseModel):
+    # The folder relative paths start from, e.g. the agent's.
+    base: str
+    candidates: list[str]
 
 
 class TrashEntryRequest(BaseModel):
@@ -931,6 +937,31 @@ def create_app(
     @app.get("/api/files/content", dependencies=authenticated)
     def read_file(path: str) -> files.TextFile:
         return files.read_text(scope.resolve(path), max_edit_bytes)
+
+    @app.get("/api/files/raw", dependencies=authenticated)
+    def raw_file(path: str, download: bool = False) -> FileResponse:
+        """The file as it is: pictures for the viewer, anything else to download."""
+        resolved = scope.resolve(path)
+        if not resolved.is_file():
+            raise FileNotFoundError(str(resolved))
+        return FileResponse(
+            resolved,
+            filename=resolved.name,
+            content_disposition_type="attachment" if download else "inline",
+            # Opened directly, a file the agent wrote (an SVG, an HTML page) runs no script
+            # under Agent-Orc's origin.
+            headers={"Content-Security-Policy": "sandbox", "X-Content-Type-Options": "nosniff"},
+        )
+
+    @app.post("/api/files/existing", dependencies=authenticated)
+    def existing_files(body: ExistingPathsRequest) -> dict[str, dict[str, str]]:
+        """Of the paths in an agent's output, those that exist in scope, so they can be opened."""
+        found = files.existing_paths(scope.resolve(body.base), body.candidates)
+        return {
+            text: {"path": str(path), "kind": "folder" if path.is_dir() else "file"}
+            for text, path in found.items()
+            if scope.contains(path)
+        }
 
     @app.put("/api/files/content", dependencies=authenticated)
     def write_file(body: WriteFileRequest) -> dict[str, str]:

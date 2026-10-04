@@ -39,6 +39,10 @@ class AccessScope:
         if not path.is_absolute():
             raise OutsideScopeError(f"path must be absolute: {raw_path}")
         resolved = path.resolve()
-        if not resolved.is_relative_to(self.root):
+        if not self.contains(resolved):
             raise OutsideScopeError(str(resolved))
         return resolved
+
+    def contains(self, resolved: Path) -> bool:
+        """Whether a resolved path lies in scope."""
+        return resolved.is_relative_to(self.root)

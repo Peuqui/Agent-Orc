@@ -76,7 +76,10 @@ aus wieder aufnehmen.
   Textansicht zum Markieren und Kopieren, anklickbare Links.
 
 **Dateien und mehr**
-- Dateien in den Projektordnern durchsuchen, bearbeiten und in den Papierkorb legen.
+- Dateien in den Projektordnern durchsuchen, bearbeiten und in den Papierkorb legen;
+  Markdown als Vorschau, Bilder als Bild, andere Dateien zum Herunterladen.
+- Dateipfade in der Ausgabe eines Agenten sind anklickbar und öffnen die Datei (an der
+  genannten Zeile) oder den Ordner.
 - Einstellungen pro Gerät (Schrift, Größe, Zeilenabstand, Scrollgeschwindigkeit) und eine Hilfe
   (Glühbirne).
 - Claude-Code-Sitzungen starten mit Remote Control und erscheinen dadurch auch in der Claude-App.

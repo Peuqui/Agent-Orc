@@ -1170,3 +1170,44 @@ def test_broadcast_types_into_every_chosen_agent(client: TestClient, home: Path)
     assert refused.status_code == 404
     time.sleep(0.3)
     assert "nope" not in client.get(f"/api/sessions/{first}/text").json()["text"]
+
+
+def test_raw_file_is_served_without_running_its_scripts(client: TestClient, home: Path) -> None:
+    picture = home / "projects" / "logo.svg"
+    picture.write_text('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>')
+    shown = client.get("/api/files/raw", params={"path": str(picture)})
+    assert shown.status_code == 200
+    assert shown.content == picture.read_bytes()
+    assert shown.headers["content-type"].startswith("image/svg+xml")
+    assert shown.headers["content-security-policy"] == "sandbox"
+    assert shown.headers["content-disposition"].startswith("inline")
+    saved = client.get("/api/files/raw", params={"path": str(picture), "download": True})
+    assert saved.headers["content-disposition"].startswith("attachment")
+    assert client.get("/api/files/raw", params={"path": str(home / "projects")}).status_code == 404
+    secret = home / "private" / "secret.txt"
+    secret.write_text("x")
+    assert client.get("/api/files/raw", params={"path": str(secret)}).status_code == 403
+
+
+def test_existing_paths_of_an_agents_output(client: TestClient, home: Path) -> None:
+    project = home / "projects" / "demo"
+    (project / "src").mkdir(parents=True)
+    (project / "src" / "main.py").write_text("print()")
+    (home / "private" / "secret.txt").write_text("x")
+    candidates = [
+        "src/main.py",
+        "src",
+        str(project / "src" / "main.py"),
+        "missing.py",
+        # Exists, but outside the scope: not offered.
+        "~/private/secret.txt",
+    ]
+    found = client.post(
+        "/api/files/existing", json={"base": str(project), "candidates": candidates}
+    ).json()
+    main = {"path": str(project / "src" / "main.py"), "kind": "file"}
+    assert found == {
+        "src/main.py": main,
+        "src": {"path": str(project / "src"), "kind": "folder"},
+        str(project / "src" / "main.py"): main,
+    }

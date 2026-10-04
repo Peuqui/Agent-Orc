@@ -110,7 +110,8 @@
     "close": "Close",
     "copied": "Copied to the clipboard.",
     "jog": "Fast scrolling: pull the grip up or down – the further, the faster",
-    "reconnecting": "Connection lost – reconnecting …"
+    "reconnecting": "Connection lost – reconnecting …",
+    "files": "Open project folder"
   },
   "editor": {
     "search": "Search",
@@ -119,7 +120,11 @@
     "overwrite": "Save anyway (overwrite)",
     "unsavedTitle": "Unsaved changes",
     "unsavedMessage": "Your changes are not saved yet. Leave anyway?",
-    "discard": "Discard"
+    "discard": "Discard",
+    "edit": "Edit",
+    "preview": "Preview",
+    "download": "Download",
+    "notText": "This file is not a text file (or too large for the editor)."
   },
   "errors": {
     "NetworkError": "Server not reachable.",
@@ -253,7 +258,9 @@
           "Grip on the right (jog): pull up or down to scroll, the further the faster. Mouse wheel and swiping scroll as well.",
           "A− / A+ changes the font size of this terminal only; the text view shows the screen for selecting and copying.",
           "The key bar sends Esc, Tab, arrows, Ctrl and so on – Ctrl and Alt apply to the next key.",
-          "Templates (in the paperclip menu): put frequent prompts into the input field with a tap; “Manage templates” creates them, for all devices."
+          "Templates (in the paperclip menu): put frequent prompts into the input field with a tap; “Manage templates” creates them, for all devices.",
+          "File paths in the output (e.g. src/main.py:42) are clickable when they exist: files open in the editor at that line, folders in the file view. The folder icon at the top opens the project folder.",
+          "Editor: Markdown shows as a page (pencil: edit), pictures as pictures; other files that are not text can be downloaded. “Back” returns to where the file was opened from."
         ]
       },
       {

@@ -9,14 +9,23 @@ import { EditorView, keymap } from '@codemirror/view'
 import { basicSetup } from 'codemirror'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ApiError, api } from '../api'
+import { ApiError, api, rawFileUrl } from '../api'
 import AppIcon from '../components/AppIcon.vue'
 import BaseDialog from '../components/BaseDialog.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
 import { useToast } from '../composables/useToast'
 import { baseName, parentPath } from '../format'
+import { isExternal, linkedPath, renderMarkdown } from '../markdown'
 
-const props = defineProps<{ path: string }>()
+// line: where to start, e.g. from "main.py:42" in an agent's output.
+const props = defineProps<{ path: string; line: number | null }>()
+
+// What the file is shown as: text in the editor, Markdown also as a page, a picture, or (not
+// text, too large) only offered to download.
+type Kind = 'text' | 'markdown' | 'image' | 'binary'
+const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'ico', 'avif']
+const MARKDOWN_EXTENSIONS = ['md', 'markdown']
+const NOT_SHOWN_AS_TEXT = ['NotTextError', 'FileTooLargeError']
 
 const FONT_SIZE_KEY = 'agent-orc-editor-font-size'
 const DEFAULT_FONT_SIZE = 14
@@ -39,6 +48,12 @@ let view: EditorView | null = null
 const language = new Compartment()
 const fontTheme = new Compartment()
 const name = computed(() => baseName(props.path))
+const extension = computed(() => name.value.split('.').pop()?.toLowerCase() ?? '')
+const kind = ref<Kind>(IMAGE_EXTENSIONS.includes(extension.value) ? 'image' : 'text')
+// Markdown opens as a page; the editor keeps the text for switching back.
+const previewing = ref(MARKDOWN_EXTENSIONS.includes(extension.value))
+const previewHtml = ref('')
+const editable = computed(() => kind.value === 'text' || kind.value === 'markdown')
 
 function fontSizeTheme(size: number) {
   return EditorView.theme({ '&': { fontSize: `${size}px` }, '.cm-scroller': { fontFamily: 'ui-monospace, monospace' } })
@@ -71,7 +86,37 @@ async function loadLanguage(): Promise<void> {
   view.dispatch({ effects: language.reconfigure(await description.load()) })
 }
 
+function showPreview(): void {
+  previewHtml.value = renderMarkdown(view?.state.doc.toString() ?? '', props.path)
+  previewing.value = true
+}
+
+function togglePreview(): void {
+  if (previewing.value) previewing.value = false
+  else showPreview()
+}
+
+/** Links in the page: other files of the project open here, anything else in a new tab. */
+function followLink(event: MouseEvent): void {
+  const link = (event.target as Element).closest('a')
+  const href = link?.getAttribute('href')
+  if (!href || href.startsWith('#')) return
+  event.preventDefault()
+  if (isExternal(href)) window.open(href, '_blank', 'noopener')
+  else void router.push({ path: '/edit', query: { path: linkedPath(props.path, href) } })
+}
+
+function goToLine(line: number): void {
+  if (!view) return
+  const target = view.state.doc.line(Math.min(line, view.state.doc.lines))
+  view.dispatch({ selection: { anchor: target.from }, scrollIntoView: true })
+}
+
 async function load(): Promise<void> {
+  if (kind.value === 'image') {
+    loaded.value = true
+    return
+  }
   const file = await api.readFile(props.path)
   version = file.version
   if (view) {
@@ -82,6 +127,13 @@ async function load(): Promise<void> {
   }
   dirty.value = false
   loaded.value = true
+  if (MARKDOWN_EXTENSIONS.includes(extension.value)) {
+    kind.value = 'markdown'
+    // Asked for a line: the text there, not the page.
+    if (props.line === null && previewing.value) showPreview()
+    else previewing.value = false
+  }
+  if (props.line !== null) goToLine(props.line)
 }
 
 async function save(expected: string): Promise<void> {
@@ -119,13 +171,20 @@ function changeFontSize(delta: number): void {
 
 function leave(): void {
   dialog.value = null
-  void router.push({ path: '/files', query: { path: parentPath(props.path) } })
+  // Back to where it was opened from (a terminal, the changes); otherwise to its folder.
+  if (window.history.state?.back) router.back()
+  else void router.push({ path: '/files', query: { path: parentPath(props.path) } })
 }
 
 onMounted(async () => {
   try {
     await load()
   } catch (error) {
+    if (error instanceof ApiError && NOT_SHOWN_AS_TEXT.includes(error.code)) {
+      kind.value = 'binary'
+      loaded.value = true
+      return
+    }
     toast.error(error)
     leave()
   }
@@ -147,17 +206,59 @@ onBeforeUnmount(() => view?.destroy())
       <h1 class="min-w-0 flex-1 truncate font-semibold">
         {{ name }}<span v-if="dirty" class="text-red-400"> ●</span>
       </h1>
-      <button class="btn-icon" :aria-label="$t('editor.search')" @click="view && openSearchPanel(view)">
-        <AppIcon name="search" />
+      <button
+        v-if="kind === 'markdown'"
+        class="btn-secondary btn-small"
+        :title="$t(previewing ? 'editor.edit' : 'editor.preview')"
+        :aria-label="$t(previewing ? 'editor.edit' : 'editor.preview')"
+        @click="togglePreview"
+      >
+        <!-- On phones the icon only, so the file's name keeps its room. -->
+        <AppIcon :name="previewing ? 'pencil' : 'eye'" /><span class="max-sm:hidden">{{
+          $t(previewing ? 'editor.edit' : 'editor.preview')
+        }}</span>
       </button>
-      <button class="btn-icon text-sm" :aria-label="$t('terminal.smaller')" @click="changeFontSize(-1)">A−</button>
-      <button class="btn-icon text-base" :aria-label="$t('terminal.larger')" @click="changeFontSize(1)">A+</button>
-      <button class="btn-primary min-h-10 px-3" :disabled="!dirty || saving" @click="save(version)">
+      <template v-if="editable && !previewing">
+        <button class="btn-icon" :aria-label="$t('editor.search')" @click="view && openSearchPanel(view)">
+          <AppIcon name="search" />
+        </button>
+        <button class="btn-icon text-sm" :aria-label="$t('terminal.smaller')" @click="changeFontSize(-1)">A−</button>
+        <button class="btn-icon text-base" :aria-label="$t('terminal.larger')" @click="changeFontSize(1)">A+</button>
+      </template>
+      <a
+        class="btn-icon"
+        :href="rawFileUrl(path, true)"
+        :title="$t('editor.download')"
+        :aria-label="$t('editor.download')"
+      >
+        <AppIcon name="download" />
+      </a>
+      <!-- Also when changes wait while the page is shown, so they are not hidden. -->
+      <button
+        v-if="editable && (!previewing || dirty)"
+        class="btn-primary min-h-10 px-3"
+        :disabled="!dirty || saving"
+        @click="save(version)"
+      >
         {{ $t('common.save') }}
       </button>
     </header>
 
-    <div ref="container" class="min-h-0 flex-1 overflow-hidden" />
+    <div v-show="editable && !previewing" ref="container" class="min-h-0 flex-1 overflow-hidden" />
+    <!-- v-html is safe here: renderMarkdown passes the HTML through DOMPurify. -->
+    <article
+      v-if="kind === 'markdown' && previewing"
+      class="markdown min-h-0 flex-1 overflow-y-auto px-4 py-3 sm:px-8"
+      @click="followLink"
+      v-html="previewHtml"
+    />
+    <div v-if="kind === 'image'" class="flex min-h-0 flex-1 items-center justify-center overflow-auto p-3">
+      <img :src="rawFileUrl(path)" :alt="name" class="max-h-full max-w-full object-contain" />
+    </div>
+    <div v-if="kind === 'binary'" class="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
+      <p class="text-slate-300">{{ $t('editor.notText') }}</p>
+      <a class="btn-primary" :href="rawFileUrl(path, true)"><AppIcon name="download" />{{ $t('editor.download') }}</a>
+    </div>
 
     <BaseDialog v-if="dialog === 'conflict'" :title="$t('editor.conflictTitle')" @close="dialog = null">
       <p class="mb-5 text-slate-300">{{ $t('errors.FileConflictError') }}</p>

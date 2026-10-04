@@ -66,6 +66,11 @@ export interface ScheduledPrompt {
   reason: 'user' | 'limit'
 }
 
+export interface ExistingPath {
+  path: string
+  kind: 'file' | 'folder'
+}
+
 export interface AgentSession {
   id: string
   profile: string
@@ -398,6 +403,9 @@ export const api = {
   rename: (path: string, newName: string) =>
     request<{ path: string }>('POST', 'files/rename', { body: { path, new_name: newName } }),
   readFile: (path: string) => request<TextFile>('GET', 'files/content', { query: { path } }),
+  /** Of the paths an agent wrote (relative to base, absolute or from ~), those that exist. */
+  existingPaths: (base: string, candidates: string[]) =>
+    request<Record<string, ExistingPath>>('POST', 'files/existing', { body: { base, candidates } }),
   writeFile: (path: string, content: string, expectedVersion: string | null) =>
     request<{ version: string }>('PUT', 'files/content', {
       body: { path, content, expected_version: expectedVersion },
@@ -414,6 +422,13 @@ export const api = {
  * WebSocket URL of a session's terminal, relative to the page like all API calls; the size goes
  * along, so tmux draws for this terminal from the start.
  */
+/** The file as it is, for pictures and downloads (the login cookie goes along). */
+export function rawFileUrl(path: string, download = false): string {
+  const url = new URL('api/files/raw', document.baseURI)
+  url.search = new URLSearchParams(download ? { path, download: 'true' } : { path }).toString()
+  return url.toString()
+}
+
 export function terminalUrl(sessionId: string, cols: number, rows: number): string {
   const url = new URL(`api/sessions/${encodeURIComponent(sessionId)}/terminal`, document.baseURI)
   url.search = new URLSearchParams({ cols: String(cols), rows: String(rows) }).toString()

@@ -110,7 +110,8 @@
     "close": "Schließen",
     "copied": "In die Zwischenablage kopiert.",
     "jog": "Schnell scrollen: Griff nach oben oder unten ziehen – je weiter, desto schneller",
-    "reconnecting": "Verbindung unterbrochen – verbinde neu …"
+    "reconnecting": "Verbindung unterbrochen – verbinde neu …",
+    "files": "Projektordner öffnen"
   },
   "editor": {
     "search": "Suchen",
@@ -119,7 +120,11 @@
     "overwrite": "Trotzdem speichern (überschreiben)",
     "unsavedTitle": "Ungespeicherte Änderungen",
     "unsavedMessage": "Deine Änderungen sind noch nicht gespeichert. Trotzdem verlassen?",
-    "discard": "Verwerfen"
+    "discard": "Verwerfen",
+    "edit": "Bearbeiten",
+    "preview": "Vorschau",
+    "download": "Herunterladen",
+    "notText": "Diese Datei ist keine Textdatei (oder zu groß für den Editor)."
   },
   "errors": {
     "NetworkError": "Server nicht erreichbar.",
@@ -253,7 +258,9 @@
           "Griff rechts (Jog): nach oben oder unten ziehen scrollt, je weiter, desto schneller. Mausrad und Wischen scrollen auch.",
           "A− / A+ ändert die Schriftgröße nur dieses Terminals; die Textansicht zeigt den Bildschirm zum Markieren und Kopieren.",
           "Die Tastenleiste schickt Esc, Tab, Pfeile, Ctrl usw. – Ctrl und Alt gelten für die nächste Taste.",
-          "Vorlagen (in der Büroklammer): häufige Anweisungen mit einem Tipp ins Eingabefeld setzen; „Vorlagen verwalten“ legt sie an, für alle Geräte."
+          "Vorlagen (in der Büroklammer): häufige Anweisungen mit einem Tipp ins Eingabefeld setzen; „Vorlagen verwalten“ legt sie an, für alle Geräte.",
+          "Dateipfade in der Ausgabe (z. B. src/main.py:42) sind anklickbar, wenn es sie gibt: Dateien öffnen im Editor an der genannten Zeile, Ordner in der Dateiansicht. Das Ordner-Symbol oben öffnet den Projektordner.",
+          "Editor: Markdown erscheint als Seite (Stift: bearbeiten), Bilder als Bild; andere Dateien, die keine Textdateien sind, lassen sich herunterladen. „Zurück“ führt dorthin, woher die Datei geöffnet wurde."
         ]
       },
       {

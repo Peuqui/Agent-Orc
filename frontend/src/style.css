@@ -70,3 +70,60 @@
 @utility input {
   @apply min-h-11 w-full rounded-lg border border-slate-600 bg-slate-900 px-3 text-slate-100 placeholder:text-slate-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 focus:outline-none;
 }
+
+/* A Markdown file shown as a page (EditorView, markdown.ts). */
+@layer components {
+  .markdown {
+    @apply leading-relaxed text-slate-200;
+  }
+  .markdown > * + * {
+    @apply mt-3;
+  }
+  .markdown h1 {
+    @apply border-b border-slate-700 pb-1 text-2xl font-semibold text-slate-100;
+  }
+  .markdown h2 {
+    @apply mt-6 border-b border-slate-800 pb-1 text-xl font-semibold text-slate-100;
+  }
+  .markdown h3,
+  .markdown h4 {
+    @apply mt-5 text-lg font-semibold text-slate-100;
+  }
+  .markdown a {
+    @apply text-sky-400 underline;
+  }
+  .markdown ul {
+    @apply list-disc pl-6;
+  }
+  .markdown ol {
+    @apply list-decimal pl-6;
+  }
+  .markdown li + li {
+    @apply mt-1;
+  }
+  .markdown code {
+    @apply rounded bg-slate-800 px-1 py-0.5 font-mono text-sm;
+  }
+  .markdown pre {
+    @apply overflow-x-auto rounded-lg bg-slate-800 p-3;
+  }
+  .markdown pre code {
+    @apply bg-transparent p-0;
+  }
+  .markdown blockquote {
+    @apply border-l-4 border-slate-600 pl-3 text-slate-400;
+  }
+  .markdown table {
+    @apply block overflow-x-auto border-collapse;
+  }
+  .markdown th,
+  .markdown td {
+    @apply border border-slate-700 px-2 py-1 text-left;
+  }
+  .markdown img {
+    @apply max-w-full;
+  }
+  .markdown hr {
+    @apply border-slate-700;
+  }
+}

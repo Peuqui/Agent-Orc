@@ -16,6 +16,7 @@ import RestartButton from '../components/RestartButton.vue'
 import JogScroller from '../components/JogScroller.vue'
 import KeyBar from '../components/KeyBar.vue'
 import MessageInput from '../components/MessageInput.vue'
+import { registerFileLinks } from '../composables/useFileLinks'
 import { useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
 import {
@@ -101,6 +102,8 @@ const fit = new FitAddon()
 terminal.loadAddon(fit)
 // Plain web addresses in the output become links (Claude's own OSC 8 links work without it).
 terminal.loadAddon(new WebLinksAddon())
+// Files and folders the agent mentions open with a click (only those that exist).
+registerFileLinks(terminal, router, () => session.value?.path)
 // What an agent copies (OSC 52, e.g. Claude Code's copy) lands in the browser's clipboard.
 terminal.loadAddon(new ClipboardAddon())
 // Emoji are two cells wide in the agents' output; xterm's default (Unicode 6) counts one and
@@ -309,6 +312,16 @@ onBeforeUnmount(() => {
       <!-- Embedded in the workspace, the column's tab names the agent already. -->
       <h1 class="min-w-0 flex-1 truncate font-semibold">{{ embedded ? '' : name }}</h1>
       <RestartButton v-if="session?.running" :session="session" button-class="btn-icon" />
+      <!-- The agent's project in the file view; in the workspace within the column (back returns). -->
+      <RouterLink
+        v-if="session"
+        :to="{ path: '/files', query: { path: session.path } }"
+        class="btn-icon"
+        :aria-label="$t('terminal.files')"
+        :title="$t('terminal.files')"
+      >
+        <AppIcon name="folder" />
+      </RouterLink>
       <!-- What the agent changed; in the workspace it opens within the column (back returns). -->
       <RouterLink
         :to="`/changes/${encodeURIComponent(id)}`"

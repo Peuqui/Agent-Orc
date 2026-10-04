@@ -12,6 +12,16 @@ export function parentPath(path: string): string {
   return `/${parts.join('/')}`
 }
 
+/** A path written relative to a folder (with ./ and ../), or absolute, as an absolute path. */
+export function joinPath(folder: string, written: string): string {
+  const parts = written.startsWith('/') ? [] : folder.split('/').filter(Boolean)
+  for (const part of written.split('/')) {
+    if (part === '..') parts.pop()
+    else if (part !== '.' && part !== '') parts.push(part)
+  }
+  return `/${parts.join('/')}`
+}
+
 export function formatSize(bytes: number): string {
   let value = bytes
   let unit = 0
