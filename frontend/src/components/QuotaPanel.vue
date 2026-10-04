@@ -5,8 +5,9 @@ import { useSessions } from '../composables/useSessions'
 import UsageBar from './UsageBar.vue'
 import UsageMeter from './UsageMeter.vue'
 
-// compact: one line without a card, e.g. in the workspace's header: the bars where there is
-// room, small rings otherwise (phones too), whose name and reset show on hover or tap.
+// compact: one line without a card, e.g. in the workspace's header: the bars where the panel
+// has room (a container query on the room it gets, not the window), small rings otherwise
+// (phones too), whose name and reset show on hover or tap.
 defineProps<{ compact?: boolean }>()
 const { quotas } = useSessions()
 const { t, te, locale } = useI18n()
@@ -32,15 +33,16 @@ function detail(window: QuotaWindow): string {
 </script>
 
 <template>
-  <!-- One root, so a class from outside (e.g. hidden on phones) applies to the whole panel. -->
-  <div>
+  <!-- One root, so a class from outside applies to the whole panel; it is also the container
+       the compact form measures. -->
+  <div class="@container">
     <div
       v-for="quota in quotas"
       :key="quota.profile"
       class="flex"
       :class="
         compact
-          ? 'items-center rounded-md border border-slate-600 py-1'
+          ? 'mx-auto w-fit max-w-[38rem] items-center rounded-md border border-slate-600 py-1 @[34rem]:w-auto'
           : 'card mb-4 flex-col gap-x-6 gap-y-1 px-4 py-2.5 md:flex-row md:items-center'
       "
       :title="compact ? $t('quota.title', { agent: quota.label }) : undefined"
@@ -53,7 +55,7 @@ function detail(window: QuotaWindow): string {
       <div
         :class="
           compact
-            ? 'hidden w-[36rem] grid-cols-2 divide-x divide-slate-600 2xl:grid'
+            ? 'hidden min-w-0 flex-1 grid-cols-2 divide-x divide-slate-600 @[34rem]:grid'
             : 'grid flex-1 gap-x-6 gap-y-1 md:grid-cols-2'
         "
       >
@@ -66,11 +68,12 @@ function detail(window: QuotaWindow): string {
           :detail="detail(usage)"
         />
       </div>
-      <div v-if="compact" class="flex divide-x divide-slate-600 2xl:hidden">
+      <div v-if="compact" class="flex divide-x divide-slate-600 @[34rem]:hidden">
         <UsageMeter
           v-for="(usage, name) in quota.windows"
           :key="name"
           class="px-2"
+          room-of="container"
           :percent="usage.used_percentage"
           :title="`${windowLabel(String(name))}: ${detail(usage)}`"
           :detail="`${shortLabel(String(name))} ${Math.round(usage.used_percentage)} %`"

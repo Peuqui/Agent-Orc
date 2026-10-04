@@ -285,17 +285,18 @@ async function rename(): Promise<void> {
 
 <template>
   <div class="flex h-dvh flex-col bg-slate-900">
-    <!-- Compact buttons below sm, so name, workspaces and usage fit on a phone. -->
-    <header class="flex flex-wrap items-center gap-1 border-b border-slate-800 px-1 py-1 max-sm:[&_.btn-icon]:size-8">
+    <!-- Compact buttons below md, so name, workspaces and usage fit on a phone. -->
+    <header class="flex flex-wrap items-center gap-1 border-b border-slate-800 px-1 py-1 max-md:[&_.btn-icon]:size-8">
       <button class="btn-icon" :aria-label="$t('terminal.back')" @click="router.push('/sessions')">
         <AppIcon name="up" class="-rotate-90" />
       </button>
-      <!-- Phones: the name and the workspaces move to a second row (this break starts it). -->
-      <div class="order-last h-0 basis-full sm:hidden" />
+      <!-- Phones and narrow windows: the name and the workspaces move to a second row (this
+           break starts it). -->
+      <div class="order-last h-0 basis-full md:hidden" />
       <input
         v-model="nameInput"
         size="12"
-        class="w-28 min-w-0 shrink rounded-md bg-transparent max-sm:order-last sm:w-44 px-2 py-1 font-semibold placeholder:font-normal placeholder:text-slate-500 hover:bg-slate-800 focus:bg-slate-800 focus:outline-none"
+        class="w-28 min-w-0 shrink rounded-md bg-transparent max-md:order-last lg:w-44 px-2 py-1 font-semibold placeholder:font-normal placeholder:text-slate-500 hover:bg-slate-800 focus:bg-slate-800 focus:outline-none"
         :placeholder="$t('workspace.unnamed')"
         :title="$t('workspace.nameHint')"
         :aria-label="$t('workspace.nameHint')"
@@ -305,9 +306,9 @@ async function rename(): Promise<void> {
       />
       <!-- The other workspaces, one click away: in their own tab if one shows them, otherwise
            here; a middle click opens a new tab. -->
-      <!-- Phones: in the second row next to the name, swipeable. -->
+      <!-- Phones and narrow windows: in the second row next to the name, swipeable. -->
       <nav
-        class="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto [scrollbar-width:none] max-sm:order-last"
+        class="flex min-w-0 items-center gap-1 overflow-x-auto [scrollbar-width:none] max-md:order-last max-md:flex-1 md:shrink-0"
       >
         <a
           v-for="other in otherNames"
@@ -328,10 +329,9 @@ async function rename(): Promise<void> {
           <AppIcon name="plus" class="size-3.5" /><AppIcon name="workspace" class="size-4" />
         </button>
       </nav>
-      <!-- Claude's usage, centred in the room between the workspaces and the buttons (the
-           spacer after it grows like the bar of workspaces before it). -->
-      <QuotaPanel compact class="shrink-0 sm:px-3" />
-      <div class="hidden flex-1 sm:block" />
+      <!-- Claude's usage, centred in the room between the workspaces and the buttons; it shrinks
+           with the window. -->
+      <QuotaPanel compact class="min-w-0 flex-1 sm:px-3" />
       <div class="relative">
         <button
           class="flex size-8 items-center justify-center rounded-md border border-slate-600 text-slate-300 hover:bg-slate-700"
