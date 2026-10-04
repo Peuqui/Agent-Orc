@@ -19,4 +19,12 @@ fi
 "$VENV/bin/pip" install .
 mkdir -p "$BIN"
 ln -sfn "$VENV/bin/agent-orc" "$BIN/agent-orc"
-echo "Installed $(git rev-parse --short HEAD) to $VENV; restart the service to run it."
+echo "Installed $(git rev-parse --short HEAD) to $VENV."
+
+# A running service would otherwise keep the old code while already serving the new web app.
+# Agents keep running (KillMode=process); the user needs the right to restart the unit (polkit).
+UNIT="agent-orc@$(id -un).service"
+if systemctl is-active --quiet "$UNIT"; then
+    systemctl restart "$UNIT"
+    echo "Restarted $UNIT."
+fi

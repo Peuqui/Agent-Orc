@@ -28,7 +28,11 @@ dadurch zusätzlich in der Claude-App auf dem Handy.
 - Linux
 - Python 3.12+
 - `tmux`
+- Node.js mit npm (baut bei der Installation die Web-App)
 - die Agent-CLIs, die du nutzen willst
+- optional, fürs Diktat im Terminal: [whisper-stt](https://github.com/Peuqui/whisper-stt)
+  (lokale Spracherkennung); ohne den Dienst hört die Spracherkennung des Browsers zu, wo er
+  eine hat (Chrome)
 
 ## Installation
 
@@ -44,7 +48,9 @@ agent-orc serve            # http://127.0.0.1:8770
 ```
 
 `deploy/install.sh` verlinkt den Befehl nach `~/.local/bin`, das im `PATH` liegen muss. Nach
-`git pull` erneut aufrufen, um zu aktualisieren; es installiert nur committeten Code.
+`git pull` erneut aufrufen, um zu aktualisieren; es installiert nur committeten Code und startet
+einen laufenden Dienst `agent-orc@<user>` neu (dafür braucht der Benutzer das Recht, z. B. per
+Polkit-Regel).
 
 Vor dem ersten Start `~/.config/agent-orc/config.yaml` anpassen, mindestens `files.base_dir`
 (der Ordner mit deinen Projekten). Für einen ersten Test über reines HTTP
