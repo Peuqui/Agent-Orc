@@ -248,7 +248,8 @@
           "Am Handy (installierte App) wechselt die Leiste im selben Fenster.",
           "„+“ fügt einen laufenden Agenten als Spalte hinzu, „− n +“ legt fest, wie viele Spalten den Bildschirm füllen.",
           "Spaltenkopf ziehen sortiert die Spalten; den Trenner am rechten Rand ziehen ändert die Breite, Doppelklick setzt sie zurück.",
-          "Tastenkürzel am Rechner: Alt+Umschalt+1 … 9 springt in die Spalte, Alt+Umschalt+← / → zur vorigen oder nächsten Arbeitsfläche."
+          "Tastenkürzel am Rechner: Alt+Umschalt+1 … 9 springt in die Spalte, Alt+Umschalt+← / → zur vorigen oder nächsten Arbeitsfläche.",
+          "Am Handy zeigt die Arbeitsfläche eine Spalte auf einmal; seitlich im Terminal wischen holt die nächste (nach links) oder vorige (nach rechts), senkrecht wischen scrollt."
         ]
       },
       {

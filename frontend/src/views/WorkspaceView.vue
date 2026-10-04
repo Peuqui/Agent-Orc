@@ -8,6 +8,7 @@ import HelpButton from '../components/HelpButton.vue'
 import QuotaPanel from '../components/QuotaPanel.vue'
 import { moveInList, useReorder } from '../composables/useReorder'
 import { sessionName, useSessions } from '../composables/useSessions'
+import { COLUMN_SWIPE_EVENT } from '../composables/useTouchScroll'
 import { useToast } from '../composables/useToast'
 import {
   announceWorkspace,
@@ -20,6 +21,7 @@ import {
   saveTabState,
   useOtherTabs,
 } from '../composables/useWorkspaceTab'
+import { PHONE_WIDTH, TOUCH_FIRST } from '../device'
 
 // Several agents side by side. Every open agent is one column: its tab is the head of that
 // column, both in one grid, so tab order and column order can never differ. The user picks
@@ -69,7 +71,17 @@ const notOpen = computed(() =>
   sessions.value.filter((session) => session.running && !workspace.value.tabs.includes(session.id)),
 )
 
+// On a phone one column fills the screen and a sideways swipe brings the next; the columns
+// and widths set on a computer stay as they are for it.
+const phone = ref(PHONE_WIDTH.matches)
+const followPhoneWidth = (event: MediaQueryListEvent): void => {
+  phone.value = event.matches
+}
+PHONE_WIDTH.addEventListener('change', followPhoneWidth)
+onBeforeUnmount(() => PHONE_WIDTH.removeEventListener('change', followPhoneWidth))
+
 function widthShare(id: string): number {
+  if (phone.value) return 1
   return workspace.value.widths[id] ?? 1 / workspace.value.visible
 }
 
@@ -179,6 +191,12 @@ function onFrameLoad(id: string): void {
   )
   // Typing mostly happens inside a column: its shortcuts are caught there, before the terminal.
   frameWindow?.addEventListener('keydown', onShortcut, true)
+  // A sideways swipe in its terminal brings the neighbouring column (phones).
+  frameWindow?.addEventListener(COLUMN_SWIPE_EVENT, (event) => {
+    const direction = (event as CustomEvent<1 | -1>).detail
+    const neighbour = workspace.value.tabs[workspace.value.tabs.indexOf(id) + direction]
+    if (neighbour !== undefined) void activate(neighbour)
+  })
 }
 
 // Desktop shortcuts: Alt+Shift+1…9 goes to that column, Alt+Shift+←/→ to the previous or next
@@ -210,11 +228,12 @@ function onShortcut(event: KeyboardEvent): void {
 window.addEventListener('keydown', onShortcut, true)
 onBeforeUnmount(() => window.removeEventListener('keydown', onShortcut, true))
 
-// Typing goes to the active column's input field.
+// Typing goes to the active column's input field; not on touch screens, where the focus would
+// open the on-screen keyboard (a tap into the field does).
 watch(
   () => workspace.value.active,
   async (id) => {
-    if (id === null) return
+    if (id === null || TOUCH_FIRST.matches) return
     await nextTick()
     frameOf(id)?.contentDocument?.querySelector('textarea')?.focus()
   },
@@ -392,6 +411,7 @@ async function rename(): Promise<void> {
       </div>
       <!-- Columns as one boxed group: fewer | count | more. -->
       <div
+        v-if="!phone"
         class="flex h-8 shrink-0 items-stretch divide-x divide-slate-600 overflow-hidden rounded-md border border-slate-600 text-sm text-slate-300"
         :title="$t('workspace.columns')"
       >
@@ -458,9 +478,10 @@ async function rename(): Promise<void> {
           allow="microphone; clipboard-write"
           @load="onFrameLoad(id)"
         />
-        <!-- Divider on each column's right edge, above the iframes (which would swallow it). -->
+        <!-- Divider on each column's right edge, above the iframes (which would swallow it); on
+             phones every column fills the screen, so there is nothing to divide. -->
         <div
-          v-for="id in workspace.tabs"
+          v-for="id in phone ? [] : workspace.tabs"
           :key="`divider-${id}`"
           class="z-10 w-2 cursor-col-resize touch-none justify-self-end border-r border-slate-700 hover:bg-red-500/30"
           :class="{ 'bg-red-500/40': resize?.id === id }"

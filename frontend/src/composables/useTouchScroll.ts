@@ -3,6 +3,8 @@
 // scroll keeps going at the finger's speed and slows down, like native scrolling on a phone.
 
 const PIXELS_PER_STEP = 24
+// Sent by a terminal in a workspace column on a sideways swipe; detail: 1 next, -1 previous.
+export const COLUMN_SWIPE_EVENT = 'agent-orc-column-swipe'
 // Weight of the newest movement in the measured speed; the rest is the speed so far, which
 // smooths out jittery touch events.
 const NEWEST_SPEED_WEIGHT = 0.7
@@ -12,10 +14,24 @@ const GLIDE_FRICTION_PER_MS = 0.997
 const MIN_GLIDE_SPEED = 0.05
 // A finger resting this long before it is lifted means "stop here", not a flick.
 const MAX_RELEASE_PAUSE_MS = 80
+// After this many pixels the swipe's direction is settled: up and down scroll, sideways not.
+const AXIS_LOCK_PX = 10
+// A sideways swipe at least this long, and clearly more sideways than up or down, is reported.
+const MIN_SIDEWAYS_SWIPE_PX = 60
+const SIDEWAYS_RATIO = 2
 
-/** scroll receives whole steps (positive: towards newer content) and the finger position. */
-export function useTouchScroll(scroll: (steps: number, x: number, y: number) => void) {
+/**
+ * scroll receives whole steps (positive: towards newer content) and the finger position;
+ * sideways, if given, a finished sideways swipe (1: to the left, i.e. "next"; -1: "previous").
+ */
+export function useTouchScroll(
+  scroll: (steps: number, x: number, y: number) => void,
+  sideways?: (direction: 1 | -1) => void,
+) {
   let lastY: number | null = null
+  let startX = 0
+  let startY = 0
+  let axis: 'vertical' | 'sideways' | null = null
   let lastTime = 0
   let x = 0
   // Pixels per millisecond; positive while the finger moves up.
@@ -58,6 +74,9 @@ export function useTouchScroll(scroll: (steps: number, x: number, y: number) => 
     }
     lastY = event.touches[0].clientY
     x = event.touches[0].clientX
+    startX = x
+    startY = lastY
+    axis = null
     lastTime = event.timeStamp
     speed = 0
     remainder = 0
@@ -66,6 +85,19 @@ export function useTouchScroll(scroll: (steps: number, x: number, y: number) => 
   function onTouchMove(event: TouchEvent): void {
     if (lastY === null || event.touches.length !== 1) return
     const touch = event.touches[0]
+    if (axis === null) {
+      const dx = Math.abs(touch.clientX - startX)
+      const dy = Math.abs(touch.clientY - startY)
+      if (Math.max(dx, dy) < AXIS_LOCK_PX) return
+      axis = sideways && dx > dy ? 'sideways' : 'vertical'
+    }
+    if (axis === 'sideways') {
+      // Not a scroll, and not a pan of the page either.
+      event.preventDefault()
+      x = touch.clientX
+      lastY = touch.clientY
+      return
+    }
     const distance = lastY - touch.clientY
     if (distance === 0) return
     // The swipe must not also scroll or zoom the page.
@@ -81,6 +113,15 @@ export function useTouchScroll(scroll: (steps: number, x: number, y: number) => 
   }
 
   function onTouchEnd(event: TouchEvent): void {
+    if (axis === 'sideways') {
+      const dx = x - startX
+      const dy = (lastY ?? startY) - startY
+      if (Math.abs(dx) >= MIN_SIDEWAYS_SWIPE_PX && Math.abs(dx) > SIDEWAYS_RATIO * Math.abs(dy)) {
+        sideways?.(dx < 0 ? 1 : -1)
+      }
+      lastY = null
+      return
+    }
     const flicked =
       lastY !== null &&
       event.timeStamp - lastTime <= MAX_RELEASE_PAUSE_MS &&

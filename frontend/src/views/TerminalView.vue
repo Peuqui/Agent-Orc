@@ -28,7 +28,7 @@ import {
   type TerminalFont,
   useSettings,
 } from '../composables/useSettings'
-import { useTouchScroll } from '../composables/useTouchScroll'
+import { COLUMN_SWIPE_EVENT, useTouchScroll } from '../composables/useTouchScroll'
 
 const props = defineProps<{ id: string; embedded: boolean }>()
 
@@ -175,7 +175,13 @@ function onWheel(event: WheelEvent): void {
 
 // xterm.js does not pass finger swipes on, so swipes (and their glide after a flick) become
 // wheel events too. Taps stay untouched.
-const touchScroll = useTouchScroll(scrollTerminal)
+// In a workspace column, a sideways swipe brings the neighbouring column (WorkspaceView).
+const touchScroll = useTouchScroll(
+  scrollTerminal,
+  props.embedded
+    ? (direction) => window.dispatchEvent(new CustomEvent(COLUMN_SWIPE_EVENT, { detail: direction }))
+    : undefined,
+)
 
 function send(message: object): void {
   if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message))

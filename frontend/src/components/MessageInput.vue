@@ -3,6 +3,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { api } from '../api'
 import { useDictation } from '../composables/useDictation'
 import { useToast } from '../composables/useToast'
+import { TOUCH_FIRST } from '../device'
 import AppIcon from './AppIcon.vue'
 import PromptTemplates from './PromptTemplates.vue'
 
@@ -18,8 +19,6 @@ watch(text, (current) => {
   else sessionStorage.removeItem(draftKey)
 })
 const field = ref<HTMLTextAreaElement>()
-// A finger rather than a mouse is the main pointer (phones, tablets without a mouse).
-const TOUCH_FIRST = window.matchMedia('(pointer: coarse)')
 
 const {
   state,

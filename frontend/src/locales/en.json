@@ -248,7 +248,8 @@
           "On the phone (installed app) the bar switches within the same window.",
           "“+” adds a running agent as a column, “− n +” sets how many columns fill the screen.",
           "Dragging a column head sorts the columns; dragging the divider on its right edge changes the width, a double click resets it.",
-          "Shortcuts on a computer: Alt+Shift+1 … 9 jumps to that column, Alt+Shift+← / → to the previous or next workspace."
+          "Shortcuts on a computer: Alt+Shift+1 … 9 jumps to that column, Alt+Shift+← / → to the previous or next workspace.",
+          "On a phone the workspace shows one column at a time; a sideways swipe in the terminal brings the next (to the left) or previous one (to the right), up and down scrolls."
         ]
       },
       {
