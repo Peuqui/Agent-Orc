@@ -23,8 +23,6 @@ import { PHONE_WIDTH } from '../device'
 import { useToast } from '../composables/useToast'
 import {
   FONT_SAMPLE,
-  MAX_FONT_SIZE,
-  MIN_FONT_SIZE,
   TERMINAL_FONTS,
   type TerminalFont,
   useSettings,
@@ -51,11 +49,8 @@ const settings = ref<TerminalSettings | null>(null)
 const modifiers = ref(new Set<Modifier>())
 const connected = ref(false)
 // A−/A+ give this terminal its own size; otherwise it follows the size set in the settings.
-const ownFontSizeKey = `agent-orc-font-size:${props.id}`
-const storedOwnFontSize = localStorage.getItem(ownFontSizeKey)
-const ownFontSize = ref(storedOwnFontSize === null ? null : Number(storedOwnFontSize))
-const { lineHeight, fontSize: defaultFontSize, terminalFont } = useSettings()
-const fontSize = computed(() => ownFontSize.value ?? defaultFontSize.value)
+// One font size for every terminal of this device (settings menu, or ⋯ on phones).
+const { lineHeight, fontSize, stepFontSize, terminalFont } = useSettings()
 
 // Plain-text view: the canvas terminal cannot be selected on a phone, ordinary text can.
 const plainText = ref<string | null>(null)
@@ -92,6 +87,12 @@ const followPhoneWidth = (event: MediaQueryListEvent): void => {
 }
 PHONE_WIDTH.addEventListener('change', followPhoneWidth)
 const ownTab = computed(() => !props.embedded || phone.value)
+const actionsOpen = ref(false)
+const actionClass = computed(() =>
+  phone.value
+    ? 'flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-slate-300 hover:bg-slate-700'
+    : 'btn-icon',
+)
 
 function closeColumn(): void {
   window.dispatchEvent(new CustomEvent(COLUMN_CLOSE_EVENT))
@@ -238,10 +239,6 @@ function submitText(text: string): void {
   window.setTimeout(() => sendInput('\r'), settings.value.submit_delay_ms)
 }
 
-function changeFontSize(delta: number): void {
-  ownFontSize.value = Math.min(MAX_FONT_SIZE, Math.max(MIN_FONT_SIZE, fontSize.value + delta))
-  localStorage.setItem(ownFontSizeKey, String(ownFontSize.value))
-}
 
 const NORMAL_CLOSURE = 1000
 const FIRST_APPLICATION_CODE = 4000
@@ -344,32 +341,71 @@ onBeforeUnmount(() => {
       <span class="mx-1 size-2.5 shrink-0 rounded-full" :class="connected ? 'bg-red-500' : 'bg-slate-600'" />
       <!-- Embedded in the workspace, the column's tab names the agent already (not on phones). -->
       <h1 class="min-w-0 flex-1 truncate font-semibold">{{ ownTab ? name : '' }}</h1>
-      <RestartButton v-if="session?.running" :session="session" button-class="btn-icon" />
-      <TerminalButton v-if="session && !session.terminal" :path="session.path" :agent-id="session.id" button-class="btn-icon" />
-      <!-- The agent's project in the file view; in the workspace within the column (back returns). -->
-      <RouterLink
-        v-if="session"
-        :to="{ path: '/files', query: { path: session.path } }"
-        class="btn-icon"
-        :aria-label="$t('terminal.files')"
-        :title="$t('terminal.files')"
-      >
-        <AppIcon name="folder" />
-      </RouterLink>
-      <!-- What the agent changed; in the workspace it opens within the column (back returns). -->
-      <RouterLink
-        :to="`/changes/${encodeURIComponent(id)}`"
-        class="btn-icon"
-        :aria-label="$t('changes.open')"
-        :title="$t('changes.open')"
-      >
-        <AppIcon name="diff" />
-      </RouterLink>
-      <button class="btn-icon" :aria-label="$t('terminal.plainText')" :title="$t('terminal.plainText')" @click="showPlainText">
-        <AppIcon name="copy" />
-      </button>
-      <button class="btn-icon text-sm" :aria-label="$t('terminal.smaller')" @click="changeFontSize(-1)">A−</button>
-      <button class="btn-icon text-base" :aria-label="$t('terminal.larger')" @click="changeFontSize(1)">A+</button>
+      <!-- The actions: side by side on computers, behind ⋯ on phones so the name has room. -->
+      <div class="relative flex items-center">
+        <button
+          v-if="phone"
+          class="btn-icon"
+          :aria-label="$t('terminal.actions')"
+          :title="$t('terminal.actions')"
+          @click="actionsOpen = !actionsOpen"
+        >
+          <AppIcon name="more" />
+        </button>
+        <div v-if="phone && actionsOpen" class="fixed inset-0 z-30" @click="actionsOpen = false" />
+        <div
+          v-if="!phone || actionsOpen"
+          :class="
+            phone
+              ? 'card absolute top-full right-0 z-40 mt-1 flex w-60 flex-col p-1 shadow-xl'
+              : 'flex items-center gap-1'
+          "
+        >
+          <RestartButton v-if="session?.running" :session="session" :button-class="actionClass" :with-label="phone" />
+          <TerminalButton
+            v-if="session && !session.terminal"
+            :path="session.path"
+            :agent-id="session.id"
+            :button-class="actionClass"
+            :with-label="phone"
+          />
+          <!-- The agent's project in the file view; in the workspace within the column (back
+               returns). -->
+          <RouterLink
+            v-if="session"
+            :to="{ path: '/files', query: { path: session.path } }"
+            :class="actionClass"
+            :aria-label="$t('terminal.files')"
+            :title="$t('terminal.files')"
+          >
+            <AppIcon name="folder" /><span v-if="phone">{{ $t('terminal.files') }}</span>
+          </RouterLink>
+          <!-- What the agent changed; in the workspace it opens within the column (back returns). -->
+          <RouterLink
+            :to="`/changes/${encodeURIComponent(id)}`"
+            :class="actionClass"
+            :aria-label="$t('changes.open')"
+            :title="$t('changes.open')"
+          >
+            <AppIcon name="diff" /><span v-if="phone">{{ $t('changes.button') }}</span>
+          </RouterLink>
+          <button
+            :class="actionClass"
+            :aria-label="$t('terminal.plainText')"
+            :title="$t('terminal.plainText')"
+            @click="((actionsOpen = false), showPlainText())"
+          >
+            <AppIcon name="copy" /><span v-if="phone">{{ $t('terminal.plainText') }}</span>
+          </button>
+          <!-- The device's font size (the settings menu holds it too). -->
+          <div v-if="phone" class="flex items-center gap-2 px-3 py-1 text-sm text-slate-300">
+            <span class="flex-1">{{ $t('settings.fontSize') }}</span>
+            <button class="btn-icon size-8" :aria-label="$t('settings.less')" @click="stepFontSize(-1)">−</button>
+            <span class="w-6 text-center">{{ fontSize }}</span>
+            <button class="btn-icon size-8" :aria-label="$t('settings.more')" @click="stepFontSize(1)">+</button>
+          </div>
+        </div>
+      </div>
       <button v-if="embedded && phone" class="btn-icon" :aria-label="$t('workspace.close')" :title="$t('workspace.close')" @click="closeColumn">
         ×
       </button>

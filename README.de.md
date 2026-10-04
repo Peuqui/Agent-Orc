@@ -75,7 +75,7 @@ aus wieder aufnehmen.
   eingefügt) oder Datei anhängen: Sie landen im Projektordner, erscheinen als kleine Vorschau
   über dem Eingabefeld und gehen mit der nächsten Nachricht an den Agenten.
 - Sondertasten-Leiste (Esc, Tab, Shift+Tab, Pfeile, einrastendes Strg/Alt, …) für die
-  Bildschirmtastatur, ein Griff zum schnellen Scrollen, Schriftgröße pro Terminal, eine
+  Bildschirmtastatur, ein Griff zum schnellen Scrollen, eine Schriftgröße pro Gerät, eine
   Textansicht zum Markieren und Kopieren, anklickbare Links.
 
 **Dateien und mehr**

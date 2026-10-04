@@ -9,7 +9,7 @@ import ConfirmDialog from './ConfirmDialog.vue'
 
 // Restarts the agent with its conversation resumed, e.g. when it hangs or should read changed
 // settings; asked first, as it ends a running answer and the agent's background tasks.
-const props = defineProps<{ session: AgentSession; buttonClass: string }>()
+const props = defineProps<{ session: AgentSession; buttonClass: string; withLabel?: boolean }>()
 const { t } = useI18n()
 const toast = useToast()
 const { refresh } = useSessions()
@@ -29,7 +29,7 @@ async function restart(): Promise<void> {
 
 <template>
   <button :class="buttonClass" :title="$t('restart.title')" :aria-label="$t('restart.title')" @click="asking = true">
-    <AppIcon name="restart" />
+    <AppIcon name="restart" /><span v-if="withLabel">{{ $t('restart.title') }}</span>
   </button>
   <ConfirmDialog
     v-if="asking"

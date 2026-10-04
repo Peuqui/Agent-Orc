@@ -113,7 +113,8 @@
     "copied": "Copied to the clipboard.",
     "jog": "Fast scrolling: pull the grip up or down – the further, the faster",
     "reconnecting": "Connection lost – reconnecting …",
-    "files": "Open project folder"
+    "files": "Open project folder",
+    "actions": "More actions"
   },
   "editor": {
     "search": "Search",
@@ -266,7 +267,7 @@
           "Microphone: dictation through Whisper; the GPU is done at once, the CPU is slower but always there. If it fails, “Retry” sends the same recording again.",
           "Paperclip: take a photo, pick a picture or screenshot from the gallery, capture the screen (desktop) or attach a file – it lands in the project folder and it shows as a small preview above the input field (× removes it) and goes to the agent with the next message. A screenshot from the clipboard can also simply be pasted into the input field (Ctrl+V).",
           "Grip on the right (jog): pull up or down to scroll, the further the faster. Mouse wheel and swiping scroll as well.",
-          "A− / A+ changes the font size of this terminal only; the text view shows the screen for selecting and copying.",
+          "Font size: one for all terminals of this device – in the ☰ menu (also in the workspace header) or, on phones, in the ⋮ menu of the terminal bar. On phones ⋮ also holds restart, terminal, project folder, changes and the text view for selecting and copying.",
           "The key bar sends Esc, Tab, arrows, Ctrl and so on – Ctrl and Alt apply to the next key.",
           "Templates (in the paperclip menu): put frequent prompts into the input field with a tap; “Manage templates” creates them, for all devices.",
           "File paths in the output (e.g. src/main.py:42) are clickable when they exist: files open in the editor at that line, folders in the file view. The folder icon at the top opens the project folder.",

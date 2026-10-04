@@ -5,8 +5,6 @@ import { useToast } from '../composables/useToast'
 import { useI18n } from 'vue-i18n'
 import {
   LINE_HEIGHT_STEP,
-  MAX_FONT_SIZE,
-  MIN_FONT_SIZE,
   TERMINAL_FONTS,
   type TerminalFont,
   MAX_LINE_HEIGHT,
@@ -20,7 +18,7 @@ import HandoverSettings from './HandoverSettings.vue'
 import PushSettings from './PushSettings.vue'
 
 // Settings of this device; more entries join here as they become adjustable.
-const { scrollLines, lineHeight, fontSize, terminalFont, dictationEngine } = useSettings()
+const { scrollLines, lineHeight, fontSize, stepFontSize, terminalFont, dictationEngine } = useSettings()
 const toast = useToast()
 const open = ref(false)
 // The engines the Whisper service offers; asked when the menu opens.
@@ -36,10 +34,6 @@ watch(open, async (isOpen) => {
 })
 const FONT_NAMES: Record<TerminalFont, string> = { jetbrains: 'JetBrains Mono', system: 'System' }
 const { locale } = useI18n()
-
-function changeFontSize(delta: number): void {
-  fontSize.value = Math.min(MAX_FONT_SIZE, Math.max(MIN_FONT_SIZE, fontSize.value + delta))
-}
 
 function changeLineHeight(delta: number): void {
   // Rounded, so repeated steps do not drift (1.2000000000000002).
@@ -76,9 +70,9 @@ function changeScrollLines(delta: number): void {
       <div class="mt-3 flex items-center justify-between gap-2 text-sm text-slate-300">
         <span>{{ $t('settings.fontSize') }}</span>
         <div class="flex items-center gap-1">
-          <button class="btn-icon size-7" :aria-label="$t('settings.less')" @click="changeFontSize(-1)">−</button>
+          <button class="btn-icon size-7" :aria-label="$t('settings.less')" @click="stepFontSize(-1)">−</button>
           <span class="w-6 text-center tabular-nums">{{ fontSize }}</span>
-          <button class="btn-icon size-7" :aria-label="$t('settings.more')" @click="changeFontSize(1)">+</button>
+          <button class="btn-icon size-7" :aria-label="$t('settings.more')" @click="stepFontSize(1)">+</button>
         </div>
       </div>
       <p class="mt-1 mb-3 text-xs text-slate-500">{{ $t('settings.fontSizeHint') }}</p>

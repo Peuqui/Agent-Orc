@@ -68,7 +68,7 @@ detaches: the agents keep working, and you pick them up again from any device.
   simply pasted with Ctrl+V) or a file: it lands in the project folder, shows as a small preview
   above the input field and goes to the agent with the next message.
 - Extra-keys bar (Esc, Tab, Shift+Tab, arrows, sticky Ctrl/Alt, …) for the on-screen keyboard,
-  a jog grip for fast scrolling, font size per terminal, a text view for selecting and copying,
+  a jog grip for fast scrolling, one font size per device, a text view for selecting and copying,
   clickable links.
 
 **Files and more**

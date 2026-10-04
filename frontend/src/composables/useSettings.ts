@@ -61,6 +61,19 @@ const dictationEngine = setting('agent-orc-dictation-engine', '', String)
 /** All rows of extra keys; folded, only the first (the config orders them). */
 const extraKeysUnfolded = setting('agent-orc-extra-keys-unfolded', false, (stored) => stored === 'true')
 
+/** One step larger (1) or smaller (-1), within the bounds; from the settings or a terminal. */
+function stepFontSize(delta: number): void {
+  fontSize.value = Math.min(MAX_FONT_SIZE, Math.max(MIN_FONT_SIZE, fontSize.value + delta))
+}
+
 export function useSettings() {
-  return { scrollLines, lineHeight, fontSize, terminalFont, dictationEngine, extraKeysUnfolded }
+  return {
+    scrollLines,
+    lineHeight,
+    fontSize,
+    stepFontSize,
+    terminalFont,
+    dictationEngine,
+    extraKeysUnfolded,
+  }
 }

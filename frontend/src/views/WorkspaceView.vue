@@ -8,6 +8,7 @@ import AppIcon from '../components/AppIcon.vue'
 import HelpButton from '../components/HelpButton.vue'
 import NavMenu from '../components/NavMenu.vue'
 import QuotaPanel from '../components/QuotaPanel.vue'
+import SettingsMenu from '../components/SettingsMenu.vue'
 import { moveInList, useReorder } from '../composables/useReorder'
 import { sessionName, useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
@@ -486,6 +487,8 @@ async function rename(): Promise<void> {
       <button class="btn-icon" :aria-label="$t('workspace.fullscreen')" :title="$t('workspace.fullscreen')" @click="fullscreen = true">
         <AppIcon name="expand" />
       </button>
+      <!-- The device's settings (font size …) also here; phones reach the font size via ⋯. -->
+      <SettingsMenu v-if="!phone" />
       <HelpButton />
     </header>
     <!-- The way back from fullscreen, small in the corner above the columns. -->
