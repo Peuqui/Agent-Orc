@@ -74,7 +74,12 @@
     "resume": "Letztes Gespräch fortsetzen",
     "earlier": "Frühere Gespräche in diesem Ordner",
     "untitled": "(ohne Titel)",
-    "recentlyActive": "gerade aktiv – evtl. noch woanders offen"
+    "recentlyActive": "gerade aktiv – evtl. noch woanders offen",
+    "effortDefaultShort": "Standard",
+    "faster": "Schneller",
+    "smarter": "Intelligenter",
+    "ultracode": "Ultracode",
+    "ultracodeHint": "Claude plant für größere Aufgaben selbst Workflows mit mehreren Agenten"
   },
   "trash": {
     "empty": "Der Papierkorb ist leer.",

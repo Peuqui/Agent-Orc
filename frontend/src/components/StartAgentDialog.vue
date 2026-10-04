@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { api, type Conversation } from '../api'
+import { api, type Conversation, type Reasoning } from '../api'
 import { useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
 import { baseName, formatDate, formatSize } from '../format'
 import BaseDialog from './BaseDialog.vue'
+import ReasoningControl from './ReasoningControl.vue'
 
 const props = defineProps<{ path: string }>()
 const emit = defineEmits<{ started: [id: string]; close: [] }>()
@@ -13,24 +14,23 @@ const emit = defineEmits<{ started: [id: string]; close: [] }>()
 const { profiles, loadProfiles, refresh } = useSessions()
 const toast = useToast()
 const selected = ref('')
-// Empty string: the agent's own default effort.
-const effort = ref('')
+const NO_REASONING: Reasoning = { effort: null, ultracode: false }
+const reasoning = ref<Reasoning>(NO_REASONING)
 const busy = ref(false)
 const conversations = ref<Conversation[]>([])
 const MILLISECONDS_PER_SECOND = 1000
 const { locale } = useI18n()
 
-const effortLevels = computed(
-  () => profiles.value.find((profile) => profile.name === selected.value)?.effort_levels ?? [],
-)
-// For the chosen agent: preselect the folder's stored effort, list earlier conversations.
-watch(selected, async (profile) => {
-  effort.value = ''
+const profile = computed(() => profiles.value.find((candidate) => candidate.name === selected.value))
+const effortLevels = computed(() => profile.value?.effort_levels ?? [])
+// For the chosen agent: preselect the folder's stored reasoning, list earlier conversations.
+watch(selected, async (name) => {
+  reasoning.value = NO_REASONING
   conversations.value = []
-  if (!profile) return
+  if (!name) return
   try {
-    effort.value = (await api.folderEffort(profile, props.path)).effort ?? ''
-    conversations.value = await api.conversations(profile, props.path)
+    reasoning.value = await api.folderReasoning(name, props.path)
+    conversations.value = await api.conversations(name, props.path)
   } catch (error) {
     toast.error(error)
   }
@@ -48,7 +48,7 @@ async function start(resume: boolean, conversation: string | null = null): Promi
       selected.value,
       props.path,
       resume,
-      effort.value || null,
+      reasoning.value,
       conversation,
     )
     await refresh()
@@ -75,13 +75,13 @@ async function start(resume: boolean, conversation: string | null = null): Promi
         {{ profile.label }}
       </label>
     </fieldset>
-    <label v-if="effortLevels.length" class="mb-5 block">
-      <span class="mb-1 block text-sm text-slate-400">{{ $t('agent.effort') }}</span>
-      <select v-model="effort" class="input">
-        <option value="">{{ $t('agent.effortDefault') }}</option>
-        <option v-for="level in effortLevels" :key="level" :value="level">{{ level }}</option>
-      </select>
-    </label>
+    <ReasoningControl
+      v-if="effortLevels.length"
+      v-model="reasoning"
+      :levels="effortLevels"
+      :ultracode-offered="profile?.ultracode ?? false"
+      class="mb-5"
+    />
     <div class="flex flex-col gap-2">
       <button class="btn-primary" :disabled="busy || !selected" @click="start(false)">
         {{ $t('agent.startNew') }}

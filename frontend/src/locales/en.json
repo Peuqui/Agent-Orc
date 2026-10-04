@@ -74,7 +74,12 @@
     "resume": "Resume last conversation",
     "earlier": "Earlier conversations in this folder",
     "untitled": "(untitled)",
-    "recentlyActive": "recently active – may still be open elsewhere"
+    "recentlyActive": "recently active – may still be open elsewhere",
+    "effortDefaultShort": "Default",
+    "faster": "Faster",
+    "smarter": "Smarter",
+    "ultracode": "Ultracode",
+    "ultracodeHint": "Claude plans multi-agent workflows for larger tasks by itself"
   },
   "trash": {
     "empty": "The trash is empty.",

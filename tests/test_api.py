@@ -44,7 +44,7 @@ def config(home: Path, socket_name: str) -> Config:
             "label": "Sleeper",
             "start": ["sleep", "60"],
             "resume": ["true"],
-            "effort": {"levels": ["low", "high"], "store": "claude_project"},
+            "effort": {"levels": ["low", "high"], "store": "claude_project", "ultracode": True},
         },
         "talker": {
             "label": "Talker",
@@ -126,6 +126,7 @@ def test_folder_session_and_trash_flow(client: TestClient, home: Path) -> None:
         "path": str(demo),
         "resume": False,
         "effort": None,
+        "ultracode": False,
         "conversation": None,
     }
     session = client.post("/api/sessions", json=start)
@@ -156,6 +157,7 @@ def test_second_agent_in_same_folder_is_refused(client: TestClient, home: Path) 
         "path": str(home / "projects"),
         "resume": False,
         "effort": None,
+        "ultracode": False,
         "conversation": None,
     }
     assert client.post("/api/sessions", json=body).status_code == 200
@@ -163,7 +165,13 @@ def test_second_agent_in_same_folder_is_refused(client: TestClient, home: Path) 
 
 
 def test_unknown_profile_and_missing_folder(client: TestClient, home: Path) -> None:
-    base = {"path": str(home / "projects"), "resume": False, "effort": None, "conversation": None}
+    base = {
+        "path": str(home / "projects"),
+        "resume": False,
+        "effort": None,
+        "ultracode": False,
+        "conversation": None,
+    }
     unknown = {**base, "profile": "nope"}
     assert client.post("/api/sessions", json=unknown).status_code == 404
     missing = {**base, "profile": "sleeper", "path": str(home / "projects" / "missing")}
@@ -267,6 +275,7 @@ def start_shell(client: TestClient, home: Path) -> str:
         "path": str(home / "projects"),
         "resume": False,
         "effort": None,
+        "ultracode": False,
         "conversation": None,
     }
     session_id: str = client.post("/api/sessions", json=body).json()["id"]
@@ -348,6 +357,7 @@ def test_sessions_report_model_and_context(
         "path": str(home / "projects"),
         "resume": False,
         "effort": None,
+        "ultracode": False,
         "conversation": None,
     }
     session_id = client.post("/api/sessions", json=start).json()["id"]
@@ -372,6 +382,7 @@ def test_agent_knows_its_session_id(client: TestClient, home: Path, socket_name:
         "path": str(home / "projects"),
         "resume": False,
         "effort": None,
+        "ultracode": False,
         "conversation": None,
     }
     session_id = client.post("/api/sessions", json=start).json()["id"]
@@ -394,6 +405,7 @@ def test_invalid_effort_is_rejected(client: TestClient, home: Path) -> None:
         "path": str(home / "projects"),
         "resume": False,
         "effort": "max",
+        "ultracode": False,
         "conversation": None,
     }
     response = client.post("/api/sessions", json=body)
@@ -407,13 +419,14 @@ def test_effort_is_stored_in_the_project(client: TestClient, home: Path) -> None
     settings.parent.mkdir()
     settings.write_text(json.dumps({"permissions": {"allow": ["Bash(ls:*)"]}}))
     query = {"profile": "sleeper", "path": str(folder)}
-    assert client.get("/api/effort", params=query).json() == {"effort": None}
+    assert client.get("/api/effort", params=query).json() == {"effort": None, "ultracode": False}
 
     start = {
         "profile": "sleeper",
         "path": str(folder),
         "resume": False,
         "effort": "high",
+        "ultracode": False,
         "conversation": None,
     }
     assert client.post("/api/sessions", json=start).status_code == 200
@@ -421,7 +434,7 @@ def test_effort_is_stored_in_the_project(client: TestClient, home: Path) -> None
         "permissions": {"allow": ["Bash(ls:*)"]},
         "effortLevel": "high",
     }
-    assert client.get("/api/effort", params=query).json() == {"effort": "high"}
+    assert client.get("/api/effort", params=query).json() == {"effort": "high", "ultracode": False}
 
 
 def test_changing_effort_resumes_the_agent(
@@ -433,10 +446,11 @@ def test_changing_effort_resumes_the_agent(
         "path": str(folder),
         "resume": False,
         "effort": None,
+        "ultracode": False,
         "conversation": None,
     }
     session_id = client.post("/api/sessions", json=start).json()["id"]
-    change = {"effort": "low", "immediately": False}
+    change = {"effort": "low", "ultracode": True, "immediately": False}
     changed = client.post(f"/api/sessions/{session_id}/effort", json=change)
     # The agent never reported to be busy, so the change applies at once.
     assert changed.json() == {"applied": True}
@@ -448,10 +462,12 @@ def test_changing_effort_resumes_the_agent(
     ).stdout.strip()  # fmt: skip
     assert command == "true"
     settings = json.loads((folder / ".claude" / "settings.local.json").read_text())
-    assert settings == {"effortLevel": "low"}
+    assert settings == {"effortLevel": "low", "ultracode": True}
+    assert client.get("/api/sessions").json()[0]["ultracode"] is True
 
     back = client.post(
-        f"/api/sessions/{session_id}/effort", json={"effort": None, "immediately": False}
+        f"/api/sessions/{session_id}/effort",
+        json={"effort": None, "ultracode": False, "immediately": False},
     )
     assert back.json() == {"applied": True}
     assert json.loads((folder / ".claude" / "settings.local.json").read_text()) == {}
@@ -463,6 +479,7 @@ def test_effort_for_agent_without_effort_setting(client: TestClient, home: Path)
         "path": str(home / "projects"),
         "resume": False,
         "effort": "low",
+        "ultracode": False,
         "conversation": None,
     }
     assert client.post("/api/sessions", json=body).status_code == 422
@@ -479,31 +496,32 @@ def test_effort_change_waits_for_a_busy_agent(
         "path": str(folder),
         "resume": False,
         "effort": None,
+        "ultracode": False,
         "conversation": None,
     }
     session_id = client.post("/api/sessions", json=start).json()["id"]
     store_activity(session_id, busy=True)
     url = f"/api/sessions/{session_id}/effort"
 
-    assert client.post(url, json={"effort": "high", "immediately": False}).json() == {
-        "applied": False
-    }
+    assert client.post(
+        url, json={"effort": "high", "ultracode": False, "immediately": False}
+    ).json() == {"applied": False}
     listed = client.get("/api/sessions").json()[0]
     assert listed["busy"] is True
     assert (listed["effort_pending"], listed["pending_effort"]) == (True, "high")
     assert not (folder / ".claude" / "settings.local.json").exists()
 
     # A wrong level is refused right away, not only when the change would be applied.
-    wrong = client.post(url, json={"effort": "ultra", "immediately": False})
+    wrong = client.post(url, json={"effort": "ultra", "ultracode": False, "immediately": False})
     assert wrong.status_code == 422
 
     assert client.delete(url).status_code == 204
     assert client.get("/api/sessions").json()[0]["effort_pending"] is False
 
     # "Immediately" ignores the busy state on purpose.
-    assert client.post(url, json={"effort": "high", "immediately": True}).json() == {
-        "applied": True
-    }
+    assert client.post(
+        url, json={"effort": "high", "ultracode": False, "immediately": True}
+    ).json() == {"applied": True}
     assert json.loads((folder / ".claude" / "settings.local.json").read_text()) == {
         "effortLevel": "high"
     }
@@ -525,12 +543,13 @@ def test_pending_effort_applies_when_the_agent_is_done(
             "path": str(folder),
             "resume": False,
             "effort": None,
+            "ultracode": False,
             "conversation": None,
         }
         session_id = client.post("/api/sessions", json=start).json()["id"]
         store_activity(session_id, busy=True)
         url = f"/api/sessions/{session_id}/effort"
-        client.post(url, json={"effort": "low", "immediately": False})
+        client.post(url, json={"effort": "low", "ultracode": False, "immediately": False})
         time.sleep(0.5)
         assert client.get("/api/sessions").json()[0]["effort_pending"] is True
 
@@ -564,6 +583,7 @@ def test_resume_a_chosen_earlier_conversation(
         "path": str(folder),
         "resume": True,
         "effort": None,
+        "ultracode": False,
         "conversation": None,
     }
     unknown = client.post("/api/sessions", json={**base, "conversation": "not-there"})
@@ -643,3 +663,19 @@ def test_quota_per_reporting_profile(
     limits = {"seven_day": {"used_percentage": 39, "resets_at": 1791554400}}
     store_status("x-1", {"model": {"display_name": "M"}, "rate_limits": limits})
     assert client.get("/api/quota").json()[0]["windows"] == limits
+
+
+def test_ultracode_only_for_agents_offering_it(client: TestClient, home: Path) -> None:
+    agents = {agent["name"]: agent for agent in client.get("/api/agents").json()}
+    assert (agents["sleeper"]["ultracode"], agents["talker"]["ultracode"]) == (True, False)
+    start = {
+        "profile": "talker",
+        "path": str(home / "projects"),
+        "resume": False,
+        "effort": None,
+        "ultracode": True,
+        "conversation": None,
+    }
+    refused = client.post("/api/sessions", json=start)
+    assert refused.status_code == 422
+    assert refused.json()["error"] == "InvalidEffortError"

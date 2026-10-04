@@ -79,6 +79,8 @@ class EffortConfig(StrictModel):
     levels: list[str]
     # Where the choice is kept (see effort.py); "claude_project": the folder's Claude settings.
     store: Literal["claude_project"]
+    # The agent also offers ultracode (workflow orchestration), switched on next to the effort.
+    ultracode: bool = False
 
 
 class ConversationsConfig(StrictModel):

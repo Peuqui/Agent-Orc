@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { api, type AgentSession } from '../api'
+import { useI18n } from 'vue-i18n'
+import { api, type AgentSession, type Reasoning } from '../api'
 import AppIcon from '../components/AppIcon.vue'
 import BaseDialog from '../components/BaseDialog.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
 import ContextMeter from '../components/ContextMeter.vue'
+import ReasoningControl from '../components/ReasoningControl.vue'
 import QuotaPanel from '../components/QuotaPanel.vue'
 import { useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
@@ -12,24 +14,34 @@ import { baseName } from '../format'
 
 const { sessions, profiles, refresh } = useSessions()
 const toast = useToast()
+const { t } = useI18n()
 const stopping = ref<AgentSession | null>(null)
-const effortChange = ref<{
-  session: AgentSession
-  effort: string | null
-  select: HTMLSelectElement
-} | null>(null)
+// A chosen reasoning waiting for confirmation; the control shows it until then.
+const effortChange = ref<{ session: AgentSession; reasoning: Reasoning } | null>(null)
 
 const levels = computed(() => new Map(profiles.value.map((p) => [p.name, p.effort_levels])))
+const ultracodeOffered = computed(() => new Map(profiles.value.map((p) => [p.name, p.ultracode])))
 
-// Cancelled: show the effort that is actually in effect again.
+// Cancelled: the slider falls back to the effort actually in effect.
 function cancelEffort(): void {
-  const change = effortChange.value
   effortChange.value = null
-  if (change) change.select.value = change.session.effort ?? ''
+}
+
+/** "medium", "Standard + Ultracode", ... for the confirmation and pending notes. */
+function reasoningLabel(reasoning: Reasoning): string {
+  const effort = reasoning.effort ?? t('agent.effortDefault')
+  return reasoning.ultracode ? `${effort} + ${t('agent.ultracode')}` : effort
+}
+
+function shownReasoning(session: AgentSession): Reasoning {
+  return effortChange.value?.session.id === session.id
+    ? effortChange.value.reasoning
+    : { effort: session.effort, ultracode: session.ultracode }
 }
 
 function applyPendingNow(session: AgentSession): void {
-  void run(() => api.changeEffort(session.id, session.pending_effort, true))
+  const pending = { effort: session.pending_effort, ultracode: session.pending_ultracode ?? false }
+  void run(() => api.changeReasoning(session.id, pending, true))
 }
 
 function discardPending(session: AgentSession): void {
@@ -39,7 +51,7 @@ function discardPending(session: AgentSession): void {
 function applyEffort(immediately: boolean): void {
   const change = effortChange.value
   effortChange.value = null
-  if (change) void run(() => api.changeEffort(change.session.id, change.effort, immediately))
+  if (change) void run(() => api.changeReasoning(change.session.id, change.reasoning, immediately))
 }
 
 const labels = computed(() => new Map(profiles.value.map((p) => [p.name, p.label])))
@@ -64,7 +76,12 @@ function confirmStop(): void {
 
 function resume(session: AgentSession): void {
   // Resume with the effort the agent last reported.
-  void run(() => api.startSession(session.profile, session.path, true, session.effort))
+  void run(() =>
+    api.startSession(session.profile, session.path, true, {
+      effort: session.effort,
+      ultracode: session.ultracode,
+    }),
+  )
 }
 </script>
 
@@ -115,35 +132,28 @@ function resume(session: AgentSession): void {
           :tokens="session.context_tokens"
           :window="session.context_window"
         />
-        <label
+        <ReasoningControl
           v-if="session.running && levels.get(session.profile)?.length"
-          class="mb-3 flex items-center gap-2 text-sm text-slate-400"
-        >
-          {{ $t('agent.effort') }}
-          <select
-            class="h-9 rounded-md border border-slate-600 bg-slate-900 px-2 text-slate-200"
-            :disabled="session.effort_pending"
-            :value="session.effort ?? ''"
-            @change="
-              effortChange = {
-                session,
-                effort: ($event.target as HTMLSelectElement).value || null,
-                select: $event.target as HTMLSelectElement,
-              }
-            "
-          >
-            <option value="">{{ $t('agent.effortDefault') }}</option>
-            <option v-for="level in levels.get(session.profile)" :key="level" :value="level">
-              {{ level }}
-            </option>
-          </select>
-        </label>
+          class="mb-3"
+          :levels="levels.get(session.profile) ?? []"
+          :ultracode-offered="ultracodeOffered.get(session.profile) ?? false"
+          :model-value="shownReasoning(session)"
+          :disabled="session.effort_pending"
+          @update:model-value="(reasoning) => (effortChange = { session, reasoning })"
+        />
         <div
           v-if="session.effort_pending"
           class="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-amber-700 bg-amber-950/40 px-3 py-2 text-sm text-amber-200"
         >
           <span class="flex-1">
-            {{ $t('sessions.effortPending', { effort: session.pending_effort ?? $t('agent.effortDefault') }) }}
+            {{
+              $t('sessions.effortPending', {
+                effort: reasoningLabel({
+                  effort: session.pending_effort,
+                  ultracode: session.pending_ultracode ?? false,
+                }),
+              })
+            }}
           </span>
           <button
             class="btn-secondary min-h-9"
@@ -178,7 +188,7 @@ function resume(session: AgentSession): void {
         {{
           $t(effortChange.session.busy ? 'sessions.confirmEffortBusy' : 'sessions.confirmEffort', {
             name: baseName(effortChange.session.path),
-            effort: effortChange.effort ?? $t('agent.effortDefault'),
+            effort: reasoningLabel(effortChange.reasoning),
           })
         }}
       </p>

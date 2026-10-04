@@ -26,7 +26,7 @@ from agent_orc.dictation import (
     UnsupportedAudioError,
     transcribe,
 )
-from agent_orc.effort import EFFORT_STORES, InvalidEffortError
+from agent_orc.effort import EFFORT_STORES, InvalidEffortError, Reasoning
 from agent_orc.history import CONVERSATION_SOURCES, ConversationNotFoundError
 from agent_orc.scope import AccessScope, OutsideScopeError
 from agent_orc.sessions import (
@@ -115,14 +115,16 @@ class StartSessionRequest(BaseModel):
     profile: str
     path: str
     resume: bool
-    # Stored as the folder's effort; None: the agent's own default.
+    # Stored as the folder's reasoning; effort None: the agent's own default.
     effort: str | None
+    ultracode: bool
     # Resume this earlier conversation (from GET /api/conversations) instead.
     conversation: str | None
 
 
 class EffortRequest(BaseModel):
     effort: str | None
+    ultracode: bool
     # False: wait until the agent has finished its current answer (no tokens wasted).
     immediately: bool
 
@@ -155,26 +157,26 @@ def create_app(
     name_pattern = config.files.name_pattern
     max_edit_bytes = config.files.max_edit_bytes
 
-    # Effort changes waiting until their (busy) agent has finished its answer.
-    pending_effort: dict[str, str | None] = {}
+    # Reasoning changes waiting until their (busy) agent has finished its answer.
+    pending_effort: dict[str, Reasoning] = {}
 
     def find_session(session_id: str) -> AgentSession | None:
         return next((s for s in sessions.list() if s.id == session_id), None)
 
-    def apply_effort(session: AgentSession, effort: str | None) -> AgentSession:
-        """Store the folder's effort and resume the agent, which only reads it at start."""
+    def apply_effort(session: AgentSession, reasoning: Reasoning) -> AgentSession:
+        """Store the folder's reasoning and resume the agent, which only reads it at start."""
         pending_effort.pop(session.id, None)
-        store_effort(session.profile, session.path, effort)
+        store_effort(session.profile, session.path, reasoning)
         sessions.stop(session.id)
         return sessions.start(session.profile, session.path, resume=True)
 
     def apply_pending_efforts() -> None:
-        for session_id, effort in list(pending_effort.items()):
+        for session_id, reasoning in list(pending_effort.items()):
             session = find_session(session_id)
             if session is None:
                 pending_effort.pop(session_id, None)
             elif not session.running or not session_busy(session):
-                apply_effort(session, effort)
+                apply_effort(session, reasoning)
 
     async def watch_pending_efforts() -> None:
         while True:
@@ -222,18 +224,27 @@ def create_app(
             if session.path.is_relative_to(path):
                 raise FolderBusyError(str(session.path))
 
-    def validate_effort(profile_name: str, effort: str | None) -> None:
-        """An agent without effort setting accepts only None."""
+    def validate_effort(profile_name: str, reasoning: Reasoning) -> None:
+        """An agent accepts only the levels (and ultracode) its profile offers."""
         profile = config.agents.get(profile_name)
-        allowed = profile.effort.levels if profile and profile.effort else []
-        if effort is not None and effort not in allowed:
-            raise InvalidEffortError(effort)
+        effort = profile.effort if profile else None
+        allowed = effort.levels if effort else []
+        if reasoning.effort is not None and reasoning.effort not in allowed:
+            raise InvalidEffortError(reasoning.effort)
+        if reasoning.ultracode and not (effort and effort.ultracode):
+            raise InvalidEffortError("ultracode")
 
-    def store_effort(profile_name: str, folder: Path, effort: str | None) -> None:
-        validate_effort(profile_name, effort)
+    def store_effort(profile_name: str, folder: Path, reasoning: Reasoning) -> None:
+        validate_effort(profile_name, reasoning)
         profile = config.agents.get(profile_name)
         if profile and profile.effort:
-            EFFORT_STORES[profile.effort.store].write(folder, effort)
+            EFFORT_STORES[profile.effort.store].write(folder, reasoning)
+
+    def folder_reasoning(profile_name: str, folder: Path) -> Reasoning:
+        profile = config.agents.get(profile_name)
+        if profile is None or profile.effort is None:
+            return Reasoning(effort=None, ultracode=False)
+        return EFFORT_STORES[profile.effort.store].read(folder)
 
     def scope_state() -> dict[str, Any]:
         return {
@@ -283,7 +294,12 @@ def create_app(
     @app.get("/api/agents", dependencies=authenticated)
     def agents() -> list[dict[str, Any]]:
         return [
-            {"name": name, "label": p.label, "effort_levels": p.effort.levels if p.effort else []}
+            {
+                "name": name,
+                "label": p.label,
+                "effort_levels": p.effort.levels if p.effort else [],
+                "ultracode": bool(p.effort and p.effort.ultracode),
+            }
             for name, p in config.agents.items()
         ]
 
@@ -323,18 +339,22 @@ def create_app(
 
     @app.get("/api/sessions", dependencies=authenticated)
     def list_sessions() -> list[dict[str, Any]]:
+        return [session_entry(s) for s in sessions.list()]
+
+    def session_entry(session: AgentSession) -> dict[str, Any]:
         empty = {"model": None, "effort": None, "context_tokens": None, "context_window": None}
-        return [
-            {
-                **asdict(s),
-                **empty,
-                **session_status(s),
-                "busy": session_busy(s),
-                "effort_pending": s.id in pending_effort,
-                "pending_effort": pending_effort.get(s.id),
-            }
-            for s in sessions.list()
-        ]
+        pending = pending_effort.get(session.id)
+        return {
+            **asdict(session),
+            **empty,
+            **session_status(session),
+            "busy": session_busy(session),
+            # As stored for the folder; the agent reads it at start.
+            "ultracode": folder_reasoning(session.profile, session.path).ultracode,
+            "effort_pending": pending is not None,
+            "pending_effort": pending.effort if pending else None,
+            "pending_ultracode": pending.ultracode if pending else None,
+        }
 
     @app.post("/api/sessions", dependencies=authenticated)
     def start_session(body: StartSessionRequest) -> AgentSession:
@@ -348,7 +368,7 @@ def create_app(
             ids = {c["id"] for c in conversations_of(body.profile, path)}
             if body.conversation not in ids:
                 raise ConversationNotFoundError(body.conversation)
-        store_effort(body.profile, path, body.effort)
+        store_effort(body.profile, path, Reasoning(body.effort, body.ultracode))
         return sessions.start(body.profile, path, body.resume, body.conversation)
 
     def conversations_of(profile_name: str, folder: Path) -> list[dict[str, Any]]:
@@ -368,11 +388,12 @@ def create_app(
         session = find_session(session_id)
         if session is None:
             raise SessionNotFoundError(session_id)
-        validate_effort(session.profile, body.effort)
+        reasoning = Reasoning(body.effort, body.ultracode)
+        validate_effort(session.profile, reasoning)
         if body.immediately or not session.running or not session_busy(session):
-            apply_effort(session, body.effort)
+            apply_effort(session, reasoning)
             return {"applied": True}
-        pending_effort[session_id] = body.effort
+        pending_effort[session_id] = reasoning
         return {"applied": False}
 
     @app.delete(
@@ -384,11 +405,8 @@ def create_app(
         pending_effort.pop(session_id, None)
 
     @app.get("/api/effort", dependencies=authenticated)
-    def folder_effort(profile: str, path: str) -> dict[str, str | None]:
-        agent = config.agents.get(profile)
-        if agent is None or agent.effort is None:
-            return {"effort": None}
-        return {"effort": EFFORT_STORES[agent.effort.store].read(scope.resolve(path))}
+    def folder_effort(profile: str, path: str) -> Reasoning:
+        return folder_reasoning(profile, scope.resolve(path))
 
     @app.get("/api/sessions/{session_id}/text", dependencies=authenticated)
     def session_text(session_id: str) -> dict[str, str]:

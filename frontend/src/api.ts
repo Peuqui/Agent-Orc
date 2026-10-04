@@ -5,6 +5,8 @@ export interface AgentProfile {
   label: string
   /** Selectable reasoning effort; empty if the agent has none. */
   effort_levels: string[]
+  /** The agent offers ultracode (workflow orchestration) next to the effort. */
+  ultracode: boolean
 }
 
 export interface AgentSession {
@@ -19,9 +21,12 @@ export interface AgentSession {
   effort: string | null
   /** The agent is working on an answer (reported by its hooks). */
   busy: boolean
-  /** An effort change waits until the current answer is finished. */
+  /** Stored for the folder; the agent reads it at start. */
+  ultracode: boolean
+  /** A reasoning change waits until the current answer is finished. */
   effort_pending: boolean
   pending_effort: string | null
+  pending_ultracode: boolean | null
   /** Occupied context window in tokens; null when unknown. */
   context_tokens: number | null
   context_window: number | null
@@ -38,6 +43,12 @@ export interface AgentQuota {
   profile: string
   label: string
   windows: Record<string, QuotaWindow>
+}
+
+/** Reasoning of an agent, stored per folder: effort (null: the agent's default) and ultracode. */
+export interface Reasoning {
+  effort: string | null
+  ultracode: boolean
 }
 
 /** Where Whisper transcribes: the GPU is near instant, the CPU slower but always there. */
@@ -179,30 +190,30 @@ export const api = {
   terminalSettings: () => request<TerminalSettings>('GET', 'terminal'),
   sessions: () => request<AgentSession[]>('GET', 'sessions'),
   /**
-   * effort is stored for the folder (null: the agent's own default); conversation resumes
-   * that earlier conversation, resume the last one.
+   * reasoning is stored for the folder; conversation resumes that earlier conversation,
+   * resume the last one.
    */
   startSession: (
     profile: string,
     path: string,
     resume: boolean,
-    effort: string | null,
+    reasoning: Reasoning,
     conversation: string | null = null,
   ) =>
     request<AgentSession>('POST', 'sessions', {
-      body: { profile, path, resume, effort, conversation },
+      body: { profile, path, resume, ...reasoning, conversation },
     }),
   conversations: (profile: string, path: string) =>
     request<Conversation[]>('GET', 'conversations', { query: { profile, path } }),
-  folderEffort: (profile: string, path: string) =>
-    request<{ effort: string | null }>('GET', 'effort', { query: { profile, path } }),
+  folderReasoning: (profile: string, path: string) =>
+    request<Reasoning>('GET', 'effort', { query: { profile, path } }),
   /**
-   * Stores the folder's effort and resumes the agent (it reads the effort only at start).
+   * Stores the folder's reasoning and resumes the agent (it reads it only at start).
    * Without `immediately` a busy agent first finishes its answer; then applied is false.
    */
-  changeEffort: (sessionId: string, effort: string | null, immediately: boolean) =>
+  changeReasoning: (sessionId: string, reasoning: Reasoning, immediately: boolean) =>
     request<{ applied: boolean }>('POST', `sessions/${encodeURIComponent(sessionId)}/effort`, {
-      body: { effort, immediately },
+      body: { ...reasoning, immediately },
     }),
   cancelEffortChange: (sessionId: string) =>
     request<void>('DELETE', `sessions/${encodeURIComponent(sessionId)}/effort`),

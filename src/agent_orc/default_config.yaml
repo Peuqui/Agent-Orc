@@ -88,6 +88,8 @@ agents:
     effort:
       levels: [low, medium, high, xhigh, max]
       store: claude_project
+      # Ultracode: Claude plans multi-agent workflows for larger tasks by itself.
+      ultracode: true
   codex:
     label: Codex CLI
     start: [codex]
