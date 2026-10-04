@@ -73,7 +73,7 @@ function onKeydown(event: KeyboardEvent): void {
       <button
         v-if="whisper"
         type="button"
-        class="text-[0.6rem] font-semibold tracking-wide text-slate-400"
+        class="rounded border border-slate-600 px-1 text-[0.6rem] font-semibold tracking-wide text-slate-300 hover:border-slate-400"
         :title="$t('dictation.device')"
         :disabled="state !== 'idle'"
         @click="toggleDevice"

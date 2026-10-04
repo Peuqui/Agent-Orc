@@ -206,7 +206,8 @@ onBeforeUnmount(() => {
       >
         <AppIcon name="up" class="-rotate-90" />
       </button>
-      <h1 class="min-w-0 flex-1 truncate font-semibold">{{ name }}</h1>
+      <!-- Embedded in the workspace, the column's tab names the agent already. -->
+      <h1 class="min-w-0 flex-1 truncate font-semibold">{{ embedded ? '' : name }}</h1>
       <ContextMeter
         v-if="session && session.context_tokens != null && session.context_window != null"
         compact

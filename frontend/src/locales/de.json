@@ -151,11 +151,13 @@
   },
   "workspace": {
     "close": "Tab schließen",
-    "columns": "Spalten",
+    "columns": "Sichtbare Spalten",
     "fewerColumns": "Eine Spalte weniger",
     "moreColumns": "Eine Spalte mehr",
-    "pick": "Welcher Agent soll in diese Spalte?",
-    "shown": "schon in einer Spalte",
-    "dropHere": "Hier ablegen"
+    "add": "Agent hinzufügen",
+    "allOpen": "Alle laufenden Agenten sind schon offen.",
+    "move": "Ziehen zum Verschieben",
+    "empty": "Noch kein Agent offen – über „+“ oben einen hinzufügen.",
+    "resize": "Ziehen ändert die Breite, Doppelklick setzt sie zurück"
   }
 }

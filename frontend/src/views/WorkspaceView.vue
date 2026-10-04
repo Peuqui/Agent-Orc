@@ -5,52 +5,77 @@ import AppIcon from '../components/AppIcon.vue'
 import { useSessions } from '../composables/useSessions'
 import { baseName } from '../format'
 
-// Several agents side by side: every open agent is the terminal page in its own iframe, so
-// each keeps its connection, history and half-typed text while hidden in a tab. The iframes
-// never move in the DOM (that would reload them); only their grid column changes.
-const STORAGE_KEY = 'agent-orc-workspace'
-const MIN_COLUMNS = 1
-// A pointer moving less than this is a tap on a tab, not a drag.
-const DRAG_THRESHOLD_PX = 8
+// Several agents side by side. Every open agent is one column: its tab is the head of that
+// column, both in one grid, so tab order and column order can never differ. The user picks
+// how many columns fill the screen; further ones follow to the right (horizontal scrolling).
+// Each column is the terminal page in an iframe; the iframes never move in the DOM (that
+// would reload them), only their grid column changes.
+const STORAGE_KEY = 'agent-orc-columns'
+const MIN_VISIBLE = 1
+// Narrowest and widest column a divider can set, as a share of the screen width.
+const MIN_WIDTH_SHARE = 0.1
+const MAX_WIDTH_SHARE = 1
 
 interface Workspace {
+  /** Open agents, in column order. */
   tabs: string[]
-  /** Which tab each column shows; its length is the number of columns. */
-  panes: (string | null)[]
-  active: number
+  /** How many columns fill the screen. */
+  visible: number
+  /** Columns set wider or narrower by dragging their divider, as a share of the screen width. */
+  widths: Record<string, number>
+  active: string | null
+}
+
+interface Resize {
+  id: string
+  pointerId: number
+  startX: number
+  startShare: number
 }
 
 interface Drag {
   id: string
   pointerId: number
-  startX: number
-  startY: number
-  active: boolean
-  /** Column under the pointer, or the tab it would be put in front of (null: at the end). */
-  column: number | null
-  before: string | null | undefined
+  /** The tab it would be put in front of (null: at the end). */
+  before: string | null
 }
 
 const route = useRoute()
 const router = useRouter()
-const { sessions, profiles } = useSessions()
+const { sessions } = useSessions()
 
 function loadWorkspace(): Workspace {
   const stored = localStorage.getItem(STORAGE_KEY)
-  return stored ? (JSON.parse(stored) as Workspace) : { tabs: [], panes: [null], active: 0 }
+  return stored
+    ? (JSON.parse(stored) as Workspace)
+    : { tabs: [], visible: MIN_VISIBLE, widths: {}, active: null }
 }
 
 const workspace = ref<Workspace>(loadWorkspace())
 watch(workspace, (value) => localStorage.setItem(STORAGE_KEY, JSON.stringify(value)), { deep: true })
 
-const frames = ref<HTMLIFrameElement[]>([])
-// The iframes in the order they were opened, apart from the tab order: an iframe moved in
-// the DOM reloads, so sorting the tabs must never reorder them. Only appended and removed.
+// Opened order of the iframes, apart from the column order: only appended and removed.
 const frameIds = ref<string[]>([...workspace.value.tabs])
+const frames = ref<HTMLIFrameElement[]>([])
+const heads = ref<HTMLElement[]>([])
 const drag = ref<Drag | null>(null)
+const resize = ref<Resize | null>(null)
+const row = ref<HTMLElement>()
+const picking = ref(false)
 
-const runningSessions = computed(() => sessions.value.filter((session) => session.running))
-const labels = computed(() => new Map(profiles.value.map((profile) => [profile.name, profile.label])))
+const notOpen = computed(() =>
+  sessions.value.filter((session) => session.running && !workspace.value.tabs.includes(session.id)),
+)
+
+function widthShare(id: string): number {
+  return workspace.value.widths[id] ?? 1 / workspace.value.visible
+}
+
+const gridStyle = computed(() => ({
+  gridTemplateColumns: workspace.value.tabs
+    .map((id) => `calc(100cqw * ${widthShare(id)})`)
+    .join(' '),
+}))
 
 function tabName(id: string): string {
   const session = sessions.value.find((candidate) => candidate.id === id)
@@ -61,124 +86,96 @@ function frameUrl(id: string): string {
   return `./#/terminal/${encodeURIComponent(id)}?embedded`
 }
 
-/** Grid position of a tab's iframe: its column, or hidden when no column shows it. */
-function frameStyle(id: string): Record<string, string> {
-  const column = workspace.value.panes.indexOf(id)
-  return column === -1 ? { display: 'none' } : { gridColumn: String(column + 1), gridRow: '1' }
+function column(id: string): string {
+  return String(workspace.value.tabs.indexOf(id) + 1)
 }
 
-function cell(column: number): Record<string, string> {
-  return { gridColumn: String(column + 1), gridRow: '1' }
+function headOf(id: string): HTMLElement | undefined {
+  return heads.value.find((head) => head.dataset.tabId === id)
 }
-
-function addTab(id: string): void {
-  if (workspace.value.tabs.includes(id)) return
-  workspace.value.tabs.push(id)
-  frameIds.value.push(id)
-}
-
-/** Put a tab into a column; a column that showed it before gets that column's tab instead. */
-function place(id: string, column: number): void {
-  const { panes } = workspace.value
-  addTab(id)
-  const shownIn = panes.indexOf(id)
-  if (shownIn !== -1 && shownIn !== column) panes[shownIn] = panes[column]
-  panes[column] = id
-  workspace.value.active = column
-}
-
-/** Tap on a tab: a column showing it already becomes active, else it goes into the active one. */
-function show(id: string): void {
-  const shownIn = workspace.value.panes.indexOf(id)
-  if (shownIn !== -1) workspace.value.active = shownIn
-  else place(id, workspace.value.active)
-}
-
-function closeTab(id: string): void {
-  const { tabs, panes } = workspace.value
-  tabs.splice(tabs.indexOf(id), 1)
-  frameIds.value.splice(frameIds.value.indexOf(id), 1)
-  const column = panes.indexOf(id)
-  if (column !== -1) panes[column] = null
-}
-
-function moveTab(id: string, before: string | null): void {
-  const { tabs } = workspace.value
-  tabs.splice(tabs.indexOf(id), 1)
-  const index = before === null ? tabs.length : tabs.indexOf(before)
-  tabs.splice(index, 0, id)
-}
-
-function changeColumns(delta: number): void {
-  const { panes } = workspace.value
-  if (delta > 0) panes.push(null)
-  else if (panes.length > MIN_COLUMNS) panes.pop()
-  workspace.value.active = Math.min(workspace.value.active, panes.length - 1)
-}
-
-const gridStyle = computed(() => ({
-  gridTemplateColumns: `repeat(${workspace.value.panes.length}, minmax(0, 1fr))`,
-}))
-
-function onTabPointerDown(event: PointerEvent, id: string): void {
-  if (event.button !== 0) return
-  drag.value = {
-    id,
-    pointerId: event.pointerId,
-    startX: event.clientX,
-    startY: event.clientY,
-    active: false,
-    column: null,
-    before: undefined,
-  }
-  // Keeps the pointer events coming while the pointer leaves the tab.
-  const tab = event.currentTarget as HTMLElement
-  tab.setPointerCapture(event.pointerId)
-}
-
-/** Where a dragged tab would land: a column's drop zone, or a place in the tab bar. */
-function dropTarget(x: number, y: number): Pick<Drag, 'column' | 'before'> {
-  for (const element of document.elementsFromPoint(x, y)) {
-    if (!(element instanceof HTMLElement)) continue
-    if (element.dataset.dropColumn !== undefined) {
-      return { column: Number(element.dataset.dropColumn), before: undefined }
-    }
-    if (element.dataset.tabBar !== undefined) {
-      const tabs = [...element.querySelectorAll<HTMLElement>('[data-tab-id]')]
-      const next = tabs.find((tab) => {
-        const box = tab.getBoundingClientRect()
-        return x < box.left + box.width / 2
-      })
-      return { column: null, before: next?.dataset.tabId ?? null }
-    }
-  }
-  return { column: null, before: undefined }
-}
-
-function onTabPointerMove(event: PointerEvent): void {
-  const current = drag.value
-  if (current === null || event.pointerId !== current.pointerId) return
-  const moved = Math.hypot(event.clientX - current.startX, event.clientY - current.startY)
-  if (!current.active && moved < DRAG_THRESHOLD_PX) return
-  current.active = true
-  Object.assign(current, dropTarget(event.clientX, event.clientY))
-}
-
-function onTabPointerUp(event: PointerEvent): void {
-  const current = drag.value
-  if (current === null || event.pointerId !== current.pointerId) return
-  drag.value = null
-  if (!current.active) show(current.id)
-  else if (current.column !== null) place(current.id, current.column)
-  else if (current.before !== undefined && current.before !== current.id) {
-    moveTab(current.id, current.before)
-  }
-}
-
-const activeTab = computed(() => workspace.value.panes[workspace.value.active])
 
 function frameOf(id: string): HTMLIFrameElement | undefined {
   return frames.value.find((frame) => frame.dataset.tab === id)
+}
+
+/** Make a tab the active one and scroll its column into view. */
+async function activate(id: string): Promise<void> {
+  workspace.value.active = id
+  await nextTick()
+  headOf(id)?.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' })
+}
+
+function open(id: string): void {
+  picking.value = false
+  if (!workspace.value.tabs.includes(id)) {
+    workspace.value.tabs.push(id)
+    frameIds.value.push(id)
+  }
+  void activate(id)
+}
+
+function closeTab(id: string): void {
+  const { tabs } = workspace.value
+  const index = tabs.indexOf(id)
+  tabs.splice(index, 1)
+  frameIds.value.splice(frameIds.value.indexOf(id), 1)
+  delete workspace.value.widths[id]
+  if (workspace.value.active === id) workspace.value.active = tabs[Math.max(0, index - 1)] ?? null
+}
+
+/** Sets the width of all columns: N of them fill the screen; individual widths are dropped. */
+function changeVisible(delta: number): void {
+  workspace.value.visible = Math.max(MIN_VISIBLE, workspace.value.visible + delta)
+  workspace.value.widths = {}
+}
+
+// A column's right divider sets its width (mouse or finger); a double click resets it.
+function onDividerPointerDown(event: PointerEvent, id: string): void {
+  if (event.button !== 0) return
+  resize.value = { id, pointerId: event.pointerId, startX: event.clientX, startShare: widthShare(id) }
+  const divider = event.currentTarget as HTMLElement
+  divider.setPointerCapture(event.pointerId)
+}
+
+function onDividerPointerMove(event: PointerEvent): void {
+  const current = resize.value
+  const screenWidth = row.value?.clientWidth
+  if (current === null || event.pointerId !== current.pointerId || !screenWidth) return
+  const share = current.startShare + (event.clientX - current.startX) / screenWidth
+  workspace.value.widths[current.id] = Math.min(MAX_WIDTH_SHARE, Math.max(MIN_WIDTH_SHARE, share))
+}
+
+function resetWidth(id: string): void {
+  delete workspace.value.widths[id]
+}
+
+// Sorting: a tab is dragged by its grip; the columns follow, as they belong to the same grid.
+function onGripPointerDown(event: PointerEvent, id: string): void {
+  if (event.button !== 0) return
+  drag.value = { id, pointerId: event.pointerId, before: null }
+  // Keeps the pointer events coming while the pointer leaves the grip.
+  const grip = event.currentTarget as HTMLElement
+  grip.setPointerCapture(event.pointerId)
+}
+
+function onGripPointerMove(event: PointerEvent): void {
+  const current = drag.value
+  if (current === null || event.pointerId !== current.pointerId) return
+  const next = workspace.value.tabs.find((id) => {
+    const box = headOf(id)?.getBoundingClientRect()
+    return box !== undefined && event.clientX < box.left + box.width / 2
+  })
+  current.before = next ?? null
+}
+
+function onGripPointerUp(event: PointerEvent): void {
+  const current = drag.value
+  if (current === null || event.pointerId !== current.pointerId) return
+  drag.value = null
+  if (current.before === current.id) return
+  const { tabs } = workspace.value
+  tabs.splice(tabs.indexOf(current.id), 1)
+  tabs.splice(current.before === null ? tabs.length : tabs.indexOf(current.before), 0, current.id)
 }
 
 // The iframes share this page's origin, so their pointer events can be watched directly: a
@@ -188,32 +185,28 @@ function onFrameLoad(id: string): void {
   frameOf(id)?.contentWindow?.addEventListener(
     'pointerdown',
     () => {
-      const column = workspace.value.panes.indexOf(id)
-      if (column !== -1) workspace.value.active = column
+      workspace.value.active = id
     },
     true,
   )
 }
 
 // Typing goes to the active column's input field.
-watch(activeTab, async (id) => {
-  if (id === null || id === undefined) return
-  await nextTick()
-  frameOf(id)?.contentDocument?.querySelector('textarea')?.focus()
-})
-
-// Opened from the agent list (?open=id) or for a column that asked for a new agent (&column=n).
 watch(
-  () => route.query,
-  (query) => {
-    if (typeof query.open !== 'string') return
-    const column = Number(query.column)
-    if (Number.isInteger(column) && column >= 0 && column < workspace.value.panes.length) {
-      place(query.open, column)
-    } else {
-      const empty = workspace.value.panes.indexOf(null)
-      place(query.open, empty !== -1 ? empty : workspace.value.active)
-    }
+  () => workspace.value.active,
+  async (id) => {
+    if (id === null) return
+    await nextTick()
+    frameOf(id)?.contentDocument?.querySelector('textarea')?.focus()
+  },
+)
+
+// Opened from the agent list, or a new agent started from the "+" menu.
+watch(
+  () => route.query.open,
+  (id) => {
+    if (typeof id !== 'string') return
+    open(id)
     void router.replace({ path: '/workspace' })
   },
   { immediate: true },
@@ -226,104 +219,104 @@ watch(
       <button class="btn-icon" :aria-label="$t('terminal.back')" @click="router.push('/sessions')">
         <AppIcon name="up" class="-rotate-90" />
       </button>
-      <nav data-tab-bar class="flex min-w-0 flex-1 gap-1 overflow-x-auto">
+      <h1 class="flex-1 truncate font-semibold">{{ $t('nav.workspace') }}</h1>
+      <div class="relative">
+        <button class="btn-icon" :aria-label="$t('workspace.add')" :title="$t('workspace.add')" @click="picking = !picking">
+          <AppIcon name="plus" />
+        </button>
         <div
-          v-for="id in workspace.tabs"
-          :key="id"
-          :data-tab-id="id"
-          class="flex shrink-0 cursor-grab touch-none items-center rounded-lg border text-sm select-none"
-          :class="[
-            activeTab === id
-              ? 'border-red-500 bg-slate-800 text-slate-100'
-              : workspace.panes.includes(id)
-                ? 'border-slate-500 bg-slate-800 text-slate-200'
-                : 'border-slate-700 text-slate-400',
-            drag?.active && drag.id === id ? 'opacity-50' : '',
-            drag?.active && drag.column === null && drag.before === id ? 'ml-3 border-l-amber-400' : '',
-          ]"
-          @pointerdown="onTabPointerDown($event, id)"
-          @pointermove="onTabPointerMove"
-          @pointerup="onTabPointerUp"
-          @pointercancel="drag = null"
+          v-if="picking"
+          class="card absolute top-full right-0 z-20 mt-1 flex w-64 flex-col gap-1 p-2 shadow-xl"
         >
-          <span class="py-1 pr-1 pl-3">{{ tabName(id) }}</span>
           <button
-            class="px-2 py-1 text-slate-500 hover:text-slate-200"
-            :aria-label="$t('workspace.close')"
-            @pointerdown.stop
-            @click="closeTab(id)"
+            v-for="session in notOpen"
+            :key="session.id"
+            class="rounded-md px-3 py-2 text-left hover:bg-slate-700"
+            @click="open(session.id)"
           >
-            ×
+            {{ baseName(session.path) }}
           </button>
+          <p v-if="notOpen.length === 0" class="px-3 py-2 text-sm text-slate-500">{{ $t('workspace.allOpen') }}</p>
+          <RouterLink :to="{ path: '/files', query: { workspace: '1' } }" class="btn-primary mt-1">
+            <AppIcon name="plus" />{{ $t('sessions.startNew') }}
+          </RouterLink>
         </div>
-      </nav>
-      <div class="flex shrink-0 items-center gap-1 text-sm text-slate-400">
-        <button class="btn-icon" :aria-label="$t('workspace.fewerColumns')" @click="changeColumns(-1)">−</button>
-        <span :title="$t('workspace.columns')">{{ workspace.panes.length }}</span>
-        <button class="btn-icon" :aria-label="$t('workspace.moreColumns')" @click="changeColumns(1)">+</button>
+      </div>
+      <div class="flex shrink-0 items-center gap-1 text-sm text-slate-400" :title="$t('workspace.columns')">
+        <button class="btn-icon" :aria-label="$t('workspace.fewerColumns')" @click="changeVisible(-1)">−</button>
+        <span>{{ workspace.visible }}</span>
+        <button class="btn-icon" :aria-label="$t('workspace.moreColumns')" @click="changeVisible(1)">+</button>
       </div>
     </header>
 
-    <div class="relative grid min-h-0 flex-1 gap-px bg-slate-800" :style="gridStyle">
-      <iframe
-        v-for="id in frameIds"
-        :key="id"
-        ref="frames"
-        :data-tab="id"
-        :src="frameUrl(id)"
-        :title="tabName(id)"
-        class="h-full w-full border-t-2"
-        :data-active="activeTab === id"
-        :class="activeTab === id ? 'border-red-500' : 'border-transparent'"
-        :style="frameStyle(id)"
-        allow="microphone; clipboard-write"
-        @load="onFrameLoad(id)"
-      />
+    <p v-if="workspace.tabs.length === 0" class="p-6 text-center text-slate-400">{{ $t('workspace.empty') }}</p>
 
-      <!-- An empty column offers the running agents and a new one. -->
-      <div
-        v-for="(pane, column) in workspace.panes"
-        v-show="pane === null"
-        :key="`empty-${column}`"
-        class="flex flex-col gap-2 overflow-y-auto border-t-2 bg-slate-900 p-4"
-        :class="workspace.active === column ? 'border-red-500' : 'border-transparent'"
-        :style="cell(column)"
-        @click="workspace.active = column"
-      >
-        <p class="text-sm text-slate-400">{{ $t('workspace.pick') }}</p>
-        <button
-          v-for="session in runningSessions"
-          :key="session.id"
-          class="card flex flex-col items-start p-3 text-left hover:border-slate-500"
-          @click.stop="place(session.id, column)"
-        >
-          <span class="font-semibold">{{ baseName(session.path) }}</span>
-          <span class="text-xs text-slate-500">
-            {{ labels.get(session.profile) ?? session.profile }}
-            <template v-if="workspace.panes.includes(session.id)"> · {{ $t('workspace.shown') }}</template>
-          </span>
-        </button>
-        <RouterLink :to="{ path: '/files', query: { column: String(column) } }" class="btn-primary">
-          <AppIcon name="plus" />{{ $t('sessions.startNew') }}
-        </RouterLink>
-      </div>
-
-      <!-- While a tab is dragged: drop zones over the columns (iframes would swallow the pointer). -->
-      <div v-if="drag?.active" class="absolute inset-0 grid" :style="gridStyle">
+    <!-- One scrolling row; 100cqw is its width, so N columns fill it exactly. -->
+    <div
+      ref="row"
+      class="min-h-0 flex-1 overflow-x-auto"
+      :class="{ 'snap-x snap-mandatory': resize === null }"
+      style="container-type: inline-size"
+    >
+      <div class="grid h-full grid-rows-[auto_minmax(0,1fr)]" :style="gridStyle">
         <div
-          v-for="(_pane, column) in workspace.panes"
-          :key="`drop-${column}`"
-          :data-drop-column="column"
-          class="flex items-center justify-center border-2 border-dashed text-sm"
-          :class="
-            drag.column === column
-              ? 'border-amber-400 bg-amber-400/15 text-amber-300'
-              : 'border-slate-600 bg-slate-900/60 text-slate-400'
-          "
-          :style="cell(column)"
+          v-for="id in workspace.tabs"
+          :key="`head-${id}`"
+          ref="heads"
+          :data-tab-id="id"
+          class="flex snap-start items-center gap-1 border-b-2 bg-slate-900 px-1 py-1 text-sm"
+          :class="[
+            workspace.active === id ? 'border-red-500 text-slate-100' : 'border-slate-800 text-slate-400',
+            drag && drag.before === id && drag.id !== id ? 'shadow-[inset_3px_0_0_0] shadow-amber-400' : '',
+            drag?.id === id ? 'opacity-50' : '',
+          ]"
+          :style="{ gridColumn: column(id), gridRow: '1' }"
         >
-          {{ $t('workspace.dropHere') }}
+          <span
+            class="cursor-grab touch-none px-1 text-slate-500 select-none"
+            :aria-label="$t('workspace.move')"
+            :title="$t('workspace.move')"
+            @pointerdown="onGripPointerDown($event, id)"
+            @pointermove="onGripPointerMove"
+            @pointerup="onGripPointerUp"
+            @pointercancel="drag = null"
+          >
+            ⠿
+          </span>
+          <button class="min-w-0 flex-1 truncate text-left font-medium" @click="activate(id)">
+            {{ tabName(id) }}
+          </button>
+          <button class="px-2 text-slate-500 hover:text-slate-200" :aria-label="$t('workspace.close')" @click="closeTab(id)">
+            ×
+          </button>
         </div>
+        <iframe
+          v-for="id in frameIds"
+          :key="id"
+          ref="frames"
+          :data-tab="id"
+          :data-active="workspace.active === id"
+          :src="frameUrl(id)"
+          :title="tabName(id)"
+          class="h-full w-full bg-slate-900"
+          :style="{ gridColumn: column(id), gridRow: '2' }"
+          allow="microphone; clipboard-write"
+          @load="onFrameLoad(id)"
+        />
+        <!-- Divider on each column's right edge, above the iframes (which would swallow it). -->
+        <div
+          v-for="id in workspace.tabs"
+          :key="`divider-${id}`"
+          class="z-10 w-2 cursor-col-resize touch-none justify-self-end border-r border-slate-700 hover:bg-red-500/30"
+          :class="{ 'bg-red-500/40': resize?.id === id }"
+          :style="{ gridColumn: column(id), gridRow: '1 / span 2' }"
+          :title="$t('workspace.resize')"
+          @pointerdown="onDividerPointerDown($event, id)"
+          @pointermove="onDividerPointerMove"
+          @pointerup="resize = null"
+          @pointercancel="resize = null"
+          @dblclick="resetWidth(id)"
+        />
       </div>
     </div>
   </div>

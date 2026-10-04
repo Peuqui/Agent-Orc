@@ -151,11 +151,13 @@
   },
   "workspace": {
     "close": "Close tab",
-    "columns": "Columns",
+    "columns": "Visible columns",
     "fewerColumns": "One column less",
     "moreColumns": "One more column",
-    "pick": "Which agent goes into this column?",
-    "shown": "already in a column",
-    "dropHere": "Drop here"
+    "add": "Add agent",
+    "allOpen": "All running agents are open already.",
+    "move": "Drag to move",
+    "empty": "No agent open yet – add one with “+” above.",
+    "resize": "Drag to change the width, double-click to reset it"
   }
 }
