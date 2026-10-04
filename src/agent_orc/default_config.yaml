@@ -1,7 +1,7 @@
 # Agent-Orc configuration.
-# This file is the single source of all default values; `agent-orc init` copies it to
-# ~/.config/agent-orc/config.yaml, where you adapt it.
-# The password lives separately in credentials.json, written by `agent-orc set-password`.
+# This file is the single source of all default values; `agent-orc setup` fills it in to
+# ~/.config/agent-orc/config.yaml, where you adapt the rest.
+# The password lives separately in credentials.json (`agent-orc set-password` changes it).
 
 server:
   host: 127.0.0.1

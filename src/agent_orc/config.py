@@ -166,7 +166,7 @@ class Config(StrictModel):
 
 
 def default_config_text() -> str:
-    """Return the shipped default configuration, used as template by `agent-orc init`."""
+    """Return the shipped default configuration, the template `agent-orc setup` fills in."""
     return files("agent_orc").joinpath("default_config.yaml").read_text(encoding="utf-8")
 
 

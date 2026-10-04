@@ -1,4 +1,4 @@
-"""Command line entry point: `agent-orc init | set-password | serve`."""
+"""Command line entry point: `agent-orc setup | set-password | serve` and the agents' hooks."""
 
 import argparse
 import getpass
@@ -19,21 +19,12 @@ from agent_orc.config import (
     CONFIG_FILE_NAME,
     CREDENTIALS_FILE_NAME,
     config_dir,
-    default_config_text,
     load_config,
 )
 from agent_orc.context import status_line, store_activity, store_status
 from agent_orc.push import agent_message, send_to_all
 from agent_orc.sessions import SESSION_ENV
-
-
-def init() -> None:
-    path = config_dir() / CONFIG_FILE_NAME
-    if path.exists():
-        sys.exit(f"Config already exists: {path}")
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(default_config_text(), encoding="utf-8")
-    print(f"Wrote {path}. Adapt it, then run `agent-orc set-password`.")
+from agent_orc.setup import run_setup
 
 
 def set_password() -> None:
@@ -107,8 +98,8 @@ def _notify(kind: str, hook: dict[str, Any], text: str) -> None:
 
 
 COMMANDS = {
-    "init": (init, "write the default config to ~/.config/agent-orc/"),
-    "set-password": (set_password, "set the login password"),
+    "setup": (run_setup, "first-run setup: config and password in ~/.config/agent-orc/"),
+    "set-password": (set_password, "change the login password"),
     "serve": (serve, "run the web server"),
     "statusline": (statusline, "status line command for agent sessions (JSON on stdin)"),
     "agent-busy": (agent_busy, "hook command: the agent started working"),

@@ -81,23 +81,25 @@ detaches: the agents keep working, and you pick them up again from any device.
 ```bash
 git clone https://github.com/Peuqui/Agent-Orc.git && cd Agent-Orc
 deploy/install.sh          # builds the web app, installs into ~/.local/share/agent-orc/venv
-agent-orc init             # writes ~/.config/agent-orc/config.yaml
-agent-orc set-password     # writes ~/.config/agent-orc/credentials.json
+agent-orc setup            # asks a few questions, writes the config and the password
 agent-orc serve            # http://127.0.0.1:8770
 ```
 
 `deploy/install.sh` links the `agent-orc` command into `~/.local/bin`, which must be on your
 `PATH`.
 
-Before the first start, adapt `~/.config/agent-orc/config.yaml`:
+`agent-orc setup` checks that `tmux` and `git` are there and which agent CLIs it finds, then
+asks for:
 
-- `files.base_dir`: the folder that holds your projects (default `~/projects`).
-- `server.cookie_secure`: `false` for a first test on plain HTTP (`http://127.0.0.1:8770`);
-  keep `true` behind HTTPS.
-- `push.contact`: your own `mailto:` address for the push services that deliver notifications
-  (they need HTTPS, or `http://127.0.0.1` for a local test).
-- `dictation.whisper_url`: `null` if you run no Whisper service; the microphone then uses the
-  browser's own speech recognition (Chrome).
+- the folder that holds your projects (created if it does not exist),
+- whether Agent-Orc runs behind HTTPS or on plain HTTP for a first local test,
+- a Whisper service for dictation, if you run one (it checks that it answers); without one
+  the microphone uses the browser's own speech recognition (Chrome),
+- your e-mail address for the push services that deliver notifications (optional),
+- the password for the web app.
+
+It writes `~/.config/agent-orc/config.yaml`, the shipped default with your answers; its comments
+explain every other setting. `agent-orc set-password` changes the password later.
 
 Then open `http://127.0.0.1:8770` and log in with your password.
 

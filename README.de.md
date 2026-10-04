@@ -87,23 +87,26 @@ aus wieder aufnehmen.
 ```bash
 git clone https://github.com/Peuqui/Agent-Orc.git && cd Agent-Orc
 deploy/install.sh          # baut die Web-App, installiert nach ~/.local/share/agent-orc/venv
-agent-orc init             # schreibt ~/.config/agent-orc/config.yaml
-agent-orc set-password     # schreibt ~/.config/agent-orc/credentials.json
+agent-orc setup            # stellt ein paar Fragen, schreibt Config und Passwort
 agent-orc serve            # http://127.0.0.1:8770
 ```
 
 `deploy/install.sh` verlinkt den Befehl `agent-orc` nach `~/.local/bin`; dieser Ordner muss im
 `PATH` liegen.
 
-Vor dem ersten Start `~/.config/agent-orc/config.yaml` anpassen:
+`agent-orc setup` prüft, ob `tmux` und `git` da sind und welche Agenten-CLIs es findet, und
+fragt dann nach:
 
-- `files.base_dir`: der Ordner mit deinen Projekten (Standard `~/projects`).
-- `server.cookie_secure`: `false` für einen ersten Test über einfaches HTTP
-  (`http://127.0.0.1:8770`); hinter HTTPS auf `true` lassen.
-- `push.contact`: eine eigene `mailto:`-Adresse für die Push-Dienste, die Benachrichtigungen
-  zustellen (sie brauchen HTTPS, oder `http://127.0.0.1` für einen lokalen Test).
-- `dictation.whisper_url`: `null`, wenn kein Whisper-Dienst läuft; das Mikrofon nutzt dann die
-  Spracherkennung des Browsers (Chrome).
+- dem Ordner mit deinen Projekten (wird angelegt, falls es ihn nicht gibt),
+- ob Agent-Orc hinter HTTPS läuft oder für einen ersten lokalen Test über einfaches HTTP,
+- einem Whisper-Dienst fürs Diktat, falls du einen betreibst (es prüft, ob er antwortet); ohne
+  ihn nutzt das Mikrofon die Spracherkennung des Browsers (Chrome),
+- deiner E-Mail-Adresse für die Push-Dienste, die Benachrichtigungen zustellen (optional),
+- dem Passwort für die Web-App.
+
+Es schreibt `~/.config/agent-orc/config.yaml`: die mitgelieferte Standard-Config mit deinen
+Antworten; ihre Kommentare erklären alle übrigen Einstellungen. `agent-orc set-password` ändert
+das Passwort später.
 
 Danach `http://127.0.0.1:8770` öffnen und mit dem Passwort anmelden.
 
