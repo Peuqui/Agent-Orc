@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import { ClipboardAddon } from '@xterm/addon-clipboard'
 import { FitAddon } from '@xterm/addon-fit'
 import { Unicode11Addon } from '@xterm/addon-unicode11'
 import { WebglAddon } from '@xterm/addon-webgl'
+import { WebLinksAddon } from '@xterm/addon-web-links'
 import { Terminal } from '@xterm/xterm'
 import '@xterm/xterm/css/xterm.css'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
@@ -95,6 +97,10 @@ const terminal = new Terminal({
 })
 const fit = new FitAddon()
 terminal.loadAddon(fit)
+// Plain web addresses in the output become links (Claude's own OSC 8 links work without it).
+terminal.loadAddon(new WebLinksAddon())
+// What an agent copies (OSC 52, e.g. Claude Code's copy) lands in the browser's clipboard.
+terminal.loadAddon(new ClipboardAddon())
 // Emoji are two cells wide in the agents' output; xterm's default (Unicode 6) counts one and
 // shifts every following character.
 terminal.loadAddon(new Unicode11Addon())

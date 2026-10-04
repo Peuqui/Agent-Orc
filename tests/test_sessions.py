@@ -141,3 +141,12 @@ def test_session_id_is_tmux_safe_and_unique() -> None:
 
 def test_build_command_replaces_placeholder() -> None:
     assert build_command(["x", "--name", "{name}"], "demo") == ["x", "--name", "demo"]
+
+
+def test_server_passes_mouse_and_clipboard_on(
+    manager: SessionManager, workdir: Path, socket_name: str
+) -> None:
+    manager.start("sleeper", workdir, resume=False)
+    # Wheel scrolling reaches the agent; its copies (OSC 52) reach the browser.
+    assert tmux_query(socket_name, "show-options", "-gv", "mouse") == "on"
+    assert tmux_query(socket_name, "show-options", "-gv", "set-clipboard") == "on"

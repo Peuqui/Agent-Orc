@@ -121,11 +121,13 @@ class SessionManager:
         # and its exit status stays visible. The status bar would only repeat what the
         # app shows and costs a terminal line on small screens. Mouse mode turns wheel
         # and touch scrolling in the browser terminal into scrolling the agent's history.
+        # set-clipboard on lets an agent's copy (OSC 52) through to the browser's clipboard.
         self._tmux(
             "start-server", ";",
             "set-option", "-g", "remain-on-exit", "on", ";",
             "set-option", "-g", "status", "off", ";",
             "set-option", "-g", "mouse", "on", ";",
+            "set-option", "-g", "set-clipboard", "on", ";",
             "new-session", "-d", "-s", session_id, "-c", str(path),
             "-e", f"{SESSION_ENV}={session_id}", *command, ";",
             "set-option", "-t", exact_target(session_id), PROFILE_OPTION, profile_name, ";",
