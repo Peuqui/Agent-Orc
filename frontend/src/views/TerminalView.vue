@@ -338,7 +338,6 @@ onBeforeUnmount(() => {
         :tokens="session.context_tokens"
         :window="session.context_window"
       />
-      <span class="mx-1 size-2.5 shrink-0 rounded-full" :class="connected ? 'bg-red-500' : 'bg-slate-600'" />
       <!-- Embedded in the workspace, the column's tab names the agent already (not on phones). -->
       <h1 class="min-w-0 flex-1 truncate font-semibold">{{ ownTab ? name : '' }}</h1>
       <!-- The actions: side by side on computers, behind ⋯ on phones so the name has room. -->
