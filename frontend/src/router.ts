@@ -43,3 +43,12 @@ export const router = createRouter({
     },
   ],
 })
+
+// A workspace never runs inside a column of another (it would take the tab's workspace for its
+// own and store its single column under that name). From a column, the request goes to the
+// browser tab's workspace, e.g. a new agent started from the column's file view.
+router.beforeEach((to) => {
+  if (to.path !== '/workspace' || window.top === null || window.self === window.top) return true
+  window.top.location.hash = to.fullPath
+  return false
+})

@@ -4,7 +4,8 @@
     "logout": "Log out",
     "retry": "Try again",
     "language": "Language",
-    "newVersion": "New version – loading …"
+    "newVersion": "New version – loading …",
+    "backToTerminal": "Back to the terminal"
   },
   "nav": {
     "sessions": "Agents",

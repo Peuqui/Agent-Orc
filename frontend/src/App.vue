@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { ApiError, NETWORK_ERROR, api, authenticated } from './api'
 import AppHeader from './components/AppHeader.vue'
 import BottomNav from './components/BottomNav.vue'
+import AppIcon from './components/AppIcon.vue'
 import ToastList from './components/ToastList.vue'
 import UpdateBanner from './components/UpdateBanner.vue'
 import { useSessions } from './composables/useSessions'
@@ -13,6 +14,15 @@ import LoginView from './views/LoginView.vue'
 const { startPolling, stopPolling, loadProfiles } = useSessions()
 const toast = useToast()
 const route = useRoute()
+const router = useRouter()
+// A column of the workspace shows its agent's terminal in an iframe; pages opened from there
+// (the project folder) get no app header or navigation, which would lead to a workspace inside
+// the column, but a way back to the column's terminal.
+const columnTab = window.self === window.top ? null : window.frameElement?.getAttribute('data-tab')
+
+function backToTerminal(): void {
+  if (columnTab) void router.push({ path: `/terminal/${encodeURIComponent(columnTab)}`, query: { embedded: null } })
+}
 
 const unreachable = ref(false)
 
@@ -51,6 +61,17 @@ watch(authenticated, (isAuthenticated) => {
   <RouterView v-else-if="authenticated && route.meta.fullscreen" v-slot="{ Component }">
     <component :is="Component" :key="route.meta.perQuery ? route.fullPath : route.path" />
   </RouterView>
+  <div v-else-if="authenticated && columnTab" class="min-h-dvh">
+    <header class="flex items-center gap-1 border-b border-slate-800 px-1 py-1">
+      <button class="btn-icon" :aria-label="$t('app.backToTerminal')" @click="backToTerminal">
+        <AppIcon name="up" class="-rotate-90" />
+      </button>
+      <span class="text-sm text-slate-300">{{ $t('app.backToTerminal') }}</span>
+    </header>
+    <main class="px-3 py-3">
+      <RouterView />
+    </main>
+  </div>
   <div v-else-if="authenticated" class="min-h-dvh pb-20 md:pb-4">
     <AppHeader />
     <main class="page-width py-4">
