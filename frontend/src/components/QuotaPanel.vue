@@ -38,7 +38,11 @@ function detail(window: QuotaWindow): string {
       v-for="quota in quotas"
       :key="quota.profile"
       class="flex"
-      :class="compact ? 'items-center gap-x-2.5' : 'card mb-4 flex-col gap-x-6 gap-y-1 px-4 py-2.5 md:flex-row md:items-center'"
+      :class="
+        compact
+          ? 'items-center rounded-md border border-slate-600 py-1'
+          : 'card mb-4 flex-col gap-x-6 gap-y-1 px-4 py-2.5 md:flex-row md:items-center'
+      "
       :title="compact ? $t('quota.title', { agent: quota.label }) : undefined"
     >
       <h2 v-if="!compact" class="shrink-0 text-sm font-semibold text-slate-300">
@@ -47,27 +51,31 @@ function detail(window: QuotaWindow): string {
       <p v-if="!compact && Object.keys(quota.windows).length === 0" class="text-xs text-slate-500">{{ $t('quota.none') }}</p>
       <!-- The bars; in the compact form only in wide windows, rings stand in elsewhere. -->
       <div
-        class="gap-x-6 gap-y-1"
-        :class="compact ? 'hidden w-[34rem] grid-cols-2 2xl:grid' : 'grid flex-1 md:grid-cols-2'"
+        :class="
+          compact
+            ? 'hidden w-[36rem] grid-cols-2 divide-x divide-slate-600 2xl:grid'
+            : 'grid flex-1 gap-x-6 gap-y-1 md:grid-cols-2'
+        "
       >
         <UsageBar
           v-for="(usage, name) in quota.windows"
           :key="name"
+          :class="{ 'px-3': compact }"
           :label="windowLabel(String(name))"
           :percent="usage.used_percentage"
           :detail="detail(usage)"
         />
       </div>
-      <template v-if="compact">
+      <div v-if="compact" class="flex divide-x divide-slate-600 2xl:hidden">
         <UsageMeter
           v-for="(usage, name) in quota.windows"
           :key="name"
-          class="2xl:hidden"
+          class="px-2"
           :percent="usage.used_percentage"
           :title="`${windowLabel(String(name))}: ${detail(usage)}`"
           :detail="`${shortLabel(String(name))} ${Math.round(usage.used_percentage)} %`"
         />
-      </template>
+      </div>
     </div>
   </div>
 </template>

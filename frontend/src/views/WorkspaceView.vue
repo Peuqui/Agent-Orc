@@ -290,10 +290,12 @@ async function rename(): Promise<void> {
       <button class="btn-icon" :aria-label="$t('terminal.back')" @click="router.push('/sessions')">
         <AppIcon name="up" class="-rotate-90" />
       </button>
+      <!-- Phones: the name and the workspaces move to a second row (this break starts it). -->
+      <div class="order-last h-0 basis-full sm:hidden" />
       <input
         v-model="nameInput"
         size="12"
-        class="w-28 min-w-0 shrink rounded-md bg-transparent max-sm:flex-1 sm:w-44 px-2 py-1 font-semibold placeholder:font-normal placeholder:text-slate-500 hover:bg-slate-800 focus:bg-slate-800 focus:outline-none"
+        class="w-28 min-w-0 shrink rounded-md bg-transparent max-sm:order-last sm:w-44 px-2 py-1 font-semibold placeholder:font-normal placeholder:text-slate-500 hover:bg-slate-800 focus:bg-slate-800 focus:outline-none"
         :placeholder="$t('workspace.unnamed')"
         :title="$t('workspace.nameHint')"
         :aria-label="$t('workspace.nameHint')"
@@ -303,9 +305,9 @@ async function rename(): Promise<void> {
       />
       <!-- The other workspaces, one click away: in their own tab if one shows them, otherwise
            here; a middle click opens a new tab. -->
-      <!-- Phones: a second, swipeable row of its own, which the rest of the header leaves no room for. -->
+      <!-- Phones: in the second row next to the name, swipeable. -->
       <nav
-        class="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto [scrollbar-width:none] max-sm:order-last max-sm:basis-full"
+        class="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto [scrollbar-width:none] max-sm:order-last"
       >
         <a
           v-for="other in otherNames"
@@ -326,11 +328,18 @@ async function rename(): Promise<void> {
           <AppIcon name="plus" class="size-3.5" /><AppIcon name="workspace" class="size-4" />
         </button>
       </nav>
-      <!-- Claude's usage, as on the overview, as small rings that fit on phones too. -->
-      <QuotaPanel compact class="shrink-0 px-1" />
+      <!-- Claude's usage, centred in the room between the workspaces and the buttons (the
+           spacer after it grows like the bar of workspaces before it). -->
+      <QuotaPanel compact class="shrink-0 sm:px-3" />
+      <div class="hidden flex-1 sm:block" />
       <div class="relative">
-        <button class="btn-icon" :aria-label="$t('workspace.add')" :title="$t('workspace.add')" @click="picking = !picking">
-          <AppIcon name="plus" />
+        <button
+          class="flex size-8 items-center justify-center rounded-md border border-slate-600 text-slate-300 hover:bg-slate-700"
+          :aria-label="$t('workspace.add')"
+          :title="$t('workspace.add')"
+          @click="picking = !picking"
+        >
+          <AppIcon name="plus" class="size-4" />
         </button>
         <div
           v-if="picking"
@@ -350,12 +359,16 @@ async function rename(): Promise<void> {
           </RouterLink>
         </div>
       </div>
-      <HelpButton />
-      <div class="flex shrink-0 items-center gap-1 text-sm text-slate-400" :title="$t('workspace.columns')">
-        <button class="btn-icon" :aria-label="$t('workspace.fewerColumns')" @click="changeVisible(-1)">−</button>
-        <span>{{ workspace.visible }}</span>
-        <button class="btn-icon" :aria-label="$t('workspace.moreColumns')" @click="changeVisible(1)">+</button>
+      <!-- Columns as one boxed group: fewer | count | more. -->
+      <div
+        class="flex h-8 shrink-0 items-stretch divide-x divide-slate-600 overflow-hidden rounded-md border border-slate-600 text-sm text-slate-300"
+        :title="$t('workspace.columns')"
+      >
+        <button class="w-7 hover:bg-slate-700" :aria-label="$t('workspace.fewerColumns')" @click="changeVisible(-1)">−</button>
+        <span class="flex w-7 items-center justify-center text-slate-400">{{ workspace.visible }}</span>
+        <button class="w-7 hover:bg-slate-700" :aria-label="$t('workspace.moreColumns')" @click="changeVisible(1)">+</button>
       </div>
+      <HelpButton />
     </header>
 
     <p v-if="ready && workspace.tabs.length === 0" class="p-6 text-center text-slate-400">{{ $t('workspace.empty') }}</p>
