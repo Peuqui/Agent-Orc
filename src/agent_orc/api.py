@@ -480,7 +480,8 @@ def create_app(
         sessions.stop(session_id)
 
     @app.websocket("/api/sessions/{session_id}/terminal")
-    async def terminal(websocket: WebSocket, session_id: str) -> None:
+    async def terminal(websocket: WebSocket, session_id: str, cols: int, rows: int) -> None:
+        """The browser sends its terminal size along (cols, rows), so tmux starts at it."""
         if not is_logged_in(websocket.cookies.get(SESSION_COOKIE)):
             await websocket.close(WS_CLOSE_UNAUTHORIZED)
             return
@@ -493,7 +494,7 @@ def create_app(
             await websocket.close(WS_CLOSE_SESSION_NOT_FOUND)
             return
         await websocket.accept()
-        await bridge(websocket, config.tmux.socket_name, session_id)
+        await bridge(websocket, config.tmux.socket_name, session_id, cols, rows)
 
     @app.get("/api/files", dependencies=authenticated)
     def list_files(path: str) -> list[files.FileEntry]:

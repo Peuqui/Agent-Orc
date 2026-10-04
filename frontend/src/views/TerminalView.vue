@@ -213,11 +213,10 @@ function changeFontSize(delta: number): void {
 }
 
 function connect(): void {
-  socket = new WebSocket(terminalUrl(props.id))
+  socket = new WebSocket(terminalUrl(props.id, terminal.cols, terminal.rows))
   socket.binaryType = 'arraybuffer'
   socket.onopen = () => {
     connected.value = true
-    send({ type: 'resize', cols: terminal.cols, rows: terminal.rows })
     // Typing goes to our input field first: dictation tools (and phone keyboards) work there,
     // not in the terminal's own input. In the workspace only the active column takes the focus.
     if (!props.embedded || window.frameElement?.getAttribute('data-active') === 'true') {

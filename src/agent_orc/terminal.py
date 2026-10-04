@@ -29,14 +29,19 @@ def _set_window_size(fd: int, cols: int, rows: int) -> None:
     fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack("HHHH", rows, cols, 0, 0))
 
 
-async def bridge(websocket: WebSocket, socket_name: str, session_id: str) -> None:
+async def bridge(
+    websocket: WebSocket, socket_name: str, session_id: str, cols: int, rows: int
+) -> None:
     """Attach a tmux client in a fresh PTY and pump bytes until either side ends.
+
+    The PTY starts at the browser terminal's size, so tmux draws for it from the first frame.
 
     Client messages are JSON text frames: {"type": "input", "data": str} or
     {"type": "resize", "cols": int, "rows": int}. Terminal output goes out as binary frames.
     Closing the terminal only detaches; the agent keeps running.
     """
     master, slave = pty.openpty()
+    _set_window_size(master, cols, rows)
     process = await asyncio.create_subprocess_exec(
         "tmux", "-L", socket_name, "attach-session", "-t", exact_target(session_id),
         stdin=slave, stdout=slave, stderr=slave,

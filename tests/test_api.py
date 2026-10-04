@@ -291,8 +291,16 @@ def read_until(terminal: WebSocketTestSession, text: str) -> str:
     raise AssertionError(f"{text!r} not seen in terminal output")
 
 
+START_COLS = 90
+START_ROWS = 25
+
+
+def terminal_url(session_id: str) -> str:
+    return f"/api/sessions/{session_id}/terminal?cols={START_COLS}&rows={START_ROWS}"
+
+
 def refused_code(client: TestClient, session_id: str, headers: dict[str, str]) -> int:
-    url = f"/api/sessions/{session_id}/terminal"
+    url = terminal_url(session_id)
     connect = client.websocket_connect(url, headers=headers)
     with pytest.raises(WebSocketDisconnect) as refused, connect:
         pass
@@ -321,8 +329,10 @@ def test_terminal_roundtrip_resize_and_detach(
     client: TestClient, home: Path, socket_name: str
 ) -> None:
     session_id = start_shell(client, home)
-    with client.websocket_connect(f"/api/sessions/{session_id}/terminal", headers=ORIGIN) as term:
+    with client.websocket_connect(terminal_url(session_id), headers=ORIGIN) as term:
         read_until(term, "READY")
+        # Attached at the size the browser sent along, before any resize message.
+        assert tmux_client_size(socket_name) == f"{START_COLS}x{START_ROWS}"
         term.send_text(json.dumps({"type": "input", "data": "hallo-orc\r"}))
         read_until(term, "hallo-orc")
 
@@ -340,7 +350,7 @@ def test_terminal_roundtrip_resize_and_detach(
 
 def test_terminal_closes_when_session_stops(client: TestClient, home: Path) -> None:
     session_id = start_shell(client, home)
-    with client.websocket_connect(f"/api/sessions/{session_id}/terminal", headers=ORIGIN) as term:
+    with client.websocket_connect(terminal_url(session_id), headers=ORIGIN) as term:
         read_until(term, "READY")
         client.delete(f"/api/sessions/{session_id}")
         with pytest.raises(WebSocketDisconnect):

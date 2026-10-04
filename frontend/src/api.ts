@@ -274,9 +274,13 @@ export const api = {
   emptyTrash: () => request<void>('DELETE', 'trash'),
 }
 
-/** WebSocket URL of a session's terminal, relative to the page like all API calls. */
-export function terminalUrl(sessionId: string): string {
+/**
+ * WebSocket URL of a session's terminal, relative to the page like all API calls; the size goes
+ * along, so tmux draws for this terminal from the start.
+ */
+export function terminalUrl(sessionId: string, cols: number, rows: number): string {
   const url = new URL(`api/sessions/${encodeURIComponent(sessionId)}/terminal`, document.baseURI)
+  url.search = new URLSearchParams({ cols: String(cols), rows: String(rows) }).toString()
   url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
   return url.toString()
 }
