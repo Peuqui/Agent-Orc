@@ -45,7 +45,7 @@ def config(home: Path, socket_name: str) -> Config:
         "sleeper": {
             "label": "Sleeper",
             "start": ["sleep", "60"],
-            "resume": ["true"],
+            "resume": ["sleep", "61"],
             "effort": {
                 "levels": ["low", "high"],
                 "default": "low",
@@ -507,13 +507,13 @@ def test_changing_effort_resumes_the_agent(
     # The agent never reported to be busy, so the change applies at once.
     assert changed.json() == {"applied": True}
     assert [s["id"] for s in client.get("/api/sessions").json()] == [session_id]
-    # Resumed with the profile's resume command ("true" exits at once for the test agent).
+    # Resumed with the profile's resume command, still running like a real agent.
     command = subprocess.run(
         ["tmux", "-L", socket_name, "display-message", "-p", "-t", f"={session_id}:",
          "#{pane_start_command}"],
         capture_output=True, text=True, check=True,
     ).stdout.strip()  # fmt: skip
-    assert command == "true"
+    assert command == "sleep 61"
     settings = json.loads((folder / ".claude" / "settings.local.json").read_text())
     assert settings == {
         "effortLevel": "low",
@@ -908,6 +908,16 @@ def test_push_subscription_and_test_message(
     unsubscribe = client.delete("/api/push/subscriptions", params={"endpoint": phone.endpoint})
     assert unsubscribe.status_code == 204
     assert client.post("/api/push/test").json() == {"delivered": 0}
+
+
+def test_prompt_templates_are_kept(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+    assert client.get("/api/prompt-templates").json() == []
+    templates = [{"label": "Tests", "text": "Run the tests and fix what fails."}]
+    assert client.put("/api/prompt-templates", json=templates).status_code == 204
+    assert client.get("/api/prompt-templates").json() == templates
 
 
 def test_card_order_is_kept(
