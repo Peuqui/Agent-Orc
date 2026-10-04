@@ -16,6 +16,8 @@ const {
   whisper,
   microphone,
   browserFallback,
+  failedAudio,
+  retry,
   toggleDevice,
   toggleMicrophone,
   toggleBrowser,
@@ -58,6 +60,16 @@ function onKeydown(event: KeyboardEvent): void {
 
 <template>
   <form class="flex items-end gap-1 border-t border-slate-800 p-1" @submit.prevent="submit">
+    <button
+      v-if="failedAudio"
+      type="button"
+      class="btn-secondary min-h-10 px-1.5 text-xs"
+      :disabled="state !== 'idle'"
+      :title="$t('dictation.retryHint')"
+      @click="retry"
+    >
+      {{ $t('dictation.retry') }}
+    </button>
     <button
       v-if="browserFallback"
       type="button"

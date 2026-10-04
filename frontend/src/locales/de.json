@@ -140,7 +140,9 @@
     "transcribing": "Wird transkribiert …",
     "browser": "Browser",
     "browserHint": "Whisper ging nicht: Spracherkennung des Browsers nutzen (Chrome schickt das Audio an Google)",
-    "browserStop": "Stopp"
+    "browserStop": "Stopp",
+    "retry": "Erneut",
+    "retryHint": "Die letzte Aufnahme noch einmal an Whisper schicken (vorher ggf. auf CPU umschalten)"
   },
   "quota": {
     "title": "Kontingent {agent}:",

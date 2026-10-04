@@ -43,6 +43,8 @@ export function useDictation(onText: (text: string) => void, onError: (error: un
   const whisper = ref<boolean | null>(null)
   const language = ref('')
   const whisperFailed = ref(false)
+  // Kept when Whisper failed, so the dictation is not lost: it can be sent again, e.g. on the CPU.
+  const failedAudio = ref<Blob | null>(null)
   let recorder: MediaRecorder | null = null
   let recognition: SpeechRecognitionLike | null = null
 
@@ -86,12 +88,14 @@ export function useDictation(onText: (text: string) => void, onError: (error: un
 
   async function transcribe(audio: Blob): Promise<void> {
     state.value = 'transcribing'
+    failedAudio.value = null
     try {
       const { text } = await api.dictate(audio, device.value)
       whisperFailed.value = false
       if (text) onText(text)
     } catch (error) {
       whisperFailed.value = true
+      failedAudio.value = audio
       onError(error)
     } finally {
       state.value = 'idle'
@@ -121,6 +125,11 @@ export function useDictation(onText: (text: string) => void, onError: (error: un
     state.value = 'listening'
   }
 
+  /** Send the recording that failed once more, with the device chosen now. */
+  function retry(): void {
+    if (failedAudio.value !== null && state.value === 'idle') void transcribe(failedAudio.value)
+  }
+
   /** Browser recognition: start, or stop until pressed again. */
   function toggleBrowser(): void {
     if (state.value === 'listening') recognition?.stop()
@@ -142,6 +151,8 @@ export function useDictation(onText: (text: string) => void, onError: (error: un
     whisper,
     microphone,
     browserFallback,
+    failedAudio,
+    retry,
     toggleDevice,
     toggleMicrophone,
     toggleBrowser,

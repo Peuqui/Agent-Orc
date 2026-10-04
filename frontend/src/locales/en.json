@@ -140,7 +140,9 @@
     "transcribing": "Transcribing …",
     "browser": "Browser",
     "browserHint": "Whisper failed: use the browser's speech recognition (Chrome sends the audio to Google)",
-    "browserStop": "Stop"
+    "browserStop": "Stop",
+    "retry": "Retry",
+    "retryHint": "Send the last recording to Whisper again (switch to CPU first if needed)"
   },
   "quota": {
     "title": "{agent} usage:",
