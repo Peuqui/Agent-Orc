@@ -143,10 +143,11 @@ def test_build_command_replaces_placeholder() -> None:
     assert build_command(["x", "--name", "{name}"], "demo") == ["x", "--name", "demo"]
 
 
-def test_server_passes_mouse_and_clipboard_on(
+def test_server_passes_mouse_clipboard_and_focus_on(
     manager: SessionManager, workdir: Path, socket_name: str
 ) -> None:
     manager.start("sleeper", workdir, resume=False)
-    # Wheel scrolling reaches the agent; its copies (OSC 52) reach the browser.
+    # Wheel scrolling and focus changes reach the agent; its copies (OSC 52) reach the browser.
     assert tmux_query(socket_name, "show-options", "-gv", "mouse") == "on"
     assert tmux_query(socket_name, "show-options", "-gv", "set-clipboard") == "on"
+    assert tmux_query(socket_name, "show-options", "-sv", "focus-events") == "on"
