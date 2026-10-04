@@ -4,7 +4,7 @@
     "logout": "Abmelden",
     "retry": "Erneut versuchen",
     "language": "Sprache",
-    "newVersion": "Neue Version – neu laden"
+    "newVersion": "Neue Version – wird geladen …"
   },
   "nav": {
     "sessions": "Agenten",

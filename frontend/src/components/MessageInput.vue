@@ -9,7 +9,13 @@ const props = defineProps<{ sessionId: string }>()
 const emit = defineEmits<{ submit: [text: string] }>()
 
 const toast = useToast()
-const text = ref('')
+// The unsent text survives a reload (e.g. when a new version is installed), per agent and tab.
+const draftKey = `agent-orc-draft:${props.sessionId}`
+const text = ref(sessionStorage.getItem(draftKey) ?? '')
+watch(text, (current) => {
+  if (current) sessionStorage.setItem(draftKey, current)
+  else sessionStorage.removeItem(draftKey)
+})
 const field = ref<HTMLTextAreaElement>()
 
 const {

@@ -1,10 +1,22 @@
 /**
- * Switch to the installed new version: a new service worker takes over and reloads the page by
- * itself (registerType autoUpdate); without a new one nothing cached stands in the way of a plain
- * reload. Used by the update banner and when a part of the old version is gone from the server.
+ * Switch to the installed new version. Asked for an update, the service worker may bring a new
+ * one; it takes over by itself (skipWaiting), and the page reloads once it has, so the new
+ * worker serves the new files. Without a new worker nothing cached stands in the way of a plain
+ * reload. Used for a newly installed version and when a part of the old one is gone.
  */
 export async function reloadToNewVersion(): Promise<void> {
   const registration = await navigator.serviceWorker?.getRegistration()
-  await registration?.update()
-  if (!registration?.installing && !registration?.waiting) location.reload()
+  try {
+    await registration?.update()
+  } catch {
+    // The worker script is briefly missing while a version is being installed: reload anyway;
+    // a page that still gets the old version notices the new one again and comes back here.
+    location.reload()
+    return
+  }
+  if (registration?.installing || registration?.waiting) {
+    navigator.serviceWorker.addEventListener('controllerchange', () => location.reload(), { once: true })
+  } else {
+    location.reload()
+  }
 }
