@@ -187,5 +187,51 @@
     "title": "Attach a photo or file",
     "photo": "Take a photo",
     "file": "Choose a file"
+  },
+  "help": {
+    "button": "Help: how Agent-Orc works",
+    "title": "How Agent-Orc works",
+    "close": "Close",
+    "sections": [
+      {
+        "title": "Agents (overview)",
+        "items": [
+          "“Start new agent”: pick a folder; the agent starts and gets going at once with its start request (e.g. the AI-Connect watcher). Resuming starts without it.",
+          "Sorting cards: drag at a free spot with the mouse; with a finger, hold briefly first. The order is the same on every device.",
+          "Context ring: green below 50 %, amber above, red from 70 % – time for /compact or a new conversation soon.",
+          "Effort slider and ultracode apply per project folder. While the agent is working you choose: after the answer, or now (restart with resume).",
+          "Quota at the top: Claude's used five-hour and weekly limits, once a session has reported them."
+        ]
+      },
+      {
+        "title": "Workspaces",
+        "items": [
+          "Every browser tab has its own workspace; a reload keeps it.",
+          "Type a name at the top and press Enter: the workspace is saved and shows up in the overview and in the bar of every workspace.",
+          "Clicking another workspace jumps to the tab that already shows it (↗︎), otherwise this tab switches. A middle click opens a new tab.",
+          "Jumping only finds tabs opened from within Agent-Orc – so open further workspaces through the buttons; they can then be detached onto other monitors.",
+          "On the phone (installed app) the bar switches within the same window.",
+          "“+” adds a running agent as a column, “− n +” sets how many columns fill the screen.",
+          "Dragging a column head sorts the columns; dragging the divider on its right edge changes the width, a double click resets it."
+        ]
+      },
+      {
+        "title": "Terminal",
+        "items": [
+          "Input field at the bottom: Enter sends, Shift+Enter starts a new line.",
+          "Microphone: dictation through Whisper; the GPU is done at once, the CPU is slower but always there. If it fails, “Retry” sends the same recording again.",
+          "Paperclip: attach a photo or file – it lands in the project folder and its {'@'}path is put into the input field.",
+          "Grip on the right (jog): pull up or down to scroll, the further the faster. Mouse wheel and swiping scroll as well.",
+          "A− / A+ changes the font size of this terminal only; the text view shows the screen for selecting and copying.",
+          "The key bar sends Esc, Tab, arrows, Ctrl and so on – Ctrl and Alt apply to the next key."
+        ]
+      },
+      {
+        "title": "Settings (gear)",
+        "items": [
+          "Font, font size, line spacing and lines per scroll step – stored on this device."
+        ]
+      }
+    ]
   }
 }

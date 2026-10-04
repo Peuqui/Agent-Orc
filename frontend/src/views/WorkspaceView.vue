@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { api, type Workspace } from '../api'
 import AppIcon from '../components/AppIcon.vue'
+import HelpButton from '../components/HelpButton.vue'
 import { moveInList, useReorder } from '../composables/useReorder'
 import { useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
@@ -342,6 +343,7 @@ async function rename(): Promise<void> {
           </RouterLink>
         </div>
       </div>
+      <HelpButton />
       <div class="flex shrink-0 items-center gap-1 text-sm text-slate-400" :title="$t('workspace.columns')">
         <button class="btn-icon" :aria-label="$t('workspace.fewerColumns')" @click="changeVisible(-1)">−</button>
         <span>{{ workspace.visible }}</span>
