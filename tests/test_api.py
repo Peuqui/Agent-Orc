@@ -13,6 +13,7 @@ from starlette.testclient import WebSocketTestSession
 from starlette.websockets import WebSocketDisconnect
 
 from agent_orc.api import BUILD_ID_FILE, BUILD_ID_HEADER, create_app
+from agent_orc.approvals import open_request, wait_for_decision
 from agent_orc.auth import new_credentials
 from agent_orc.config import Config, DictationConfig, default_config_text
 from agent_orc.context import store_activity, store_status
@@ -45,7 +46,12 @@ def config(home: Path, socket_name: str) -> Config:
             "label": "Sleeper",
             "start": ["sleep", "60"],
             "resume": ["true"],
-            "effort": {"levels": ["low", "high"], "store": "claude_project", "ultracode": True},
+            "effort": {
+                "levels": ["low", "high"],
+                "default": "low",
+                "store": "claude_project",
+                "ultracode": True,
+            },
             "permission": {
                 "modes": ["default", "plan"],
                 "default": "default",
@@ -444,7 +450,8 @@ def test_effort_is_stored_in_the_project(client: TestClient, home: Path) -> None
     settings.parent.mkdir()
     settings.write_text(json.dumps({"permissions": {"allow": ["Bash(ls:*)"]}}))
     query = {"profile": "sleeper", "path": str(folder)}
-    assert client.get("/api/effort", params=query).json() == {"effort": None, "ultracode": False}
+    # A folder without a level of its own shows the configured one.
+    assert client.get("/api/effort", params=query).json() == {"effort": "low", "ultracode": False}
 
     start = {
         "profile": "sleeper",
@@ -476,9 +483,13 @@ def test_changing_effort_resumes_the_agent(
     }
     session_id = client.post("/api/sessions", json=start).json()["id"]
     change = {"effort": "low", "ultracode": True, "immediately": False}
-    changed = client.post(f"/api/sessions/{session_id}/effort", json=change)
+    with client.websocket_connect(terminal_url(session_id), headers=ORIGIN):
+        changed = client.post(f"/api/sessions/{session_id}/effort", json=change)
+        # Restarted in its own session: the open terminal stays attached to the same id.
+        assert tmux_client_size(socket_name) == f"{START_COLS}x{START_ROWS}"
     # The agent never reported to be busy, so the change applies at once.
     assert changed.json() == {"applied": True}
+    assert [s["id"] for s in client.get("/api/sessions").json()] == [session_id]
     # Resumed with the profile's resume command ("true" exits at once for the test agent).
     command = subprocess.run(
         ["tmux", "-L", socket_name, "display-message", "-p", "-t", f"={session_id}:",
@@ -494,15 +505,12 @@ def test_changing_effort_resumes_the_agent(
     }
     assert client.get("/api/sessions").json()[0]["ultracode"] is True
 
-    back = client.post(
+    # There is no "agent's own default" any more: an agent with levels always has one.
+    refused = client.post(
         f"/api/sessions/{session_id}/effort",
         json={"effort": None, "ultracode": False, "immediately": False},
     )
-    assert back.json() == {"applied": True}
-    # Only the permission mode, set at start, is left.
-    assert json.loads((folder / ".claude" / "settings.local.json").read_text()) == {
-        "permissions": {"defaultMode": "default"}
-    }
+    assert refused.status_code == 422
 
 
 def test_effort_for_agent_without_effort_setting(client: TestClient, home: Path) -> None:
@@ -541,8 +549,9 @@ def test_effort_change_waits_for_a_busy_agent(
     listed = client.get("/api/sessions").json()[0]
     assert listed["busy"] is True
     assert (listed["effort_pending"], listed["pending_effort"]) == (True, "high")
+    # Not applied yet: the folder keeps the level it started with.
     stored = json.loads((folder / ".claude" / "settings.local.json").read_text())
-    assert "effortLevel" not in stored
+    assert stored["effortLevel"] == "low"
 
     # A wrong level is refused right away, not only when the change would be applied.
     wrong = client.post(url, json={"effort": "ultra", "ultracode": False, "immediately": False})
@@ -737,6 +746,23 @@ def test_permission_mode_is_stored_for_the_folder(client: TestClient, home: Path
     refused = client.put(url, json={"mode": "bypassPermissions"})
     assert refused.status_code == 422
     assert refused.json()["error"] == "InvalidPermissionModeError"
+
+
+def test_permission_request_is_answered_from_the_card(
+    client: TestClient, home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
+    session_id = start_shell(client, home)
+    hook = {"tool_name": "Bash", "tool_input": {"command": "git push"}}
+    request = open_request(session_id, hook)
+    listed = client.get("/api/sessions").json()[0]["approvals"]
+    assert [(a["id"], a["tool"], a["subject"]) for a in listed] == [
+        (request.id, "Bash", "git push")
+    ]
+    url = f"/api/sessions/{session_id}/approval"
+    assert client.post(url, json={"request": "other", "allow": True}).status_code == 404
+    assert client.post(url, json={"request": request.id, "allow": False}).status_code == 204
+    assert wait_for_decision(request.id) is False
 
 
 def test_push_subscription_and_test_message(

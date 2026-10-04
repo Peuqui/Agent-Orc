@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { api, type Workspace } from '../api'
 import AppIcon from '../components/AppIcon.vue'
 import HelpButton from '../components/HelpButton.vue'
+import QuotaPanel from '../components/QuotaPanel.vue'
 import { moveInList, useReorder } from '../composables/useReorder'
 import { useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
@@ -284,14 +285,15 @@ async function rename(): Promise<void> {
 
 <template>
   <div class="flex h-dvh flex-col bg-slate-900">
-    <header class="flex items-center gap-1 border-b border-slate-800 px-1 py-1">
+    <!-- Compact buttons below sm, so name, workspaces and usage fit on a phone. -->
+    <header class="flex flex-wrap items-center gap-1 border-b border-slate-800 px-1 py-1 max-sm:[&_.btn-icon]:size-8">
       <button class="btn-icon" :aria-label="$t('terminal.back')" @click="router.push('/sessions')">
         <AppIcon name="up" class="-rotate-90" />
       </button>
       <input
         v-model="nameInput"
         size="12"
-        class="w-28 min-w-0 shrink rounded-md bg-transparent sm:w-44 px-2 py-1 font-semibold placeholder:font-normal placeholder:text-slate-500 hover:bg-slate-800 focus:bg-slate-800 focus:outline-none"
+        class="w-28 min-w-0 shrink rounded-md bg-transparent max-sm:flex-1 sm:w-44 px-2 py-1 font-semibold placeholder:font-normal placeholder:text-slate-500 hover:bg-slate-800 focus:bg-slate-800 focus:outline-none"
         :placeholder="$t('workspace.unnamed')"
         :title="$t('workspace.nameHint')"
         :aria-label="$t('workspace.nameHint')"
@@ -301,7 +303,10 @@ async function rename(): Promise<void> {
       />
       <!-- The other workspaces, one click away: in their own tab if one shows them, otherwise
            here; a middle click opens a new tab. -->
-      <nav class="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto [scrollbar-width:none]">
+      <!-- Phones: a second, swipeable row of its own, which the rest of the header leaves no room for. -->
+      <nav
+        class="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto [scrollbar-width:none] max-sm:order-last max-sm:basis-full"
+      >
         <a
           v-for="other in otherNames"
           :key="other"
@@ -321,6 +326,8 @@ async function rename(): Promise<void> {
           <AppIcon name="plus" class="size-3.5" /><AppIcon name="workspace" class="size-4" />
         </button>
       </nav>
+      <!-- Claude's usage, as on the overview, as small rings that fit on phones too. -->
+      <QuotaPanel compact class="shrink-0 px-1" />
       <div class="relative">
         <button class="btn-icon" :aria-label="$t('workspace.add')" :title="$t('workspace.add')" @click="picking = !picking">
           <AppIcon name="plus" />
@@ -381,7 +388,8 @@ async function rename(): Promise<void> {
           @touchmove="reorder.onTouchMove"
           @contextmenu.prevent
         >
-          <button class="min-w-0 flex-1 truncate text-left font-medium" @click="activate(id)">
+          <!-- The grabbing hand here too: the whole head is the handle for sorting. -->
+          <button class="min-w-0 flex-1 cursor-grab truncate text-left font-medium" @click="activate(id)">
             {{ tabName(id) }}
           </button>
           <button

@@ -55,8 +55,8 @@ aus wieder aufnehmen.
 - Diktat über einen lokalen Whisper-Dienst ([whisper-stt](https://github.com/Peuqui/whisper-stt),
   GPU oder CPU) oder die Spracherkennung des Browsers.
 - Foto, Screenshot (aus der Galerie, am Rechner direkt vom Bildschirm oder einfach mit Strg+V
-  eingefügt) oder Datei anhängen: Sie landen im Projektordner, ihr `@Pfad` steht danach im
-  Eingabefeld.
+  eingefügt) oder Datei anhängen: Sie landen im Projektordner, erscheinen als kleine Vorschau
+  über dem Eingabefeld und gehen mit der nächsten Nachricht an den Agenten.
 - Sondertasten-Leiste (Esc, Tab, Shift+Tab, Pfeile, einrastendes Strg/Alt, …) für die
   Bildschirmtastatur, ein Griff zum schnellen Scrollen, Schriftgröße pro Terminal, eine
   Textansicht zum Markieren und Kopieren, anklickbare Links.

@@ -108,12 +108,27 @@ def test_agent_killed_by_signal_has_no_exit_status(manager: SessionManager, work
     assert wait_until_exited(manager, workdir).exit_status is None
 
 
-def test_exited_session_is_replaced_on_start(manager: SessionManager, workdir: Path) -> None:
-    manager.start("failing", workdir, resume=False)
+def test_exited_session_is_started_again_in_place(manager: SessionManager, workdir: Path) -> None:
+    exited = manager.start("failing", workdir, resume=False)
     wait_until_exited(manager, workdir)
     session = manager.start("sleeper", workdir, resume=False)
     assert session.running
+    # Same id: open terminals and workspace columns stay valid.
+    assert (session.id, session.profile) == (exited.id, "sleeper")
     assert len(manager.list()) == 1
+
+
+def test_restart_resumes_a_running_agent_in_its_session(
+    manager: SessionManager, workdir: Path, socket_name: str
+) -> None:
+    session = manager.start("sleeper", workdir, resume=False)
+    restarted = manager.restart(session)
+    assert (restarted.id, restarted.running) == (session.id, True)
+    target = f"={session.id}:"
+    command = tmux_query(
+        socket_name, "display-message", "-p", "-t", target, "#{pane_start_command}"
+    )
+    assert command == "sleep 61"
 
 
 def test_only_one_running_agent_per_folder(manager: SessionManager, workdir: Path) -> None:

@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { api, type AgentSession, type Reasoning } from '../api'
+import { api, type AgentSession, type Approval, type Reasoning } from '../api'
 import AppIcon from '../components/AppIcon.vue'
 import BaseDialog from '../components/BaseDialog.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
@@ -34,7 +34,7 @@ function cancelEffort(): void {
 
 /** "medium", "Standard + Ultracode", ... for the confirmation and pending notes. */
 function reasoningLabel(reasoning: Reasoning): string {
-  const effort = reasoning.effort ?? t('agent.effortDefault')
+  const effort = reasoning.effort ?? ''
   return reasoning.ultracode ? `${effort} + ${t('agent.ultracode')}` : effort
 }
 
@@ -113,6 +113,10 @@ function confirmDeleteWorkspace(): void {
 /** Known modes by name; a mode added in the config shows as it is written there. */
 function permissionLabel(mode: string): string {
   return te(`permission.modes.${mode}`) ? t(`permission.modes.${mode}`) : mode
+}
+
+function answerApproval(session: AgentSession, approval: Approval, allow: boolean): void {
+  void run(() => api.answerApproval(session.id, approval.id, allow))
 }
 
 function changePermissionMode(session: AgentSession, mode: string): void {
@@ -247,6 +251,26 @@ function resume(session: AgentSession): void {
             :disabled="session.effort_pending"
             @update:model-value="(reasoning) => (effortChange = { session, reasoning })"
           />
+        </div>
+        <!-- The agent asks for a permission; the terminal asks too, the first answer counts. -->
+        <div
+          v-for="approval in session.approvals"
+          :key="approval.id"
+          class="flex flex-col gap-2 rounded-lg border border-amber-600 bg-amber-950/40 px-3 py-2 text-sm"
+        >
+          <span class="text-amber-200">
+            {{ $t('approval.asks', { tool: approval.tool }) }}
+            <span v-if="approval.description" class="text-amber-300/70"> · {{ approval.description }}</span>
+          </span>
+          <code class="line-clamp-3 rounded bg-slate-950/60 px-2 py-1 font-mono text-xs break-all text-slate-200">{{ approval.subject }}</code>
+          <div class="flex gap-2">
+            <button class="btn-primary btn-small" @click="answerApproval(session, approval, true)">
+              {{ $t('approval.allow') }}
+            </button>
+            <button class="btn-secondary btn-small" @click="answerApproval(session, approval, false)">
+              {{ $t('approval.deny') }}
+            </button>
+          </div>
         </div>
         <div
           v-if="session.effort_pending"

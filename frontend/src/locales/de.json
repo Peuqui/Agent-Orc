@@ -67,14 +67,12 @@
   "agent": {
     "title": "Agent in „{name}“ starten",
     "effort": "Aufwand (Reasoning)",
-    "effortDefault": "Standard (Einstellung des Agenten)",
     "profile": "Agent",
     "startNew": "Neu starten",
     "resume": "Letztes Gespräch fortsetzen",
     "earlier": "Frühere Gespräche in diesem Ordner",
     "untitled": "(ohne Titel)",
     "recentlyActive": "gerade aktiv – evtl. noch woanders offen",
-    "effortDefaultShort": "Standard",
     "faster": "Schneller",
     "smarter": "Intelligenter",
     "ultracode": "Ultracode",
@@ -150,7 +148,11 @@
     "five_hour": "5 Stunden",
     "seven_day": "Woche",
     "detail": "{percent} % · Reset {when}",
-    "none": "Noch keine Angaben – erscheinen, sobald eine Sitzung gearbeitet hat."
+    "none": "Noch keine Angaben – erscheinen, sobald eine Sitzung gearbeitet hat.",
+    "short": {
+      "five_hour": "5 Std.",
+      "seven_day": "Woche"
+    }
   },
   "workspace": {
     "close": "Tab schließen",
@@ -188,7 +190,8 @@
     "photo": "Foto aufnehmen",
     "file": "Datei wählen",
     "image": "Bild oder Screenshot",
-    "screen": "Bildschirmfoto aufnehmen"
+    "screen": "Bildschirmfoto aufnehmen",
+    "remove": "Anhang entfernen"
   },
   "help": {
     "button": "Hilfe: So funktioniert Agent-Orc",
@@ -203,7 +206,8 @@
           "Kontext-Ring: grün unter 50 %, gelb darüber, rot ab 70 % – dann bald /compact oder ein neues Gespräch.",
           "Effort-Regler und Ultracode gelten pro Projektordner. Arbeitet der Agent gerade, wählst du: nach der Antwort oder sofort (Neustart mit Fortsetzen).",
           "Kontingent oben: verbrauchte 5-Stunden- und Wochen-Quote von Claude, sobald eine Sitzung sie gemeldet hat.",
-          "„Start“ auf der Karte: Freigabe-Modus, in dem der Agent startet – Fragen, Bearbeiten (Dateiänderungen ohne Nachfrage), Auto oder Planen. Voreinstellung ist Auto; gilt ab dem nächsten Start, im Agenten wechselt Shift+Tab."
+          "„Start“ auf der Karte: Freigabe-Modus, in dem der Agent startet – Fragen, Bearbeiten (Dateiänderungen ohne Nachfrage), Auto oder Planen. Voreinstellung ist Auto; gilt ab dem nächsten Start, im Agenten wechselt Shift+Tab.",
+          "Fragt ein Agent um Erlaubnis, zeigt seine Karte den Befehl mit „Erlauben“ und „Ablehnen“. Im Terminal steht dieselbe Frage; wo zuerst geantwortet wird, das gilt."
         ]
       },
       {
@@ -223,7 +227,7 @@
         "items": [
           "Eingabefeld unten: Enter sendet, Shift+Enter macht eine neue Zeile.",
           "Mikrofon: Diktat über Whisper; GPU ist sofort fertig, CPU langsamer, aber immer verfügbar. Schlägt es fehl, schickt „Erneut“ dieselbe Aufnahme noch einmal.",
-          "Büroklammer: Foto aufnehmen, Bild oder Screenshot aus der Galerie, Bildschirmfoto (am Rechner) oder Datei anhängen – sie landen im Projektordner, ihr {'@'}Pfad steht danach im Eingabefeld. Ein Screenshot aus der Zwischenablage lässt sich auch einfach ins Eingabefeld einfügen (Strg+V).",
+          "Büroklammer: Foto aufnehmen, Bild oder Screenshot aus der Galerie, Bildschirmfoto (am Rechner) oder Datei anhängen – sie landen im Projektordner, sie erscheinen als kleine Vorschau über dem Eingabefeld (× entfernt sie) und gehen mit der nächsten Nachricht an den Agenten. Ein Screenshot aus der Zwischenablage lässt sich auch einfach ins Eingabefeld einfügen (Strg+V).",
           "Griff rechts (Jog): nach oben oder unten ziehen scrollt, je weiter, desto schneller. Mausrad und Wischen scrollen auch.",
           "A− / A+ ändert die Schriftgröße nur dieses Terminals; die Textansicht zeigt den Bildschirm zum Markieren und Kopieren.",
           "Die Tastenleiste schickt Esc, Tab, Pfeile, Ctrl usw. – Ctrl und Alt gelten für die nächste Taste."
@@ -258,5 +262,10 @@
     "denied": "Benachrichtigungen sind im Browser blockiert – dort in den Website-Einstellungen erlauben.",
     "test": "Testnachricht senden",
     "testSent": "Testnachricht an {count} Gerät(e) gesendet."
+  },
+  "approval": {
+    "asks": "Möchte {tool} ausführen",
+    "allow": "Erlauben",
+    "deny": "Ablehnen"
   }
 }

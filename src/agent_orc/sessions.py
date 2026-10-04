@@ -1,5 +1,6 @@
 """Agent sessions, each one a tmux session on Agent-Orc's own tmux server."""
 
+import builtins
 import hashlib
 import re
 import subprocess
@@ -96,27 +97,18 @@ class SessionManager:
     ) -> AgentSession:
         """Start an agent in `path`; at most one agent session exists per folder.
 
-        A session whose agent has already exited is replaced. `conversation` resumes that
+        A session whose agent has already exited is started again in place, so it keeps its
+        id (open terminals and workspace columns stay valid). `conversation` resumes that
         earlier conversation (the caller has checked that it exists); `resume` the last one.
         """
-        profile = self._agents.get(profile_name)
-        if profile is None:
-            raise UnknownProfileError(profile_name)
+        command = self._command(profile_name, path, resume, conversation)
         existing = self.find_by_path(path)
         if existing is not None:
             if existing.running:
                 raise SessionAlreadyRunningError(existing.id)
-            self.stop(existing.id)
+            return self._respawn(existing, profile_name, command)
 
         session_id = session_id_for(path)
-        if conversation is not None and profile.conversations is not None:
-            arguments = [
-                argument.replace(CONVERSATION_PLACEHOLDER, conversation)
-                for argument in profile.conversations.resume
-            ]
-        else:
-            arguments = profile.resume if resume else profile.start
-        command = build_command(arguments, path.name)
         # One tmux invocation, so remain-on-exit is active before the agent can exit
         # and its exit status stays visible. The status bar would only repeat what the
         # app shows and costs a terminal line on small screens. Mouse mode turns wheel
@@ -139,6 +131,41 @@ class SessionManager:
         if session is None:
             raise SessionError(f"tmux session {session_id} vanished right after start")
         return session
+
+    def restart(self, session: AgentSession) -> AgentSession:
+        """Resume a running agent in its own session (it reads some settings only at start)."""
+        command = self._command(session.profile, session.path, resume=True, conversation=None)
+        return self._respawn(session, session.profile, command)
+
+    def _command(
+        self, profile_name: str, path: Path, resume: bool, conversation: str | None
+    ) -> builtins.list[str]:
+        # builtins: inside this class, "list" is the method listing the sessions.
+        profile = self._agents.get(profile_name)
+        if profile is None:
+            raise UnknownProfileError(profile_name)
+        if conversation is not None and profile.conversations is not None:
+            arguments = [
+                argument.replace(CONVERSATION_PLACEHOLDER, conversation)
+                for argument in profile.conversations.resume
+            ]
+        else:
+            arguments = profile.resume if resume else profile.start
+        return build_command(arguments, path.name)
+
+    def _respawn(
+        self, session: AgentSession, profile_name: str, command: builtins.list[str]
+    ) -> AgentSession:
+        """Replace the session's process (ending a running one); attached terminals stay."""
+        self._tmux(
+            "respawn-pane", "-k", "-t", exact_target(session.id), "-c", str(session.path),
+            "-e", f"{SESSION_ENV}={session.id}", *command, ";",
+            "set-option", "-t", exact_target(session.id), PROFILE_OPTION, profile_name,
+        )  # fmt: skip
+        respawned = self.find_by_path(session.path)
+        if respawned is None:
+            raise SessionError(f"tmux session {session.id} vanished right after restart")
+        return respawned
 
     def text(self, session_id: str, history_lines: int) -> str:
         """The session's screen and history as plain text; wrapped lines are joined again."""

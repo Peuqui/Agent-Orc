@@ -3,13 +3,21 @@ import { useI18n } from 'vue-i18n'
 import type { QuotaWindow } from '../api'
 import { useSessions } from '../composables/useSessions'
 import UsageBar from './UsageBar.vue'
+import UsageMeter from './UsageMeter.vue'
 
+// compact: one line without a card, e.g. in the workspace's header: the bars where there is
+// room, small rings otherwise (phones too), whose name and reset show on hover or tap.
+defineProps<{ compact?: boolean }>()
 const { quotas } = useSessions()
 const { t, te, locale } = useI18n()
 const MILLISECONDS_PER_SECOND = 1000
 
 function windowLabel(name: string): string {
   return te(`quota.${name}`) ? t(`quota.${name}`) : name
+}
+
+function shortLabel(name: string): string {
+  return te(`quota.short.${name}`) ? t(`quota.short.${name}`) : name
 }
 
 function detail(window: QuotaWindow): string {
@@ -24,21 +32,42 @@ function detail(window: QuotaWindow): string {
 </script>
 
 <template>
-  <div
-    v-for="quota in quotas"
-    :key="quota.profile"
-    class="card mb-4 flex flex-col gap-x-6 gap-y-1 px-4 py-2.5 md:flex-row md:items-center"
-  >
-    <h2 class="shrink-0 text-sm font-semibold text-slate-300">{{ $t('quota.title', { agent: quota.label }) }}</h2>
-    <p v-if="Object.keys(quota.windows).length === 0" class="text-xs text-slate-500">{{ $t('quota.none') }}</p>
-    <div class="grid flex-1 gap-x-6 gap-y-1 md:grid-cols-2">
-      <UsageBar
-        v-for="(usage, name) in quota.windows"
-        :key="name"
-        :label="windowLabel(String(name))"
-        :percent="usage.used_percentage"
-        :detail="detail(usage)"
-      />
+  <!-- One root, so a class from outside (e.g. hidden on phones) applies to the whole panel. -->
+  <div>
+    <div
+      v-for="quota in quotas"
+      :key="quota.profile"
+      class="flex"
+      :class="compact ? 'items-center gap-x-2.5' : 'card mb-4 flex-col gap-x-6 gap-y-1 px-4 py-2.5 md:flex-row md:items-center'"
+      :title="compact ? $t('quota.title', { agent: quota.label }) : undefined"
+    >
+      <h2 v-if="!compact" class="shrink-0 text-sm font-semibold text-slate-300">
+        {{ $t('quota.title', { agent: quota.label }) }}
+      </h2>
+      <p v-if="!compact && Object.keys(quota.windows).length === 0" class="text-xs text-slate-500">{{ $t('quota.none') }}</p>
+      <!-- The bars; in the compact form only in wide windows, rings stand in elsewhere. -->
+      <div
+        class="gap-x-6 gap-y-1"
+        :class="compact ? 'hidden w-[34rem] grid-cols-2 2xl:grid' : 'grid flex-1 md:grid-cols-2'"
+      >
+        <UsageBar
+          v-for="(usage, name) in quota.windows"
+          :key="name"
+          :label="windowLabel(String(name))"
+          :percent="usage.used_percentage"
+          :detail="detail(usage)"
+        />
+      </div>
+      <template v-if="compact">
+        <UsageMeter
+          v-for="(usage, name) in quota.windows"
+          :key="name"
+          class="2xl:hidden"
+          :percent="usage.used_percentage"
+          :title="`${windowLabel(String(name))}: ${detail(usage)}`"
+          :detail="`${shortLabel(String(name))} ${Math.round(usage.used_percentage)} %`"
+        />
+      </template>
     </div>
   </div>
 </template>

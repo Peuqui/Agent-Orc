@@ -4,6 +4,7 @@ import argparse
 import getpass
 import json
 import os
+import signal
 import sys
 from importlib.resources import files
 from pathlib import Path
@@ -12,6 +13,7 @@ from typing import Any
 import uvicorn
 
 from agent_orc.api import create_app
+from agent_orc.approvals import close_request, hook_answer, open_request, wait_for_decision
 from agent_orc.auth import load_credentials, new_credentials, save_credentials
 from agent_orc.config import (
     CONFIG_FILE_NAME,
@@ -85,6 +87,19 @@ def agent_waiting() -> None:
     _notify("waiting", hook, hook["message"])
 
 
+def agent_permission() -> None:
+    """Hook command (Claude: PermissionRequest): the user may answer in the web app too."""
+    hook = json.load(sys.stdin)
+    request = open_request(os.environ[SESSION_ENV], hook)
+    # Claude ends the hook when the user answers in the terminal; the request goes along.
+    signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
+    try:
+        allow = wait_for_decision(request.id)
+    finally:
+        close_request(request.id)
+    print(json.dumps(hook_answer(allow)))
+
+
 def _notify(kind: str, hook: dict[str, Any], text: str) -> None:
     config = load_config(config_dir() / CONFIG_FILE_NAME)
     message = agent_message(kind, os.environ[SESSION_ENV], Path(hook["cwd"]).name, text)
@@ -99,6 +114,7 @@ COMMANDS = {
     "agent-busy": (agent_busy, "hook command: the agent started working"),
     "agent-idle": (agent_idle, "hook command: the agent finished its answer"),
     "agent-waiting": (agent_waiting, "hook command: the agent waits for the user"),
+    "agent-permission": (agent_permission, "hook command: a permission request for the web app"),
 }
 
 

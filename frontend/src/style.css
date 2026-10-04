@@ -7,6 +7,24 @@
     @apply bg-slate-900 text-slate-100 antialiased;
     -webkit-tap-highlight-color: transparent;
   }
+
+  /* Everything clickable shows the hand, also over the terminal (whose text cursor would
+     otherwise show through), and answers a press by sinking in a little. */
+  button,
+  select,
+  [role="switch"] {
+    cursor: pointer;
+    transition-property: color, background-color, border-color, transform;
+    transition-duration: 100ms;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+  }
+
+  button:not(:disabled):active {
+    transform: scale(0.94);
+  }
 }
 
 /* Component classes as utilities, so they can build on each other via @apply. */
@@ -20,7 +38,7 @@
 }
 
 @utility btn {
-  @apply inline-flex min-h-9 items-center justify-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+  @apply inline-flex min-h-9 items-center justify-center gap-2 rounded-lg px-3 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50;
 }
 
 /* Compact buttons inside cards; set after btn-primary/-secondary in the class list. */

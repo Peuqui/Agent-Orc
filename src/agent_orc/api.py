@@ -16,10 +16,11 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from agent_orc import files
+from agent_orc.approvals import ApprovalNotFoundError, ApprovalRequest, decide, open_requests
 from agent_orc.attachments import store_attachment
 from agent_orc.auth import Clock, Credentials, LoginGuard, TokenSigner, verify_password
 from agent_orc.config import Config, TerminalConfig
-from agent_orc.context import QUOTA_SOURCES, session_busy, session_status
+from agent_orc.context import QUOTA_SOURCES, session_busy, session_status, store_activity
 from agent_orc.dictation import (
     Device,
     DictationServiceError,
@@ -90,6 +91,7 @@ ERROR_STATUS: dict[type[Exception], int] = {
     files.InvalidNameError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     InvalidEffortError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     InvalidPermissionModeError: status.HTTP_422_UNPROCESSABLE_CONTENT,
+    ApprovalNotFoundError: status.HTTP_404_NOT_FOUND,
     files.FileTooLargeError: status.HTTP_413_CONTENT_TOO_LARGE,
     files.NotTextError: status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
     SessionNotFoundError: status.HTTP_404_NOT_FOUND,
@@ -148,6 +150,11 @@ class PushSubscription(BaseModel):
 
     endpoint: str
     keys: PushKeys
+
+
+class ApprovalDecision(BaseModel):
+    request: str
+    allow: bool
 
 
 class PermissionModeRequest(BaseModel):
@@ -216,8 +223,10 @@ def create_app(
         """Store the folder's reasoning and resume the agent, which only reads it at start."""
         pending_effort.pop(session.id, None)
         store_effort(session.profile, session.path, reasoning)
-        sessions.stop(session.id)
-        return sessions.start(session.profile, session.path, resume=True)
+        restarted = sessions.restart(session)
+        # The ended agent cannot report that it stopped working.
+        store_activity(session.id, busy=False)
+        return restarted
 
     def apply_pending_efforts() -> None:
         for session_id, reasoning in list(pending_effort.items()):
@@ -277,9 +286,10 @@ def create_app(
         """An agent accepts only the levels (and ultracode) its profile offers."""
         profile = config.agents.get(profile_name)
         effort = profile.effort if profile else None
-        allowed = effort.levels if effort else []
-        if reasoning.effort is not None and reasoning.effort not in allowed:
-            raise InvalidEffortError(reasoning.effort)
+        # An agent with levels always gets one of them; one without gets none.
+        valid = reasoning.effort is None if effort is None else reasoning.effort in effort.levels
+        if not valid:
+            raise InvalidEffortError(str(reasoning.effort))
         if reasoning.ultracode and not (effort and effort.ultracode):
             raise InvalidEffortError("ultracode")
 
@@ -293,7 +303,10 @@ def create_app(
         profile = config.agents.get(profile_name)
         if profile is None or profile.effort is None:
             return Reasoning(effort=None, ultracode=False)
-        return EFFORT_STORES[profile.effort.store].read(folder)
+        stored = EFFORT_STORES[profile.effort.store].read(folder)
+        # A folder without a level of its own has the configured one; starting there writes it.
+        effort = stored.effort if stored.effort is not None else profile.effort.default
+        return Reasoning(effort=effort, ultracode=stored.ultracode)
 
     def scope_state() -> dict[str, Any]:
         return {
@@ -446,19 +459,26 @@ def create_app(
 
     @app.get("/api/sessions", dependencies=authenticated)
     def list_sessions() -> list[dict[str, Any]]:
-        return [session_entry(s) for s in sessions.list()]
+        requests = open_requests()
+        return [session_entry(s, requests) for s in sessions.list()]
 
-    def session_entry(session: AgentSession) -> dict[str, Any]:
-        empty = {"model": None, "effort": None, "context_tokens": None, "context_window": None}
+    def session_entry(session: AgentSession, requests: list[ApprovalRequest]) -> dict[str, Any]:
+        empty = {"model": None, "context_tokens": None, "context_window": None}
         pending = pending_effort.get(session.id)
+        status = session_status(session)
+        folder = folder_reasoning(session.profile, session.path)
         return {
             **asdict(session),
             **empty,
-            **session_status(session),
+            **status,
+            # As the agent reports it; before its first report, the folder's level it started with.
+            "effort": status.get("effort") or folder.effort,
             "busy": session_busy(session),
             # As stored for the folder; the agent reads it at start.
-            "ultracode": folder_reasoning(session.profile, session.path).ultracode,
+            "ultracode": folder.ultracode,
             "permission_mode": folder_permission_mode(session.profile, session.path),
+            # Waiting for the user's answer; normally at most one, as Claude asks one at a time.
+            "approvals": [asdict(r) for r in requests if r.session == session.id],
             "effort_pending": pending is not None,
             "pending_effort": pending.effort if pending else None,
             "pending_ultracode": pending.ultracode if pending else None,
@@ -476,7 +496,11 @@ def create_app(
             ids = {c["id"] for c in conversations_of(body.profile, path)}
             if body.conversation not in ids:
                 raise ConversationNotFoundError(body.conversation)
-        store_effort(body.profile, path, Reasoning(body.effort, body.ultracode))
+        effort = body.effort
+        if effort is None and profile and profile.effort:
+            # Started without a choice: the folder's level, or else the configured one.
+            effort = folder_reasoning(body.profile, path).effort
+        store_effort(body.profile, path, Reasoning(effort, body.ultracode))
         if profile and profile.permission:
             # A folder without a mode of its own starts in the configured one, so the card
             # shows the mode the agent really runs in, whatever the user's own setting says.
@@ -495,6 +519,17 @@ def create_app(
     @app.get("/api/conversations", dependencies=authenticated)
     def list_conversations(profile: str, path: str) -> list[dict[str, Any]]:
         return conversations_of(profile, scope.resolve(path))
+
+    @app.post(
+        "/api/sessions/{session_id}/approval",
+        dependencies=authenticated,
+        status_code=status.HTTP_204_NO_CONTENT,
+    )
+    def answer_approval(session_id: str, body: ApprovalDecision) -> None:
+        """The user's answer to a permission request, handed to the waiting hook."""
+        if not any(r.id == body.request and r.session == session_id for r in open_requests()):
+            raise ApprovalNotFoundError(body.request)
+        decide(body.request, body.allow)
 
     def folder_permission_mode(profile_name: str, folder: Path) -> str | None:
         profile = config.agents.get(profile_name)

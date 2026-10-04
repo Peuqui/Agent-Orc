@@ -86,13 +86,21 @@ class TmuxConfig(StrictModel):
 
 
 class EffortConfig(StrictModel):
-    """Reasoning effort the user may pick; without a pick the agent's own default applies."""
+    """Reasoning effort the user may pick, and the one a folder has until the user picks."""
 
     levels: list[str]
+    # The level of a folder without one of its own.
+    default: str
     # Where the choice is kept (see effort.py); "claude_project": the folder's Claude settings.
     store: Literal["claude_project"]
     # The agent also offers ultracode (workflow orchestration), switched on next to the effort.
     ultracode: bool = False
+
+    @model_validator(mode="after")
+    def default_is_offered(self) -> "EffortConfig":
+        if self.default not in self.levels:
+            raise ValueError(f"effort default {self.default!r} is not one of {self.levels}")
+        return self
 
 
 class PermissionConfig(StrictModel):

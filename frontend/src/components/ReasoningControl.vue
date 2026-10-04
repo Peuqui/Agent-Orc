@@ -3,9 +3,8 @@ import { computed, ref, watch } from 'vue'
 import type { Reasoning } from '../api'
 import ToggleSwitch from './ToggleSwitch.vue'
 
-// Reasoning of an agent: the effort as a slider (first stop: the agent's own default, then
-// the profile's levels from fast to smart; chosen on release) and, where the agent offers it,
-// the ultracode switch next to it.
+// Reasoning of an agent: the effort as a slider (the profile's levels from fast to smart;
+// chosen on release) and, where the agent offers it, the ultracode switch next to it.
 const props = defineProps<{
   levels: string[]
   ultracodeOffered: boolean
@@ -16,13 +15,15 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{ 'update:modelValue': [reasoning: Reasoning] }>()
 
-const stops = computed<(string | null)[]>(() => [null, ...props.levels])
+const stops = computed(() => props.levels)
 const position = ref(0)
 
 watch(
   () => [props.modelValue.effort, props.levels] as const,
   () => {
-    position.value = Math.max(0, stops.value.indexOf(props.modelValue.effort))
+    // Unknown (null) until a running agent reports its level: the first stop then.
+    const { effort } = props.modelValue
+    position.value = effort === null ? 0 : Math.max(0, stops.value.indexOf(effort))
   },
   { immediate: true },
 )
@@ -50,7 +51,7 @@ function toggleUltracode(): void {
       <div class="flex shrink-0 items-baseline gap-2" :class="compact ? 'text-xs' : 'text-sm'">
         <span v-if="!compact" class="text-slate-400">{{ $t('agent.effort') }}</span>
         <span class="font-medium text-slate-100" :class="{ 'w-14': compact }">
-          {{ effort ?? $t('agent.effortDefaultShort') }}
+          {{ effort }}
         </span>
       </div>
       <div v-if="!compact" class="flex justify-between text-xs text-slate-500">
@@ -78,7 +79,7 @@ function toggleUltracode(): void {
           :value="position"
           :disabled="disabled"
           :aria-label="$t('agent.effort')"
-          :aria-valuetext="effort ?? $t('agent.effortDefaultShort')"
+          :aria-valuetext="effort"
           @input="onInput"
           @change="onChange"
         />

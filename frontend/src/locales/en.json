@@ -67,14 +67,12 @@
   "agent": {
     "title": "Start agent in “{name}”",
     "effort": "Effort (reasoning)",
-    "effortDefault": "Default (agent's own setting)",
     "profile": "Agent",
     "startNew": "Start new",
     "resume": "Resume last conversation",
     "earlier": "Earlier conversations in this folder",
     "untitled": "(untitled)",
     "recentlyActive": "recently active – may still be open elsewhere",
-    "effortDefaultShort": "Default",
     "faster": "Faster",
     "smarter": "Smarter",
     "ultracode": "Ultracode",
@@ -150,7 +148,11 @@
     "five_hour": "5 hours",
     "seven_day": "Week",
     "detail": "{percent} % · reset {when}",
-    "none": "No data yet – appears once a session has worked."
+    "none": "No data yet – appears once a session has worked.",
+    "short": {
+      "five_hour": "5 h",
+      "seven_day": "Week"
+    }
   },
   "workspace": {
     "close": "Close tab",
@@ -188,7 +190,8 @@
     "photo": "Take a photo",
     "file": "Choose a file",
     "image": "Picture or screenshot",
-    "screen": "Capture the screen"
+    "screen": "Capture the screen",
+    "remove": "Remove attachment"
   },
   "help": {
     "button": "Help: how Agent-Orc works",
@@ -203,7 +206,8 @@
           "Context ring: green below 50 %, amber above, red from 70 % – time for /compact or a new conversation soon.",
           "Effort slider and ultracode apply per project folder. While the agent is working you choose: after the answer, or now (restart with resume).",
           "Quota at the top: Claude's used five-hour and weekly limits, once a session has reported them.",
-          "“Start” on the card: the permission mode the agent starts in – Ask, Edit (file edits without asking), Auto or Plan. Auto by default; applies from the next start, inside the agent Shift+Tab switches it."
+          "“Start” on the card: the permission mode the agent starts in – Ask, Edit (file edits without asking), Auto or Plan. Auto by default; applies from the next start, inside the agent Shift+Tab switches it.",
+          "When an agent asks for permission, its card shows the command with “Allow” and “Deny”. The terminal asks the same; the first answer counts."
         ]
       },
       {
@@ -223,7 +227,7 @@
         "items": [
           "Input field at the bottom: Enter sends, Shift+Enter starts a new line.",
           "Microphone: dictation through Whisper; the GPU is done at once, the CPU is slower but always there. If it fails, “Retry” sends the same recording again.",
-          "Paperclip: take a photo, pick a picture or screenshot from the gallery, capture the screen (desktop) or attach a file – it lands in the project folder and its {'@'}path goes into the input field. A screenshot from the clipboard can also simply be pasted into the input field (Ctrl+V).",
+          "Paperclip: take a photo, pick a picture or screenshot from the gallery, capture the screen (desktop) or attach a file – it lands in the project folder and it shows as a small preview above the input field (× removes it) and goes to the agent with the next message. A screenshot from the clipboard can also simply be pasted into the input field (Ctrl+V).",
           "Grip on the right (jog): pull up or down to scroll, the further the faster. Mouse wheel and swiping scroll as well.",
           "A− / A+ changes the font size of this terminal only; the text view shows the screen for selecting and copying.",
           "The key bar sends Esc, Tab, arrows, Ctrl and so on – Ctrl and Alt apply to the next key."
@@ -258,5 +262,10 @@
     "denied": "Notifications are blocked in the browser – allow them in its site settings.",
     "test": "Send a test message",
     "testSent": "Test message sent to {count} device(s)."
+  },
+  "approval": {
+    "asks": "Wants to run {tool}",
+    "allow": "Allow",
+    "deny": "Deny"
   }
 }

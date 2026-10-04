@@ -11,6 +11,15 @@ export interface AgentProfile {
   permission_modes: string[]
 }
 
+/** A permission request of an agent, waiting for the user (also asked in its terminal). */
+export interface Approval {
+  id: string
+  tool: string
+  /** What the tool would do: the command, the file, ... */
+  subject: string
+  description: string | null
+}
+
 export interface AgentSession {
   id: string
   profile: string
@@ -28,6 +37,7 @@ export interface AgentSession {
   /** Permission mode the folder's sessions start in; null for agents started before Agent-Orc
    * stored one there. */
   permission_mode: string | null
+  approvals: Approval[]
   /** A reasoning change waits until the current answer is finished. */
   effort_pending: boolean
   pending_effort: string | null
@@ -230,6 +240,11 @@ export const api = {
   changeReasoning: (sessionId: string, reasoning: Reasoning, immediately: boolean) =>
     request<{ applied: boolean }>('POST', `sessions/${encodeURIComponent(sessionId)}/effort`, {
       body: { ...reasoning, immediately },
+    }),
+  /** Answers a permission request in the agent's place of the terminal prompt. */
+  answerApproval: (sessionId: string, requestId: string, allow: boolean) =>
+    request<void>('POST', `sessions/${encodeURIComponent(sessionId)}/approval`, {
+      body: { request: requestId, allow },
     }),
   /** Takes effect at the agent's next start. */
   changePermissionMode: (sessionId: string, mode: string) =>

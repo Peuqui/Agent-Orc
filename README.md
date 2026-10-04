@@ -50,8 +50,8 @@ detaches: the agents keep working, and you pick them up again from any device.
 - Dictation through a local Whisper service ([whisper-stt](https://github.com/Peuqui/whisper-stt),
   GPU or CPU) or the browser's own speech recognition.
 - Attach a photo, a screenshot (from the gallery, captured from the screen on the desktop, or
-  simply pasted with Ctrl+V) or a file: it lands in the project folder and its `@path` goes into
-  the input field.
+  simply pasted with Ctrl+V) or a file: it lands in the project folder, shows as a small preview
+  above the input field and goes to the agent with the next message.
 - Extra-keys bar (Esc, Tab, Shift+Tab, arrows, sticky Ctrl/Alt, …) for the on-screen keyboard,
   a jog grip for fast scrolling, font size per terminal, a text view for selecting and copying,
   clickable links.

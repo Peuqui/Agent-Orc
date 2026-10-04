@@ -79,11 +79,13 @@ tmux:
 # which is replaced by the name of the folder the agent runs in.
 # Claude reports model and context usage through `agent-orc statusline` as its status line, and
 # through hooks whether it is working, has finished (agent-idle) or waits for a permission or an
-# answer (agent-waiting, which notifies your devices); all only for sessions started by Agent-Orc.
+# answer (agent-waiting, which notifies your devices); agent-permission offers each permission
+# request on the agent's card too (the terminal still asks; whichever answers first decides).
+# All only for sessions started by Agent-Orc.
 agents:
   claude:
     label: Claude Code
-    start: [claude, --settings, &claude_settings '{"statusLine": {"type": "command", "command": "agent-orc statusline"}, "hooks": {"UserPromptSubmit": [{"hooks": [{"type": "command", "command": "agent-orc agent-busy"}]}], "Stop": [{"hooks": [{"type": "command", "command": "agent-orc agent-idle"}]}], "Notification": [{"matcher": "permission_prompt|elicitation_dialog", "hooks": [{"type": "command", "command": "agent-orc agent-waiting"}]}]}}', --remote-control, "{name}"]
+    start: [claude, --settings, &claude_settings '{"statusLine": {"type": "command", "command": "agent-orc statusline"}, "hooks": {"UserPromptSubmit": [{"hooks": [{"type": "command", "command": "agent-orc agent-busy"}]}], "Stop": [{"hooks": [{"type": "command", "command": "agent-orc agent-idle"}]}], "Notification": [{"matcher": "permission_prompt|elicitation_dialog", "hooks": [{"type": "command", "command": "agent-orc agent-waiting"}]}], "PermissionRequest": [{"matcher": "", "hooks": [{"type": "command", "command": "agent-orc agent-permission", "timeout": 86400}]}]}}', --remote-control, "{name}"]
     resume: [claude, --settings, *claude_settings, --continue, --remote-control, "{name}"]
     # Every earlier conversation in the folder (also from VS Code or a terminal) can be resumed.
     conversations:
@@ -93,10 +95,11 @@ agents:
     trust: claude
     # Usage limits (five hours, week) as Claude reports them in its status line.
     quota: claude
-    # Reasoning effort per project folder (<folder>/.claude/settings.local.json); without a
-    # choice Claude uses the user's own settings.
+    # Reasoning effort per project folder (<folder>/.claude/settings.local.json).
     effort:
       levels: [low, medium, high, xhigh, max]
+      # A folder without a level of its own gets this one when an agent starts there.
+      default: medium
       store: claude_project
       # Ultracode: Claude plans multi-agent workflows for larger tasks by itself.
       ultracode: true
