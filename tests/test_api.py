@@ -18,6 +18,7 @@ from agent_orc.config import Config, DictationConfig, default_config_text
 from agent_orc.context import store_activity, store_status
 from agent_orc.history import claude_project_dir
 from agent_orc.sessions import SESSION_ENV
+from agent_orc.terminal import attach_environment
 from tests.conftest import FakeClock, FakeWhisper
 
 PASSWORD = "richtig-langes-passwort"
@@ -346,6 +347,15 @@ def test_terminal_roundtrip_resize_and_detach(
 
     # Closing the terminal only detaches: the agent keeps running.
     assert client.get("/api/sessions").json()[0]["running"] is True
+
+
+def test_tmux_client_does_not_inherit_tmux(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Started by hand in a tmux window, the server inherits TMUX; passed on, tmux may take the
+    # attach for nesting and refuse it (depends on reused PTY numbers, so checked directly).
+    monkeypatch.setenv("TMUX", "/tmp/tmux-1000/default,1234,0")
+    environment = attach_environment()
+    assert "TMUX" not in environment
+    assert environment["TERM"] == "xterm-256color"
 
 
 def test_terminal_closes_when_session_stops(client: TestClient, home: Path) -> None:

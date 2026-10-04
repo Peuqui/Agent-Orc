@@ -25,6 +25,19 @@ def _make_controlling_terminal() -> None:
     fcntl.ioctl(0, termios.TIOCSCTTY, 0)
 
 
+def attach_environment() -> dict[str, str]:
+    """Environment of the tmux client, without TMUX.
+
+    A server started by hand inside tmux inherits TMUX. tmux then refuses to attach ("sessions
+    should be nested with care") whenever the new PTY gets the device name a stopped agent's
+    pane still holds, which happens as Linux reuses free PTY numbers. Agent-Orc attaches to its
+    own tmux server, so nothing is nested.
+    """
+    environment = {name: value for name, value in os.environ.items() if name != "TMUX"}
+    environment["TERM"] = TERM
+    return environment
+
+
 def _set_window_size(fd: int, cols: int, rows: int) -> None:
     fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack("HHHH", rows, cols, 0, 0))
 
@@ -45,7 +58,7 @@ async def bridge(
     process = await asyncio.create_subprocess_exec(
         "tmux", "-L", socket_name, "attach-session", "-t", exact_target(session_id),
         stdin=slave, stdout=slave, stderr=slave,
-        env={**os.environ, "TERM": TERM},
+        env=attach_environment(),
         start_new_session=True,
         preexec_fn=_make_controlling_terminal,
     )  # fmt: skip
