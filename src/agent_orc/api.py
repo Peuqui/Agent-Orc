@@ -27,7 +27,13 @@ from agent_orc.dictation import (
     UnsupportedAudioError,
     transcribe,
 )
-from agent_orc.effort import EFFORT_STORES, InvalidEffortError, Reasoning
+from agent_orc.effort import (
+    EFFORT_STORES,
+    PERMISSION_STORES,
+    InvalidEffortError,
+    InvalidPermissionModeError,
+    Reasoning,
+)
 from agent_orc.history import CONVERSATION_SOURCES, ConversationNotFoundError
 from agent_orc.scope import AccessScope, OutsideScopeError
 from agent_orc.sessions import (
@@ -76,6 +82,7 @@ ERROR_STATUS: dict[type[Exception], int] = {
     SessionAlreadyRunningError: status.HTTP_409_CONFLICT,
     files.InvalidNameError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     InvalidEffortError: status.HTTP_422_UNPROCESSABLE_CONTENT,
+    InvalidPermissionModeError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     files.FileTooLargeError: status.HTTP_413_CONTENT_TOO_LARGE,
     files.NotTextError: status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
     SessionNotFoundError: status.HTTP_404_NOT_FOUND,
@@ -122,6 +129,11 @@ class StartSessionRequest(BaseModel):
     ultracode: bool
     # Resume this earlier conversation (from GET /api/conversations) instead.
     conversation: str | None
+
+
+class PermissionModeRequest(BaseModel):
+    # None: the user's own setting.
+    mode: str | None
 
 
 class EffortRequest(BaseModel):
@@ -318,6 +330,7 @@ def create_app(
                 "label": p.label,
                 "effort_levels": p.effort.levels if p.effort else [],
                 "ultracode": bool(p.effort and p.effort.ultracode),
+                "permission_modes": p.permission.modes if p.permission else [],
             }
             for name, p in config.agents.items()
         ]
@@ -400,6 +413,7 @@ def create_app(
             "busy": session_busy(session),
             # As stored for the folder; the agent reads it at start.
             "ultracode": folder_reasoning(session.profile, session.path).ultracode,
+            "permission_mode": folder_permission_mode(session.profile, session.path),
             "effort_pending": pending is not None,
             "pending_effort": pending.effort if pending else None,
             "pending_ultracode": pending.ultracode if pending else None,
@@ -430,6 +444,28 @@ def create_app(
     @app.get("/api/conversations", dependencies=authenticated)
     def list_conversations(profile: str, path: str) -> list[dict[str, Any]]:
         return conversations_of(profile, scope.resolve(path))
+
+    def folder_permission_mode(profile_name: str, folder: Path) -> str | None:
+        profile = config.agents.get(profile_name)
+        if profile is None or profile.permission is None:
+            return None
+        return PERMISSION_STORES[profile.permission.store].read(folder)
+
+    @app.put(
+        "/api/sessions/{session_id}/permission-mode",
+        dependencies=authenticated,
+        status_code=status.HTTP_204_NO_CONTENT,
+    )
+    def change_permission_mode(session_id: str, body: PermissionModeRequest) -> None:
+        """Takes effect at the agent's next start, like the effort of a running agent."""
+        session = find_session(session_id)
+        if session is None:
+            raise SessionNotFoundError(session_id)
+        profile = config.agents.get(session.profile)
+        permission = profile.permission if profile else None
+        if permission is None or (body.mode is not None and body.mode not in permission.modes):
+            raise InvalidPermissionModeError(str(body.mode))
+        PERMISSION_STORES[permission.store].write(session.path, body.mode)
 
     @app.post("/api/sessions/{session_id}/effort", dependencies=authenticated)
     def change_effort(session_id: str, body: EffortRequest) -> dict[str, bool]:

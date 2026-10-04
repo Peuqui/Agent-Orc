@@ -46,6 +46,7 @@ def config(home: Path, socket_name: str) -> Config:
             "start": ["sleep", "60"],
             "resume": ["true"],
             "effort": {"levels": ["low", "high"], "store": "claude_project", "ultracode": True},
+            "permission": {"modes": ["default", "plan"], "store": "claude_project"},
         },
         "talker": {
             "label": "Talker",
@@ -699,6 +700,30 @@ def test_ultracode_only_for_agents_offering_it(client: TestClient, home: Path) -
     refused = client.post("/api/sessions", json=start)
     assert refused.status_code == 422
     assert refused.json()["error"] == "InvalidEffortError"
+
+
+def test_permission_mode_is_stored_for_the_folder(client: TestClient, home: Path) -> None:
+    body = {
+        "profile": "sleeper",
+        "path": str(home / "projects"),
+        "resume": False,
+        "effort": None,
+        "ultracode": False,
+        "conversation": None,
+    }
+    session_id = client.post("/api/sessions", json=body).json()["id"]
+    agents = {agent["name"]: agent for agent in client.get("/api/agents").json()}
+    assert agents["sleeper"]["permission_modes"] == ["default", "plan"]
+    url = f"/api/sessions/{session_id}/permission-mode"
+    assert client.put(url, json={"mode": "plan"}).status_code == 204
+    assert client.get("/api/sessions").json()[0]["permission_mode"] == "plan"
+    settings = json.loads((home / "projects/.claude/settings.local.json").read_text())
+    assert settings["permissions"] == {"defaultMode": "plan"}
+    refused = client.put(url, json={"mode": "bypassPermissions"})
+    assert refused.status_code == 422
+    assert refused.json()["error"] == "InvalidPermissionModeError"
+    assert client.put(url, json={"mode": None}).status_code == 204
+    assert client.get("/api/sessions").json()[0]["permission_mode"] is None
 
 
 def test_card_order_is_kept(

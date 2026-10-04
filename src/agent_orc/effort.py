@@ -7,6 +7,9 @@ the effort level; documented settings key, verified in the installed Claude Code
 session does not pick up a change, so changing the reasoning of a running agent means
 resuming it. Setting it here, rather than with /effort inside the session, matters: /effort
 silently saves the level as the user's global default.
+
+The same file also holds the permission mode a session starts in (`permissions.defaultMode`,
+values as listed by the installed Claude Code); inside a session Shift+Tab switches it.
 """
 
 import json
@@ -19,10 +22,16 @@ from typing import Any
 CLAUDE_PROJECT_SETTINGS = Path(".claude") / "settings.local.json"
 CLAUDE_EFFORT_KEY = "effortLevel"
 CLAUDE_ULTRACODE_KEY = "ultracode"
+CLAUDE_PERMISSIONS_KEY = "permissions"
+CLAUDE_DEFAULT_MODE_KEY = "defaultMode"
 NEW_SETTINGS_MODE = 0o644
 
 
 class InvalidEffortError(ValueError):
+    pass
+
+
+class InvalidPermissionModeError(ValueError):
     pass
 
 
@@ -68,6 +77,11 @@ def write_claude_project_reasoning(folder: Path, reasoning: Reasoning) -> None:
             settings.pop(key, None)
         else:
             settings[key] = value
+    _write_settings(path, settings)
+
+
+def _write_settings(path: Path, settings: dict[str, Any]) -> None:
+    """Replace the settings file at once, keeping its file mode."""
     path.parent.mkdir(exist_ok=True)
     mode = path.stat().st_mode & 0o777 if path.exists() else NEW_SETTINGS_MODE
     temporary = path.with_name(f"{path.name}.agent-orc-tmp")
@@ -79,6 +93,29 @@ def write_claude_project_reasoning(folder: Path, reasoning: Reasoning) -> None:
     temporary.replace(path)
 
 
+def read_claude_permission_mode(folder: Path) -> str | None:
+    """The mode the folder's sessions start in; None: the user's own setting."""
+    permissions = _read_settings(folder / CLAUDE_PROJECT_SETTINGS).get(CLAUDE_PERMISSIONS_KEY)
+    mode = permissions.get(CLAUDE_DEFAULT_MODE_KEY) if isinstance(permissions, dict) else None
+    return mode if isinstance(mode, str) else None
+
+
+def write_claude_permission_mode(folder: Path, mode: str | None) -> None:
+    """Set the start mode; the folder's other permissions (allow lists, ...) stay as they are."""
+    if read_claude_permission_mode(folder) == mode:
+        return
+    path = folder / CLAUDE_PROJECT_SETTINGS
+    settings = _read_settings(path)
+    permissions = settings.setdefault(CLAUDE_PERMISSIONS_KEY, {})
+    if mode is None:
+        permissions.pop(CLAUDE_DEFAULT_MODE_KEY, None)
+        if not permissions:
+            del settings[CLAUDE_PERMISSIONS_KEY]
+    else:
+        permissions[CLAUDE_DEFAULT_MODE_KEY] = mode
+    _write_settings(path, settings)
+
+
 @dataclass(frozen=True)
 class EffortStore:
     read: Callable[[Path], Reasoning]
@@ -88,4 +125,16 @@ class EffortStore:
 # Per agent profile setting "effort.store".
 EFFORT_STORES: dict[str, EffortStore] = {
     "claude_project": EffortStore(read_claude_project_reasoning, write_claude_project_reasoning),
+}
+
+
+@dataclass(frozen=True)
+class PermissionStore:
+    read: Callable[[Path], str | None]
+    write: Callable[[Path, str | None], None]
+
+
+# Per agent profile setting "permission.store".
+PERMISSION_STORES: dict[str, PermissionStore] = {
+    "claude_project": PermissionStore(read_claude_permission_mode, write_claude_permission_mode),
 }

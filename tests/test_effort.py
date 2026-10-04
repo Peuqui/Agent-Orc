@@ -5,7 +5,9 @@ from pathlib import Path
 from agent_orc.effort import (
     CLAUDE_PROJECT_SETTINGS,
     Reasoning,
+    read_claude_permission_mode,
     read_claude_project_reasoning,
+    write_claude_permission_mode,
     write_claude_project_reasoning,
 )
 
@@ -61,3 +63,28 @@ def test_nothing_to_change_does_not_touch_anything(tmp_path: Path) -> None:
     before = settings_of(tmp_path).stat().st_mtime_ns
     write_claude_project_reasoning(tmp_path, Reasoning("low", ultracode=True))
     assert settings_of(tmp_path).stat().st_mtime_ns == before
+
+
+def test_permission_mode_keeps_the_folders_other_permissions(tmp_path: Path) -> None:
+    path = settings_of(tmp_path)
+    path.parent.mkdir()
+    path.write_text(json.dumps({"permissions": {"allow": ["Bash(git *)"]}, "effortLevel": "high"}))
+    assert read_claude_permission_mode(tmp_path) is None
+    write_claude_permission_mode(tmp_path, "acceptEdits")
+    assert read_claude_permission_mode(tmp_path) == "acceptEdits"
+    assert json.loads(path.read_text()) == {
+        "permissions": {"allow": ["Bash(git *)"], "defaultMode": "acceptEdits"},
+        "effortLevel": "high",
+    }
+    write_claude_permission_mode(tmp_path, None)
+    assert json.loads(path.read_text()) == {
+        "permissions": {"allow": ["Bash(git *)"]},
+        "effortLevel": "high",
+    }
+
+
+def test_permission_mode_alone_leaves_no_empty_permissions(tmp_path: Path) -> None:
+    write_claude_permission_mode(tmp_path, "plan")
+    assert json.loads(settings_of(tmp_path).read_text()) == {"permissions": {"defaultMode": "plan"}}
+    write_claude_permission_mode(tmp_path, None)
+    assert json.loads(settings_of(tmp_path).read_text()) == {}

@@ -233,5 +233,19 @@
         ]
       }
     ]
+  },
+  "permission": {
+    "label": "Start",
+    "title": "Permission mode the agent starts in – applies from its next start; inside the agent Shift+Tab switches it",
+    "own": "own setting",
+    "changed": "Applies from the next start of “{name}”.",
+    "modes": {
+      "default": "Ask",
+      "acceptEdits": "Accept edits",
+      "auto": "Auto",
+      "plan": "Plan only",
+      "dontAsk": "Don't ask",
+      "bypassPermissions": "Allow everything"
+    }
   }
 }

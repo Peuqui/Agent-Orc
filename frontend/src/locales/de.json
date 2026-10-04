@@ -233,5 +233,19 @@
         ]
       }
     ]
+  },
+  "permission": {
+    "label": "Start",
+    "title": "Freigabe-Modus, in dem der Agent startet – gilt ab dem nächsten Start; im Agenten wechselt Shift+Tab",
+    "own": "eigene Einstellung",
+    "changed": "Gilt ab dem nächsten Start von „{name}“.",
+    "modes": {
+      "default": "Nachfragen",
+      "acceptEdits": "Änderungen annehmen",
+      "auto": "Auto",
+      "plan": "Nur planen",
+      "dontAsk": "Nicht fragen",
+      "bypassPermissions": "Alles erlauben"
+    }
   }
 }

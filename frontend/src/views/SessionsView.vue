@@ -18,12 +18,13 @@ import { baseName } from '../format'
 const { sessions, profiles, refresh } = useSessions()
 const toast = useToast()
 const router = useRouter()
-const { t } = useI18n()
+const { t, te } = useI18n()
 const stopping = ref<AgentSession | null>(null)
 // A chosen reasoning waiting for confirmation; the control shows it until then.
 const effortChange = ref<{ session: AgentSession; reasoning: Reasoning } | null>(null)
 
 const levels = computed(() => new Map(profiles.value.map((p) => [p.name, p.effort_levels])))
+const permissionModes = computed(() => new Map(profiles.value.map((p) => [p.name, p.permission_modes])))
 const ultracodeOffered = computed(() => new Map(profiles.value.map((p) => [p.name, p.ultracode])))
 
 // Cancelled: the slider falls back to the effort actually in effect.
@@ -88,7 +89,7 @@ const reorder = useReorder({
     cardOrder.value = folders
     void run(() => api.arrangeCards(folders))
   },
-  ignore: 'button, a, input, [role="switch"]',
+  ignore: 'button, a, input, select, [role="switch"]',
 })
 const drag = reorder.drag
 
@@ -107,6 +108,18 @@ function confirmDeleteWorkspace(): void {
   const workspace = deletingWorkspace.value
   deletingWorkspace.value = null
   if (workspace !== null) api.deleteWorkspace(workspace).then(loadWorkspaceNames, toast.error)
+}
+
+/** Known modes by name; a mode added in the config shows as it is written there. */
+function permissionLabel(mode: string): string {
+  return te(`permission.modes.${mode}`) ? t(`permission.modes.${mode}`) : mode
+}
+
+function changePermissionMode(session: AgentSession, mode: string): void {
+  void run(async () => {
+    await api.changePermissionMode(session.id, mode === '' ? null : mode)
+    if (session.running) toast.info(t('permission.changed', { name: baseName(session.path) }))
+  })
 }
 
 async function run(action: () => Promise<unknown>): Promise<void> {
@@ -273,6 +286,23 @@ function resume(session: AgentSession): void {
           <button class="btn-secondary btn-small" @click="stopping = session">
             <AppIcon name="stop" />{{ $t('sessions.stop') }}
           </button>
+          <label
+            v-if="permissionModes.get(session.profile)?.length"
+            class="ml-auto flex items-center gap-1.5 text-xs text-slate-400"
+            :title="$t('permission.title')"
+          >
+            {{ $t('permission.label') }}
+            <select
+              class="h-8 rounded-md border border-slate-700 bg-slate-800 px-1.5 text-xs text-slate-200"
+              :value="session.permission_mode ?? ''"
+              @change="changePermissionMode(session, ($event.target as HTMLSelectElement).value)"
+            >
+              <option value="">{{ $t('permission.own') }}</option>
+              <option v-for="mode in permissionModes.get(session.profile)" :key="mode" :value="mode">
+                {{ permissionLabel(mode) }}
+              </option>
+            </select>
+          </label>
         </div>
       </li>
     </ul>

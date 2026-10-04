@@ -7,6 +7,8 @@ export interface AgentProfile {
   effort_levels: string[]
   /** The agent offers ultracode (workflow orchestration) next to the effort. */
   ultracode: boolean
+  /** Permission modes a session may start in; empty if the agent has none. */
+  permission_modes: string[]
 }
 
 export interface AgentSession {
@@ -23,6 +25,8 @@ export interface AgentSession {
   busy: boolean
   /** Stored for the folder; the agent reads it at start. */
   ultracode: boolean
+  /** Permission mode the folder's sessions start in; null: the user's own setting. */
+  permission_mode: string | null
   /** A reasoning change waits until the current answer is finished. */
   effort_pending: boolean
   pending_effort: string | null
@@ -226,6 +230,9 @@ export const api = {
     request<{ applied: boolean }>('POST', `sessions/${encodeURIComponent(sessionId)}/effort`, {
       body: { ...reasoning, immediately },
     }),
+  /** Takes effect at the agent's next start. */
+  changePermissionMode: (sessionId: string, mode: string | null) =>
+    request<void>('PUT', `sessions/${encodeURIComponent(sessionId)}/permission-mode`, { body: { mode } }),
   cancelEffortChange: (sessionId: string) =>
     request<void>('DELETE', `sessions/${encodeURIComponent(sessionId)}/effort`),
   stopSession: (id: string) => request<void>('DELETE', `sessions/${encodeURIComponent(id)}`),

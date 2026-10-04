@@ -83,6 +83,14 @@ class EffortConfig(StrictModel):
     ultracode: bool = False
 
 
+class PermissionConfig(StrictModel):
+    """Permission modes a session may start in; without a pick the user's own setting applies."""
+
+    modes: list[str]
+    # Where the choice is kept (see effort.py); "claude_project": the folder's Claude settings.
+    store: Literal["claude_project"]
+
+
 class ConversationsConfig(StrictModel):
     """Earlier conversations in a folder that can be resumed one by one."""
 
@@ -98,6 +106,7 @@ class AgentProfile(StrictModel):
     resume: list[str]
     conversations: ConversationsConfig | None = None
     effort: EffortConfig | None = None
+    permission: PermissionConfig | None = None
     # Mark the folder as trusted before starting, so the agent does not stop at a prompt.
     trust: Literal["claude"] | None = None
     # Where the account's usage limits come from (see context.QUOTA_SOURCES).
