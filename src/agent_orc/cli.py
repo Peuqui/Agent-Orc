@@ -13,7 +13,14 @@ from typing import Any
 import uvicorn
 
 from agent_orc.api import create_app
-from agent_orc.approvals import close_request, hook_answer, open_request, wait_for_decision
+from agent_orc.approvals import (
+    close_answered,
+    close_request,
+    close_session_requests,
+    hook_answer,
+    open_request,
+    wait_for_decision,
+)
 from agent_orc.auth import load_credentials, new_credentials, save_credentials
 from agent_orc.config import (
     CONFIG_FILE_NAME,
@@ -62,13 +69,17 @@ def statusline() -> None:
 
 def agent_busy() -> None:
     """Hook command (Claude: UserPromptSubmit): the agent starts working."""
-    store_activity(os.environ[SESSION_ENV], busy=True)
+    session_id = os.environ[SESSION_ENV]
+    store_activity(session_id, busy=True)
+    close_session_requests(session_id)
 
 
 def agent_idle() -> None:
     """Hook command (Claude: Stop): the agent finished its answer; tells the user's devices."""
     hook = json.load(sys.stdin)
-    store_activity(os.environ[SESSION_ENV], busy=False)
+    session_id = os.environ[SESSION_ENV]
+    store_activity(session_id, busy=False)
+    close_session_requests(session_id)
     # Absent when the answer ended without text (e.g. interrupted).
     _notify("done", hook, hook.get("last_assistant_message") or "")
 
@@ -80,6 +91,7 @@ def agent_limited() -> None:
     session_id = os.environ[SESSION_ENV]
     # StopFailure comes instead of Stop: the agent no longer works.
     store_activity(session_id, busy=False)
+    close_session_requests(session_id)
     mark_limited(session_id)
     _notify("limited", hook, hook.get("last_assistant_message") or "")
 
@@ -103,6 +115,13 @@ def agent_permission() -> None:
     print(json.dumps(hook_answer(allow)))
 
 
+def agent_tool_done() -> None:
+    """Hook command (Claude: PostToolUse, PostToolUseFailure, PermissionDenied; async): a
+    permission request for this call was answered, maybe in the terminal."""
+    hook = json.load(sys.stdin)
+    close_answered(os.environ[SESSION_ENV], hook["tool_name"], hook["tool_input"])
+
+
 def _notify(kind: str, hook: dict[str, Any], text: str) -> None:
     config = load_config(config_dir() / CONFIG_FILE_NAME)
     message = agent_message(kind, os.environ[SESSION_ENV], Path(hook["cwd"]).name, text)
@@ -118,6 +137,7 @@ COMMANDS = {
     "agent-idle": (agent_idle, "hook command: the agent finished its answer"),
     "agent-limited": (agent_limited, "hook command: the usage limit stopped the agent"),
     "agent-waiting": (agent_waiting, "hook command: the agent waits for the user"),
+    "agent-tool-done": (agent_tool_done, "hook command: a tool call ran, failed or was denied"),
     "agent-permission": (agent_permission, "hook command: a permission request for the web app"),
 }
 

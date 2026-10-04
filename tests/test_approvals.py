@@ -13,6 +13,7 @@ from agent_orc.approvals import (
     ApprovalNotFoundError,
     approvals_dir,
     close_request,
+    close_session_requests,
     decide,
     hook_answer,
     open_request,
@@ -21,11 +22,8 @@ from agent_orc.approvals import (
 )
 from agent_orc.sessions import SESSION_ENV
 
-HOOK_INPUT = {
-    "hook_event_name": "PermissionRequest",
-    "tool_name": "Bash",
-    "tool_input": {"command": "rm probe-file.txt", "description": "Remove the probe file"},
-}
+TOOL_INPUT = {"command": "rm probe-file.txt", "description": "Remove the probe file"}
+HOOK_INPUT = {"hook_event_name": "PermissionRequest", "tool_name": "Bash", "tool_input": TOOL_INPUT}
 WAIT_STEPS = 100
 WAIT_STEP_SECONDS = 0.05
 
@@ -100,9 +98,43 @@ def test_hook_answers_claude_with_the_users_decision(state: Path) -> None:
     assert list(approvals_dir().iterdir()) == []
 
 
-def test_hook_ended_by_claude_takes_its_request_along(state: Path) -> None:
-    # Claude ends the hook when the user answers in the terminal.
+def test_hook_ended_by_a_signal_takes_its_request_along(state: Path) -> None:
     hook = start_hook(state)
     hook.send_signal(signal.SIGTERM)
     hook.wait(timeout=10)
     assert list(approvals_dir().iterdir()) == []
+
+
+def run_tool_done(state: Path, tool_input: dict[str, str]) -> None:
+    """What Claude's PostToolUse hook runs once the tool call is done."""
+    environment = {**os.environ, "XDG_STATE_HOME": str(state), SESSION_ENV: "garden-1"}
+    hook_input = {"hook_event_name": "PostToolUse", "tool_name": "Bash", "tool_input": tool_input}
+    subprocess.run(
+        [sys.executable, "-c", "from agent_orc.cli import main; main()", "agent-tool-done"],
+        input=json.dumps(hook_input),
+        text=True,
+        env=environment,
+        check=True,
+    )
+
+
+def test_request_answered_in_the_terminal_leaves_once_its_tool_ran(state: Path) -> None:
+    hook = start_hook(state)
+    # Another tool call of the agent does not answer this request.
+    run_tool_done(state, {"command": "ls"})
+    assert len(open_requests()) == 1
+    run_tool_done(state, TOOL_INPUT)
+    assert hook.wait(timeout=10) == 0
+    assert open_requests() == []
+    assert list(approvals_dir().iterdir()) == []
+
+
+def test_requests_leave_when_the_agents_turn_ends(state: Path) -> None:
+    hook = start_hook(state)
+    other = open_request("other-agent", HOOK_INPUT)
+    close_session_requests("garden-1")
+    assert hook.wait(timeout=10) == 0
+    # Its request carries this test's pid, which runs no hook: only the file goes.
+    assert [request.session for request in open_requests()] == ["other-agent"]
+    close_session_requests(other.session)
+    assert open_requests() == []
