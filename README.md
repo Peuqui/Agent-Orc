@@ -35,6 +35,12 @@ detaches: the agents keep working, and you pick them up again from any device.
 - Notifications on your phone or desktop when an agent is done or waits for a permission or an
   answer (Web Push, switched on per device); tapping one opens the agent.
 - The permission mode an agent starts in, per project (ask, edit, auto, plan; auto by default).
+  When an agent asks for permission, its card shows the command with “Allow” and “Deny”; the
+  first answer counts, on the card or in the terminal.
+- Profiles with a choice of models: through a small start script, Claude Code also runs on
+  local models (e.g. vLLM or llama-swap) or with other providers. The start dialog then offers
+  the models and their reasoning levels, with a note per model (such as how long it is free to
+  use); the comments of the default config hold an example.
 - An agent can start in a git worktree of its own (a second working copy on a new branch), so
   two agents can work on one project; removed again once it has ended, without losing work.
 - Restart (⟳) with the conversation resumed, schedule prompts for later, and carry on by
@@ -51,10 +57,11 @@ detaches: the agents keep working, and you pick them up again from any device.
 - Shortcuts on a computer: Alt+Shift+1 … 9 for the columns, Alt+Shift+← / → for the
   workspaces.
 - On a phone one column at a time: a sideways swipe in the terminal brings the next; a
-  fullscreen shows terminal and input field only, and the extra keys fold away.
+  fullscreen shows terminal and input field only, the extra keys fold away, and a terminal's
+  actions sit behind ⋮.
 
 <p align="center">
-  <img src="docs/screenshots/workspace-en.png" alt="Workspace with two agents side by side" width="860">
+  <img src="docs/screenshots/workspace-en.png" alt="Workspace with an agent and its terminal side by side" width="860">
 </p>
 
 **Terminal**
@@ -68,8 +75,8 @@ detaches: the agents keep working, and you pick them up again from any device.
   simply pasted with Ctrl+V) or a file: it lands in the project folder, shows as a small preview
   above the input field and goes to the agent with the next message.
 - Extra-keys bar (Esc, Tab, Shift+Tab, arrows, sticky Ctrl/Alt, …) for the on-screen keyboard,
-  a jog grip for fast scrolling, one font size per device, freely arranged extra keys with text keys (macros), a text view for selecting and copying,
-  clickable links.
+  freely arranged and with text keys (macros); a jog grip for fast scrolling, one font size per
+  device, a text view for selecting and copying, clickable links.
 
 **Files and more**
 - Browse, edit and trash files in your project folders; Markdown as a preview, pictures as

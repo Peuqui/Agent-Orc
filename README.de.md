@@ -39,7 +39,13 @@ aus wieder aufnehmen.
 - Benachrichtigungen aufs Handy oder den Rechner, wenn ein Agent fertig ist oder auf eine
   Freigabe oder Antwort wartet (Web Push, pro Gerät einschaltbar); Antippen öffnet den Agenten.
 - Der Freigabe-Modus, in dem ein Agent startet, pro Projekt (Fragen, Bearbeiten, Auto, Planen;
-  Voreinstellung Auto).
+  Voreinstellung Auto). Fragt ein Agent um Erlaubnis, zeigt seine Karte den Befehl mit
+  „Erlauben“ und „Ablehnen“; es gilt die Antwort, die zuerst kommt, auf der Karte oder im
+  Terminal.
+- Profile mit Modellwahl: Über ein kleines Startskript läuft Claude Code auch mit lokalen
+  Modellen (z. B. vLLM oder llama-swap) oder bei anderen Anbietern. Der Startdialog bietet dann
+  die Modelle und ihre Denkstufen an, mit einem Hinweis je Modell (etwa wie lange es frei
+  nutzbar ist); ein Beispiel steht in den Kommentaren der Standard-Config.
 - Ein Agent kann in einem eigenen Git-Worktree starten (zweite Arbeitskopie auf einem neuen
   Branch), damit zwei Agenten an einem Projekt arbeiten können; danach wird er wieder
   entfernt, ohne Arbeit zu verlieren.
@@ -58,10 +64,11 @@ aus wieder aufnehmen.
 - Tastenkürzel am Rechner: Alt+Umschalt+1 … 9 für die Spalten, Alt+Umschalt+← / → für die
   Arbeitsflächen.
 - Am Handy eine Spalte auf einmal: seitlich im Terminal wischen holt die nächste; ein Vollbild
-  zeigt nur Terminal und Eingabefeld, die Sondertasten lassen sich einklappen.
+  zeigt nur Terminal und Eingabefeld, die Sondertasten lassen sich einklappen, und die Aktionen
+  eines Terminals liegen hinter ⋮.
 
 <p align="center">
-  <img src="docs/screenshots/workspace-de.png" alt="Arbeitsfläche mit zwei Agenten nebeneinander" width="860">
+  <img src="docs/screenshots/workspace-de.png" alt="Arbeitsfläche mit einem Agenten und seinem Terminal nebeneinander" width="860">
 </p>
 
 **Terminal**
@@ -75,8 +82,9 @@ aus wieder aufnehmen.
   eingefügt) oder Datei anhängen: Sie landen im Projektordner, erscheinen als kleine Vorschau
   über dem Eingabefeld und gehen mit der nächsten Nachricht an den Agenten.
 - Sondertasten-Leiste (Esc, Tab, Shift+Tab, Pfeile, einrastendes Strg/Alt, …) für die
-  Bildschirmtastatur, ein Griff zum schnellen Scrollen, eine Schriftgröße pro Gerät, frei anpassbare Sondertasten mit Text-Tasten (Makros), eine
-  Textansicht zum Markieren und Kopieren, anklickbare Links.
+  Bildschirmtastatur, frei anpassbar und mit Text-Tasten (Makros); ein Griff zum schnellen
+  Scrollen, eine Schriftgröße pro Gerät, eine Textansicht zum Markieren und Kopieren,
+  anklickbare Links.
 
 **Dateien und mehr**
 - Dateien in den Projektordnern durchsuchen, bearbeiten und in den Papierkorb legen;
