@@ -18,6 +18,8 @@ watch(text, (current) => {
   else sessionStorage.removeItem(draftKey)
 })
 const field = ref<HTMLTextAreaElement>()
+// A finger rather than a mouse is the main pointer (phones, tablets without a mouse).
+const TOUCH_FIRST = window.matchMedia('(pointer: coarse)')
 
 const {
   state,
@@ -32,7 +34,9 @@ const {
   toggleBrowser,
 } = useDictation(async (dictated) => {
   text.value = text.value ? `${text.value} ${dictated}` : dictated
-  // Ready to send with Enter (or to correct), without clicking into the field first.
+  // Ready to send with Enter (or to correct), without clicking into the field first. Not on
+  // touch screens: the focus would open the on-screen keyboard; there the send button is ready.
+  if (TOUCH_FIRST.matches) return
   await nextTick()
   const input = field.value
   if (!input) return
