@@ -10,7 +10,8 @@ import ConfirmDialog from './ConfirmDialog.vue'
 
 // Restarts the agent with its conversation resumed, e.g. when it hangs or should read changed
 // settings; asked first, as it ends a running answer and the agent's background tasks.
-const props = defineProps<{ session: AgentSession; buttonClass: string }>()
+// dialogAtTop: opened from a bar at the top, the question appears right below it.
+const props = defineProps<{ session: AgentSession; buttonClass: string; dialogAtTop?: boolean }>()
 const { t } = useI18n()
 const toast = useToast()
 const { refresh } = useSessions()
@@ -38,6 +39,7 @@ async function restart(): Promise<void> {
     :message="$t(session.busy ? 'restart.confirmBusy' : 'restart.confirm', { name: baseName(session.path) })"
     :confirm-label="$t('restart.title')"
     :danger="session.busy"
+    :top="dialogAtTop"
     @confirm="restart"
     @close="asking = false"
   />

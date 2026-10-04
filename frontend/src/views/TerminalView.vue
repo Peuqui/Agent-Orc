@@ -289,7 +289,7 @@ onBeforeUnmount(() => {
       <span class="mx-1 size-2.5 shrink-0 rounded-full" :class="connected ? 'bg-red-500' : 'bg-slate-600'" />
       <!-- Embedded in the workspace, the column's tab names the agent already. -->
       <h1 class="min-w-0 flex-1 truncate font-semibold">{{ embedded ? '' : name }}</h1>
-      <RestartButton v-if="session?.running" :session="session" button-class="btn-icon" />
+      <RestartButton v-if="session?.running" :session="session" button-class="btn-icon" dialog-at-top />
       <!-- What the agent changed; in the workspace it opens within the column (back returns). -->
       <RouterLink
         :to="`/changes/${encodeURIComponent(id)}`"
