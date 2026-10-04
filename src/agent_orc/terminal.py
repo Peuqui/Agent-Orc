@@ -17,6 +17,8 @@ from agent_orc.sessions import exact_target
 TERM = "xterm-256color"
 READ_SIZE = 65536
 STOP_TIMEOUT_SECONDS = 5
+# WebSocket close code "service restart": the terminal frontend connects again by itself.
+WS_CLOSE_SERVICE_RESTART = 1012
 
 
 def _make_controlling_terminal() -> None:
@@ -113,5 +115,19 @@ async def bridge(
             return
         if error is not None:
             raise error
-    # The tmux client ended (session stopped or agent gone): tell the browser.
-    await websocket.close()
+    # The tmux client ended. With its session, the agent was stopped: the terminal is done.
+    # Otherwise only the client went, e.g. as Agent-Orc itself is restarted for an update: the
+    # browser connects again by itself.
+    if await _session_exists(socket_name, session_id):
+        await websocket.close(WS_CLOSE_SERVICE_RESTART)
+    else:
+        await websocket.close()
+
+
+async def _session_exists(socket_name: str, session_id: str) -> bool:
+    check = await asyncio.create_subprocess_exec(
+        "tmux", "-L", socket_name, "has-session", "-t", exact_target(session_id),
+        stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL,
+        env=attach_environment(),
+    )  # fmt: skip
+    return await check.wait() == 0

@@ -109,7 +109,8 @@
     "copyAll": "Copy all",
     "close": "Close",
     "copied": "Copied to the clipboard.",
-    "jog": "Fast scrolling: pull the grip up or down – the further, the faster"
+    "jog": "Fast scrolling: pull the grip up or down – the further, the faster",
+    "reconnecting": "Connection lost – reconnecting …"
   },
   "editor": {
     "search": "Search",

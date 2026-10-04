@@ -1,6 +1,8 @@
 """End-to-end tests of the HTTP API with a real tmux server and a throwaway home."""
 
 import json
+import os
+import signal
 import subprocess
 import time
 from pathlib import Path
@@ -20,7 +22,7 @@ from agent_orc.context import store_activity, store_status
 from agent_orc.history import claude_project_dir
 from agent_orc.schedule import mark_limited, read_scheduled
 from agent_orc.sessions import SESSION_ENV
-from agent_orc.terminal import attach_environment
+from agent_orc.terminal import WS_CLOSE_SERVICE_RESTART, attach_environment
 from tests.conftest import Device, FakeClock, FakePushService, FakeWhisper
 
 PASSWORD = "richtig-langes-passwort"
@@ -393,9 +395,30 @@ def test_terminal_closes_when_session_stops(client: TestClient, home: Path) -> N
     with client.websocket_connect(terminal_url(session_id), headers=ORIGIN) as term:
         read_until(term, "READY")
         client.delete(f"/api/sessions/{session_id}")
-        with pytest.raises(WebSocketDisconnect):
+        with pytest.raises(WebSocketDisconnect) as closed:
             for _ in range(MAX_TERMINAL_FRAMES):
                 term.receive_bytes()
+    # A normal close: the browser offers to reconnect but does not try by itself.
+    assert closed.value.code == 1000
+
+
+def test_terminal_of_a_running_agent_asks_to_reconnect(
+    client: TestClient, home: Path, socket_name: str
+) -> None:
+    session_id = start_shell(client, home / "projects")
+    with client.websocket_connect(terminal_url(session_id), headers=ORIGIN) as term:
+        read_until(term, "READY")
+        # The tmux client ends while its session lives on, as when Agent-Orc is restarted.
+        client_pid = subprocess.run(
+            ["tmux", "-L", socket_name, "list-clients", "-F", "#{client_pid}"],
+            capture_output=True, text=True, check=True,
+        ).stdout.strip()  # fmt: skip
+        os.kill(int(client_pid), signal.SIGTERM)
+        with pytest.raises(WebSocketDisconnect) as closed:
+            for _ in range(MAX_TERMINAL_FRAMES):
+                term.receive_bytes()
+    assert closed.value.code == WS_CLOSE_SERVICE_RESTART
+    assert client.get("/api/sessions").json()[0]["running"] is True
 
 
 def test_sessions_report_model_and_context(

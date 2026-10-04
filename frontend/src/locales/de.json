@@ -109,7 +109,8 @@
     "copyAll": "Alles kopieren",
     "close": "Schließen",
     "copied": "In die Zwischenablage kopiert.",
-    "jog": "Schnell scrollen: Griff nach oben oder unten ziehen – je weiter, desto schneller"
+    "jog": "Schnell scrollen: Griff nach oben oder unten ziehen – je weiter, desto schneller",
+    "reconnecting": "Verbindung unterbrochen – verbinde neu …"
   },
   "editor": {
     "search": "Suchen",

@@ -213,11 +213,20 @@ function changeFontSize(delta: number): void {
   localStorage.setItem(ownFontSizeKey, String(ownFontSize.value))
 }
 
+const NORMAL_CLOSURE = 1000
+const FIRST_APPLICATION_CODE = 4000
+const RECONNECT_MILLISECONDS = 2000
+const reconnecting = ref(false)
+let reconnectTimer: number | undefined
+let unmounted = false
+
 function connect(): void {
+  window.clearTimeout(reconnectTimer)
   socket = new WebSocket(terminalUrl(props.id, terminal.cols, terminal.rows))
   socket.binaryType = 'arraybuffer'
   socket.onopen = () => {
     connected.value = true
+    reconnecting.value = false
     // Typing goes to our input field first: dictation tools (and phone keyboards) work there,
     // not in the terminal's own input. In the workspace only the active column takes the focus.
     if (!props.embedded || window.frameElement?.getAttribute('data-active') === 'true') {
@@ -225,8 +234,16 @@ function connect(): void {
     }
   }
   socket.onmessage = (event: MessageEvent<ArrayBuffer>) => terminal.write(new Uint8Array(event.data))
-  socket.onclose = () => {
+  socket.onclose = (event: CloseEvent) => {
     connected.value = false
+    // Closed on purpose by the server: the session ended (1000) or may not be shown (4000 and
+    // up, see api.py). Anything else means the connection went away while the agent runs on,
+    // e.g. Agent-Orc restarted after an update (1012, terminal.py) or a lost network: then it
+    // comes back by itself.
+    if (!unmounted && event.code !== NORMAL_CLOSURE && event.code < FIRST_APPLICATION_CODE) {
+      reconnecting.value = true
+      reconnectTimer = window.setTimeout(connect, RECONNECT_MILLISECONDS)
+    }
   }
 }
 
@@ -261,6 +278,8 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  unmounted = true
+  window.clearTimeout(reconnectTimer)
   touchScroll.stopGlide()
   resizeObserver.disconnect()
   socket?.close()
@@ -327,8 +346,10 @@ onBeforeUnmount(() => {
         v-if="!connected"
         class="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-900/85"
       >
-        <p class="text-slate-300">{{ $t('terminal.disconnected') }}</p>
-        <button class="btn-primary" @click="connect">{{ $t('terminal.reconnect') }}</button>
+        <p class="text-slate-300">
+          {{ $t(reconnecting ? 'terminal.reconnecting' : 'terminal.disconnected') }}
+        </p>
+        <button v-if="!reconnecting" class="btn-primary" @click="connect">{{ $t('terminal.reconnect') }}</button>
       </div>
     </div>
 
