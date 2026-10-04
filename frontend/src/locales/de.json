@@ -42,7 +42,8 @@
     "working": "arbeitet …",
     "effortPending": "Wechsel auf „{effort}“ vorgemerkt – nach der aktuellen Antwort",
     "applyNow": "Sofort",
-    "discard": "Verwerfen"
+    "discard": "Verwerfen",
+    "ended": "beendet"
   },
   "files": {
     "newFolder": "Neuer Ordner",
@@ -134,5 +135,12 @@
     "transcribing": "Wird transkribiert …",
     "browser": "Browser",
     "browserHint": "Whisper ging nicht: Spracherkennung des Browsers nutzen (Chrome schickt das Audio an Google)"
+  },
+  "quota": {
+    "title": "Kontingent {agent}",
+    "five_hour": "5 Stunden",
+    "seven_day": "Woche",
+    "detail": "{percent} % · zurückgesetzt {when}",
+    "none": "Noch keine Angaben – erscheinen, sobald eine Sitzung gearbeitet hat."
   }
 }

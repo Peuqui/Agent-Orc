@@ -18,7 +18,7 @@ from pydantic import BaseModel
 from agent_orc import files
 from agent_orc.auth import Clock, Credentials, LoginGuard, TokenSigner, verify_password
 from agent_orc.config import Config, TerminalConfig
-from agent_orc.context import session_busy, session_status
+from agent_orc.context import QUOTA_SOURCES, session_busy, session_status
 from agent_orc.dictation import (
     Device,
     DictationServiceError,
@@ -291,10 +291,26 @@ def create_app(
     def terminal_settings() -> TerminalConfig:
         return config.terminal
 
+    @app.get("/api/quota", dependencies=authenticated)
+    def quota() -> list[dict[str, Any]]:
+        """Usage limits per agent profile that reports them; windows are empty until it has."""
+        return [
+            {
+                "profile": name,
+                "label": profile.label,
+                "windows": QUOTA_SOURCES[profile.quota]() or {},
+            }
+            for name, profile in config.agents.items()
+            if profile.quota is not None
+        ]
+
     @app.get("/api/dictation", dependencies=authenticated)
-    def dictation_settings() -> dict[str, str]:
-        # The browser's own speech recognition (the fallback) listens in the same language.
-        return {"language": config.dictation.language}
+    def dictation_settings() -> dict[str, Any]:
+        # The browser's own speech recognition listens in the same language.
+        return {
+            "language": config.dictation.language,
+            "whisper": config.dictation.whisper_url is not None,
+        }
 
     @app.post("/api/dictation", dependencies=authenticated)
     async def dictate(request: Request, device: Device) -> dict[str, str]:

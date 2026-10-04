@@ -5,6 +5,7 @@ import AppIcon from '../components/AppIcon.vue'
 import BaseDialog from '../components/BaseDialog.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
 import ContextMeter from '../components/ContextMeter.vue'
+import QuotaPanel from '../components/QuotaPanel.vue'
 import { useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
 import { baseName } from '../format'
@@ -70,6 +71,7 @@ function resume(session: AgentSession): void {
 <template>
   <section>
     <!-- Always reachable: a new agent starts in a folder chosen in the file view. -->
+    <QuotaPanel />
     <RouterLink to="/files" class="btn-primary mb-4 w-full sm:w-auto">
       <AppIcon name="plus" />{{ $t('sessions.startNew') }}
     </RouterLink>
@@ -98,7 +100,13 @@ function resume(session: AgentSession): void {
             class="shrink-0 rounded-full px-2.5 py-1 text-xs font-medium"
             :class="session.running ? 'bg-red-900/40 text-red-300' : 'bg-slate-700 text-slate-300'"
           >
-            {{ session.running ? $t('sessions.running') : $t('sessions.exited', { code: session.exit_status }) }}
+            {{
+              session.running
+                ? $t('sessions.running')
+                : session.exit_status === null
+                  ? $t('sessions.ended')
+                  : $t('sessions.exited', { code: session.exit_status })
+            }}
           </span>
         </div>
         <ContextMeter

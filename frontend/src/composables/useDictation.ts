@@ -1,5 +1,6 @@
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { api, type DictationDevice } from '../api'
+import { START_BEEP, STOP_BEEP, playBeep } from '../sounds'
 
 // Recording formats the Whisper service is fed with (agent_orc.dictation.AUDIO_SUFFIXES),
 // best first: Chrome records WebM, Firefox Ogg, Safari MP4.
@@ -30,16 +31,36 @@ const BrowserRecognition = speechWindow.SpeechRecognition ?? speechWindow.webkit
 export type DictationState = 'idle' | 'recording' | 'transcribing' | 'listening'
 
 /**
- * Speech input: recorded in the browser and transcribed by the local Whisper service on the
- * device the user picked. Only when Whisper fails is the browser's own recognition offered,
- * as a separate button the user presses deliberately.
+ * Speech input. With a Whisper service the browser records and Whisper transcribes on the
+ * device the user picked; the browser's own recognition is then only offered after Whisper
+ * failed, as a separate button pressed deliberately. Without a Whisper service the microphone
+ * uses the browser's recognition directly.
  */
 export function useDictation(onText: (text: string) => void, onError: (error: unknown) => void) {
   const state = ref<DictationState>('idle')
   const device = ref<DictationDevice>(localStorage.getItem(DEVICE_KEY) === 'cpu' ? 'cpu' : 'cuda')
-  const browserFallback = ref(false)
+  // Unknown until the server's settings have arrived.
+  const whisper = ref<boolean | null>(null)
+  const language = ref('')
+  const whisperFailed = ref(false)
   let recorder: MediaRecorder | null = null
   let recognition: SpeechRecognitionLike | null = null
+
+  const hasBrowserRecognition = BrowserRecognition !== undefined
+  const microphone = computed(
+    () => whisper.value === true || (whisper.value === false && hasBrowserRecognition),
+  )
+  const browserFallback = computed(
+    () => whisper.value === true && whisperFailed.value && hasBrowserRecognition,
+  )
+
+  api
+    .dictationSettings()
+    .then((settings) => {
+      whisper.value = settings.whisper
+      language.value = settings.language
+    })
+    .catch(onError)
 
   function toggleDevice(): void {
     device.value = device.value === 'cuda' ? 'cpu' : 'cuda'
@@ -59,6 +80,7 @@ export function useDictation(onText: (text: string) => void, onError: (error: un
       void transcribe(new Blob(chunks, { type: mimeType }))
     }
     recorder.start()
+    playBeep(START_BEEP)
     state.value = 'recording'
   }
 
@@ -66,27 +88,20 @@ export function useDictation(onText: (text: string) => void, onError: (error: un
     state.value = 'transcribing'
     try {
       const { text } = await api.dictate(audio, device.value)
-      browserFallback.value = false
+      whisperFailed.value = false
       if (text) onText(text)
     } catch (error) {
-      browserFallback.value = BrowserRecognition !== undefined
+      whisperFailed.value = true
       onError(error)
     } finally {
       state.value = 'idle'
     }
   }
 
-  /** Microphone button: start recording, or stop it and transcribe. */
-  function toggleWhisper(): void {
-    if (state.value === 'recording') recorder?.stop()
-    else if (state.value === 'idle') startRecording().catch(onError)
-  }
-
-  async function startListening(): Promise<void> {
+  function startListening(): void {
     if (BrowserRecognition === undefined) return
-    const { language } = await api.dictationSettings()
     recognition = new BrowserRecognition()
-    recognition.lang = language
+    recognition.lang = language.value
     recognition.continuous = true
     recognition.interimResults = false
     recognition.onresult = (event) => {
@@ -96,18 +111,39 @@ export function useDictation(onText: (text: string) => void, onError: (error: un
       }
     }
     recognition.onerror = (event) => onError(new Error(event.error))
+    // Also when the browser stops by itself after a silence.
     recognition.onend = () => {
+      playBeep(STOP_BEEP)
       state.value = 'idle'
     }
     recognition.start()
+    playBeep(START_BEEP)
     state.value = 'listening'
   }
 
-  /** Fallback button: the browser's own recognition, until pressed again. */
+  /** Browser recognition: start, or stop until pressed again. */
   function toggleBrowser(): void {
     if (state.value === 'listening') recognition?.stop()
-    else if (state.value === 'idle') startListening().catch(onError)
+    else if (state.value === 'idle') startListening()
   }
 
-  return { state, device, browserFallback, toggleDevice, toggleWhisper, toggleBrowser }
+  /** Microphone button: Whisper when there is a service, else the browser's recognition. */
+  function toggleMicrophone(): void {
+    if (whisper.value === false) toggleBrowser()
+    else if (state.value === 'recording') {
+      playBeep(STOP_BEEP)
+      recorder?.stop()
+    } else if (state.value === 'idle') startRecording().catch(onError)
+  }
+
+  return {
+    state,
+    device,
+    whisper,
+    microphone,
+    browserFallback,
+    toggleDevice,
+    toggleMicrophone,
+    toggleBrowser,
+  }
 }

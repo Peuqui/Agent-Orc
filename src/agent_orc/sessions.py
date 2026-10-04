@@ -159,7 +159,8 @@ class SessionManager:
             profile=profile,
             path=Path(path),
             running=running,
-            exit_status=None if running else int(dead_status),
+            # Empty when the process died from a signal, or tmux has not collected it yet.
+            exit_status=int(dead_status) if dead_status else None,
             created=float(created),
         )
 

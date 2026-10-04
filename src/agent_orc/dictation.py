@@ -33,6 +33,8 @@ class DictationServiceError(RuntimeError):
 
 
 def transcribe(audio: bytes, content_type: str, device: Device, config: DictationConfig) -> str:
+    if config.whisper_url is None:
+        raise DictationServiceError("no Whisper service configured")
     media_type = content_type.split(";")[0].strip()
     if media_type not in AUDIO_SUFFIXES:
         raise UnsupportedAudioError(content_type)

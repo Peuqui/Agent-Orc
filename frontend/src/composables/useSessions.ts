@@ -1,16 +1,19 @@
 import { computed, ref } from 'vue'
-import { api, type AgentProfile, type AgentSession } from '../api'
+import { api, type AgentProfile, type AgentQuota, type AgentSession } from '../api'
 import { useToast } from './useToast'
 
 const REFRESH_MILLISECONDS = 3000
 
 const sessions = ref<AgentSession[]>([])
 const profiles = ref<AgentProfile[]>([])
+const quotas = ref<AgentQuota[]>([])
 let timer: number | undefined
 
 async function refresh(): Promise<void> {
   try {
-    sessions.value = await api.sessions()
+    const [currentSessions, currentQuotas] = await Promise.all([api.sessions(), api.quota()])
+    sessions.value = currentSessions
+    quotas.value = currentQuotas
   } catch (error) {
     useToast().error(error)
   }
@@ -38,5 +41,14 @@ const sessionByPath = computed(
 )
 
 export function useSessions() {
-  return { sessions, profiles, sessionByPath, refresh, startPolling, stopPolling, loadProfiles }
+  return {
+    sessions,
+    profiles,
+    quotas,
+    sessionByPath,
+    refresh,
+    startPolling,
+    stopPolling,
+    loadProfiles,
+  }
 }

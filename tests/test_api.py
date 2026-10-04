@@ -610,7 +610,7 @@ def test_dictation(config: Config, clock: FakeClock, fake_whisper: FakeWhisper) 
 
     assert dictate("cpu").status_code == 401
     client.post("/api/login", json={"password": PASSWORD})
-    assert client.get("/api/dictation").json() == {"language": "de"}
+    assert client.get("/api/dictation").json() == {"language": "de", "whisper": True}
     assert dictate("cpu").json() == {"text": "Hallo Welt"}
     assert dictate("tpu").status_code == 422
     fake_whisper.status = 503
@@ -618,3 +618,25 @@ def test_dictation(config: Config, clock: FakeClock, fake_whisper: FakeWhisper) 
     full = dictate("cuda")
     assert full.status_code == 503
     assert full.json()["error"] == "GpuUnavailableError"
+
+
+def test_quota_per_reporting_profile(
+    config: Config, clock: FakeClock, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+    reporting = config.agents["sleeper"].model_copy(update={"quota": "claude"})
+    agents = {**config.agents, "sleeper": reporting}
+    app = create_app(
+        config.model_copy(update={"agents": agents}),
+        new_credentials(PASSWORD),
+        static_dir=None,
+        clock=clock,
+    )
+    client = TestClient(app)
+    client.post("/api/login", json={"password": PASSWORD})
+    assert client.get("/api/quota").json() == [
+        {"profile": "sleeper", "label": "Sleeper", "windows": {}}
+    ]
+    limits = {"seven_day": {"used_percentage": 39, "resets_at": 1791554400}}
+    store_status("x-1", {"model": {"display_name": "M"}, "rate_limits": limits})
+    assert client.get("/api/quota").json()[0]["windows"] == limits

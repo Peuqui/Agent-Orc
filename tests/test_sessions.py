@@ -21,6 +21,7 @@ from agent_orc.sessions import (
 AGENTS = {
     "sleeper": AgentProfile(label="Sleeper", start=["sleep", "60"], resume=["sleep", "61"]),
     "failing": AgentProfile(label="Failing", start=["sh", "-c", "exit 3"], resume=["true"]),
+    "killed": AgentProfile(label="Killed", start=["sh", "-c", "kill -KILL $$"], resume=["true"]),
     "echo": AgentProfile(
         label="Echo", start=["sh", "-c", "echo started {name}; sleep 60"], resume=["sleep", "60"]
     ),
@@ -100,6 +101,11 @@ def test_exited_agent_stays_visible_with_status(manager: SessionManager, workdir
     manager.start("failing", workdir, resume=False)
     session = wait_until_exited(manager, workdir)
     assert session.exit_status == 3
+
+
+def test_agent_killed_by_signal_has_no_exit_status(manager: SessionManager, workdir: Path) -> None:
+    manager.start("killed", workdir, resume=False)
+    assert wait_until_exited(manager, workdir).exit_status is None
 
 
 def test_exited_session_is_replaced_on_start(manager: SessionManager, workdir: Path) -> None:

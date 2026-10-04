@@ -42,7 +42,8 @@
     "working": "working …",
     "effortPending": "Change to “{effort}” scheduled – after the current answer",
     "applyNow": "Now",
-    "discard": "Discard"
+    "discard": "Discard",
+    "ended": "ended"
   },
   "files": {
     "newFolder": "New folder",
@@ -134,5 +135,12 @@
     "transcribing": "Transcribing …",
     "browser": "Browser",
     "browserHint": "Whisper failed: use the browser's speech recognition (Chrome sends the audio to Google)"
+  },
+  "quota": {
+    "title": "{agent} usage",
+    "five_hour": "5 hours",
+    "seven_day": "Week",
+    "detail": "{percent} % · resets {when}",
+    "none": "No data yet – appears once a session has worked."
   }
 }

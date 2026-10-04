@@ -7,12 +7,16 @@ default_config.yaml), which stores the document here, one file per session. The 
 learns its session from the environment variable Agent-Orc sets for every agent.
 The window size thus always matches the model actually running, also after /model.
 
+The same document carries the account's usage limits (five hours, week); they hold for every
+session alike, so the most recently reported ones are the current ones.
+
 Whether the agent is working comes from Claude's hooks: UserPromptSubmit runs
 `agent-orc agent-busy`, Stop runs `agent-orc agent-idle`.
 """
 
 import json
 import os
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -88,3 +92,20 @@ def session_status(session: AgentSession) -> dict[str, Any]:
         "context_tokens": sum(usage.get(field, 0) for field in CONTEXT_FIELDS) if usage else None,
         "context_window": window.get("context_window_size"),
     }
+
+
+def claude_rate_limits() -> dict[str, Any] | None:
+    """Usage windows from the newest Claude status, e.g. {"five_hour": {"used_percentage": 5,
+    "resets_at": 1791111000}, "seven_day": ...}; None until a session has reported them."""
+    reports = sorted(status_dir().glob(f"*{STATUS_SUFFIX}"), key=lambda path: path.stat().st_mtime)
+    for path in reversed(reports):
+        limits = json.loads(path.read_text(encoding="utf-8")).get("rate_limits")
+        if limits:
+            return dict(limits)
+    return None
+
+
+# Per agent profile setting "quota": where the usage limits of that agent come from.
+QUOTA_SOURCES: dict[str, Callable[[], dict[str, Any] | None]] = {
+    "claude": claude_rate_limits,
+}

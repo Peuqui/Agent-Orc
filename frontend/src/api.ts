@@ -27,6 +27,19 @@ export interface AgentSession {
   context_window: number | null
 }
 
+/** One usage window of an account, e.g. five hours or a week; resets_at in Unix seconds. */
+export interface QuotaWindow {
+  used_percentage: number
+  resets_at: number
+}
+
+/** Usage limits of an agent profile; windows stay empty until the agent has reported them. */
+export interface AgentQuota {
+  profile: string
+  label: string
+  windows: Record<string, QuotaWindow>
+}
+
 /** Where Whisper transcribes: the GPU is near instant, the CPU slower but always there. */
 export type DictationDevice = 'cuda' | 'cpu'
 
@@ -198,7 +211,9 @@ export const api = {
   sessionText: (id: string) =>
     request<{ text: string }>('GET', `sessions/${encodeURIComponent(id)}/text`),
 
-  dictationSettings: () => request<{ language: string }>('GET', 'dictation'),
+  quota: () => request<AgentQuota[]>('GET', 'quota'),
+
+  dictationSettings: () => request<{ language: string; whisper: boolean }>('GET', 'dictation'),
   /** Transcribe recorded speech on the chosen device; never switches device by itself. */
   dictate: (audio: Blob, device: DictationDevice) =>
     request<{ text: string }>('POST', 'dictation', { upload: audio, query: { device } }),

@@ -50,3 +50,9 @@ def test_rejects_unknown_audio_format(fake_whisper: FakeWhisper) -> None:
     with pytest.raises(UnsupportedAudioError):
         transcribe(AUDIO, "video/x-msvideo", "cpu", dictation_config(fake_whisper.url))
     assert fake_whisper.bodies == []
+
+
+def test_without_whisper_service() -> None:
+    config = DictationConfig(whisper_url=None, language="de", timeout_seconds=5)
+    with pytest.raises(DictationServiceError, match="no Whisper"):
+        transcribe(AUDIO, "audio/ogg", "cpu", config)

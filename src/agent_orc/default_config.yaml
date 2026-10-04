@@ -55,6 +55,8 @@ terminal:
 # Dictation in the terminal's input field: the browser records, Agent-Orc hands the audio to a
 # Whisper service (whisper-stt API: POST /transcribe) and puts the text into the field.
 dictation:
+  # null: no Whisper service, the browser's own speech recognition listens instead (Chrome;
+  # it sends the audio to Google). Firefox has none, so the microphone is missing there.
   whisper_url: http://127.0.0.1:5080
   language: de
   # CPU transcription of a long dictation can take a while.
@@ -79,6 +81,8 @@ agents:
       resume: [claude, --settings, *claude_settings, --resume, "{conversation}", --remote-control, "{name}"]
     # Starting an agent in a folder means trusting it: skip Claude's trust prompt.
     trust: claude
+    # Usage limits (five hours, week) as Claude reports them in its status line.
+    quota: claude
     # Reasoning effort per project folder (<folder>/.claude/settings.local.json); without a
     # choice Claude uses the user's own settings.
     effort:

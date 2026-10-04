@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { useDictation } from '../composables/useDictation'
 import { useToast } from '../composables/useToast'
 import AppIcon from './AppIcon.vue'
@@ -10,12 +10,28 @@ const toast = useToast()
 const text = ref('')
 const field = ref<HTMLTextAreaElement>()
 
-const { state, device, browserFallback, toggleDevice, toggleWhisper, toggleBrowser } = useDictation(
-  (dictated) => {
-    text.value = text.value ? `${text.value} ${dictated}` : dictated
-  },
-  toast.error,
+const {
+  state,
+  device,
+  whisper,
+  microphone,
+  browserFallback,
+  toggleDevice,
+  toggleMicrophone,
+  toggleBrowser,
+} = useDictation((dictated) => {
+  text.value = text.value ? `${text.value} ${dictated}` : dictated
+}, toast.error)
+
+// Without Whisper the microphone itself listens through the browser.
+const microphoneActive = computed(
+  () => state.value === 'recording' || (whisper.value === false && state.value === 'listening'),
 )
+const microphoneBusy = computed(
+  () => state.value === 'transcribing' || (whisper.value === true && state.value === 'listening'),
+)
+
+defineExpose({ focus: () => field.value?.focus() })
 
 // Grows with its content (up to a cap set in CSS), so a long dictation can be read before sending.
 watch(text, async () => {
@@ -42,22 +58,20 @@ function onKeydown(event: KeyboardEvent): void {
 
 <template>
   <form class="flex items-end gap-1 border-t border-slate-800 p-1" @submit.prevent="submit">
-    <div class="flex flex-col items-center">
+    <div v-if="microphone" class="flex flex-col items-center">
       <button
         type="button"
         class="btn-icon min-h-10"
-        :class="{
-          'animate-pulse text-red-500': state === 'recording',
-          'opacity-50': state === 'transcribing',
-        }"
-        :disabled="state === 'transcribing' || state === 'listening'"
-        :aria-label="state === 'recording' ? $t('dictation.stop') : $t('dictation.start')"
-        :title="state === 'recording' ? $t('dictation.stop') : $t('dictation.start')"
-        @click="toggleWhisper"
+        :class="{ 'animate-pulse text-red-500': microphoneActive, 'opacity-50': microphoneBusy }"
+        :disabled="microphoneBusy"
+        :aria-label="microphoneActive ? $t('dictation.stop') : $t('dictation.start')"
+        :title="microphoneActive ? $t('dictation.stop') : $t('dictation.start')"
+        @click="toggleMicrophone"
       >
         <AppIcon name="mic" />
       </button>
       <button
+        v-if="whisper"
         type="button"
         class="text-[0.6rem] font-semibold tracking-wide text-slate-400"
         :title="$t('dictation.device')"

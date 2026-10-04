@@ -4,7 +4,13 @@ from typing import Any
 
 import pytest
 
-from agent_orc.context import session_status, status_file, status_line, store_status
+from agent_orc.context import (
+    claude_rate_limits,
+    session_status,
+    status_file,
+    status_line,
+    store_status,
+)
 from agent_orc.sessions import AgentSession
 
 SESSION_START = 1_000_000.0
@@ -76,3 +82,14 @@ def test_each_session_has_its_own_file() -> None:
 def test_status_line_text() -> None:
     assert status_line(claude_status(5, {"input_tokens": 1})) == "Opus 5.5 (1M context) · ctx 5%"
     assert status_line(claude_status(None, None)) == "Opus 5.5 (1M context)"
+
+
+def test_rate_limits_come_from_the_newest_report() -> None:
+    assert claude_rate_limits() is None
+    older = {"five_hour": {"used_percentage": 5, "resets_at": 100}}
+    newer = {"five_hour": {"used_percentage": 7, "resets_at": 100}}
+    touch(store_status("a-1", {**claude_status(1, None), "rate_limits": older}), SESSION_START)
+    touch(store_status("b-2", {**claude_status(1, None), "rate_limits": newer}), SESSION_START + 1)
+    # Reported later, but without limits (older Claude versions omit them): ignored.
+    touch(store_status("c-3", claude_status(1, None)), SESSION_START + 2)
+    assert claude_rate_limits() == newer

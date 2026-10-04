@@ -34,6 +34,7 @@ const toast = useToast()
 const { sessions } = useSessions()
 
 const container = ref<HTMLElement>()
+const messageInput = ref<InstanceType<typeof MessageInput>>()
 const settings = ref<TerminalSettings | null>(null)
 const modifiers = ref(new Set<Modifier>())
 const connected = ref(false)
@@ -154,7 +155,9 @@ function connect(): void {
   socket.onopen = () => {
     connected.value = true
     send({ type: 'resize', cols: terminal.cols, rows: terminal.rows })
-    terminal.focus()
+    // Typing goes to our input field first: dictation tools (and phone keyboards) work there,
+    // not in the terminal's own input.
+    messageInput.value?.focus()
   }
   socket.onmessage = (event: MessageEvent<ArrayBuffer>) => terminal.write(new Uint8Array(event.data))
   socket.onclose = () => {
@@ -236,7 +239,7 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <MessageInput @submit="submitText" />
+    <MessageInput ref="messageInput" @submit="submitText" />
 
     <KeyBar
       v-if="settings"

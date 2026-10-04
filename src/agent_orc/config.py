@@ -63,7 +63,8 @@ class TerminalConfig(StrictModel):
 class DictationConfig(StrictModel):
     """Speech input, transcribed by a Whisper service (see dictation.py)."""
 
-    whisper_url: str
+    # Without a Whisper service the browser's own speech recognition is used, where it has one.
+    whisper_url: str | None
     language: str
     timeout_seconds: int
 
@@ -97,6 +98,8 @@ class AgentProfile(StrictModel):
     effort: EffortConfig | None = None
     # Mark the folder as trusted before starting, so the agent does not stop at a prompt.
     trust: Literal["claude"] | None = None
+    # Where the account's usage limits come from (see context.QUOTA_SOURCES).
+    quota: Literal["claude"] | None = None
 
 
 class Config(StrictModel):
