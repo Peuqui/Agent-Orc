@@ -159,5 +159,12 @@
     "move": "Drag to move",
     "empty": "No agent open yet – add one with “+” above.",
     "resize": "Drag to change the width, double-click to reset it"
+  },
+  "settings": {
+    "title": "Settings",
+    "scrollLines": "Scrolling: lines per step",
+    "scrollLinesHint": "For the mouse wheel and swiping in the terminal, on this device.",
+    "less": "Less",
+    "more": "More"
   }
 }

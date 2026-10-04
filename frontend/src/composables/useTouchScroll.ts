@@ -2,7 +2,7 @@
 // events). The swipe is turned into steps while the finger moves; when it is lifted, the
 // scroll keeps going at the finger's speed and slows down, like native scrolling on a phone.
 
-export const PIXELS_PER_STEP = 24
+const PIXELS_PER_STEP = 24
 // Weight of the newest movement in the measured speed; the rest is the speed so far, which
 // smooths out jittery touch events.
 const NEWEST_SPEED_WEIGHT = 0.7

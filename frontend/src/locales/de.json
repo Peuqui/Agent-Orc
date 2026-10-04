@@ -159,5 +159,12 @@
     "move": "Ziehen zum Verschieben",
     "empty": "Noch kein Agent offen – über „+“ oben einen hinzufügen.",
     "resize": "Ziehen ändert die Breite, Doppelklick setzt sie zurück"
+  },
+  "settings": {
+    "title": "Einstellungen",
+    "scrollLines": "Scrollen: Zeilen pro Schritt",
+    "scrollLinesHint": "Gilt für Mausrad und Wischen im Terminal, auf diesem Gerät.",
+    "less": "Weniger",
+    "more": "Mehr"
   }
 }

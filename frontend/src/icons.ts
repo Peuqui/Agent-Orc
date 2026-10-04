@@ -18,6 +18,7 @@ export const ICONS = {
   copy: 'M8 8h11v12H8z M5 16V4h11',
   workspace: 'M3 5h18v14H3z M9 5v14 M15 5v14',
   send: 'M3 4l18 8-18 8 3-8z M6 12h8',
+  settings: 'M12 6a6 6 0 1 0 0 12 6 6 0 0 0 0-12z M12 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4z M12 3v3 M12 18v3 M3 12h3 M18 12h3 M5.6 5.6l2.2 2.2 M16.2 16.2l2.2 2.2 M5.6 18.4l2.2-2.2 M16.2 7.8l2.2-2.2',
   mic: 'M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3z M5 11a7 7 0 0 0 14 0 M12 18v3',
 } as const
 

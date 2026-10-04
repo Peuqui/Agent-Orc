@@ -4,6 +4,7 @@ import { api, authenticated } from '../api'
 import { LOCALES, setLocale, type Locale } from '../i18n'
 import { NAV_ITEMS } from '../navigation'
 import AppIcon from './AppIcon.vue'
+import SettingsMenu from './SettingsMenu.vue'
 import AppLogo from './AppLogo.vue'
 
 const { locale } = useI18n()
@@ -39,6 +40,7 @@ async function logout(): Promise<void> {
         >
           <option v-for="code in LOCALES" :key="code" :value="code">{{ code.toUpperCase() }}</option>
         </select>
+        <SettingsMenu />
         <button class="btn-icon" :title="$t('app.logout')" :aria-label="$t('app.logout')" @click="logout">
           <AppIcon name="logout" />
         </button>

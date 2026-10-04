@@ -13,7 +13,8 @@ import KeyBar from '../components/KeyBar.vue'
 import MessageInput from '../components/MessageInput.vue'
 import { useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
-import { PIXELS_PER_STEP, useTouchScroll } from '../composables/useTouchScroll'
+import { useSettings } from '../composables/useSettings'
+import { useTouchScroll } from '../composables/useTouchScroll'
 import { baseName } from '../format'
 
 const props = defineProps<{ id: string; embedded: boolean }>()
@@ -91,22 +92,41 @@ terminal.unicode.activeVersion = '11'
 let socket: WebSocket | null = null
 const resizeObserver = new ResizeObserver(() => fit.fit())
 
-// Touch scrolling: the agent's history lives in tmux (mouse mode), which scrolls on wheel
-// events. xterm.js does not pass finger swipes on, so swipes (and their glide after a flick)
-// become wheel events on the terminal, just like a mouse wheel on the desktop. Taps stay
-// untouched.
-const touchScroll = useTouchScroll((steps, x, y) => {
-  terminal.element?.dispatchEvent(
-    new WheelEvent('wheel', {
-      deltaY: steps * PIXELS_PER_STEP,
-      deltaMode: WheelEvent.DOM_DELTA_PIXEL,
+// Scrolling: the agents run full screen and catch the mouse themselves (Claude Code scrolls one
+// line per wheel report), and browsers report a wheel notch in different sizes (Firefox lines,
+// Chrome pixels), which xterm.js turns into different numbers of reports. So every notch and
+// every swipe step becomes exactly the user's number of single-line wheel events.
+const { scrollLines } = useSettings()
+// Events dispatched here pass the wheel handler below untouched.
+const ownWheelEvents = new WeakSet<Event>()
+
+function scrollTerminal(steps: number, x: number, y: number): void {
+  const element = terminal.element
+  if (!element) return
+  for (let index = 0; index < Math.abs(steps) * scrollLines.value; index++) {
+    const event = new WheelEvent('wheel', {
+      deltaY: Math.sign(steps),
+      deltaMode: WheelEvent.DOM_DELTA_LINE,
       clientX: x,
       clientY: y,
       bubbles: true,
       cancelable: true,
-    }),
-  )
-})
+    })
+    ownWheelEvents.add(event)
+    element.dispatchEvent(event)
+  }
+}
+
+function onWheel(event: WheelEvent): void {
+  if (ownWheelEvents.has(event) || event.deltaY === 0) return
+  event.preventDefault()
+  event.stopPropagation()
+  scrollTerminal(Math.sign(event.deltaY), event.clientX, event.clientY)
+}
+
+// xterm.js does not pass finger swipes on, so swipes (and their glide after a flick) become
+// wheel events too. Taps stay untouched.
+const touchScroll = useTouchScroll(scrollTerminal)
 
 function send(message: object): void {
   if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message))
@@ -180,6 +200,8 @@ onMounted(async () => {
   terminal.open(container.value)
   fit.fit()
   resizeObserver.observe(container.value)
+  // Capture phase: the notch is resized before xterm.js sees it.
+  container.value.addEventListener('wheel', onWheel, { capture: true, passive: false })
   container.value.addEventListener('touchstart', touchScroll.onTouchStart, { passive: true })
   // Not passive: a swipe must not also scroll or zoom the page.
   container.value.addEventListener('touchmove', touchScroll.onTouchMove, { passive: false })
