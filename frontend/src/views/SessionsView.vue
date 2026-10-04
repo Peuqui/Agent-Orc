@@ -94,7 +94,9 @@ function resume(session: AgentSession): void {
     </RouterLink>
     <p v-if="sorted.length === 0" class="card p-6 text-center text-slate-400">{{ $t('sessions.empty') }}</p>
 
-    <ul class="flex flex-col gap-3">
+    <!-- As many cards side by side as fit, before the page has to scroll; one column on phones.
+         Below 24rem the row with context, effort and ultracode would wrap. -->
+    <ul class="grid grid-cols-[repeat(auto-fill,minmax(min(24rem,100%),1fr))] gap-3">
       <li v-for="session in sorted" :key="session.id" class="card flex flex-col gap-2 px-4 py-3">
         <div class="flex items-center gap-3">
           <div class="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-3">
@@ -133,7 +135,7 @@ function resume(session: AgentSession): void {
           />
           <ReasoningControl
             v-if="session.running && levels.get(session.profile)?.length"
-            class="min-w-0 flex-1 md:max-w-xl"
+            class="min-w-0 flex-1"
             compact
             :levels="levels.get(session.profile) ?? []"
             :ultracode-offered="ultracodeOffered.get(session.profile) ?? false"

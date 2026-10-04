@@ -49,7 +49,7 @@ watch(authenticated, (isAuthenticated) => {
   <RouterView v-else-if="authenticated && route.meta.fullscreen" />
   <div v-else-if="authenticated" class="min-h-dvh pb-20 md:pb-4">
     <AppHeader />
-    <main class="mx-auto max-w-5xl px-4 py-4">
+    <main class="page-width py-4">
       <RouterView />
     </main>
     <BottomNav />

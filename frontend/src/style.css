@@ -14,6 +14,11 @@
   @apply rounded-xl border border-slate-700 bg-slate-800;
 }
 
+/* Width of the page content and the header above it, kept in one place so they line up. */
+@utility page-width {
+  @apply mx-auto max-w-[96rem] px-4;
+}
+
 @utility btn {
   @apply inline-flex min-h-9 items-center justify-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50;
 }

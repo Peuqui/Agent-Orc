@@ -16,7 +16,7 @@ async function logout(): Promise<void> {
 
 <template>
   <header class="sticky top-0 z-30 border-b border-slate-800 bg-slate-900/95 backdrop-blur">
-    <div class="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-2">
+    <div class="page-width flex items-center justify-between gap-4 py-2">
       <AppLogo />
       <!-- Wide screens: sections as header tabs instead of the bottom bar. -->
       <nav class="hidden flex-1 justify-center gap-1 md:flex">
