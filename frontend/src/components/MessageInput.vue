@@ -70,27 +70,28 @@ function onKeydown(event: KeyboardEvent): void {
       {{ state === 'listening' ? $t('dictation.browserStop') : $t('dictation.browser') }}
     </button>
     <template v-if="microphone">
+      <!-- Device switch first and small, the microphone right beside the text field and large:
+           the one used most is the easiest to hit. -->
+      <button
+        v-if="whisper"
+        type="button"
+        class="mb-2 ml-0.5 h-6 rounded border border-slate-600 px-1 text-[0.6rem] font-semibold tracking-wide text-slate-300 hover:border-slate-400"
+        :title="$t('dictation.device')"
+        :disabled="state !== 'idle'"
+        @click="toggleDevice"
+      >
+        {{ device === 'cuda' ? 'GPU' : 'CPU' }}
+      </button>
       <button
         type="button"
-        class="btn-icon size-10"
+        class="btn-icon size-11"
         :class="{ 'animate-pulse text-red-500': microphoneActive, 'opacity-50': microphoneBusy }"
         :disabled="microphoneBusy"
         :aria-label="microphoneActive ? $t('dictation.stop') : $t('dictation.start')"
         :title="microphoneActive ? $t('dictation.stop') : $t('dictation.start')"
         @click="toggleMicrophone"
       >
-        <AppIcon name="mic" />
-      </button>
-      <!-- Beside the microphone rather than under it, with its own space: no mistaken taps. -->
-      <button
-        v-if="whisper"
-        type="button"
-        class="mr-1 mb-1.5 h-7 rounded border border-slate-600 px-1.5 text-[0.65rem] font-semibold tracking-wide text-slate-300 hover:border-slate-400"
-        :title="$t('dictation.device')"
-        :disabled="state !== 'idle'"
-        @click="toggleDevice"
-      >
-        {{ device === 'cuda' ? 'GPU' : 'CPU' }}
+        <AppIcon name="mic" class="size-6" />
       </button>
     </template>
     <textarea
