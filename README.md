@@ -24,6 +24,9 @@ detaches: the agents keep working, and you pick them up again from any device.
   70 %), whether it is working right now, and the reasoning effort as a slider with an
   ultracode switch (Claude, per project folder).
 - Claude's 5-hour and weekly usage at the top; cards can be dragged into your own order.
+- Notifications on your phone or desktop when an agent is done or waits for a permission or an
+  answer (Web Push, switched on per device); tapping one opens the agent.
+- The permission mode an agent starts in, per project (ask, accept edits, auto, plan only).
 
 **Workspaces**
 - Several agents side by side as columns; drag the column heads to sort them and the dividers
@@ -84,6 +87,8 @@ Before the first start, adapt `~/.config/agent-orc/config.yaml`:
 - `files.base_dir`: the folder that holds your projects (default `~/projects`).
 - `server.cookie_secure`: `false` for a first test on plain HTTP (`http://127.0.0.1:8770`);
   keep `true` behind HTTPS.
+- `push.contact`: your own `mailto:` address for the push services that deliver notifications
+  (they need HTTPS, or `http://127.0.0.1` for a local test).
 - `dictation.whisper_url`: `null` if you run no Whisper service; the microphone then uses the
   browser's own speech recognition (Chrome).
 

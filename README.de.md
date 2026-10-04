@@ -27,6 +27,10 @@ aus wieder aufnehmen.
   pro Projektordner).
 - Oben das 5-Stunden- und Wochen-Kontingent von Claude; die Karten lassen sich in die eigene
   Reihenfolge ziehen.
+- Benachrichtigungen aufs Handy oder den Rechner, wenn ein Agent fertig ist oder auf eine
+  Freigabe oder Antwort wartet (Web Push, pro Gerät einschaltbar); Antippen öffnet den Agenten.
+- Der Freigabe-Modus, in dem ein Agent startet, pro Projekt (Nachfragen, Änderungen annehmen,
+  Auto, Nur planen).
 
 **Arbeitsflächen**
 - Mehrere Agenten als Spalten nebeneinander; Spaltenköpfe ziehen sortiert, die Trenner ziehen
@@ -89,6 +93,8 @@ Vor dem ersten Start `~/.config/agent-orc/config.yaml` anpassen:
 - `files.base_dir`: der Ordner mit deinen Projekten (Standard `~/projects`).
 - `server.cookie_secure`: `false` für einen ersten Test über einfaches HTTP
   (`http://127.0.0.1:8770`); hinter HTTPS auf `true` lassen.
+- `push.contact`: eine eigene `mailto:`-Adresse für die Push-Dienste, die Benachrichtigungen
+  zustellen (sie brauchen HTTPS, oder `http://127.0.0.1` für einen lokalen Test).
 - `dictation.whisper_url`: `null`, wenn kein Whisper-Dienst läuft; das Mikrofon nutzt dann die
   Spracherkennung des Browsers (Chrome).
 

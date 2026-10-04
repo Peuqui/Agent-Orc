@@ -245,6 +245,15 @@ export const api = {
   cardOrder: () => request<string[]>('GET', 'card-order'),
   arrangeCards: (folders: string[]) => request<void>('PUT', 'card-order', { body: { folders } }),
 
+  /** The server's public key a device subscribes to push messages with. */
+  pushKey: () => request<{ key: string }>('GET', 'push/key'),
+  subscribePush: (subscription: PushSubscriptionJSON) =>
+    request<void>('POST', 'push/subscriptions', { body: subscription }),
+  unsubscribePush: (endpoint: string) =>
+    request<void>('DELETE', 'push/subscriptions', { query: { endpoint } }),
+  /** A sample message to every subscribed device; returns how many took it. */
+  testPush: () => request<{ delivered: number }>('POST', 'push/test'),
+
   /** Named workspaces by name; an unnamed one stays in its browser tab. */
   workspaces: () => request<Record<string, Workspace>>('GET', 'workspaces'),
   storeWorkspace: (name: string, workspace: Workspace) =>

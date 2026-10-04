@@ -60,6 +60,18 @@ class TerminalConfig(StrictModel):
     text_history_lines: int
 
 
+class PushConfig(StrictModel):
+    """Notifications on the user's devices when an agent finished or waits (see push.py)."""
+
+    # Contact the push services may write to (VAPID "sub"): a mailto: or https: URL.
+    contact: str
+    # An undelivered message is dropped after this long; an old "finished" is worth nothing.
+    time_to_live_seconds: int
+    # A hook waits this long at most for each device, so a slow push service cannot hold up
+    # the agent.
+    timeout_seconds: float
+
+
 class DictationConfig(StrictModel):
     """Speech input, transcribed by a Whisper service (see dictation.py)."""
 
@@ -118,6 +130,7 @@ class Config(StrictModel):
     auth: AuthConfig
     files: FilesConfig
     terminal: TerminalConfig
+    push: PushConfig
     dictation: DictationConfig
     tmux: TmuxConfig
     agents: dict[str, AgentProfile]

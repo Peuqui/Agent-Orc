@@ -200,7 +200,8 @@
           "Sorting cards: drag at a free spot with the mouse; with a finger, hold briefly first. The order is the same on every device.",
           "Context ring: green below 50 %, amber above, red from 70 % – time for /compact or a new conversation soon.",
           "Effort slider and ultracode apply per project folder. While the agent is working you choose: after the answer, or now (restart with resume).",
-          "Quota at the top: Claude's used five-hour and weekly limits, once a session has reported them."
+          "Quota at the top: Claude's used five-hour and weekly limits, once a session has reported them.",
+          "“Start” on the card: the permission mode the agent starts in (ask, accept edits, auto, plan only) – applies from its next start; inside the agent Shift+Tab switches it."
         ]
       },
       {
@@ -229,7 +230,8 @@
       {
         "title": "Settings (gear)",
         "items": [
-          "Font, font size, line spacing and lines per scroll step – stored on this device."
+          "Font, font size, line spacing and lines per scroll step – stored on this device.",
+          "Notifications: switch them on per device in the gear menu. You then get a message when an agent is done or waits for a permission or an answer; tapping it opens the agent. Only over HTTPS; on iPhones only in the installed app."
         ]
       }
     ]
@@ -247,5 +249,13 @@
       "dontAsk": "Don't ask",
       "bypassPermissions": "Allow everything"
     }
+  },
+  "push": {
+    "title": "Notifications",
+    "hint": "On this device, when an agent is done or waits for a permission or an answer.",
+    "unsupported": "Only over HTTPS; on iPhones only in the installed app.",
+    "denied": "Notifications are blocked in the browser – allow them in its site settings.",
+    "test": "Send a test message",
+    "testSent": "Test message sent to {count} device(s)."
   }
 }

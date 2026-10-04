@@ -19,7 +19,7 @@ from agent_orc.context import store_activity, store_status
 from agent_orc.history import claude_project_dir
 from agent_orc.sessions import SESSION_ENV
 from agent_orc.terminal import attach_environment
-from tests.conftest import FakeClock, FakeWhisper
+from tests.conftest import Device, FakeClock, FakePushService, FakeWhisper
 
 PASSWORD = "richtig-langes-passwort"
 
@@ -724,6 +724,23 @@ def test_permission_mode_is_stored_for_the_folder(client: TestClient, home: Path
     assert refused.json()["error"] == "InvalidPermissionModeError"
     assert client.put(url, json={"mode": None}).status_code == 204
     assert client.get("/api/sessions").json()[0]["permission_mode"] is None
+
+
+def test_push_subscription_and_test_message(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    push_service: FakePushService,
+) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+    assert len(client.get("/api/push/key").json()["key"]) == 87
+    phone = Device(f"{push_service.url}/phone")
+    assert client.post("/api/push/subscriptions", json=phone.subscription).status_code == 204
+    assert client.post("/api/push/test").json() == {"delivered": 1}
+    assert phone.decrypt(push_service.received[0][2])["kind"] == "test"
+    unsubscribe = client.delete("/api/push/subscriptions", params={"endpoint": phone.endpoint})
+    assert unsubscribe.status_code == 204
+    assert client.post("/api/push/test").json() == {"delivered": 0}
 
 
 def test_card_order_is_kept(

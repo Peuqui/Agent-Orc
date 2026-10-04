@@ -52,6 +52,15 @@ terminal:
   # How much history the plain-text view (for selecting and copying) shows.
   text_history_lines: 5000
 
+# Notifications on your devices (switched on per device in the settings menu): an agent finished
+# its answer or waits for you. Needs HTTPS (or localhost) and, on iPhones, the installed app.
+push:
+  # Contact the browser vendors' push services may write to (VAPID): mailto: or https: URL.
+  # Put your own address here; Apple's push service is said to refuse placeholder addresses.
+  contact: mailto:agent-orc@localhost
+  time_to_live_seconds: 3600
+  timeout_seconds: 10
+
 # Dictation in the terminal's input field: the browser records, Agent-Orc hands the audio to a
 # Whisper service (whisper-stt API: POST /transcribe) and puts the text into the field.
 dictation:
@@ -69,11 +78,12 @@ tmux:
 # Agent profiles. Command arguments may contain the placeholder {name},
 # which is replaced by the name of the folder the agent runs in.
 # Claude reports model and context usage through `agent-orc statusline` as its status line, and
-# whether it is working through hooks; both only for sessions started by Agent-Orc.
+# through hooks whether it is working, has finished (agent-idle) or waits for a permission or an
+# answer (agent-waiting, which notifies your devices); all only for sessions started by Agent-Orc.
 agents:
   claude:
     label: Claude Code
-    start: [claude, --settings, &claude_settings '{"statusLine": {"type": "command", "command": "agent-orc statusline"}, "hooks": {"UserPromptSubmit": [{"hooks": [{"type": "command", "command": "agent-orc agent-busy"}]}], "Stop": [{"hooks": [{"type": "command", "command": "agent-orc agent-idle"}]}]}}', --remote-control, "{name}"]
+    start: [claude, --settings, &claude_settings '{"statusLine": {"type": "command", "command": "agent-orc statusline"}, "hooks": {"UserPromptSubmit": [{"hooks": [{"type": "command", "command": "agent-orc agent-busy"}]}], "Stop": [{"hooks": [{"type": "command", "command": "agent-orc agent-idle"}]}], "Notification": [{"matcher": "permission_prompt|elicitation_dialog", "hooks": [{"type": "command", "command": "agent-orc agent-waiting"}]}]}}', --remote-control, "{name}"]
     resume: [claude, --settings, *claude_settings, --continue, --remote-control, "{name}"]
     # Every earlier conversation in the folder (also from VS Code or a terminal) can be resumed.
     conversations:

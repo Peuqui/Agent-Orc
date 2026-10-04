@@ -35,6 +35,13 @@ from agent_orc.effort import (
     Reasoning,
 )
 from agent_orc.history import CONVERSATION_SOURCES, ConversationNotFoundError
+from agent_orc.push import (
+    add_subscription,
+    agent_message,
+    application_server_key,
+    remove_subscription,
+    send_to_all,
+)
 from agent_orc.scope import AccessScope, OutsideScopeError
 from agent_orc.sessions import (
     AgentSession,
@@ -129,6 +136,18 @@ class StartSessionRequest(BaseModel):
     ultracode: bool
     # Resume this earlier conversation (from GET /api/conversations) instead.
     conversation: str | None
+
+
+class PushKeys(BaseModel):
+    p256dh: str
+    auth: str
+
+
+class PushSubscription(BaseModel):
+    """As the browser's PushSubscription.toJSON() gives it."""
+
+    endpoint: str
+    keys: PushKeys
 
 
 class PermissionModeRequest(BaseModel):
@@ -368,6 +387,33 @@ def create_app(
         stored = read_workspaces()
         stored.pop(name, None)
         write_workspaces(stored)
+
+    @app.get("/api/push/key", dependencies=authenticated)
+    def push_key() -> dict[str, str]:
+        """The public key a device subscribes with (Push API applicationServerKey)."""
+        return {"key": application_server_key()}
+
+    @app.post(
+        "/api/push/subscriptions",
+        dependencies=authenticated,
+        status_code=status.HTTP_204_NO_CONTENT,
+    )
+    def subscribe(body: PushSubscription) -> None:
+        add_subscription(body.model_dump())
+
+    @app.delete(
+        "/api/push/subscriptions",
+        dependencies=authenticated,
+        status_code=status.HTTP_204_NO_CONTENT,
+    )
+    def unsubscribe(endpoint: str) -> None:
+        remove_subscription(endpoint)
+
+    @app.post("/api/push/test", dependencies=authenticated)
+    def push_test() -> dict[str, int]:
+        """A sample "finished" message to every subscribed device."""
+        message = agent_message("test", "", "Agent-Orc", "")
+        return {"delivered": send_to_all(message, config.push)}
 
     @app.get("/api/quota", dependencies=authenticated)
     def quota() -> list[dict[str, Any]]:

@@ -14,6 +14,7 @@ import {
   useSettings,
 } from '../composables/useSettings'
 import AppIcon from './AppIcon.vue'
+import PushSettings from './PushSettings.vue'
 
 // Settings of this device; more entries join here as they become adjustable.
 const { scrollLines, lineHeight, fontSize, terminalFont } = useSettings()
@@ -84,6 +85,7 @@ function changeScrollLines(delta: number): void {
         </div>
       </div>
       <p class="mt-1 text-xs text-slate-500">{{ $t('settings.lineHeightHint') }}</p>
+      <PushSettings />
     </div>
   </div>
 </template>

@@ -200,7 +200,8 @@
           "Karten sortieren: mit der Maus an einer freien Stelle ziehen, mit dem Finger erst kurz halten. Die Reihenfolge gilt auf allen Geräten.",
           "Kontext-Ring: grün unter 50 %, gelb darüber, rot ab 70 % – dann bald /compact oder ein neues Gespräch.",
           "Effort-Regler und Ultracode gelten pro Projektordner. Arbeitet der Agent gerade, wählst du: nach der Antwort oder sofort (Neustart mit Fortsetzen).",
-          "Kontingent oben: verbrauchte 5-Stunden- und Wochen-Quote von Claude, sobald eine Sitzung sie gemeldet hat."
+          "Kontingent oben: verbrauchte 5-Stunden- und Wochen-Quote von Claude, sobald eine Sitzung sie gemeldet hat.",
+          "„Start“ auf der Karte: Freigabe-Modus, in dem der Agent startet (Nachfragen, Änderungen annehmen, Auto, Nur planen) – gilt ab dem nächsten Start; im Agenten wechselt Shift+Tab."
         ]
       },
       {
@@ -229,7 +230,8 @@
       {
         "title": "Einstellungen (Zahnrad)",
         "items": [
-          "Schrift, Schriftgröße, Zeilenabstand und Scroll-Zeilen pro Schritt – gespeichert auf diesem Gerät."
+          "Schrift, Schriftgröße, Zeilenabstand und Scroll-Zeilen pro Schritt – gespeichert auf diesem Gerät.",
+          "Benachrichtigungen: im Zahnrad pro Gerät einschalten. Dann kommt eine Nachricht, wenn ein Agent fertig ist oder auf eine Freigabe oder Antwort wartet; Antippen öffnet ihn. Nur über HTTPS, am iPhone nur in der installierten App."
         ]
       }
     ]
@@ -247,5 +249,13 @@
       "dontAsk": "Nicht fragen",
       "bypassPermissions": "Alles erlauben"
     }
+  },
+  "push": {
+    "title": "Benachrichtigungen",
+    "hint": "Auf diesem Gerät, wenn ein Agent fertig ist oder auf eine Freigabe oder Antwort wartet.",
+    "unsupported": "Nur über HTTPS möglich, am iPhone nur in der installierten App.",
+    "denied": "Benachrichtigungen sind im Browser blockiert – dort in den Website-Einstellungen erlauben.",
+    "test": "Testnachricht senden",
+    "testSent": "Testnachricht an {count} Gerät(e) gesendet."
   }
 }

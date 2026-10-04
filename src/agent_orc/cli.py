@@ -7,6 +7,7 @@ import os
 import sys
 from importlib.resources import files
 from pathlib import Path
+from typing import Any
 
 import uvicorn
 
@@ -20,6 +21,7 @@ from agent_orc.config import (
     load_config,
 )
 from agent_orc.context import status_line, store_activity, store_status
+from agent_orc.push import agent_message, send_to_all
 from agent_orc.sessions import SESSION_ENV
 
 
@@ -70,8 +72,23 @@ def agent_busy() -> None:
 
 
 def agent_idle() -> None:
-    """Hook command (Claude: Stop): the agent finished its answer."""
+    """Hook command (Claude: Stop): the agent finished its answer; tells the user's devices."""
+    hook = json.load(sys.stdin)
     store_activity(os.environ[SESSION_ENV], busy=False)
+    # Absent when the answer ended without text (e.g. interrupted).
+    _notify("done", hook, hook.get("last_assistant_message") or "")
+
+
+def agent_waiting() -> None:
+    """Hook command (Claude: Notification): the agent waits for a permission or an answer."""
+    hook = json.load(sys.stdin)
+    _notify("waiting", hook, hook["message"])
+
+
+def _notify(kind: str, hook: dict[str, Any], text: str) -> None:
+    config = load_config(config_dir() / CONFIG_FILE_NAME)
+    message = agent_message(kind, os.environ[SESSION_ENV], Path(hook["cwd"]).name, text)
+    send_to_all(message, config.push)
 
 
 COMMANDS = {
@@ -81,6 +98,7 @@ COMMANDS = {
     "statusline": (statusline, "status line command for agent sessions (JSON on stdin)"),
     "agent-busy": (agent_busy, "hook command: the agent started working"),
     "agent-idle": (agent_idle, "hook command: the agent finished its answer"),
+    "agent-waiting": (agent_waiting, "hook command: the agent waits for the user"),
 }
 
 

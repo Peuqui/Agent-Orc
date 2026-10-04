@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import type { Reasoning } from '../api'
+import ToggleSwitch from './ToggleSwitch.vue'
 
 // Reasoning of an agent: the effort as a slider (first stop: the agent's own default, then
 // the profile's levels from fast to smart; chosen on release) and, where the agent offers it,
@@ -83,28 +84,17 @@ function toggleUltracode(): void {
         />
       </div>
     </div>
-    <button
+    <ToggleSwitch
       v-if="ultracodeOffered"
-      type="button"
-      role="switch"
-      class="flex shrink-0 items-center gap-2 text-slate-300 disabled:opacity-50"
+      class="text-slate-300"
       :class="compact ? 'h-7 text-xs' : 'h-9 text-sm'"
-      :aria-checked="modelValue.ultracode"
+      :checked="modelValue.ultracode"
       :disabled="disabled"
       :title="$t('agent.ultracodeHint')"
       @click="toggleUltracode"
     >
       {{ $t('agent.ultracode') }}
-      <span
-        class="relative h-4 w-7 rounded-full transition-colors"
-        :class="modelValue.ultracode ? 'bg-red-500' : 'bg-slate-600'"
-      >
-        <span
-          class="absolute top-0.5 size-3 rounded-full bg-white transition-all"
-          :class="modelValue.ultracode ? 'left-3.5' : 'left-0.5'"
-        />
-      </span>
-    </button>
+    </ToggleSwitch>
   </div>
 </template>
 

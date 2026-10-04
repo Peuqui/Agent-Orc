@@ -13,6 +13,7 @@ dependencies = [
     "fastapi",
     "uvicorn[standard]",
     "pyyaml",
+    "pywebpush",
 ]
 
 [project.optional-dependencies]
@@ -42,6 +43,11 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 [tool.mypy]
 strict = true
 files = ["src", "tests"]
+
+# The web push libraries ship no type information.
+[[tool.mypy.overrides]]
+module = ["py_vapid", "pywebpush", "http_ece"]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

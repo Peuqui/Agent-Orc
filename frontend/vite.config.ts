@@ -31,6 +31,8 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
+      // Shows Agent-Orc's push messages (public/push-sw.js).
+      workbox: { importScripts: ['push-sw.js'] },
       // The manifest request must carry credentials when a reverse proxy uses HTTP basic auth.
       useCredentials: true,
       manifest: {
