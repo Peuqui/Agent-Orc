@@ -14,6 +14,7 @@ import {
   useSettings,
 } from '../composables/useSettings'
 import AppIcon from './AppIcon.vue'
+import HandoverSettings from './HandoverSettings.vue'
 import PushSettings from './PushSettings.vue'
 
 // Settings of this device; more entries join here as they become adjustable.
@@ -86,6 +87,7 @@ function changeScrollLines(delta: number): void {
       </div>
       <p class="mt-1 text-xs text-slate-500">{{ $t('settings.lineHeightHint') }}</p>
       <PushSettings />
+      <HandoverSettings />
     </div>
   </div>
 </template>

@@ -53,6 +53,8 @@ export interface AgentSession {
    * stored one there. */
   permission_mode: string | null
   approvals: Approval[]
+  /** From the configured share of the context on: hand over to a fresh session. */
+  handover: { recommended: boolean; cache_cold: boolean }
   /** A reasoning change waits until the current answer is finished. */
   effort_pending: boolean
   pending_effort: string | null
@@ -277,6 +279,11 @@ export const api = {
     request<FileChange[]>('GET', `sessions/${encodeURIComponent(sessionId)}/changes`),
   changeDiff: (sessionId: string, path: string) =>
     request<FileDiff>('GET', `sessions/${encodeURIComponent(sessionId)}/changes/diff`, { query: { path } }),
+  /** Types the handover request into the agent. */
+  requestHandover: (sessionId: string) =>
+    request<void>('POST', `sessions/${encodeURIComponent(sessionId)}/handover`),
+  handoverAuto: () => request<{ auto: boolean }>('GET', 'handover/auto'),
+  setHandoverAuto: (auto: boolean) => request<void>('PUT', 'handover/auto', { body: { auto } }),
   /** Takes effect at the agent's next start. */
   changePermissionMode: (sessionId: string, mode: string) =>
     request<void>('PUT', `sessions/${encodeURIComponent(sessionId)}/permission-mode`, { body: { mode } }),

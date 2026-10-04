@@ -42,6 +42,7 @@ from agent_orc.effort import (
     Reasoning,
     set_reasoning_live,
 )
+from agent_orc.handover import advise, read_auto, write_auto
 from agent_orc.history import (
     CONVERSATION_SEARCHES,
     CONVERSATION_SOURCES,
@@ -165,6 +166,10 @@ class PushSubscription(BaseModel):
     keys: PushKeys
 
 
+class HandoverAutoRequest(BaseModel):
+    auto: bool
+
+
 class ApprovalDecision(BaseModel):
     request: str
     allow: bool
@@ -265,6 +270,32 @@ def create_app(
             elif not session.running or not session_busy(session):
                 apply_effort(session, reasoning)
 
+    # Agents already advised to hand over, so the push message comes once; an agent leaves
+    # the set when its context is small again (a fresh conversation, /compact).
+    advised_handover: set[str] = set()
+
+    def ask_for_handover(session: AgentSession) -> None:
+        sessions.type_line(session.id, config.handover.prompt, config.terminal.submit_delay_ms)
+
+    def check_handovers() -> None:
+        auto = read_auto()
+        for session in sessions.list():
+            advice = advise(session, config.handover)
+            if not advice.recommended:
+                advised_handover.discard(session.id)
+                continue
+            if session.id in advised_handover:
+                continue
+            idle = not session_busy(session)
+            # Automatic only into an idle agent, so the request does not mix with its work.
+            if auto and not idle:
+                continue
+            advised_handover.add(session.id)
+            message = agent_message("handover", session.id, session.path.name, "")
+            send_to_all(message, config.push)
+            if auto:
+                ask_for_handover(session)
+
     async def watch_pending_efforts() -> None:
         while True:
             await asyncio.sleep(PENDING_EFFORT_CHECK_SECONDS)
@@ -275,6 +306,10 @@ def create_app(
                 # Keep watching the other sessions; this one is dropped and logged.
                 logger.exception("applying a pending effort change failed")
                 pending_effort.clear()
+            try:
+                await asyncio.to_thread(check_handovers)
+            except Exception:
+                logger.exception("checking for handovers failed")
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
@@ -509,6 +544,7 @@ def create_app(
             # As stored for the folder; the agent reads it at start.
             "ultracode": folder.ultracode,
             "permission_mode": folder_permission_mode(session.profile, session.path),
+            "handover": asdict(advise(session, config.handover)),
             # Waiting for the user's answer; normally at most one, as Claude asks one at a time.
             "approvals": [asdict(r) for r in requests if r.session == session.id],
             "effort_pending": pending is not None,
@@ -571,6 +607,28 @@ def create_app(
         if not any(r.id == body.request and r.session == session_id for r in open_requests()):
             raise ApprovalNotFoundError(body.request)
         decide(body.request, body.allow)
+
+    @app.post(
+        "/api/sessions/{session_id}/handover",
+        dependencies=authenticated,
+        status_code=status.HTTP_204_NO_CONTENT,
+    )
+    def request_handover(session_id: str) -> None:
+        """Type the handover request into the agent, as the user would."""
+        session = find_session(session_id)
+        if session is None or not session.running:
+            raise SessionNotFoundError(session_id)
+        ask_for_handover(session)
+
+    @app.get("/api/handover/auto", dependencies=authenticated)
+    def handover_auto() -> dict[str, bool]:
+        return {"auto": read_auto()}
+
+    @app.put(
+        "/api/handover/auto", dependencies=authenticated, status_code=status.HTTP_204_NO_CONTENT
+    )
+    def set_handover_auto(body: HandoverAutoRequest) -> None:
+        write_auto(body.auto)
 
     def session_folder(session_id: str) -> Path:
         session = find_session(session_id)

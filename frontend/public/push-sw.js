@@ -6,11 +6,13 @@ const PUSH_TEXTS = {
     done: '{folder} ist fertig',
     waiting: '{folder} wartet auf dich',
     test: 'Benachrichtigungen sind eingerichtet',
+    handover: '{folder}: Übergabe empfohlen',
   },
   en: {
     done: '{folder} is done',
     waiting: '{folder} is waiting for you',
     test: 'Notifications are set up',
+    handover: '{folder}: handover advised',
   },
 }
 

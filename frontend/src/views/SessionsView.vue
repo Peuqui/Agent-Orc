@@ -124,6 +124,15 @@ function permissionLabel(mode: string): string {
   return te(`permission.modes.${mode}`) ? t(`permission.modes.${mode}`) : mode
 }
 
+function contextPercent(session: AgentSession): number {
+  if (session.context_tokens == null || !session.context_window) return 0
+  return Math.round((session.context_tokens / session.context_window) * 100)
+}
+
+function requestHandover(session: AgentSession): void {
+  void run(() => api.requestHandover(session.id))
+}
+
 function answerApproval(session: AgentSession, approval: Approval, allow: boolean): void {
   void run(() => api.answerApproval(session.id, approval.id, allow))
 }
@@ -261,6 +270,19 @@ function resume(session: AgentSession): void {
             @update:model-value="(reasoning) => (effortChange = { session, reasoning })"
           />
         </div>
+        <!-- The context is large: a handover to a fresh session saves tokens (more so once cold). -->
+        <div
+          v-if="session.handover.recommended && !session.busy"
+          class="flex flex-wrap items-center gap-2 rounded-lg border border-amber-700 bg-amber-950/40 px-3 py-2 text-sm text-amber-200"
+        >
+          <span class="flex-1">
+            {{ $t('handover.advice', { percent: contextPercent(session) }) }}
+            <span v-if="session.handover.cache_cold" class="text-amber-300/80"> · {{ $t('handover.cold') }}</span>
+          </span>
+          <button class="btn-secondary btn-small" :title="$t('handover.requestHint')" @click="requestHandover(session)">
+            {{ $t('handover.request') }}
+          </button>
+        </div>
         <!-- The agent asks for a permission; the terminal asks too, the first answer counts. -->
         <div
           v-for="approval in session.approvals"
@@ -323,8 +345,8 @@ function resume(session: AgentSession): void {
             :title="$t('changes.open')"
             :aria-label="$t('changes.button')"
           >
-            <!-- Phones: the icon only, so the row stays one line. -->
-            <AppIcon name="diff" /><span class="hidden sm:inline">{{ $t('changes.button') }}</span>
+            <!-- The icon only (its name in the tooltip), so the row stays one line. -->
+            <AppIcon name="diff" />
           </RouterLink>
           <button
             class="btn-secondary btn-small"
@@ -332,7 +354,7 @@ function resume(session: AgentSession): void {
             :aria-label="$t('sessions.stop')"
             @click="stopping = session"
           >
-            <AppIcon name="stop" /><span class="hidden sm:inline">{{ $t('sessions.stop') }}</span>
+            <AppIcon name="stop" />
           </button>
           <label
             v-if="permissionModes.get(session.profile)?.length"

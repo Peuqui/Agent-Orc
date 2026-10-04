@@ -842,6 +842,57 @@ def test_changes_of_an_agents_project(client: TestClient, home: Path) -> None:
     assert other.status_code == 404
 
 
+def report_context(session_id: str, tokens: int) -> None:
+    store_status(
+        session_id,
+        {
+            "model": {"display_name": "Opus"},
+            "context_window": {
+                "context_window_size": 1000,
+                "current_usage": {"input_tokens": tokens},
+            },
+        },
+    )
+
+
+def test_handover_is_advised_from_the_threshold_on(
+    client: TestClient, home: Path, socket_name: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
+    session_id = start_shell(client, home)
+    report_context(session_id, 400)
+    assert client.get("/api/sessions").json()[0]["handover"] == {
+        "recommended": False,
+        "cache_cold": False,
+    }
+    report_context(session_id, 600)
+    store_activity(session_id, busy=False)
+    assert client.get("/api/sessions").json()[0]["handover"] == {
+        "recommended": True,
+        "cache_cold": False,
+    }
+    # Two hours later, idle for longer than the cache lasts.
+    later = time.time() + 2 * 3600
+    monkeypatch.setattr("agent_orc.handover.time.time", lambda: later)
+    assert client.get("/api/sessions").json()[0]["handover"]["cache_cold"] is True
+
+    assert client.post(f"/api/sessions/{session_id}/handover").status_code == 204
+    screen = subprocess.run(
+        ["tmux", "-L", socket_name, "capture-pane", "-p", "-t", f"={session_id}:"],
+        capture_output=True, text=True, check=True,
+    ).stdout  # fmt: skip
+    assert "handover document" in screen
+
+
+def test_automatic_handover_setting_is_kept(
+    client: TestClient, home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
+    assert client.get("/api/handover/auto").json() == {"auto": False}
+    assert client.put("/api/handover/auto", json={"auto": True}).status_code == 204
+    assert client.get("/api/handover/auto").json() == {"auto": True}
+
+
 def test_push_subscription_and_test_message(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,

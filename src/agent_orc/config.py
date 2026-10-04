@@ -60,6 +60,16 @@ class TerminalConfig(StrictModel):
     text_history_lines: int
 
 
+class HandoverConfig(StrictModel):
+    """When an agent's context is large enough to advise a handover to a fresh session."""
+
+    threshold_percent: int
+    # Idle this long, the prompt cache has expired: the next message reads it all in again.
+    cold_after_minutes: int
+    # Typed into the agent to ask for its handover.
+    prompt: str
+
+
 class PushConfig(StrictModel):
     """Notifications on the user's devices when an agent finished or waits (see push.py)."""
 
@@ -160,6 +170,7 @@ class Config(StrictModel):
     files: FilesConfig
     terminal: TerminalConfig
     push: PushConfig
+    handover: HandoverConfig
     dictation: DictationConfig
     tmux: TmuxConfig
     agents: dict[str, AgentProfile]

@@ -214,7 +214,8 @@
           "Quota at the top: Claude's used five-hour and weekly limits, once a session has reported them.",
           "“Start” on the card: the permission mode the agent starts in – Ask, Edit (file edits without asking), Auto or Plan. Auto by default; applies from the next start, inside the agent Shift+Tab switches it.",
           "When an agent asks for permission, its card shows the command with “Allow” and “Deny”. The terminal asks the same; the first answer counts.",
-          "“Changes” (branch icon, on the card and in the header of every terminal) shows what the agent changed in the project: changed, new and deleted files since the last commit; a tap shows the diff."
+          "“Changes” (branch icon, on the card and in the header of every terminal) shows what the agent changed in the project: changed, new and deleted files since the last commit; a tap shows the diff.",
+          "From the configured context size on (50 % by default) the card advises a handover to a fresh session, a notification says so once; “Ask for a handover” asks the agent for a handover document. The settings menu can make this automatic."
         ]
       },
       {
@@ -291,5 +292,13 @@
       "renamed": "renamed",
       "new": "new"
     }
+  },
+  "handover": {
+    "advice": "Context at {percent} % – a handover to a fresh session is advised",
+    "cold": "cache cold, the next message reads it all in again",
+    "request": "Ask for a handover",
+    "requestHint": "Types the request for a handover document into the agent",
+    "auto": "Ask for handovers automatically",
+    "autoHint": "When an idle agent's context is large, Agent-Orc asks it for a handover document itself – also when no device is open."
   }
 }
