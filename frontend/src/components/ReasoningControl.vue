@@ -44,14 +44,11 @@ function toggleUltracode(): void {
 </script>
 
 <template>
-  <div class="flex gap-x-4" :class="compact ? 'flex-wrap items-center gap-y-1' : 'items-end'">
-    <div
-      class="flex flex-1 gap-x-3"
-      :class="compact ? 'min-w-56 items-center' : 'min-w-0 flex-col gap-y-1'"
-    >
+  <div class="flex" :class="compact ? 'items-center gap-x-3' : 'items-end gap-x-4'">
+    <div class="flex min-w-0 flex-1" :class="compact ? 'items-center gap-x-2' : 'flex-col gap-y-1'">
       <div class="flex shrink-0 items-baseline gap-2" :class="compact ? 'text-xs' : 'text-sm'">
-        <span class="text-slate-400">{{ compact ? $t('agent.effortShort') : $t('agent.effort') }}</span>
-        <span class="font-medium text-slate-100" :class="{ 'w-16': compact }">
+        <span v-if="!compact" class="text-slate-400">{{ $t('agent.effort') }}</span>
+        <span class="font-medium text-slate-100" :class="{ 'w-14': compact }">
           {{ effort ?? $t('agent.effortDefaultShort') }}
         </span>
       </div>
@@ -60,7 +57,7 @@ function toggleUltracode(): void {
         <span>{{ $t('agent.smarter') }}</span>
       </div>
       <div
-        class="relative flex min-w-24 flex-1 items-center"
+        class="relative flex min-w-20 flex-1 items-center"
         :class="compact ? 'h-7' : 'h-9'"
         :title="compact ? `${$t('agent.faster')} ← → ${$t('agent.smarter')}` : undefined"
       >

@@ -31,7 +31,6 @@
     "stop": "Stop",
     "resume": "Resume",
     "terminal": "Terminal",
-    "contextLabel": "Context",
     "context": "{used} of {total} · {percent} %",
     "startNew": "Start a new agent",
     "confirmEffort": "Set the effort for “{name}” to “{effort}”? It applies to the project; the agent briefly restarts and resumes the conversation.",
@@ -79,8 +78,7 @@
     "faster": "Faster",
     "smarter": "Smarter",
     "ultracode": "Ultracode",
-    "ultracodeHint": "Claude plans multi-agent workflows for larger tasks by itself",
-    "effortShort": "Effort"
+    "ultracodeHint": "Claude plans multi-agent workflows for larger tasks by itself"
   },
   "trash": {
     "empty": "The trash is empty.",

@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { formatTokens } from '../format'
 import { usageTone } from '../usage'
-import UsageBar from './UsageBar.vue'
+import ContextRing from './ContextRing.vue'
 
 const props = defineProps<{ tokens: number; window: number; compact?: boolean }>()
 
@@ -16,12 +16,13 @@ const detail = computed(() => ({
 
 <template>
   <span
-    v-if="compact"
-    class="rounded-md bg-slate-800 px-2 py-0.5 font-mono text-xs"
+    class="inline-flex shrink-0 items-center gap-1.5 text-xs"
     :class="usageTone(percent).text"
     :title="$t('sessions.context', detail)"
   >
-    {{ percent }} %
+    <ContextRing :percent="percent" />
+    <!-- Narrow screens (and the compact form) show the percentage only, wider ones the tokens too. -->
+    <span v-if="!compact" class="hidden sm:inline">{{ $t('sessions.context', detail) }}</span>
+    <span :class="{ 'sm:hidden': !compact }">{{ percent }} %</span>
   </span>
-  <UsageBar v-else :label="$t('sessions.contextLabel')" :percent="percent" :detail="$t('sessions.context', detail)" />
 </template>

@@ -31,7 +31,6 @@
     "stop": "Beenden",
     "resume": "Fortsetzen",
     "terminal": "Terminal",
-    "contextLabel": "Kontext",
     "context": "{used} von {total} · {percent} %",
     "startNew": "Neuen Agenten starten",
     "confirmEffort": "Aufwand für „{name}“ auf „{effort}“ setzen? Er gilt für das Projekt; der Agent startet dafür kurz neu und setzt das Gespräch fort.",
@@ -79,8 +78,7 @@
     "faster": "Schneller",
     "smarter": "Intelligenter",
     "ultracode": "Ultracode",
-    "ultracodeHint": "Claude plant für größere Aufgaben selbst Workflows mit mehreren Agenten",
-    "effortShort": "Aufwand"
+    "ultracodeHint": "Claude plant für größere Aufgaben selbst Workflows mit mehreren Agenten"
   },
   "trash": {
     "empty": "Der Papierkorb ist leer.",

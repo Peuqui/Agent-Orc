@@ -125,16 +125,15 @@ function resume(session: AgentSession): void {
             }}
           </span>
         </div>
-        <div class="flex flex-col gap-x-6 gap-y-2 md:flex-row md:items-center">
+        <div class="flex items-center gap-x-3">
           <ContextMeter
             v-if="session.context_tokens != null && session.context_window != null"
-            class="md:flex-1"
             :tokens="session.context_tokens"
             :window="session.context_window"
           />
           <ReasoningControl
             v-if="session.running && levels.get(session.profile)?.length"
-            class="md:max-w-xl md:flex-1"
+            class="min-w-0 flex-1 md:max-w-xl"
             compact
             :levels="levels.get(session.profile) ?? []"
             :ultracode-offered="ultracodeOffered.get(session.profile) ?? false"
