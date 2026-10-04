@@ -386,7 +386,7 @@ async function rename(): Promise<void> {
       <input
         v-model="nameInput"
         size="12"
-        class="min-w-0 shrink rounded-md bg-transparent px-2 py-1 font-semibold placeholder:font-normal placeholder:text-slate-500 hover:bg-slate-800 focus:bg-slate-800 focus:outline-none"
+        class="min-w-0 shrink rounded-md bg-transparent px-2 py-1 font-semibold text-amber-300 placeholder:font-normal placeholder:text-slate-500 hover:bg-slate-800 focus:bg-slate-800 focus:outline-none"
         :class="phone ? 'flex-1' : 'w-28 max-md:order-last lg:w-44'"
         :placeholder="$t('workspace.unnamed')"
         :title="$t('workspace.nameHint')"

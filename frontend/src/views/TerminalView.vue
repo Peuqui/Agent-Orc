@@ -321,7 +321,7 @@ onBeforeUnmount(() => {
     <!-- Compact buttons on phones, so name and all buttons fit in one row. -->
     <header
       v-if="!fullscreen"
-      class="flex items-center gap-1 border-b border-slate-800 px-1 py-1 max-md:[&_.btn-icon]:size-8"
+      class="flex items-center gap-1 border-b border-slate-600 px-1 py-1 max-md:[&_.btn-icon]:size-8"
     >
       <button
         v-if="!embedded"
@@ -339,7 +339,8 @@ onBeforeUnmount(() => {
         :window="session.context_window"
       />
       <!-- Embedded in the workspace, the column's tab names the agent already (not on phones). -->
-      <h1 class="min-w-0 flex-1 truncate font-semibold">{{ ownTab ? name : '' }}</h1>
+      <!-- In the light bulb's amber, set off from the usage figure. -->
+      <h1 class="ml-2 min-w-0 flex-1 truncate font-semibold text-amber-300">{{ ownTab ? name : '' }}</h1>
       <!-- The actions: side by side on computers, behind ⋯ on phones so the name has room. -->
       <div class="relative flex items-center">
         <button
