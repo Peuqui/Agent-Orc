@@ -7,6 +7,7 @@ import { useToast } from '../composables/useToast'
 import { baseName, formatDate, formatSize } from '../format'
 import BaseDialog from './BaseDialog.vue'
 import ReasoningControl from './ReasoningControl.vue'
+import ToggleSwitch from './ToggleSwitch.vue'
 
 const props = defineProps<{ path: string }>()
 const emit = defineEmits<{ started: [id: string]; close: [] }>()
@@ -17,6 +18,15 @@ const selected = ref('')
 const NO_REASONING: Reasoning = { effort: null, ultracode: false }
 const reasoning = ref<Reasoning>(NO_REASONING)
 const busy = ref(false)
+// A worktree of its own: a second working copy on a new branch, next to the project.
+const inWorktree = ref(false)
+const branch = ref(defaultBranch())
+
+function defaultBranch(): string {
+  const now = new Date()
+  const part = (value: number) => String(value).padStart(2, '0')
+  return `agent-${now.getFullYear()}${part(now.getMonth() + 1)}${part(now.getDate())}-${part(now.getHours())}${part(now.getMinutes())}`
+}
 const conversations = ref<Conversation[]>([])
 // Searching the earlier conversations' messages; shorter queries just show the list.
 const MIN_QUERY_CHARS = 2
@@ -79,6 +89,7 @@ async function start(resume: boolean, conversation: string | null = null): Promi
       resume,
       reasoning.value,
       conversation,
+      inWorktree.value ? branch.value.trim() : null,
     )
     await refresh()
     emit('started', session.id)
@@ -111,6 +122,15 @@ async function start(resume: boolean, conversation: string | null = null): Promi
       :ultracode-offered="profile?.ultracode ?? false"
       class="mb-5"
     />
+    <div class="mb-5 flex flex-col gap-2">
+      <ToggleSwitch class="h-7 self-start text-sm text-slate-300" :checked="inWorktree" @click="inWorktree = !inWorktree">
+        {{ $t('agent.inWorktree') }}
+      </ToggleSwitch>
+      <template v-if="inWorktree">
+        <input v-model="branch" class="input font-mono text-sm" :aria-label="$t('agent.branch')" :placeholder="$t('agent.branch')" />
+        <p class="text-xs text-slate-500">{{ $t('agent.worktreeHint', { name: `${baseName(path)}.worktrees/${branch}` }) }}</p>
+      </template>
+    </div>
     <div class="flex flex-col gap-2">
       <button class="btn-primary" :disabled="busy || !selected" @click="start(false)">
         {{ $t('agent.startNew') }}

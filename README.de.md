@@ -40,6 +40,9 @@ aus wieder aufnehmen.
   Freigabe oder Antwort wartet (Web Push, pro Gerät einschaltbar); Antippen öffnet den Agenten.
 - Der Freigabe-Modus, in dem ein Agent startet, pro Projekt (Fragen, Bearbeiten, Auto, Planen;
   Voreinstellung Auto).
+- Ein Agent kann in einem eigenen Git-Worktree starten (zweite Arbeitskopie auf einem neuen
+  Branch), damit zwei Agenten an einem Projekt arbeiten können; danach wird er wieder
+  entfernt, ohne Arbeit zu verlieren.
 
 **Arbeitsflächen**
 - Mehrere Agenten als Spalten nebeneinander; Spaltenköpfe ziehen sortiert, die Trenner ziehen

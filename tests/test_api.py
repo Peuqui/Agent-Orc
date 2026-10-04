@@ -910,6 +910,41 @@ def test_push_subscription_and_test_message(
     assert client.post("/api/push/test").json() == {"delivered": 0}
 
 
+def test_agent_in_its_own_worktree(client: TestClient, home: Path) -> None:
+    folder = home / "projects" / "app"
+    folder.mkdir()
+    for arguments in (["init", "-q"], ["commit", "-q", "--allow-empty", "-m", "start"]):
+        subprocess.run(
+            ["git", "-C", str(folder), "-c", "user.name=T", "-c", "user.email=t@e.org", *arguments],
+            check=True,
+        )
+    body = {
+        "profile": "shell",
+        "path": str(folder),
+        "resume": False,
+        "effort": None,
+        "ultracode": False,
+        "conversation": None,
+        "worktree": "fix-xy",
+    }
+    started = client.post("/api/sessions", json=body).json()
+    assert started["path"] == str(home / "projects" / "app.worktrees" / "fix-xy")
+    [listed] = client.get("/api/sessions").json()
+    assert listed["worktree"] is True
+    # A running agent keeps its worktree.
+    refused = client.post(f"/api/sessions/{started['id']}/remove-worktree")
+    assert refused.status_code == 409
+    bad = client.post("/api/sessions", json={**body, "worktree": "no spaces"})
+    assert bad.status_code == 422
+    # The base folder itself as the project: its worktree would leave the scope.
+    subprocess.run(["git", "-C", str(home / "projects"), "init", "-q"], check=True)
+    outside = client.post(
+        "/api/sessions", json={**body, "path": str(home / "projects"), "worktree": "y"}
+    )
+    assert outside.status_code == 403
+    assert not (home / "projects.worktrees").exists()
+
+
 def test_prompt_templates_are_kept(
     client: TestClient, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

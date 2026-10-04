@@ -75,6 +75,14 @@ from agent_orc.state import (
 from agent_orc.terminal import bridge
 from agent_orc.trash import RestoreConflictError, Trash, TrashEntryNotFoundError, home_trash_dir
 from agent_orc.trust import FOLDER_TRUST
+from agent_orc.worktrees import (
+    InvalidBranchError,
+    WorktreeError,
+    create_worktree,
+    is_worktree,
+    remove_worktree,
+    worktree_path,
+)
 
 SESSION_COOKIE = "agent_orc_session"
 # Written by the frontend build next to index.html (frontend/vite.config.ts); sent with every
@@ -114,6 +122,8 @@ ERROR_STATUS: dict[type[Exception], int] = {
     ApprovalNotFoundError: status.HTTP_404_NOT_FOUND,
     ChangeNotFoundError: status.HTTP_404_NOT_FOUND,
     NotAGitRepositoryError: status.HTTP_422_UNPROCESSABLE_CONTENT,
+    InvalidBranchError: status.HTTP_422_UNPROCESSABLE_CONTENT,
+    WorktreeError: status.HTTP_409_CONFLICT,
     files.FileTooLargeError: status.HTTP_413_CONTENT_TOO_LARGE,
     files.NotTextError: status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
     SessionNotFoundError: status.HTTP_404_NOT_FOUND,
@@ -160,6 +170,8 @@ class StartSessionRequest(BaseModel):
     ultracode: bool
     # Resume this earlier conversation (from GET /api/conversations) instead.
     conversation: str | None
+    # Start in a new git worktree on this new branch instead of the folder itself.
+    worktree: str | None = None
 
 
 class PushKeys(BaseModel):
@@ -578,6 +590,7 @@ def create_app(
             # As stored for the folder; the agent reads it at start.
             "ultracode": folder.ultracode,
             "permission_mode": folder_permission_mode(session.profile, session.path),
+            "worktree": is_worktree(session.path),
             "handover": asdict(advise(session, config.handover)),
             # Waiting for the user's answer; normally at most one, as Claude asks one at a time.
             "approvals": [asdict(r) for r in requests if r.session == session.id],
@@ -591,6 +604,11 @@ def create_app(
         path = scope.resolve(body.path)
         if not path.is_dir():
             raise NotADirectoryError(str(path))
+        if body.worktree is not None:
+            # A second working copy next to the project; checked against the scope before
+            # it is created.
+            scope.resolve(str(worktree_path(path, body.worktree)))
+            path = create_worktree(path, body.worktree)
         profile = config.agents.get(body.profile)
         if profile and profile.trust:
             FOLDER_TRUST[profile.trust](home, path)
@@ -751,6 +769,18 @@ def create_app(
     )
     def stop_session(session_id: str) -> None:
         sessions.stop(session_id)
+
+    @app.post("/api/sessions/{session_id}/remove-worktree", dependencies=authenticated)
+    def remove_session_worktree(session_id: str) -> dict[str, Any]:
+        """Remove the worktree of an ended agent, and the agent's card with it."""
+        session = find_session(session_id)
+        if session is None:
+            raise SessionNotFoundError(session_id)
+        if session.running:
+            raise SessionAlreadyRunningError(session_id)
+        removal = remove_worktree(session.path)
+        sessions.stop(session_id)
+        return asdict(removal)
 
     @app.websocket("/api/sessions/{session_id}/terminal")
     async def terminal(websocket: WebSocket, session_id: str, cols: int, rows: int) -> None:

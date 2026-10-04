@@ -35,6 +35,8 @@ detaches: the agents keep working, and you pick them up again from any device.
 - Notifications on your phone or desktop when an agent is done or waits for a permission or an
   answer (Web Push, switched on per device); tapping one opens the agent.
 - The permission mode an agent starts in, per project (ask, edit, auto, plan; auto by default).
+- An agent can start in a git worktree of its own (a second working copy on a new branch), so
+  two agents can work on one project; removed again once it has ended, without losing work.
 
 **Workspaces**
 - Several agents side by side as columns; drag the column heads to sort them and the dividers

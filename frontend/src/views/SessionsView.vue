@@ -105,6 +105,17 @@ const drag = reorder.drag
 // Named workspaces, opened again with one tap; the unnamed one of a browser tab is not listed.
 const workspaceNames = ref<string[]>([])
 const deletingWorkspace = ref<string | null>(null)
+const removingWorktree = ref<AgentSession | null>(null)
+
+function confirmRemoveWorktree(): void {
+  const session = removingWorktree.value
+  removingWorktree.value = null
+  if (!session) return
+  void run(async () => {
+    const removal = await api.removeWorktree(session.id)
+    toast.info(t(removal.branch_deleted ? 'worktree.removedWithBranch' : 'worktree.removedKeptBranch', { branch: removal.branch }))
+  })
+}
 const otherTabs = useOtherTabs()
 
 function loadWorkspaceNames(): void {
@@ -336,6 +347,14 @@ function resume(session: AgentSession): void {
           >
             <AppIcon name="agents" />{{ $t('sessions.terminal') }}
           </RouterLink>
+          <button
+            v-if="!session.running && session.worktree"
+            class="btn-secondary btn-small"
+            :title="$t('worktree.remove')"
+            @click="removingWorktree = session"
+          >
+            <AppIcon name="trash" />{{ $t('worktree.remove') }}
+          </button>
           <button v-if="!session.running" class="btn-primary btn-small" @click="resume(session)">
             <AppIcon name="resume" />{{ $t('sessions.resume') }}
           </button>
@@ -409,6 +428,15 @@ function resume(session: AgentSession): void {
       danger
       @confirm="confirmStop"
       @close="stopping = null"
+    />
+    <ConfirmDialog
+      v-if="removingWorktree"
+      :title="$t('worktree.remove')"
+      :message="$t('worktree.confirm', { name: baseName(removingWorktree.path) })"
+      :confirm-label="$t('worktree.remove')"
+      danger
+      @confirm="confirmRemoveWorktree"
+      @close="removingWorktree = null"
     />
     <ConfirmDialog
       v-if="deletingWorkspace"

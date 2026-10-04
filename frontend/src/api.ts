@@ -74,6 +74,8 @@ export interface AgentSession {
    * stored one there. */
   permission_mode: string | null
   approvals: Approval[]
+  /** Runs in a git worktree of its own (removable once ended). */
+  worktree: boolean
   /** From the configured share of the context on: hand over to a fresh session. */
   handover: { recommended: boolean; cache_cold: boolean }
   /** A reasoning change waits until the current answer is finished. */
@@ -273,10 +275,18 @@ export const api = {
     resume: boolean,
     reasoning: Reasoning,
     conversation: string | null = null,
+    /** Start in a new git worktree on this new branch. */
+    worktree: string | null = null,
   ) =>
     request<AgentSession>('POST', 'sessions', {
-      body: { profile, path, resume, ...reasoning, conversation },
+      body: { profile, path, resume, ...reasoning, conversation, worktree },
     }),
+  /** Removes the worktree of an ended agent and its card; the branch only if merged. */
+  removeWorktree: (sessionId: string) =>
+    request<{ branch: string; branch_deleted: boolean }>(
+      'POST',
+      `sessions/${encodeURIComponent(sessionId)}/remove-worktree`,
+    ),
   conversations: (profile: string, path: string) =>
     request<Conversation[]>('GET', 'conversations', { query: { profile, path } }),
   searchConversations: (profile: string, path: string, query: string) =>

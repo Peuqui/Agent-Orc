@@ -83,7 +83,10 @@
     "ultracodeHint": "Claude plans multi-agent workflows for larger tasks by itself",
     "searchConversations": "Search earlier conversations …",
     "noHits": "Nothing found.",
-    "hitCount": "found {count}×"
+    "hitCount": "found {count}×",
+    "inWorktree": "Start in a worktree of its own",
+    "branch": "Name of the new branch",
+    "worktreeHint": "A second working copy on a new branch, in {name} – so the agent does not get in the way of others in the same project."
   },
   "trash": {
     "empty": "The trash is empty.",
@@ -216,7 +219,8 @@
           "“Start” on the card: the permission mode the agent starts in – Ask, Edit (file edits without asking), Auto or Plan. Auto by default; applies from the next start, inside the agent Shift+Tab switches it.",
           "When an agent asks for permission, its card shows the command with “Allow” and “Deny”. The terminal asks the same; the first answer counts.",
           "“Changes” (branch icon, on the card and in the header of every terminal) shows what the agent changed in the project: changed, new and deleted files since the last commit; a tap shows the diff.",
-          "From the configured context size on (50 % by default) the card advises a handover to a fresh session, a notification says so once; “Ask for a handover” asks the agent for a handover document. The settings menu can make this automatic."
+          "From the configured context size on (50 % by default) the card advises a handover to a fresh session, a notification says so once; “Ask for a handover” asks the agent for a handover document. The settings menu can make this automatic.",
+          "“Start in a worktree of its own” (start dialog): the agent works in a second working copy on a new branch next to the project; once it has ended, “Remove worktree” on the card removes it again – without losing unsaved work."
         ]
       },
       {
@@ -335,5 +339,11 @@
     "text": "Template text",
     "remove": "Remove template",
     "add": "Add template"
+  },
+  "worktree": {
+    "remove": "Remove worktree",
+    "confirm": "Remove the working copy “{name}”? Uncommitted changes prevent this; the branch stays as long as it is not merged.",
+    "removedWithBranch": "Worktree removed; branch “{branch}” was merged and is deleted.",
+    "removedKeptBranch": "Worktree removed; branch “{branch}” is not merged yet and is kept."
   }
 }
