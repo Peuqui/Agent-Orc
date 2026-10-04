@@ -15,12 +15,17 @@ export const DEFAULT_FONT_SIZE = 14
 export const MIN_FONT_SIZE = 8
 export const MAX_FONT_SIZE = 28
 
+// Noto Sans Symbols 2 follows each font for the symbols Claude Code draws (⏵ ⏺ ● ✻ ⎿), which
+// the monospace fonts lack; also shipped with the app (OFL), as phones often have none.
+const SYMBOLS = '"Noto Sans Symbols 2"'
 /** Terminal fonts: monospace, as the agents draw tables and frames from characters. */
 export const TERMINAL_FONTS = {
   // Shipped with the app (OFL), so every device shows the same font made for screens.
-  jetbrains: '"JetBrains Mono Variable", ui-monospace, monospace',
-  system: 'ui-monospace, "Cascadia Mono", "DejaVu Sans Mono", monospace',
+  jetbrains: `"JetBrains Mono Variable", ${SYMBOLS}, ui-monospace, monospace`,
+  system: `ui-monospace, "Cascadia Mono", "DejaVu Sans Mono", ${SYMBOLS}, monospace`,
 } as const
+/** Loading these characters fetches every font part the terminal needs before it draws. */
+export const FONT_SAMPLE = 'Aä⏵⏺●✻⎿'
 export type TerminalFont = keyof typeof TERMINAL_FONTS
 
 const updatersByKey = new Map<string, (stored: string) => void>()

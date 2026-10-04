@@ -18,6 +18,7 @@ import MessageInput from '../components/MessageInput.vue'
 import { useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
 import {
+  FONT_SAMPLE,
   MAX_FONT_SIZE,
   MIN_FONT_SIZE,
   TERMINAL_FONTS,
@@ -125,7 +126,9 @@ watch([fontSize, lineHeight, terminalFont], async ([size, height, font]) => {
 
 /** xterm.js measures the characters once: the font must be loaded before it does. */
 async function loadFont(font: TerminalFont, size: number): Promise<void> {
-  await document.fonts.load(`${size}px ${TERMINAL_FONTS[font]}`)
+  // The GPU renderer keeps each drawn glyph: a symbol drawn before its font arrived would
+  // stay a box, so the fonts load (for their symbols too) before the terminal draws.
+  await document.fonts.load(`${size}px ${TERMINAL_FONTS[font]}`, FONT_SAMPLE)
 }
 // Events dispatched here pass the wheel handler below untouched.
 const ownWheelEvents = new WeakSet<Event>()
