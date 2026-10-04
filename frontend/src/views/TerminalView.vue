@@ -3,7 +3,7 @@ import { FitAddon } from '@xterm/addon-fit'
 import { Unicode11Addon } from '@xterm/addon-unicode11'
 import { Terminal } from '@xterm/xterm'
 import '@xterm/xterm/css/xterm.css'
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { api, terminalUrl, type Modifier, type TerminalSettings } from '../api'
@@ -69,8 +69,11 @@ async function copyPlainText(): Promise<void> {
 const session = computed(() => sessions.value.find((candidate) => candidate.id === props.id))
 const name = computed(() => (session.value ? baseName(session.value.path) : props.id))
 
+const { lineHeight } = useSettings()
+
 const terminal = new Terminal({
   fontSize: fontSize.value,
+  lineHeight: lineHeight.value,
   fontFamily: 'ui-monospace, "Cascadia Mono", "DejaVu Sans Mono", monospace',
   cursorBlink: true,
   scrollback: SCROLLBACK_LINES,
@@ -97,6 +100,11 @@ const resizeObserver = new ResizeObserver(() => fit.fit())
 // Chrome pixels), which xterm.js turns into different numbers of reports. So every notch and
 // every swipe step becomes exactly the user's number of single-line wheel events.
 const { scrollLines } = useSettings()
+
+watch(lineHeight, (height) => {
+  terminal.options.lineHeight = height
+  fit.fit()
+})
 // Events dispatched here pass the wheel handler below untouched.
 const ownWheelEvents = new WeakSet<Event>()
 

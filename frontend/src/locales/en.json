@@ -165,6 +165,8 @@
     "scrollLines": "Scrolling: lines per step",
     "scrollLinesHint": "For the mouse wheel and swiping in the terminal, on this device.",
     "less": "Less",
-    "more": "More"
+    "more": "More",
+    "lineHeight": "Terminal line spacing",
+    "lineHeightHint": "Multiple of the font size; 1.00 means no spacing at all."
   }
 }

@@ -165,6 +165,8 @@
     "scrollLines": "Scrollen: Zeilen pro Schritt",
     "scrollLinesHint": "Gilt für Mausrad und Wischen im Terminal, auf diesem Gerät.",
     "less": "Weniger",
-    "more": "Mehr"
+    "more": "Mehr",
+    "lineHeight": "Zeilenabstand im Terminal",
+    "lineHeightHint": "Vielfaches der Schriftgröße; 1,00 ist ganz ohne Abstand."
   }
 }

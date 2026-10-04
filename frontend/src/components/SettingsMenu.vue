@@ -1,11 +1,26 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { MAX_SCROLL_LINES, MIN_SCROLL_LINES, useSettings } from '../composables/useSettings'
+import { useI18n } from 'vue-i18n'
+import {
+  LINE_HEIGHT_STEP,
+  MAX_LINE_HEIGHT,
+  MAX_SCROLL_LINES,
+  MIN_LINE_HEIGHT,
+  MIN_SCROLL_LINES,
+  useSettings,
+} from '../composables/useSettings'
 import AppIcon from './AppIcon.vue'
 
 // Settings of this device; more entries join here as they become adjustable.
-const { scrollLines } = useSettings()
+const { scrollLines, lineHeight } = useSettings()
+const { locale } = useI18n()
 const open = ref(false)
+
+function changeLineHeight(delta: number): void {
+  // Rounded, so repeated steps do not drift (1.2000000000000002).
+  const height = Math.round((lineHeight.value + delta) * 100) / 100
+  lineHeight.value = Math.min(MAX_LINE_HEIGHT, Math.max(MIN_LINE_HEIGHT, height))
+}
 
 function changeScrollLines(delta: number): void {
   scrollLines.value = Math.min(MAX_SCROLL_LINES, Math.max(MIN_SCROLL_LINES, scrollLines.value + delta))
@@ -28,6 +43,15 @@ function changeScrollLines(delta: number): void {
         </div>
       </div>
       <p class="mt-1 text-xs text-slate-500">{{ $t('settings.scrollLinesHint') }}</p>
+      <div class="mt-3 flex items-center justify-between gap-2 text-sm text-slate-300">
+        <span>{{ $t('settings.lineHeight') }}</span>
+        <div class="flex items-center gap-1">
+          <button class="btn-icon size-7" :aria-label="$t('settings.less')" @click="changeLineHeight(-LINE_HEIGHT_STEP)">−</button>
+          <span class="w-10 text-center tabular-nums">{{ lineHeight.toLocaleString(locale, { minimumFractionDigits: 2 }) }}</span>
+          <button class="btn-icon size-7" :aria-label="$t('settings.more')" @click="changeLineHeight(LINE_HEIGHT_STEP)">+</button>
+        </div>
+      </div>
+      <p class="mt-1 text-xs text-slate-500">{{ $t('settings.lineHeightHint') }}</p>
     </div>
   </div>
 </template>
