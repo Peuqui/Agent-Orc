@@ -76,15 +76,8 @@ def test_permission_mode_keeps_the_folders_other_permissions(tmp_path: Path) -> 
         "permissions": {"allow": ["Bash(git *)"], "defaultMode": "acceptEdits"},
         "effortLevel": "high",
     }
-    write_claude_permission_mode(tmp_path, None)
-    assert json.loads(path.read_text()) == {
-        "permissions": {"allow": ["Bash(git *)"]},
-        "effortLevel": "high",
-    }
 
 
-def test_permission_mode_alone_leaves_no_empty_permissions(tmp_path: Path) -> None:
+def test_permission_mode_in_a_folder_without_settings(tmp_path: Path) -> None:
     write_claude_permission_mode(tmp_path, "plan")
     assert json.loads(settings_of(tmp_path).read_text()) == {"permissions": {"defaultMode": "plan"}}
-    write_claude_permission_mode(tmp_path, None)
-    assert json.loads(settings_of(tmp_path).read_text()) == {}

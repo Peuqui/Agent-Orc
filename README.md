@@ -26,7 +26,7 @@ detaches: the agents keep working, and you pick them up again from any device.
 - Claude's 5-hour and weekly usage at the top; cards can be dragged into your own order.
 - Notifications on your phone or desktop when an agent is done or waits for a permission or an
   answer (Web Push, switched on per device); tapping one opens the agent.
-- The permission mode an agent starts in, per project (ask, accept edits, auto, plan only).
+- The permission mode an agent starts in, per project (ask, edit, auto, plan; auto by default).
 
 **Workspaces**
 - Several agents side by side as columns; drag the column heads to sort them and the dividers
@@ -44,7 +44,9 @@ detaches: the agents keep working, and you pick them up again from any device.
   Enter sends, Shift+Enter starts a new line.
 - Dictation through a local Whisper service ([whisper-stt](https://github.com/Peuqui/whisper-stt),
   GPU or CPU) or the browser's own speech recognition.
-- Attach a photo or file: it lands in the project folder and its `@path` goes into the input field.
+- Attach a photo, a screenshot (from the gallery, captured from the screen on the desktop, or
+  simply pasted with Ctrl+V) or a file: it lands in the project folder and its `@path` goes into
+  the input field.
 - Extra-keys bar (Esc, Tab, Shift+Tab, arrows, sticky Ctrl/Alt, …) for the on-screen keyboard,
   a jog grip for fast scrolling, font size per terminal, a text view for selecting and copying,
   clickable links.

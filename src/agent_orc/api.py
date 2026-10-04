@@ -151,8 +151,7 @@ class PushSubscription(BaseModel):
 
 
 class PermissionModeRequest(BaseModel):
-    # None: the user's own setting.
-    mode: str | None
+    mode: str
 
 
 class EffortRequest(BaseModel):
@@ -478,6 +477,12 @@ def create_app(
             if body.conversation not in ids:
                 raise ConversationNotFoundError(body.conversation)
         store_effort(body.profile, path, Reasoning(body.effort, body.ultracode))
+        if profile and profile.permission:
+            # A folder without a mode of its own starts in the configured one, so the card
+            # shows the mode the agent really runs in, whatever the user's own setting says.
+            store = PERMISSION_STORES[profile.permission.store]
+            if store.read(path) is None:
+                store.write(path, profile.permission.default)
         return sessions.start(body.profile, path, body.resume, body.conversation)
 
     def conversations_of(profile_name: str, folder: Path) -> list[dict[str, Any]]:
@@ -509,8 +514,8 @@ def create_app(
             raise SessionNotFoundError(session_id)
         profile = config.agents.get(session.profile)
         permission = profile.permission if profile else None
-        if permission is None or (body.mode is not None and body.mode not in permission.modes):
-            raise InvalidPermissionModeError(str(body.mode))
+        if permission is None or body.mode not in permission.modes:
+            raise InvalidPermissionModeError(body.mode)
         PERMISSION_STORES[permission.store].write(session.path, body.mode)
 
     @app.post("/api/sessions/{session_id}/effort", dependencies=authenticated)

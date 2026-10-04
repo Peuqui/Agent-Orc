@@ -184,9 +184,11 @@
     "fontSizeHint": "Standard für alle Terminals; A−/A+ im Terminal stellt nur dieses um."
   },
   "attach": {
-    "title": "Foto oder Datei anhängen",
+    "title": "Foto, Screenshot oder Datei anhängen",
     "photo": "Foto aufnehmen",
-    "file": "Datei wählen"
+    "file": "Datei wählen",
+    "image": "Bild oder Screenshot",
+    "screen": "Bildschirmfoto aufnehmen"
   },
   "help": {
     "button": "Hilfe: So funktioniert Agent-Orc",
@@ -201,7 +203,7 @@
           "Kontext-Ring: grün unter 50 %, gelb darüber, rot ab 70 % – dann bald /compact oder ein neues Gespräch.",
           "Effort-Regler und Ultracode gelten pro Projektordner. Arbeitet der Agent gerade, wählst du: nach der Antwort oder sofort (Neustart mit Fortsetzen).",
           "Kontingent oben: verbrauchte 5-Stunden- und Wochen-Quote von Claude, sobald eine Sitzung sie gemeldet hat.",
-          "„Start“ auf der Karte: Freigabe-Modus, in dem der Agent startet (Nachfragen, Änderungen annehmen, Auto, Nur planen) – gilt ab dem nächsten Start; im Agenten wechselt Shift+Tab."
+          "„Start“ auf der Karte: Freigabe-Modus, in dem der Agent startet – Fragen, Bearbeiten (Dateiänderungen ohne Nachfrage), Auto oder Planen. Voreinstellung ist Auto; gilt ab dem nächsten Start, im Agenten wechselt Shift+Tab."
         ]
       },
       {
@@ -221,7 +223,7 @@
         "items": [
           "Eingabefeld unten: Enter sendet, Shift+Enter macht eine neue Zeile.",
           "Mikrofon: Diktat über Whisper; GPU ist sofort fertig, CPU langsamer, aber immer verfügbar. Schlägt es fehl, schickt „Erneut“ dieselbe Aufnahme noch einmal.",
-          "Büroklammer: Foto oder Datei anhängen – sie landet im Projektordner, ihr {'@'}Pfad steht danach im Eingabefeld.",
+          "Büroklammer: Foto aufnehmen, Bild oder Screenshot aus der Galerie, Bildschirmfoto (am Rechner) oder Datei anhängen – sie landen im Projektordner, ihr {'@'}Pfad steht danach im Eingabefeld. Ein Screenshot aus der Zwischenablage lässt sich auch einfach ins Eingabefeld einfügen (Strg+V).",
           "Griff rechts (Jog): nach oben oder unten ziehen scrollt, je weiter, desto schneller. Mausrad und Wischen scrollen auch.",
           "A− / A+ ändert die Schriftgröße nur dieses Terminals; die Textansicht zeigt den Bildschirm zum Markieren und Kopieren.",
           "Die Tastenleiste schickt Esc, Tab, Pfeile, Ctrl usw. – Ctrl und Alt gelten für die nächste Taste."
@@ -238,14 +240,13 @@
   },
   "permission": {
     "label": "Start",
-    "title": "Freigabe-Modus, in dem der Agent startet – gilt ab dem nächsten Start; im Agenten wechselt Shift+Tab",
-    "own": "eigene Einstellung",
+    "title": "Freigabe-Modus, in dem der Agent startet: Fragen (vor Änderungen und Befehlen), Bearbeiten (Dateiänderungen ohne Nachfrage), Auto (Claude entscheidet, was sicher ist), Planen (nur planen). Gilt ab dem nächsten Start; im Agenten wechselt Shift+Tab.",
     "changed": "Gilt ab dem nächsten Start von „{name}“.",
     "modes": {
-      "default": "Nachfragen",
-      "acceptEdits": "Änderungen annehmen",
+      "default": "Fragen",
+      "acceptEdits": "Bearbeiten",
       "auto": "Auto",
-      "plan": "Nur planen",
+      "plan": "Planen",
       "dontAsk": "Nicht fragen",
       "bypassPermissions": "Alles erlauben"
     }

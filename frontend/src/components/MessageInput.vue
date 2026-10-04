@@ -37,24 +37,23 @@ const microphoneBusy = computed(
 
 defineExpose({ focus: () => field.value?.focus() })
 
-// Attaching a photo or file: it is stored in the agent's folder, and its path goes into the
-// text ("@path", as Claude Code reads files), where the question is added before sending.
+// Attaching a photo, screenshot or file: it is stored in the agent's folder, and its path goes
+// into the text ("@path", as Claude Code reads files), where the question is added before sending.
 const attaching = ref(false)
 const uploading = ref(false)
 const photoInput = ref<HTMLInputElement>()
+const imageInput = ref<HTMLInputElement>()
 const fileInput = ref<HTMLInputElement>()
+// Capturing the screen is a desktop browser feature; phone browsers have none.
+const screenCaptureSupported = typeof navigator.mediaDevices?.getDisplayMedia === 'function'
+const SCREENSHOT_NAME = 'screenshot.png'
 
 function choose(input: HTMLInputElement | undefined): void {
   attaching.value = false
   input?.click()
 }
 
-async function onFileChosen(event: Event): Promise<void> {
-  const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
-  // Cleared, so choosing the same file again still counts as a change.
-  input.value = ''
-  if (!file) return
+async function attachFile(file: File): Promise<void> {
   uploading.value = true
   try {
     const { path } = await api.attach(props.sessionId, file)
@@ -66,6 +65,46 @@ async function onFileChosen(event: Event): Promise<void> {
   } finally {
     uploading.value = false
   }
+}
+
+function onFileChosen(event: Event): void {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  // Cleared, so choosing the same file again still counts as a change.
+  input.value = ''
+  if (file) void attachFile(file)
+}
+
+/** The browser asks which screen, window or tab; its current picture is attached. */
+async function captureScreen(): Promise<void> {
+  attaching.value = false
+  let stream: MediaStream
+  try {
+    stream = await navigator.mediaDevices.getDisplayMedia({ video: true })
+  } catch (error) {
+    // The user closed the browser's choice: nothing to attach, nothing to report.
+    if (!(error instanceof DOMException && error.name === 'NotAllowedError')) toast.error(error)
+    return
+  }
+  const video = document.createElement('video')
+  video.srcObject = stream
+  video.muted = true
+  await video.play()
+  const canvas = document.createElement('canvas')
+  canvas.width = video.videoWidth
+  canvas.height = video.videoHeight
+  canvas.getContext('2d')?.drawImage(video, 0, 0)
+  stream.getTracks().forEach((track) => track.stop())
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'))
+  if (blob) await attachFile(new File([blob], SCREENSHOT_NAME, { type: 'image/png' }))
+}
+
+/** A picture pasted into the field (e.g. a screenshot from the clipboard) is attached. */
+function onPaste(event: ClipboardEvent): void {
+  const images = [...(event.clipboardData?.files ?? [])].filter((file) => file.type.startsWith('image/'))
+  if (images.length === 0) return
+  event.preventDefault()
+  for (const image of images) void attachFile(image)
 }
 
 // Grows with its content (up to a cap set in CSS), so a long dictation can be read before sending.
@@ -126,16 +165,24 @@ function onKeydown(event: KeyboardEvent): void {
       >
         <AppIcon name="paperclip" />
       </button>
-      <div v-if="attaching" class="card absolute bottom-full left-0 z-30 mb-1 flex w-48 flex-col p-1 shadow-xl">
+      <div v-if="attaching" class="card absolute bottom-full left-0 z-30 mb-1 flex w-64 flex-col p-1 shadow-xl">
         <button type="button" class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-slate-700" @click="choose(photoInput)">
           <AppIcon name="camera" />{{ $t('attach.photo') }}
+        </button>
+        <button type="button" class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-slate-700" @click="choose(imageInput)">
+          <AppIcon name="image" />{{ $t('attach.image') }}
+        </button>
+        <button v-if="screenCaptureSupported" type="button" class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-slate-700" @click="captureScreen">
+          <AppIcon name="screen" />{{ $t('attach.screen') }}
         </button>
         <button type="button" class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-slate-700" @click="choose(fileInput)">
           <AppIcon name="paperclip" />{{ $t('attach.file') }}
         </button>
       </div>
-      <!-- capture opens the camera directly on phones; desktops show the file dialog. -->
+      <!-- capture opens the camera directly on phones; without it phones offer their gallery
+           (newest screenshots first); desktops show the file dialog. -->
       <input ref="photoInput" type="file" accept="image/*" capture="environment" class="hidden" @change="onFileChosen" />
+      <input ref="imageInput" type="file" accept="image/*" class="hidden" @change="onFileChosen" />
       <input ref="fileInput" type="file" class="hidden" @change="onFileChosen" />
     </div>
     <template v-if="microphone">
@@ -174,6 +221,7 @@ function onKeydown(event: KeyboardEvent): void {
       :placeholder="state === 'transcribing' ? $t('dictation.transcribing') : $t('terminal.placeholder')"
       enterkeyhint="send"
       @keydown="onKeydown"
+      @paste="onPaste"
     />
     <button
       type="submit"

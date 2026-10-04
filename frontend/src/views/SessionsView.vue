@@ -117,7 +117,7 @@ function permissionLabel(mode: string): string {
 
 function changePermissionMode(session: AgentSession, mode: string): void {
   void run(async () => {
-    await api.changePermissionMode(session.id, mode === '' ? null : mode)
+    await api.changePermissionMode(session.id, mode)
     if (session.running) toast.info(t('permission.changed', { name: baseName(session.path) }))
   })
 }
@@ -288,16 +288,17 @@ function resume(session: AgentSession): void {
           </button>
           <label
             v-if="permissionModes.get(session.profile)?.length"
-            class="ml-auto flex items-center gap-1.5 text-xs text-slate-400"
+            class="ml-auto flex items-center gap-1 text-xs text-slate-400"
             :title="$t('permission.title')"
           >
-            {{ $t('permission.label') }}
+            <!-- Phones have no room for the word next to Terminal and Stop; the title says it. -->
+            <span class="hidden sm:inline">{{ $t('permission.label') }}</span>
             <select
-              class="h-8 rounded-md border border-slate-700 bg-slate-800 px-1.5 text-xs text-slate-200"
-              :value="session.permission_mode ?? ''"
+              class="h-7 rounded-lg border border-slate-600 bg-slate-800 pr-1 pl-1.5 text-xs text-slate-200"
+              :aria-label="$t('permission.label')"
+              :value="session.permission_mode"
               @change="changePermissionMode(session, ($event.target as HTMLSelectElement).value)"
             >
-              <option value="">{{ $t('permission.own') }}</option>
               <option v-for="mode in permissionModes.get(session.profile)" :key="mode" :value="mode">
                 {{ permissionLabel(mode) }}
               </option>

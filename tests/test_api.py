@@ -46,7 +46,11 @@ def config(home: Path, socket_name: str) -> Config:
             "start": ["sleep", "60"],
             "resume": ["true"],
             "effort": {"levels": ["low", "high"], "store": "claude_project", "ultracode": True},
-            "permission": {"modes": ["default", "plan"], "store": "claude_project"},
+            "permission": {
+                "modes": ["default", "plan"],
+                "default": "default",
+                "store": "claude_project",
+            },
         },
         "talker": {
             "label": "Talker",
@@ -452,7 +456,7 @@ def test_effort_is_stored_in_the_project(client: TestClient, home: Path) -> None
     }
     assert client.post("/api/sessions", json=start).status_code == 200
     assert json.loads(settings.read_text()) == {
-        "permissions": {"allow": ["Bash(ls:*)"]},
+        "permissions": {"allow": ["Bash(ls:*)"], "defaultMode": "default"},
         "effortLevel": "high",
     }
     assert client.get("/api/effort", params=query).json() == {"effort": "high", "ultracode": False}
@@ -483,7 +487,11 @@ def test_changing_effort_resumes_the_agent(
     ).stdout.strip()  # fmt: skip
     assert command == "true"
     settings = json.loads((folder / ".claude" / "settings.local.json").read_text())
-    assert settings == {"effortLevel": "low", "ultracode": True}
+    assert settings == {
+        "effortLevel": "low",
+        "ultracode": True,
+        "permissions": {"defaultMode": "default"},
+    }
     assert client.get("/api/sessions").json()[0]["ultracode"] is True
 
     back = client.post(
@@ -491,7 +499,10 @@ def test_changing_effort_resumes_the_agent(
         json={"effort": None, "ultracode": False, "immediately": False},
     )
     assert back.json() == {"applied": True}
-    assert json.loads((folder / ".claude" / "settings.local.json").read_text()) == {}
+    # Only the permission mode, set at start, is left.
+    assert json.loads((folder / ".claude" / "settings.local.json").read_text()) == {
+        "permissions": {"defaultMode": "default"}
+    }
 
 
 def test_effort_for_agent_without_effort_setting(client: TestClient, home: Path) -> None:
@@ -530,7 +541,8 @@ def test_effort_change_waits_for_a_busy_agent(
     listed = client.get("/api/sessions").json()[0]
     assert listed["busy"] is True
     assert (listed["effort_pending"], listed["pending_effort"]) == (True, "high")
-    assert not (folder / ".claude" / "settings.local.json").exists()
+    stored = json.loads((folder / ".claude" / "settings.local.json").read_text())
+    assert "effortLevel" not in stored
 
     # A wrong level is refused right away, not only when the change would be applied.
     wrong = client.post(url, json={"effort": "ultra", "ultracode": False, "immediately": False})
@@ -544,7 +556,8 @@ def test_effort_change_waits_for_a_busy_agent(
         url, json={"effort": "high", "ultracode": False, "immediately": True}
     ).json() == {"applied": True}
     assert json.loads((folder / ".claude" / "settings.local.json").read_text()) == {
-        "effortLevel": "high"
+        "permissions": {"defaultMode": "default"},
+        "effortLevel": "high",
     }
 
 
@@ -581,7 +594,7 @@ def test_pending_effort_applies_when_the_agent_is_done(
             time.sleep(0.1)
         assert client.get("/api/sessions").json()[0]["effort_pending"] is False
         settings = json.loads((folder / ".claude" / "settings.local.json").read_text())
-        assert settings == {"effortLevel": "low"}
+        assert settings == {"permissions": {"defaultMode": "default"}, "effortLevel": "low"}
 
 
 def test_resume_a_chosen_earlier_conversation(
@@ -714,6 +727,8 @@ def test_permission_mode_is_stored_for_the_folder(client: TestClient, home: Path
     session_id = client.post("/api/sessions", json=body).json()["id"]
     agents = {agent["name"]: agent for agent in client.get("/api/agents").json()}
     assert agents["sleeper"]["permission_modes"] == ["default", "plan"]
+    # A folder without a mode of its own starts in the configured default.
+    assert client.get("/api/sessions").json()[0]["permission_mode"] == "default"
     url = f"/api/sessions/{session_id}/permission-mode"
     assert client.put(url, json={"mode": "plan"}).status_code == 204
     assert client.get("/api/sessions").json()[0]["permission_mode"] == "plan"
@@ -722,8 +737,6 @@ def test_permission_mode_is_stored_for_the_folder(client: TestClient, home: Path
     refused = client.put(url, json={"mode": "bypassPermissions"})
     assert refused.status_code == 422
     assert refused.json()["error"] == "InvalidPermissionModeError"
-    assert client.put(url, json={"mode": None}).status_code == 204
-    assert client.get("/api/sessions").json()[0]["permission_mode"] is None
 
 
 def test_push_subscription_and_test_message(

@@ -184,9 +184,11 @@
     "fontSizeHint": "Default for all terminals; A−/A+ in a terminal changes only that one."
   },
   "attach": {
-    "title": "Attach a photo or file",
+    "title": "Attach a photo, screenshot or file",
     "photo": "Take a photo",
-    "file": "Choose a file"
+    "file": "Choose a file",
+    "image": "Picture or screenshot",
+    "screen": "Capture the screen"
   },
   "help": {
     "button": "Help: how Agent-Orc works",
@@ -201,7 +203,7 @@
           "Context ring: green below 50 %, amber above, red from 70 % – time for /compact or a new conversation soon.",
           "Effort slider and ultracode apply per project folder. While the agent is working you choose: after the answer, or now (restart with resume).",
           "Quota at the top: Claude's used five-hour and weekly limits, once a session has reported them.",
-          "“Start” on the card: the permission mode the agent starts in (ask, accept edits, auto, plan only) – applies from its next start; inside the agent Shift+Tab switches it."
+          "“Start” on the card: the permission mode the agent starts in – Ask, Edit (file edits without asking), Auto or Plan. Auto by default; applies from the next start, inside the agent Shift+Tab switches it."
         ]
       },
       {
@@ -221,7 +223,7 @@
         "items": [
           "Input field at the bottom: Enter sends, Shift+Enter starts a new line.",
           "Microphone: dictation through Whisper; the GPU is done at once, the CPU is slower but always there. If it fails, “Retry” sends the same recording again.",
-          "Paperclip: attach a photo or file – it lands in the project folder and its {'@'}path is put into the input field.",
+          "Paperclip: take a photo, pick a picture or screenshot from the gallery, capture the screen (desktop) or attach a file – it lands in the project folder and its {'@'}path goes into the input field. A screenshot from the clipboard can also simply be pasted into the input field (Ctrl+V).",
           "Grip on the right (jog): pull up or down to scroll, the further the faster. Mouse wheel and swiping scroll as well.",
           "A− / A+ changes the font size of this terminal only; the text view shows the screen for selecting and copying.",
           "The key bar sends Esc, Tab, arrows, Ctrl and so on – Ctrl and Alt apply to the next key."
@@ -238,16 +240,15 @@
   },
   "permission": {
     "label": "Start",
-    "title": "Permission mode the agent starts in – applies from its next start; inside the agent Shift+Tab switches it",
-    "own": "own setting",
+    "title": "Permission mode the agent starts in: Ask (before edits and commands), Edit (file edits without asking), Auto (Claude decides what is safe), Plan (plans only). Applies from the next start; inside the agent Shift+Tab switches it.",
     "changed": "Applies from the next start of “{name}”.",
     "modes": {
       "default": "Ask",
-      "acceptEdits": "Accept edits",
+      "acceptEdits": "Edit",
       "auto": "Auto",
-      "plan": "Plan only",
+      "plan": "Plan",
       "dontAsk": "Don't ask",
-      "bypassPermissions": "Allow everything"
+      "bypassPermissions": "Allow all"
     }
   },
   "push": {

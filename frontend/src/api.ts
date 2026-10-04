@@ -25,7 +25,8 @@ export interface AgentSession {
   busy: boolean
   /** Stored for the folder; the agent reads it at start. */
   ultracode: boolean
-  /** Permission mode the folder's sessions start in; null: the user's own setting. */
+  /** Permission mode the folder's sessions start in; null for agents started before Agent-Orc
+   * stored one there. */
   permission_mode: string | null
   /** A reasoning change waits until the current answer is finished. */
   effort_pending: boolean
@@ -231,7 +232,7 @@ export const api = {
       body: { ...reasoning, immediately },
     }),
   /** Takes effect at the agent's next start. */
-  changePermissionMode: (sessionId: string, mode: string | null) =>
+  changePermissionMode: (sessionId: string, mode: string) =>
     request<void>('PUT', `sessions/${encodeURIComponent(sessionId)}/permission-mode`, { body: { mode } }),
   cancelEffortChange: (sessionId: string) =>
     request<void>('DELETE', `sessions/${encodeURIComponent(sessionId)}/effort`),

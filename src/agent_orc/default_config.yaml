@@ -102,10 +102,11 @@ agents:
       ultracode: true
     # Permission mode a session of the folder starts in (<folder>/.claude/settings.local.json):
     # default asks before changes and commands, acceptEdits takes file edits without asking,
-    # auto lets Claude decide what is safe, plan only plans. Without a choice the user's own
-    # setting applies; inside a session Shift+Tab switches the mode.
+    # auto lets Claude decide what is safe, plan only plans. A folder without a mode of its own
+    # gets `default` below when an agent starts there; inside a session Shift+Tab switches.
     permission:
       modes: [default, acceptEdits, auto, plan]
+      default: auto
       store: claude_project
   codex:
     label: Codex CLI

@@ -96,11 +96,18 @@ class EffortConfig(StrictModel):
 
 
 class PermissionConfig(StrictModel):
-    """Permission modes a session may start in; without a pick the user's own setting applies."""
+    """Permission modes a session may start in, and the one it starts in until the user picks."""
 
     modes: list[str]
+    default: str
     # Where the choice is kept (see effort.py); "claude_project": the folder's Claude settings.
     store: Literal["claude_project"]
+
+    @model_validator(mode="after")
+    def default_is_offered(self) -> "PermissionConfig":
+        if self.default not in self.modes:
+            raise ValueError(f"permission default {self.default!r} is not one of {self.modes}")
+        return self
 
 
 class ConversationsConfig(StrictModel):

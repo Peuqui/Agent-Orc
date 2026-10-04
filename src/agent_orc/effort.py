@@ -100,19 +100,13 @@ def read_claude_permission_mode(folder: Path) -> str | None:
     return mode if isinstance(mode, str) else None
 
 
-def write_claude_permission_mode(folder: Path, mode: str | None) -> None:
+def write_claude_permission_mode(folder: Path, mode: str) -> None:
     """Set the start mode; the folder's other permissions (allow lists, ...) stay as they are."""
     if read_claude_permission_mode(folder) == mode:
         return
     path = folder / CLAUDE_PROJECT_SETTINGS
     settings = _read_settings(path)
-    permissions = settings.setdefault(CLAUDE_PERMISSIONS_KEY, {})
-    if mode is None:
-        permissions.pop(CLAUDE_DEFAULT_MODE_KEY, None)
-        if not permissions:
-            del settings[CLAUDE_PERMISSIONS_KEY]
-    else:
-        permissions[CLAUDE_DEFAULT_MODE_KEY] = mode
+    settings.setdefault(CLAUDE_PERMISSIONS_KEY, {})[CLAUDE_DEFAULT_MODE_KEY] = mode
     _write_settings(path, settings)
 
 
@@ -131,7 +125,7 @@ EFFORT_STORES: dict[str, EffortStore] = {
 @dataclass(frozen=True)
 class PermissionStore:
     read: Callable[[Path], str | None]
-    write: Callable[[Path, str | None], None]
+    write: Callable[[Path, str], None]
 
 
 # Per agent profile setting "permission.store".
