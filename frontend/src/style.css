@@ -23,6 +23,11 @@
   @apply inline-flex min-h-9 items-center justify-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50;
 }
 
+/* Compact buttons inside cards; set after btn-primary/-secondary in the class list. */
+@utility btn-small {
+  @apply min-h-7 gap-1.5 px-2.5;
+}
+
 @utility btn-primary {
   @apply btn bg-red-600 text-white hover:bg-red-500 active:bg-red-700;
 }

@@ -32,7 +32,7 @@ async function logout(): Promise<void> {
       </nav>
       <div class="flex items-center gap-1">
         <select
-          class="h-9 rounded-md border border-slate-700 bg-slate-800 px-2 text-sm text-slate-300"
+          class="h-6 rounded-md border border-slate-700 bg-slate-800 px-1.5 text-xs text-slate-300"
           :aria-label="$t('app.language')"
           :value="locale"
           @change="setLocale(($event.target as HTMLSelectElement).value as Locale)"

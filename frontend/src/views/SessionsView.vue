@@ -8,6 +8,7 @@ import ConfirmDialog from '../components/ConfirmDialog.vue'
 import ContextMeter from '../components/ContextMeter.vue'
 import ReasoningControl from '../components/ReasoningControl.vue'
 import QuotaPanel from '../components/QuotaPanel.vue'
+import { moveInList, useReorder } from '../composables/useReorder'
 import { useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
 import { baseName } from '../format'
@@ -55,9 +56,38 @@ function applyEffort(immediately: boolean): void {
 }
 
 const labels = computed(() => new Map(profiles.value.map((p) => [p.name, p.label])))
+// The user's arrangement (kept on the server); cards not arranged yet follow by name.
+const cardOrder = ref<string[]>([])
+api.cardOrder().then((order) => (cardOrder.value = order), toast.error)
+
+function rank(session: AgentSession): number {
+  const index = cardOrder.value.indexOf(session.path)
+  return index === -1 ? Number.MAX_SAFE_INTEGER : index
+}
+
 const sorted = computed(() =>
-  [...sessions.value].sort((a, b) => baseName(a.path).localeCompare(baseName(b.path))),
+  [...sessions.value].sort(
+    (a, b) => rank(a) - rank(b) || baseName(a.path).localeCompare(baseName(b.path)),
+  ),
 )
+
+// A card is dragged at a free spot (mouse) or after holding it (finger) and takes the place of
+// the card it is dropped on.
+const reorder = useReorder({
+  targetAt: (x, y) =>
+    document
+      .elementsFromPoint(x, y)
+      .map((element) => element.closest<HTMLElement>('[data-card]')?.dataset.card)
+      .find((folder) => folder !== undefined) ?? null,
+  onDrop: (folder, target) => {
+    const folders = sorted.value.map((session) => session.path)
+    moveInList(folders, folder, target)
+    cardOrder.value = folders
+    void run(() => api.arrangeCards(folders))
+  },
+  ignore: 'button, a, input, [role="switch"]',
+})
+const drag = reorder.drag
 
 async function run(action: () => Promise<unknown>): Promise<void> {
   try {
@@ -97,7 +127,22 @@ function resume(session: AgentSession): void {
     <!-- As many cards side by side as fit, before the page has to scroll; one column on phones.
          Below 24rem the row with context, effort and ultracode would wrap. -->
     <ul class="grid grid-cols-[repeat(auto-fill,minmax(min(24rem,100%),1fr))] gap-3">
-      <li v-for="session in sorted" :key="session.id" class="card flex flex-col gap-2 px-4 py-3">
+      <li
+        v-for="session in sorted"
+        :key="session.id"
+        :data-card="session.path"
+        class="card flex touch-pan-y flex-col gap-2 px-4 py-3 select-none [-webkit-touch-callout:none]"
+        :class="[
+          drag?.active && drag.target === session.path && drag.id !== session.path ? 'ring-2 ring-amber-400' : '',
+          drag?.active && drag.id === session.path ? 'opacity-50' : '',
+        ]"
+        @pointerdown="reorder.onPointerDown($event, session.path)"
+        @pointermove="reorder.onPointerMove"
+        @pointerup="reorder.onPointerUp"
+        @pointercancel="reorder.cancel"
+        @touchmove="reorder.onTouchMove"
+        @contextmenu="drag?.active && $event.preventDefault()"
+      >
         <div class="flex items-center gap-3">
           <div class="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-3">
             <h2 class="font-semibold">{{ baseName(session.path) }}</h2>
@@ -172,14 +217,14 @@ function resume(session: AgentSession): void {
           <RouterLink
             v-if="session.running"
             :to="{ path: '/workspace', query: { open: session.id } }"
-            class="btn-primary"
+            class="btn-primary btn-small"
           >
             <AppIcon name="agents" />{{ $t('sessions.terminal') }}
           </RouterLink>
-          <button v-if="!session.running" class="btn-primary" @click="resume(session)">
+          <button v-if="!session.running" class="btn-primary btn-small" @click="resume(session)">
             <AppIcon name="resume" />{{ $t('sessions.resume') }}
           </button>
-          <button class="btn-secondary" @click="stopping = session">
+          <button class="btn-secondary btn-small" @click="stopping = session">
             <AppIcon name="stop" />{{ $t('sessions.stop') }}
           </button>
         </div>

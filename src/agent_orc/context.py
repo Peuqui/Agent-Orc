@@ -15,12 +15,12 @@ Whether the agent is working comes from Claude's hooks: UserPromptSubmit runs
 """
 
 import json
-import os
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
 from agent_orc.sessions import AgentSession
+from agent_orc.state import state_dir, write_atomically
 
 STATUS_SUFFIX = ".json"
 ACTIVITY_SUFFIX = ".activity"
@@ -31,21 +31,11 @@ CONTEXT_FIELDS = ("input_tokens", "cache_creation_input_tokens", "cache_read_inp
 
 
 def status_dir() -> Path:
-    state_home = os.environ.get("XDG_STATE_HOME") or str(Path.home() / ".local" / "state")
-    return Path(state_home) / "agent-orc" / "status"
+    return state_dir() / "status"
 
 
 def status_file(session_id: str) -> Path:
     return status_dir() / f"{session_id}{STATUS_SUFFIX}"
-
-
-def _write_atomically(target: Path, text: str) -> Path:
-    target.parent.mkdir(parents=True, exist_ok=True)
-    # Write to a temporary file and rename, so readers never see a half-written file.
-    temporary = target.with_suffix(".tmp")
-    temporary.write_text(text, encoding="utf-8")
-    temporary.replace(target)
-    return target
 
 
 def activity_file(session_id: str) -> Path:
@@ -53,7 +43,7 @@ def activity_file(session_id: str) -> Path:
 
 
 def store_activity(session_id: str, busy: bool) -> Path:
-    return _write_atomically(activity_file(session_id), BUSY if busy else IDLE)
+    return write_atomically(activity_file(session_id), BUSY if busy else IDLE)
 
 
 def session_busy(session: AgentSession) -> bool:
@@ -66,7 +56,7 @@ def session_busy(session: AgentSession) -> bool:
 
 def store_status(session_id: str, status: dict[str, Any]) -> Path:
     """Store the latest status document of a session."""
-    return _write_atomically(status_file(session_id), json.dumps(status))
+    return write_atomically(status_file(session_id), json.dumps(status))
 
 
 def status_line(status: dict[str, Any]) -> str:

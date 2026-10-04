@@ -2,6 +2,7 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppIcon from '../components/AppIcon.vue'
+import { moveInList, useReorder } from '../composables/useReorder'
 import { useSessions } from '../composables/useSessions'
 import { baseName } from '../format'
 
@@ -12,10 +13,6 @@ import { baseName } from '../format'
 // would reload them), only their grid column changes.
 const STORAGE_KEY = 'agent-orc-columns'
 const MIN_VISIBLE = 1
-// A mouse drag starts after this much movement; less is a click.
-const DRAG_THRESHOLD_PX = 8
-// A finger first holds a tab this long, so that swiping across the tabs still scrolls.
-const TOUCH_HOLD_MS = 400
 // Narrowest and widest column a divider can set, as a share of the screen width.
 const MIN_WIDTH_SHARE = 0.1
 const MAX_WIDTH_SHARE = 1
@@ -37,16 +34,6 @@ interface Resize {
   startShare: number
 }
 
-interface Drag {
-  id: string
-  pointerId: number
-  startX: number
-  startY: number
-  /** False until the pointer has moved (mouse) or was held (finger) long enough. */
-  active: boolean
-  /** The tab whose place it takes when dropped. */
-  target: string | null
-}
 
 const route = useRoute()
 const router = useRouter()
@@ -66,7 +53,6 @@ watch(workspace, (value) => localStorage.setItem(STORAGE_KEY, JSON.stringify(val
 const frameIds = ref<string[]>([...workspace.value.tabs])
 const frames = ref<HTMLIFrameElement[]>([])
 const heads = ref<HTMLElement[]>([])
-const drag = ref<Drag | null>(null)
 const resize = ref<Resize | null>(null)
 const row = ref<HTMLElement>()
 const picking = ref(false)
@@ -157,62 +143,19 @@ function resetWidth(id: string): void {
   delete workspace.value.widths[id]
 }
 
-// Sorting: a whole tab is dragged and takes the place of the tab it is dropped on (the others
-// move up); the columns follow, as they belong to the same grid.
-let holdTimer: number | undefined
-
-function startDrag(element: HTMLElement): void {
-  if (drag.value === null) return
-  drag.value.active = true
-  // Keeps the pointer events coming while the pointer leaves the tab.
-  element.setPointerCapture(drag.value.pointerId)
-}
-
-function onTabPointerDown(event: PointerEvent, id: string): void {
-  if (event.button !== 0) return
-  const element = event.currentTarget as HTMLElement
-  const { pointerId, clientX, clientY } = event
-  drag.value = { id, pointerId, startX: clientX, startY: clientY, active: false, target: null }
-  if (event.pointerType === 'touch') holdTimer = window.setTimeout(() => startDrag(element), TOUCH_HOLD_MS)
-}
-
-function onTabPointerMove(event: PointerEvent): void {
-  const current = drag.value
-  if (current === null || event.pointerId !== current.pointerId) return
-  if (!current.active) {
-    const moved = Math.hypot(event.clientX - current.startX, event.clientY - current.startY)
-    if (moved < DRAG_THRESHOLD_PX) return
-    // A finger moving before the hold is up swipes the row instead.
-    if (event.pointerType === 'touch') return endDrag()
-    startDrag(event.currentTarget as HTMLElement)
-  }
-  current.target =
+// Sorting: a whole tab is dragged and takes the place of the tab it is dropped on; the columns
+// follow, as they belong to the same grid. Only the horizontal position counts, so the pointer
+// may stray off the tab row.
+const reorder = useReorder({
+  targetAt: (x) =>
     workspace.value.tabs.find((id) => {
       const box = headOf(id)?.getBoundingClientRect()
-      return box !== undefined && event.clientX >= box.left && event.clientX < box.right
-    }) ?? null
-}
-
-function onTabPointerUp(event: PointerEvent): void {
-  const current = drag.value
-  if (current === null || event.pointerId !== current.pointerId) return
-  endDrag()
-  if (!current.active || current.target === null || current.target === current.id) return
-  const { tabs } = workspace.value
-  const to = tabs.indexOf(current.target)
-  tabs.splice(tabs.indexOf(current.id), 1)
-  tabs.splice(to, 0, current.id)
-}
-
-function endDrag(): void {
-  window.clearTimeout(holdTimer)
-  drag.value = null
-}
-
-// While a finger drags a tab, the row must not scroll along.
-function onTabTouchMove(event: TouchEvent): void {
-  if (drag.value?.active) event.preventDefault()
-}
+      return box !== undefined && x >= box.left && x < box.right
+    }) ?? null,
+  onDrop: (id, target) => moveInList(workspace.value.tabs, id, target),
+  ignore: '[data-no-drag]',
+})
+const drag = reorder.drag
 
 // The iframes share this page's origin, so their pointer events can be watched directly: a
 // touch inside a column makes it the active one (a focus change alone could be the terminal's
@@ -308,11 +251,11 @@ watch(
           ]"
           :style="{ gridColumn: column(id), gridRow: '1' }"
           :title="$t('workspace.move')"
-          @pointerdown="onTabPointerDown($event, id)"
-          @pointermove="onTabPointerMove"
-          @pointerup="onTabPointerUp"
-          @pointercancel="endDrag"
-          @touchmove="onTabTouchMove"
+          @pointerdown="reorder.onPointerDown($event, id)"
+          @pointermove="reorder.onPointerMove"
+          @pointerup="reorder.onPointerUp"
+          @pointercancel="reorder.cancel"
+          @touchmove="reorder.onTouchMove"
           @contextmenu.prevent
         >
           <button class="min-w-0 flex-1 truncate text-left font-medium" @click="activate(id)">
@@ -321,7 +264,7 @@ watch(
           <button
             class="px-2 text-slate-500 hover:text-slate-200"
             :aria-label="$t('workspace.close')"
-            @pointerdown.stop
+            data-no-drag
             @click="closeTab(id)"
           >
             ×

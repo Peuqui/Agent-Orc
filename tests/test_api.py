@@ -679,3 +679,13 @@ def test_ultracode_only_for_agents_offering_it(client: TestClient, home: Path) -
     refused = client.post("/api/sessions", json=start)
     assert refused.status_code == 422
     assert refused.json()["error"] == "InvalidEffortError"
+
+
+def test_card_order_is_kept(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+    assert client.get("/api/card-order").json() == []
+    order = {"folders": ["/w/b", "/w/a"]}
+    assert client.put("/api/card-order", json=order).status_code == 204
+    assert client.get("/api/card-order").json() == ["/w/b", "/w/a"]

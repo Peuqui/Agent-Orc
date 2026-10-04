@@ -36,6 +36,7 @@ from agent_orc.sessions import (
     SessionNotFoundError,
     UnknownProfileError,
 )
+from agent_orc.state import read_card_order, write_card_order
 from agent_orc.terminal import bridge
 from agent_orc.trash import RestoreConflictError, Trash, TrashEntryNotFoundError, home_trash_dir
 from agent_orc.trust import FOLDER_TRUST
@@ -127,6 +128,11 @@ class EffortRequest(BaseModel):
     ultracode: bool
     # False: wait until the agent has finished its current answer (no tokens wasted).
     immediately: bool
+
+
+class CardOrderRequest(BaseModel):
+    # Folders of the agent cards, in the order the user arranged them.
+    folders: list[str]
 
 
 class TrashEntryRequest(BaseModel):
@@ -306,6 +312,15 @@ def create_app(
     @app.get("/api/terminal", dependencies=authenticated)
     def terminal_settings() -> TerminalConfig:
         return config.terminal
+
+    @app.get("/api/card-order", dependencies=authenticated)
+    def card_order() -> list[str]:
+        """Kept on the server, so the arrangement is the same on every device."""
+        return read_card_order()
+
+    @app.put("/api/card-order", dependencies=authenticated, status_code=status.HTTP_204_NO_CONTENT)
+    def arrange_cards(body: CardOrderRequest) -> None:
+        write_card_order(body.folders)
 
     @app.get("/api/quota", dependencies=authenticated)
     def quota() -> list[dict[str, Any]]:

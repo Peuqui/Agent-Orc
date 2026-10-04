@@ -223,6 +223,9 @@ export const api = {
     request<{ text: string }>('GET', `sessions/${encodeURIComponent(id)}/text`),
 
   quota: () => request<AgentQuota[]>('GET', 'quota'),
+  /** Folders of the agent cards in the order the user arranged them (kept on the server). */
+  cardOrder: () => request<string[]>('GET', 'card-order'),
+  arrangeCards: (folders: string[]) => request<void>('PUT', 'card-order', { body: { folders } }),
 
   dictationSettings: () => request<{ language: string; whisper: boolean }>('GET', 'dictation'),
   /** Transcribe recorded speech on the chosen device; never switches device by itself. */

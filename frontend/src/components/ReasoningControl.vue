@@ -63,7 +63,7 @@ function toggleUltracode(): void {
       >
         <!-- The track with one dot per stop is drawn here; the native slider only adds the knob. -->
         <div
-          class="pointer-events-none absolute inset-x-0 flex h-1.5 items-center justify-between rounded-full bg-slate-700 px-[9px]"
+          class="pointer-events-none absolute inset-x-0 flex h-1.5 items-center justify-between rounded-full bg-slate-700 px-[7px]"
           :class="{ 'opacity-50': disabled }"
         >
           <span v-for="(_stop, index) in stops" :key="index" class="size-1 rounded-full bg-slate-400" />
@@ -96,12 +96,12 @@ function toggleUltracode(): void {
     >
       {{ $t('agent.ultracode') }}
       <span
-        class="relative h-5 w-9 rounded-full transition-colors"
+        class="relative h-4 w-7 rounded-full transition-colors"
         :class="modelValue.ultracode ? 'bg-red-500' : 'bg-slate-600'"
       >
         <span
-          class="absolute top-0.5 size-4 rounded-full bg-white transition-all"
-          :class="modelValue.ultracode ? 'left-4.5' : 'left-0.5'"
+          class="absolute top-0.5 size-3 rounded-full bg-white transition-all"
+          :class="modelValue.ultracode ? 'left-3.5' : 'left-0.5'"
         />
       </span>
     </button>
@@ -118,16 +118,16 @@ function toggleUltracode(): void {
 }
 .effort-slider::-webkit-slider-thumb {
   appearance: none;
-  /* 18 px: the dots of the track are inset by half of it (px-[9px]). */
-  width: 18px;
-  height: 18px;
+  /* 14 px: the dots of the track are inset by half of it (px-[7px]). */
+  width: 14px;
+  height: 14px;
   border-radius: 9999px;
   background: var(--color-slate-100);
   box-shadow: 0 0 0 2px var(--color-red-500);
 }
 .effort-slider::-moz-range-thumb {
-  width: 18px;
-  height: 18px;
+  width: 14px;
+  height: 14px;
   border: none;
   border-radius: 9999px;
   background: var(--color-slate-100);
