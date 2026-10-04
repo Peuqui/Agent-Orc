@@ -313,6 +313,7 @@ def create_app(
                 reasoning,
             )
             return session
+        settle_permission_mode(session.profile, session.path)
         restarted = sessions.restart(session)
         # The ended agent cannot report that it stopped working.
         store_activity(session.id, busy=False)
@@ -699,12 +700,7 @@ def create_app(
             # Started without a choice: the folder's level, or else the configured one.
             effort = folder_reasoning(body.profile, path).effort
         store_effort(body.profile, path, Reasoning(effort, body.ultracode))
-        if profile and profile.permission:
-            # A folder without a mode of its own starts in the configured one, so the card
-            # shows the mode the agent really runs in, whatever the user's own setting says.
-            store = PERMISSION_STORES[profile.permission.store]
-            if store.read(path) is None:
-                store.write(path, profile.permission.default)
+        settle_permission_mode(body.profile, path)
         return sessions.start(body.profile, path, body.resume, body.conversation)
 
     def conversations_of(profile_name: str, folder: Path) -> list[dict[str, Any]]:
@@ -749,6 +745,7 @@ def create_app(
         if pending is not None:
             # The agent reads the folder's effort at start: a waiting change comes along.
             store_effort(session.profile, session.path, pending)
+        settle_permission_mode(session.profile, session.path)
         restarted = sessions.restart(session)
         # The ended agent cannot report that it stopped working.
         store_activity(session_id, busy=False)
@@ -792,10 +789,23 @@ def create_app(
         return asdict(file_diff(session_folder(session_id), path))
 
     def folder_permission_mode(profile_name: str, folder: Path) -> str | None:
+        """The mode the folder's agent starts in: its own, or else the configured one, which
+        every start (and restart) writes into a folder without one."""
         profile = config.agents.get(profile_name)
         if profile is None or profile.permission is None:
             return None
-        return PERMISSION_STORES[profile.permission.store].read(folder)
+        stored = PERMISSION_STORES[profile.permission.store].read(folder)
+        return profile.permission.default if stored is None else stored
+
+    def settle_permission_mode(profile_name: str, folder: Path) -> None:
+        """Before a start: a folder without a mode of its own gets the configured one, so the
+        agent runs in the mode its card shows, whatever the user's own setting says."""
+        profile = config.agents.get(profile_name)
+        if profile is None or profile.permission is None:
+            return
+        store = PERMISSION_STORES[profile.permission.store]
+        if store.read(folder) is None:
+            store.write(folder, profile.permission.default)
 
     @app.put(
         "/api/sessions/{session_id}/permission-mode",

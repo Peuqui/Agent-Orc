@@ -1211,3 +1211,40 @@ def test_existing_paths_of_an_agents_output(client: TestClient, home: Path) -> N
         "src": {"path": str(project / "src"), "kind": "folder"},
         str(project / "src" / "main.py"): main,
     }
+
+
+def test_agent_from_before_the_mode_choice_shows_and_gets_the_configured_one(
+    config: Config, clock: FakeClock, home: Path
+) -> None:
+    sleeper = config.agents["sleeper"]
+    assert sleeper.permission is not None
+    planning = sleeper.model_copy(
+        update={"permission": sleeper.permission.model_copy(update={"default": "plan"})}
+    )
+    app = create_app(
+        config.model_copy(update={"agents": {**config.agents, "sleeper": planning}}),
+        new_credentials(PASSWORD),
+        static_dir=None,
+        clock=clock,
+    )
+    client = TestClient(app)
+    client.post("/api/login", json={"password": PASSWORD})
+    folder = home / "projects"
+    body = {
+        "profile": "sleeper",
+        "path": str(folder),
+        "resume": False,
+        "effort": None,
+        "ultracode": False,
+        "conversation": None,
+    }
+    session_id = client.post("/api/sessions", json=body).json()["id"]
+    # Started before Agent-Orc stored a mode in the folder.
+    settings_file = folder / ".claude" / "settings.local.json"
+    settings = json.loads(settings_file.read_text())
+    del settings["permissions"]
+    settings_file.write_text(json.dumps(settings))
+    # The card shows what the next start brings, and a restart brings it.
+    assert client.get("/api/sessions").json()[0]["permission_mode"] == "plan"
+    client.post(f"/api/sessions/{session_id}/restart")
+    assert json.loads(settings_file.read_text())["permissions"] == {"defaultMode": "plan"}

@@ -85,8 +85,8 @@ export interface AgentSession {
   busy: boolean
   /** Stored for the folder; the agent reads it at start. */
   ultracode: boolean
-  /** Permission mode the folder's sessions start in; null for agents started before Agent-Orc
-   * stored one there. */
+  /** Permission mode the folder's sessions start in (the configured one until the folder has
+   * its own); null for agents without permission modes. */
   permission_mode: string | null
   approvals: Approval[]
   /** Earliest first; typed once due and the agent is idle. */
