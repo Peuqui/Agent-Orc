@@ -1052,17 +1052,23 @@ def test_card_order_is_kept(
     assert client.get("/api/card-order").json() == ["/w/b", "/w/a"]
 
 
+def start_agents(client: TestClient, home: Path, count: int) -> list[str]:
+    (home / "projects").mkdir(exist_ok=True)
+    return [start_shell(client, home / "projects" / f"agent{number}") for number in range(count)]
+
+
 def test_workspaces_are_kept_and_deleted(
-    client: TestClient, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    client: TestClient, home: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+    a, b, c = start_agents(client, home, 3)
     empty = {"tabs": [], "visible": 1, "widths": {}, "active": None}
     assert client.get("/api/workspaces").json() == {"unnamed": empty, "named": {}}
-    left = {"tabs": ["a", "b"], "visible": 2, "widths": {"a": 0.3}, "active": "b"}
+    left = {"tabs": [a, b], "visible": 2, "widths": {a: 0.3}, "active": b}
     assert client.put("/api/workspaces/Links", json=left).status_code == 204
     right = {"tabs": [], "visible": 1, "widths": {}, "active": None}
     assert client.put("/api/workspaces/Rechts", json=right).status_code == 204
-    loose = {"tabs": ["c"], "visible": 1, "widths": {}, "active": "c"}
+    loose = {"tabs": [c], "visible": 1, "widths": {}, "active": c}
     assert client.put("/api/unnamed-workspace", json=loose).status_code == 204
     assert client.get("/api/workspaces").json() == {
         "unnamed": loose,
@@ -1070,40 +1076,62 @@ def test_workspaces_are_kept_and_deleted(
     }
     assert client.delete("/api/workspaces/Links").status_code == 204
     assert client.get("/api/workspaces").json() == {
-        "unnamed": {**loose, "tabs": ["c", "a", "b"]},
+        "unnamed": {**loose, "tabs": [c, a, b]},
         "named": {"Rechts": right},
     }
 
 
 def test_deleting_a_workspace_moves_its_agents_to_the_unnamed_one(
-    client: TestClient, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    client: TestClient, home: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
-    left = {"tabs": ["a", "b"], "visible": 2, "widths": {}, "active": "a"}
-    loose = {"tabs": ["c"], "visible": 1, "widths": {}, "active": "c"}
+    a, b, c = start_agents(client, home, 3)
+    left = {"tabs": [a, b], "visible": 2, "widths": {}, "active": a}
+    loose = {"tabs": [c], "visible": 1, "widths": {}, "active": c}
     client.put("/api/workspaces/Links", json=left)
     client.put("/api/unnamed-workspace", json=loose)
     assert client.delete("/api/workspaces/Links").status_code == 204
     shown = client.get("/api/workspaces").json()
     assert shown["named"] == {}
-    assert shown["unnamed"]["tabs"] == ["c", "a", "b"]
+    assert shown["unnamed"]["tabs"] == [c, a, b]
 
 
 def test_an_agent_lives_in_one_workspace(
-    client: TestClient, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    client: TestClient, home: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
-    left = {"tabs": ["a", "b"], "visible": 2, "widths": {"a": 0.3, "b": 0.7}, "active": "a"}
+    a, b = start_agents(client, home, 2)
+    left = {"tabs": [a, b], "visible": 2, "widths": {a: 0.3, b: 0.7}, "active": a}
     assert client.put("/api/workspaces/Links", json=left).status_code == 204
-    moved = {"tabs": ["a"], "visible": 1, "widths": {}, "active": "a"}
+    moved = {"tabs": [a], "visible": 1, "widths": {}, "active": a}
     assert client.put("/api/unnamed-workspace", json=moved).status_code == 204
     shown = client.get("/api/workspaces").json()
     assert shown["unnamed"] == moved
     assert shown["named"]["Links"] == {
-        "tabs": ["b"],
+        "tabs": [b],
         "visible": 2,
-        "widths": {"b": 0.7},
-        "active": "b",
+        "widths": {b: 0.7},
+        "active": b,
+    }
+
+
+def test_a_workspace_shows_no_agent_that_no_longer_exists(
+    client: TestClient, home: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+    (a,) = start_agents(client, home, 1)
+    stored = {
+        "tabs": ["gone-123456", a],
+        "visible": 2,
+        "widths": {"gone-123456": 0.4},
+        "active": "gone-123456",
+    }
+    assert client.put("/api/workspaces/Links", json=stored).status_code == 204
+    assert client.get("/api/workspaces").json()["named"]["Links"] == {
+        "tabs": [a],
+        "visible": 2,
+        "widths": {},
+        "active": a,
     }
 
 

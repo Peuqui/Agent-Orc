@@ -87,6 +87,7 @@ from agent_orc.sessions import (
 from agent_orc.state import (
     UNNAMED_WORKSPACE,
     empty_workspace,
+    keep_living_agents,
     place_workspace,
     read_card_order,
     read_extra_keys,
@@ -694,11 +695,12 @@ def create_app(
     def workspaces() -> WorkspaceSet:
         """All workspaces, kept on the server so every device and browser tab shows the same."""
         stored = read_workspaces()
+        living = {session.id for session in sessions.list()}
         unnamed = stored.get(UNNAMED_WORKSPACE, empty_workspace())
         return WorkspaceSet(
-            unnamed=Workspace(**unnamed),
+            unnamed=Workspace(**keep_living_agents(unnamed, living)),
             named={
-                name: Workspace(**workspace)
+                name: Workspace(**keep_living_agents(workspace, living))
                 for name, workspace in stored.items()
                 if name != UNNAMED_WORKSPACE
             },

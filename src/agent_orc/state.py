@@ -67,6 +67,18 @@ def remove_workspace(workspaces: dict[str, Any], name: str) -> None:
     unnamed["tabs"].extend(agent for agent in removed["tabs"] if agent not in unnamed["tabs"])
 
 
+def keep_living_agents(workspace: dict[str, Any], living: set[str]) -> dict[str, Any]:
+    """The workspace without the agents that no longer exist (a stopped agent leaves its entry)."""
+    tabs = [agent for agent in workspace["tabs"] if agent in living]
+    active = workspace["active"]
+    return {
+        **workspace,
+        "tabs": tabs,
+        "widths": {agent: width for agent, width in workspace["widths"].items() if agent in tabs},
+        "active": active if active in tabs else (tabs[0] if tabs else None),
+    }
+
+
 def place_workspace(workspaces: dict[str, Any], key: str, workspace: dict[str, Any]) -> None:
     """Store a workspace; its agents leave every other one, as an agent lives in one workspace."""
     workspaces[key] = workspace
