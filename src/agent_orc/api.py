@@ -86,11 +86,13 @@ from agent_orc.sessions import (
 )
 from agent_orc.state import (
     UNNAMED_WORKSPACE,
+    empty_workspace,
     place_workspace,
     read_card_order,
     read_extra_keys,
     read_prompt_templates,
     read_workspaces,
+    remove_workspace,
     reset_extra_keys,
     write_card_order,
     write_extra_keys,
@@ -283,9 +285,6 @@ class WorkspaceSet(BaseModel):
 
     unnamed: Workspace
     named: dict[str, Workspace]
-
-
-EMPTY_WORKSPACE = {"tabs": [], "visible": 1, "widths": {}, "active": None}
 
 
 class ScheduledPromptRequest(BaseModel):
@@ -695,7 +694,7 @@ def create_app(
     def workspaces() -> WorkspaceSet:
         """All workspaces, kept on the server so every device and browser tab shows the same."""
         stored = read_workspaces()
-        unnamed = stored.get(UNNAMED_WORKSPACE, EMPTY_WORKSPACE)
+        unnamed = stored.get(UNNAMED_WORKSPACE, empty_workspace())
         return WorkspaceSet(
             unnamed=Workspace(**unnamed),
             named={
@@ -728,7 +727,7 @@ def create_app(
     )
     def delete_workspace(name: str) -> None:
         stored = read_workspaces()
-        stored.pop(name, None)
+        remove_workspace(stored, name)
         write_workspaces(stored)
         workspace_changes.notify()
 

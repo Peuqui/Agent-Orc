@@ -54,6 +54,19 @@ def write_workspaces(workspaces: dict[str, Any]) -> None:
     write_atomically(state_dir() / WORKSPACES_FILE, json.dumps(workspaces))
 
 
+def empty_workspace() -> dict[str, Any]:
+    return {"tabs": [], "visible": 1, "widths": {}, "active": None}
+
+
+def remove_workspace(workspaces: dict[str, Any], name: str) -> None:
+    """Delete a named workspace; its agents move to the unnamed one."""
+    removed = workspaces.pop(name, None)
+    if removed is None:
+        return
+    unnamed = workspaces.setdefault(UNNAMED_WORKSPACE, empty_workspace())
+    unnamed["tabs"].extend(agent for agent in removed["tabs"] if agent not in unnamed["tabs"])
+
+
 def place_workspace(workspaces: dict[str, Any], key: str, workspace: dict[str, Any]) -> None:
     """Store a workspace; its agents leave every other one, as an agent lives in one workspace."""
     workspaces[key] = workspace

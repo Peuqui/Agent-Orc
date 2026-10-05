@@ -190,7 +190,7 @@
     "nameHint": "Name eingeben speichert die Arbeitsfläche, dann lässt sie sich aus der Übersicht wieder öffnen",
     "nameTaken": "Eine Arbeitsfläche „{name}“ gibt es schon.",
     "delete": "Arbeitsfläche löschen",
-    "confirmDelete": "Arbeitsfläche „{name}“ löschen? Die Agenten laufen weiter.",
+    "confirmDelete": "Arbeitsfläche „{name}“ löschen? Ihre Agenten laufen weiter und wandern nach „Unbenannt“.",
     "movesFrom": "aus „{name}“",
     "switchHere": "In diesem Tab hierher wechseln (Mittelklick: neuer Tab)",
     "openElsewhere": "In einem anderen Tab offen – springt dorthin",

@@ -1070,9 +1070,23 @@ def test_workspaces_are_kept_and_deleted(
     }
     assert client.delete("/api/workspaces/Links").status_code == 204
     assert client.get("/api/workspaces").json() == {
-        "unnamed": loose,
+        "unnamed": {**loose, "tabs": ["c", "a", "b"]},
         "named": {"Rechts": right},
     }
+
+
+def test_deleting_a_workspace_moves_its_agents_to_the_unnamed_one(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+    left = {"tabs": ["a", "b"], "visible": 2, "widths": {}, "active": "a"}
+    loose = {"tabs": ["c"], "visible": 1, "widths": {}, "active": "c"}
+    client.put("/api/workspaces/Links", json=left)
+    client.put("/api/unnamed-workspace", json=loose)
+    assert client.delete("/api/workspaces/Links").status_code == 204
+    shown = client.get("/api/workspaces").json()
+    assert shown["named"] == {}
+    assert shown["unnamed"]["tabs"] == ["c", "a", "b"]
 
 
 def test_an_agent_lives_in_one_workspace(

@@ -190,7 +190,7 @@
     "nameHint": "Entering a name saves the workspace, so it can be opened again from the overview",
     "nameTaken": "A workspace \"{name}\" exists already.",
     "delete": "Delete workspace",
-    "confirmDelete": "Delete workspace \"{name}\"? The agents keep running.",
+    "confirmDelete": "Delete workspace \"{name}\"? Its agents keep running and move to “Default”.",
     "movesFrom": "from “{name}”",
     "switchHere": "Switch to it in this tab (middle click: new tab)",
     "openElsewhere": "Open in another tab – jumps there",

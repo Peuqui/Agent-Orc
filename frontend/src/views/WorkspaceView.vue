@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { api, type Workspace, type WorkspaceSet } from '../api'
 import { COLUMN_CLOSE_EVENT, COLUMN_FULLSCREEN_EVENT, COLUMN_SWIPE_EVENT } from '../columns'
 import AppIcon from '../components/AppIcon.vue'
+import ConfirmDialog from '../components/ConfirmDialog.vue'
 import HelpButton from '../components/HelpButton.vue'
 import NavMenu from '../components/NavMenu.vue'
 import WorkspaceNameField from '../components/WorkspaceNameField.vue'
@@ -408,6 +409,25 @@ watch(
   },
 )
 
+const deleting = ref(false)
+
+/** Deleting moves the agents to the unnamed workspace, which this tab then shows. */
+async function deleteThis(): Promise<void> {
+  const current = name.value
+  deleting.value = false
+  if (current === null) return
+  // Nothing is stored for the workspace any more, or the delete would be undone.
+  ready.value = false
+  try {
+    await api.deleteWorkspace(current)
+  } catch (error) {
+    ready.value = true
+    toast.error(error)
+    return
+  }
+  jumpToWorkspace(router, null)
+}
+
 /** Naming stores the workspace on the server; renaming moves it there. */
 async function rename(): Promise<void> {
   const wanted = nameInput.value.trim()
@@ -441,6 +461,15 @@ async function rename(): Promise<void> {
 
 <template>
   <div class="flex h-dvh flex-col bg-slate-900">
+    <ConfirmDialog
+      v-if="deleting"
+      :title="$t('workspace.delete')"
+      :message="$t('workspace.confirmDelete', { name: name ?? '' })"
+      :confirm-label="$t('workspace.delete')"
+      danger
+      @confirm="deleteThis"
+      @close="deleting = false"
+    />
     <!-- Compact buttons below md, so name, workspaces and usage fit on a phone. -->
     <header
       v-if="!fullscreen"
@@ -454,10 +483,13 @@ async function rename(): Promise<void> {
       <template v-if="phone">
         <WorkspaceNameField
           v-model="nameInput"
-          class="flex-1 rounded-md px-2 py-1 font-semibold text-amber-300 placeholder:font-normal placeholder:text-slate-500 hover:bg-slate-800 focus:bg-slate-800"
+          class="flex-1"
+          input-class="rounded-md px-2 py-1 font-semibold text-amber-300 placeholder:font-normal placeholder:text-slate-500 hover:bg-slate-800 focus:bg-slate-800"
           :placeholder="$t('workspace.unnamed')"
           :hint="$t('workspace.nameHint')"
+          :deletable="name !== null"
           @rename="rename"
+          @delete="deleting = true"
         />
         <div ref="workspaceChooser" class="relative">
           <button class="btn-icon" :aria-label="$t('workspace.others')" :title="$t('workspace.others')" @click="choosingWorkspace = !choosingWorkspace">
@@ -488,10 +520,13 @@ async function rename(): Promise<void> {
             <WorkspaceNameField
               v-if="tab === name"
               v-model="nameInput"
-              class="shrink-0 rounded-md border border-amber-400/70 px-2 py-1 text-sm text-slate-100 placeholder:text-slate-300 field-sizing-content"
+              class="shrink-0"
+              input-class="rounded-md border border-amber-400/70 px-2 py-1 text-sm text-slate-100 placeholder:text-slate-300 field-sizing-content"
               :placeholder="$t('workspace.unnamed')"
               :hint="$t('workspace.nameHint')"
+              :deletable="name !== null"
               @rename="rename"
+              @delete="deleting = true"
             />
             <a
               v-else
