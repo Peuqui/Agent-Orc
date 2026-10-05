@@ -6,7 +6,8 @@ import { START_BEEP, STOP_BEEP, playBeep } from '../sounds'
 // Recording formats the Whisper service is fed with (agent_orc.dictation.AUDIO_SUFFIXES),
 // best first: Chrome records WebM, Firefox Ogg, Safari MP4.
 const RECORDING_TYPES = ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus', 'audio/mp4']
-const DEVICE_KEY = 'agent-orc-dictation-device'
+// The device is remembered per agent: the CPU unless the GPU was chosen on purpose there.
+const DEVICE_KEY = 'agent-orc-dictation-device:'
 
 /** The parts of the Web Speech API used here; TypeScript's DOM types do not include it. */
 interface SpeechRecognitionLike {
@@ -39,9 +40,13 @@ export type DictationState = 'idle' | 'recording' | 'transcribing' | 'listening'
  */
 const { dictationEngine } = useSettings()
 
-export function useDictation(onText: (text: string) => void, onError: (error: unknown) => void) {
+export function useDictation(
+  sessionId: string,
+  onText: (text: string) => void,
+  onError: (error: unknown) => void,
+) {
   const state = ref<DictationState>('idle')
-  const device = ref<DictationDevice>(localStorage.getItem(DEVICE_KEY) === 'cpu' ? 'cpu' : 'cuda')
+  const device = ref<DictationDevice>(localStorage.getItem(DEVICE_KEY + sessionId) === 'cuda' ? 'cuda' : 'cpu')
   // Unknown until the server's settings have arrived.
   const whisper = ref<boolean | null>(null)
   const language = ref('')
@@ -69,7 +74,7 @@ export function useDictation(onText: (text: string) => void, onError: (error: un
 
   function toggleDevice(): void {
     device.value = device.value === 'cuda' ? 'cpu' : 'cuda'
-    localStorage.setItem(DEVICE_KEY, device.value)
+    localStorage.setItem(DEVICE_KEY + sessionId, device.value)
   }
 
   async function startRecording(): Promise<void> {

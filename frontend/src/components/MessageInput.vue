@@ -32,7 +32,7 @@ const {
   toggleDevice,
   toggleMicrophone,
   toggleBrowser,
-} = useDictation(async (dictated) => {
+} = useDictation(props.sessionId, async (dictated) => {
   text.value = text.value ? `${text.value} ${dictated}` : dictated
   // Ready to send with Enter (or to correct), without clicking into the field first. Not on
   // touch screens: the focus would open the on-screen keyboard; there the send button is ready.
