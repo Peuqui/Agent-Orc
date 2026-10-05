@@ -38,8 +38,23 @@ window.addEventListener('storage', (event) => {
 function setting<T>(key: string, initial: T, parse: (stored: string) => T): Ref<T> {
   const stored = localStorage.getItem(key)
   const value = ref(stored === null ? initial : parse(stored)) as Ref<T>
-  watch(value, (current) => localStorage.setItem(key, String(current)))
-  updatersByKey.set(key, (text) => (value.value = parse(text)))
+  // What arrived from another document is not stored again: every document would otherwise
+  // write back the older value it heard last, and the documents keep correcting each other
+  // (two quick steps of the font size made it jump between two sizes for good). The watcher
+  // runs at once, so the flag covers exactly that change.
+  let fromOtherDocument = false
+  watch(
+    value,
+    (current) => {
+      if (!fromOtherDocument) localStorage.setItem(key, String(current))
+    },
+    { flush: 'sync' },
+  )
+  updatersByKey.set(key, (text) => {
+    fromOtherDocument = true
+    value.value = parse(text)
+    fromOtherDocument = false
+  })
   return value
 }
 
