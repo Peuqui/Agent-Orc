@@ -19,6 +19,10 @@ export default defineConfig({
     // Bundled into the Python package, so installs need no Node.
     outDir: '../src/agent_orc/static',
     emptyOutDir: true,
+    // Tailwind writes its colours as oklch(), which Chrome before 111 drops (white page, black
+    // text on older Android tablets); this target makes the build add plain hex fallbacks. 99
+    // is the oldest Chrome that has the cascade layers Tailwind needs anyway.
+    cssTarget: 'chrome99',
   },
   plugins: [
     {
