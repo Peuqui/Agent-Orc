@@ -11,6 +11,7 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { api, terminalUrl, type Modifier, type TerminalSettings } from '../api'
 import AppIcon from '../components/AppIcon.vue'
+import ConfirmDialog from '../components/ConfirmDialog.vue'
 import ContextMeter from '../components/ContextMeter.vue'
 import RestartButton from '../components/RestartButton.vue'
 import TerminalButton from '../components/TerminalButton.vue'
@@ -42,7 +43,7 @@ const CTRL_RANGE_END = 95
 const router = useRouter()
 const { t } = useI18n()
 const toast = useToast()
-const { sessions } = useSessions()
+const { sessions, refresh } = useSessions()
 
 const container = ref<HTMLElement>()
 const messageInput = ref<InstanceType<typeof MessageInput>>()
@@ -107,6 +108,23 @@ const actionClass = computed(() =>
 
 function closeColumn(): void {
   window.dispatchEvent(new CustomEvent(COLUMN_CLOSE_EVENT))
+}
+
+// Stopping ends the agent and the terminal session that hosts it; this view has nothing left
+// to show then: its workspace column closes, otherwise the agent list opens.
+const stopping = ref(false)
+
+async function stop(): Promise<void> {
+  stopping.value = false
+  try {
+    await api.stopSession(props.id)
+    await refresh()
+  } catch (error) {
+    toast.error(error)
+    return
+  }
+  if (props.embedded) closeColumn()
+  else void router.push('/sessions')
 }
 
 // The workspace's fullscreen: terminal and input field only.
@@ -407,6 +425,14 @@ onBeforeUnmount(() => {
           >
             <AppIcon name="copy" /><span v-if="phone">{{ $t('terminal.plainText') }}</span>
           </button>
+          <button
+            :class="actionClass"
+            :aria-label="$t('sessions.stop')"
+            :title="$t('sessions.stop')"
+            @click="((actionsOpen = false), (stopping = true))"
+          >
+            <AppIcon name="stop" /><span v-if="phone">{{ $t('sessions.stop') }}</span>
+          </button>
           <!-- The device's font size (the settings menu holds it too). -->
           <div v-if="phone" class="flex items-center gap-2 px-3 py-1 text-sm text-slate-300">
             <span class="flex-1">{{ $t('settings.fontSize') }}</span>
@@ -420,6 +446,16 @@ onBeforeUnmount(() => {
         ×
       </button>
     </header>
+
+    <ConfirmDialog
+      v-if="stopping"
+      :title="$t('sessions.stop')"
+      :message="$t('sessions.confirmStop', { name })"
+      :confirm-label="$t('sessions.stop')"
+      danger
+      @confirm="stop"
+      @close="stopping = false"
+    />
 
     <div v-if="plainText !== null" class="fixed inset-0 z-40 flex flex-col bg-slate-900">
       <header class="flex items-center gap-2 border-b border-slate-800 px-2 py-1">
