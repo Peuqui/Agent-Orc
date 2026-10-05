@@ -293,6 +293,15 @@ function onShortcut(event: KeyboardEvent): void {
 window.addEventListener('keydown', onShortcut, true)
 onBeforeUnmount(() => window.removeEventListener('keydown', onShortcut, true))
 
+// Turning the device changes how many columns fit; the active one (the red one) stays in view,
+// not the one that happened to be there before. Done at once, as the layout has changed.
+watch(phone, async () => {
+  const id = workspace.value.active
+  if (id === null) return
+  await nextTick()
+  frameOf(id)?.scrollIntoView({ behavior: 'instant', inline: phone.value ? 'start' : 'nearest', block: 'nearest' })
+})
+
 // Typing goes to the active column's input field; not on touch screens, where the focus would
 // open the on-screen keyboard (a tap into the field does).
 watch(
