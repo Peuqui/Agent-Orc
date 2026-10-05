@@ -425,7 +425,9 @@ async function deleteThis(): Promise<void> {
     toast.error(error)
     return
   }
-  jumpToWorkspace(router, null)
+  // The route watcher ignores a change while nothing is ready; so load the unnamed one here.
+  await router.replace({ path: '/workspace', query: { unnamed: '1' } })
+  load().catch(toast.error)
 }
 
 /** Naming stores the workspace on the server; renaming moves it there. */
