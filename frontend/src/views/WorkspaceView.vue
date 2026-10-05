@@ -317,6 +317,9 @@ async function load(): Promise<void> {
   if (route.query.new !== undefined) {
     name.value = null
     tabState.unnamed = emptyWorkspace()
+  } else if (route.query.unnamed !== undefined) {
+    // This tab's own unnamed workspace as it is (an agent is added to it).
+    name.value = null
   } else name.value = typeof requested === 'string' && requested !== '' ? requested : tabState.name
   nameInput.value = name.value ?? ''
   const named = await api.workspaces()

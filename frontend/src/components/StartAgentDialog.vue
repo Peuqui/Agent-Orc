@@ -5,12 +5,14 @@ import { api, type Conversation, type ConversationHit, type ModelChoice, type Re
 import { useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
 import { baseName, formatDate, formatSize } from '../format'
+import type { WorkspaceTarget } from '../composables/useWorkspaceTab'
 import BaseDialog from './BaseDialog.vue'
 import ReasoningControl from './ReasoningControl.vue'
 import ToggleSwitch from './ToggleSwitch.vue'
 
-const props = defineProps<{ path: string }>()
-const emit = defineEmits<{ started: [id: string]; close: [] }>()
+// defaultTarget: where the agent opens once started (null: the agent list).
+const props = defineProps<{ path: string; defaultTarget: WorkspaceTarget | null }>()
+const emit = defineEmits<{ started: [id: string, target: WorkspaceTarget | null]; close: [] }>()
 
 const { profiles, loadProfiles, refresh } = useSessions()
 const toast = useToast()
@@ -27,6 +29,20 @@ function defaultBranch(): string {
   const part = (value: number) => String(value).padStart(2, '0')
   return `agent-${now.getFullYear()}${part(now.getMonth() + 1)}${part(now.getDate())}-${part(now.getHours())}${part(now.getMinutes())}`
 }
+// The workspace to open the agent in: 'list' (none), 'unnamed' (this tab's), or 'named:<name>'.
+const LIST_TARGET = 'list'
+const UNNAMED_TARGET = 'unnamed'
+const NAMED_PREFIX = 'named:'
+function targetKey(target: WorkspaceTarget | null): string {
+  if (target === null) return LIST_TARGET
+  return target.name === null ? UNNAMED_TARGET : NAMED_PREFIX + target.name
+}
+function targetOf(key: string): WorkspaceTarget | null {
+  if (key === LIST_TARGET) return null
+  return { name: key === UNNAMED_TARGET ? null : key.slice(NAMED_PREFIX.length) }
+}
+const workspaceTarget = ref(targetKey(props.defaultTarget))
+const workspaceNames = ref<string[]>([])
 const conversations = ref<Conversation[]>([])
 // Searching the earlier conversations' messages; shorter queries just show the list.
 const MIN_QUERY_CHARS = 2
@@ -126,6 +142,7 @@ watch(model, async (chosen) => {
 })
 
 onMounted(async () => {
+  api.workspaces().then((named) => (workspaceNames.value = Object.keys(named).sort()), toast.error)
   if (profiles.value.length === 0) await loadProfiles()
   selected.value = profiles.value[0]?.name ?? ''
 })
@@ -143,7 +160,7 @@ async function start(resume: boolean, conversation: string | null = null): Promi
       model.value,
     )
     await refresh()
-    emit('started', session.id)
+    emit('started', session.id, targetOf(workspaceTarget.value))
   } catch (error) {
     toast.error(error)
   } finally {
@@ -184,6 +201,14 @@ async function start(resume: boolean, conversation: string | null = null): Promi
       :ultracode-offered="profile?.ultracode ?? false"
       class="mb-5"
     />
+    <label class="mb-5 flex flex-col gap-1 text-sm text-slate-400">
+      {{ $t('agent.workspace') }}
+      <select v-model="workspaceTarget" class="input text-sm text-slate-200">
+        <option :value="LIST_TARGET">{{ $t('agent.workspaceNone') }}</option>
+        <option :value="UNNAMED_TARGET">{{ $t('workspace.unnamed') }}</option>
+        <option v-for="name in workspaceNames" :key="name" :value="NAMED_PREFIX + name">{{ name }}</option>
+      </select>
+    </label>
     <div class="mb-5 flex flex-col gap-2">
       <ToggleSwitch class="h-7 self-start text-sm text-slate-300" :checked="inWorktree" @click="inWorktree = !inWorktree">
         {{ $t('agent.inWorktree') }}

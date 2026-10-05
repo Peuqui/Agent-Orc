@@ -71,6 +71,8 @@
     "lock": "Lock"
   },
   "agent": {
+    "workspace": "Workspace",
+    "workspaceNone": "None (agent list)",
     "title": "Start agent in “{name}”",
     "effort": "Effort (reasoning)",
     "profile": "Agent",

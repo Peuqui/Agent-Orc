@@ -71,6 +71,8 @@
     "lock": "Sperren"
   },
   "agent": {
+    "workspace": "Arbeitsfläche",
+    "workspaceNone": "Keine (Agentenliste)",
     "title": "Agent in „{name}“ starten",
     "effort": "Aufwand (Reasoning)",
     "profile": "Agent",

@@ -8,6 +8,7 @@ import BaseDialog from '../components/BaseDialog.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
 import InputDialog from '../components/InputDialog.vue'
 import StartAgentDialog from '../components/StartAgentDialog.vue'
+import { loadTabState, openWorkspace, useOtherTabs, type WorkspaceTarget } from '../composables/useWorkspaceTab'
 import { useScope } from '../composables/useScope'
 import { useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
@@ -104,10 +105,18 @@ function confirmTrash(): void {
   void run(() => api.moveToTrash(current.entry.path))
 }
 
-function onAgentStarted(id: string): void {
+// Joins the tabs' channel, so a workspace open in another tab is found (and not opened twice).
+useOtherTabs()
+
+// From a workspace's "+": preselected is the workspace of this tab.
+const defaultTarget = computed<WorkspaceTarget | null>(() =>
+  forWorkspace.value ? { name: loadTabState().name } : null,
+)
+
+function onAgentStarted(id: string, target: WorkspaceTarget | null): void {
   dialog.value = null
-  if (forWorkspace.value) void router.push({ path: '/workspace', query: { open: id } })
-  else void router.push('/sessions')
+  if (target === null) void router.push('/sessions')
+  else openWorkspace(router, target.name, id)
 }
 
 onMounted(async () => {
@@ -237,6 +246,7 @@ watch(currentPath, loadEntries)
     <StartAgentDialog
       v-if="dialog?.kind === 'agent'"
       :path="dialog.path"
+      :default-target="defaultTarget"
       @started="onAgentStarted"
       @close="dialog = null"
     />
