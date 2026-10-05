@@ -3,7 +3,9 @@ import { onBeforeUnmount, ref } from 'vue'
 
 // Fast scrolling for a history whose length nobody outside the agent knows (Claude Code keeps
 // it itself, full screen): a grip that scrolls while it is pulled away from the middle, the
-// faster the further, and springs back when released. Mouse and finger alike.
+// faster the further, and springs back when released. Mouse and finger alike. A touch anywhere
+// on the track grabs the grip, so the track is wide (a finger needs about 40 px, and the
+// phones' own edge gesture eats the outermost ones).
 const emit = defineEmits<{ scroll: [lines: number] }>()
 
 // Pulls shorter than this do nothing, so a grip that is merely touched stays still.
@@ -82,7 +84,7 @@ onBeforeUnmount(stop)
 <template>
   <div
     ref="track"
-    class="relative w-5 cursor-ns-resize touch-none select-none"
+    class="relative w-10 cursor-ns-resize touch-none select-none"
     :title="$t('terminal.jog')"
     @pointerdown="onPointerDown"
     @pointermove="onPointerMove"
@@ -91,7 +93,7 @@ onBeforeUnmount(stop)
   >
     <div class="absolute inset-y-2 left-1/2 w-0.5 -translate-x-1/2 rounded-full bg-slate-700" />
     <div
-      class="absolute top-1/2 left-1/2 h-8 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-slate-500 bg-slate-600"
+      class="absolute top-1/2 left-1/2 h-12 w-6 -translate-x-1/2 -translate-y-1/2 rounded-full border border-slate-500 bg-slate-600"
       :class="{ 'border-amber-300 bg-amber-300/30': pulling }"
       :style="{ marginTop: `${offset}px` }"
     />

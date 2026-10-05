@@ -21,7 +21,7 @@ import MessageInput from '../components/MessageInput.vue'
 import { useDismiss } from '../composables/useDismiss'
 import { registerFileLinks } from '../composables/useFileLinks'
 import { sessionName, useSessions } from '../composables/useSessions'
-import { PHONE_WIDTH } from '../device'
+import { PHONE_WIDTH, TOUCH_FIRST } from '../device'
 import { useToast } from '../composables/useToast'
 import {
   FONT_SAMPLE,
@@ -315,6 +315,10 @@ onMounted(async () => {
   if (!container.value) return
   await loadFont(terminalFont.value, fontSize.value)
   terminal.open(container.value)
+  // A tap into the terminal (e.g. on Claude Code's "jump to bottom") makes xterm.js focus its
+  // hidden input, and the on-screen keyboard rises for it, without our input field and extra
+  // keys. Typing goes through our field; a hardware keyboard still reaches this input.
+  if (TOUCH_FIRST.matches) terminal.textarea?.setAttribute('inputmode', 'none')
   // The GPU renderer draws box and block characters itself (customGlyphs), so the agents'
   // frames stay closed with any font and line spacing; the DOM renderer takes them from the
   // font. If the browser takes the graphics context away (driver reset, too many contexts),
