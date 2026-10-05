@@ -50,8 +50,8 @@ const messageInput = ref<InstanceType<typeof MessageInput>>()
 const settings = ref<TerminalSettings | null>(null)
 const modifiers = ref(new Set<Modifier>())
 const connected = ref(false)
-// One font size for every terminal of this device (settings menu, or ⋯ on phones).
-const { lineHeight, fontSize, stepFontSize, terminalFont, extraKeysVersion } = useSettings()
+// One font size for every terminal of this device (set in the settings menu).
+const { lineHeight, fontSize, terminalFont, extraKeysVersion } = useSettings()
 
 // Arranged anew (on this or another column of the device): fetch the keys again.
 watch(extraKeysVersion, async () => {
@@ -433,13 +433,6 @@ onBeforeUnmount(() => {
           >
             <AppIcon name="stop" /><span v-if="phone">{{ $t('sessions.stop') }}</span>
           </button>
-          <!-- The device's font size (the settings menu holds it too). -->
-          <div v-if="phone" class="flex items-center gap-2 px-3 py-1 text-sm text-slate-300">
-            <span class="flex-1">{{ $t('settings.fontSize') }}</span>
-            <button class="btn-icon size-8" :aria-label="$t('settings.less')" @click="stepFontSize(-1)">−</button>
-            <span class="w-6 text-center">{{ fontSize }}</span>
-            <button class="btn-icon size-8" :aria-label="$t('settings.more')" @click="stepFontSize(1)">+</button>
-          </div>
         </div>
       </div>
       <button v-if="embedded && phone" class="btn-icon" :aria-label="$t('workspace.close')" :title="$t('workspace.close')" @click="closeColumn">
