@@ -7,6 +7,7 @@ import { COLUMN_CLOSE_EVENT, COLUMN_FULLSCREEN_EVENT, COLUMN_SWIPE_EVENT } from 
 import AppIcon from '../components/AppIcon.vue'
 import HelpButton from '../components/HelpButton.vue'
 import NavMenu from '../components/NavMenu.vue'
+import WorkspaceNameField from '../components/WorkspaceNameField.vue'
 import QuotaPanel from '../components/QuotaPanel.vue'
 import SettingsMenu from '../components/SettingsMenu.vue'
 import { useDismiss } from '../composables/useDismiss'
@@ -22,9 +23,9 @@ import {
   loadTabState,
   MIN_VISIBLE,
   nameWindow,
-  openWorkspace,
   saveTabState,
   useOtherTabs,
+  workspaceRoute,
 } from '../composables/useWorkspaceTab'
 import { PHONE_WIDTH, TOUCH_FIRST } from '../device'
 
@@ -72,10 +73,12 @@ const choosingWorkspace = ref(false)
 const workspaceChooser = ref<HTMLElement>()
 useDismiss(workspaceChooser, () => choosingWorkspace.value, () => (choosingWorkspace.value = false))
 const otherTabs = useOtherTabs()
-// Names given in other tabs since this one loaded join in as they are announced.
-const otherNames = computed(() =>
-  [...new Set([...savedNames.value, ...otherTabs.value])].filter((saved) => saved !== name.value).sort(),
-)
+// The tabs of all workspaces in a fixed order: the unnamed one (null) first, then the named ones
+// alphabetically. Names given in other tabs since this one loaded join in as they are announced.
+const workspaceOrder = computed<(string | null)[]>(() => [
+  null,
+  ...[...new Set([...savedNames.value, ...otherTabs.value, ...(name.value === null ? [] : [name.value])])].sort(),
+])
 
 const notOpen = computed(() =>
   sessions.value.filter((session) => session.running && !workspace.value.tabs.includes(session.id)),
@@ -266,13 +269,12 @@ function onShortcut(event: KeyboardEvent): void {
     event.preventDefault()
     void activate(id).then(() => frameOf(id)?.contentDocument?.querySelector('textarea')?.focus())
   } else if (step !== undefined) {
-    if (otherNames.value.length === 0) return
+    const order = workspaceOrder.value
+    if (order.length < 2) return
     event.preventDefault()
-    // Alphabetical, as the bar shows them, going round at the ends; an unnamed workspace
-    // stands before the first.
-    const names = name.value === null ? otherNames.value : [...otherNames.value, name.value].sort()
-    const here = name.value === null ? (step > 0 ? -1 : 0) : names.indexOf(name.value)
-    jumpToWorkspace(router, names[(here + step + names.length) % names.length])
+    // As the bar shows them, going round at the ends.
+    const here = order.indexOf(name.value)
+    jumpToWorkspace(router, order[(here + step + order.length) % order.length])
   }
 }
 
@@ -448,66 +450,62 @@ async function rename(): Promise<void> {
       <!-- Narrow windows (not phones, which keep one row): name and workspaces move to a second
            row (this break starts it). -->
       <div v-if="!phone" class="order-last h-0 basis-full md:hidden" />
-      <input
-        v-model="nameInput"
-        size="12"
-        class="min-w-0 shrink rounded-md bg-transparent px-2 py-1 font-semibold text-amber-300 placeholder:font-normal placeholder:text-slate-500 hover:bg-slate-800 focus:bg-slate-800 focus:outline-none"
-        :class="phone ? 'flex-1' : 'w-28 max-md:order-last lg:w-44'"
-        :placeholder="$t('workspace.unnamed')"
-        :title="$t('workspace.nameHint')"
-        :aria-label="$t('workspace.nameHint')"
-        enterkeyhint="done"
-        @keydown.enter="($event.target as HTMLInputElement).blur()"
-        @change="rename"
-      />
-      <!-- The other workspaces, one click away: in their own tab if one shows them, otherwise
-           here; a middle click opens a new tab. -->
-      <!-- Phones: in a list behind the name, so everything fits in one row. -->
-      <div v-if="phone" ref="workspaceChooser" class="relative">
-        <button class="btn-icon" :aria-label="$t('workspace.others')" :title="$t('workspace.others')" @click="choosingWorkspace = !choosingWorkspace">
-          <AppIcon name="chevron" />
-        </button>
-        <div v-if="choosingWorkspace" class="card absolute top-full left-0 z-40 mt-1 flex w-56 flex-col p-1 shadow-xl">
-          <button
-            v-for="other in otherNames"
-            :key="other"
-            class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-slate-300 hover:bg-slate-700"
-            @click="((choosingWorkspace = false), jumpToWorkspace(router, other))"
-          >
-            <AppIcon name="workspace" />{{ other }}
+      <!-- Phones: the name, and the others in a list behind it, so everything fits in one row. -->
+      <template v-if="phone">
+        <WorkspaceNameField
+          v-model="nameInput"
+          class="flex-1 placeholder:text-slate-500"
+          :placeholder="$t('workspace.unnamed')"
+          :hint="$t('workspace.nameHint')"
+          @rename="rename"
+        />
+        <div ref="workspaceChooser" class="relative">
+          <button class="btn-icon" :aria-label="$t('workspace.others')" :title="$t('workspace.others')" @click="choosingWorkspace = !choosingWorkspace">
+            <AppIcon name="chevron" />
           </button>
-          <button
-            v-if="name !== null"
-            class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-slate-400 hover:bg-slate-700"
-            @click="((choosingWorkspace = false), openWorkspace(router, null))"
-          >
-            <AppIcon name="workspace" />{{ $t('workspace.unnamed') }}
-          </button>
+          <div v-if="choosingWorkspace" class="card absolute top-full left-0 z-40 mt-1 flex w-56 flex-col p-1 shadow-xl">
+            <template v-for="other in workspaceOrder" :key="other ?? ''">
+              <button
+                v-if="other !== name"
+                class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-slate-300 hover:bg-slate-700"
+                @click="((choosingWorkspace = false), jumpToWorkspace(router, other))"
+              >
+                <AppIcon name="workspace" />{{ other ?? $t('workspace.unnamed') }}
+              </button>
+            </template>
+          </div>
         </div>
-      </div>
-      <!-- Narrow windows: in the second row next to the name, swipeable. -->
-      <nav
-        v-else
-        class="flex min-w-0 items-center gap-1 overflow-x-auto [scrollbar-width:none] max-md:order-last max-md:flex-1 md:shrink-0"
-      >
-        <a
-          v-for="other in otherNames"
-          :key="other"
-          :href="router.resolve({ path: '/workspace', query: { name: other } }).href"
-          class="flex shrink-0 items-center gap-1 rounded-md border border-slate-700 px-2 py-0.5 text-sm text-slate-300 hover:bg-slate-800 hover:text-slate-100"
-          :title="otherTabs.has(other) ? $t('workspace.openElsewhere') : $t('workspace.switchHere')"
-          @click.prevent="jumpToWorkspace(router, other)"
+      </template>
+      <!-- Computers: all workspaces as tabs in a fixed order, the one shown is the name field.
+           One click on another goes to the tab that shows it, otherwise here; a middle click
+           opens a new tab. Narrow windows: in a second row, swipeable. -->
+      <template v-else>
+        <div class="order-last h-0 basis-full md:hidden" />
+        <nav
+          class="flex min-w-0 items-center gap-1 overflow-x-auto [scrollbar-width:none] max-md:order-last max-md:flex-1 md:shrink-0"
         >
-          {{ other }}<AppIcon v-if="otherTabs.has(other)" name="external" class="size-3.5 text-slate-500" />
-        </a>
-        <button
-          v-if="name !== null"
-          class="flex shrink-0 items-center gap-1 rounded-md border border-dashed border-slate-700 px-2 py-0.5 text-sm text-slate-400 hover:bg-slate-800 hover:text-slate-100"
-          @click="openWorkspace(router, null)"
-        >
-          {{ $t('workspace.unnamed') }}
-        </button>
-      </nav>
+          <template v-for="tab in workspaceOrder" :key="tab ?? ''">
+            <WorkspaceNameField
+              v-if="tab === name"
+              v-model="nameInput"
+              class="w-28 shrink-0 border border-amber-400/70 bg-slate-800 placeholder:text-amber-300/70 lg:w-44"
+              :placeholder="$t('workspace.unnamed')"
+              :hint="$t('workspace.nameHint')"
+              @rename="rename"
+            />
+            <a
+              v-else
+              :href="router.resolve(workspaceRoute(tab)).href"
+              class="flex shrink-0 items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-sm text-slate-300 hover:bg-slate-800 hover:text-slate-100"
+              :title="tab !== null && otherTabs.has(tab) ? $t('workspace.openElsewhere') : $t('workspace.switchHere')"
+              @click.prevent="jumpToWorkspace(router, tab)"
+            >
+              {{ tab ?? $t('workspace.unnamed') }}
+              <AppIcon v-if="tab !== null && otherTabs.has(tab)" name="external" class="size-3.5 text-slate-500" />
+            </a>
+          </template>
+        </nav>
+      </template>
       <!-- Claude's usage, centred in the room between the workspaces and the buttons; it shrinks
            with the window. Not on phones: the name gets the room (the overview shows it). -->
       <QuotaPanel v-if="!phone" compact class="min-w-0 flex-1 overflow-hidden sm:px-3" />
