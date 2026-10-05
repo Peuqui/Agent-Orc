@@ -407,7 +407,8 @@
   },
   "keys": {
     "fold": "Weniger Sondertasten",
-    "unfold": "Alle Sondertasten"
+    "unfold": "Alle Sondertasten",
+    "hideKeyboard": "Tastatur ausblenden"
   },
   "keysEditor": {
     "title": "Sondertasten anpassen",

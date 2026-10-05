@@ -5,6 +5,7 @@ export const ICONS = {
   expand: 'M4 9V4h5 M20 9V4h-5 M4 15v5h5 M20 15v5h-5',
   shrink: 'M9 4v5H4 M15 4v5h5 M9 20v-5H4 M15 20v-5h5',
   chevron: 'M6 9l6 6 6-6',
+  keyboard: 'M3 6h18v10H3z M7 10h.01 M11 10h.01 M15 10h.01 M7 13h10 M9 20l3-2 3 2',
   prompt: 'M5 7l5 5-5 5 M12 17h7',
   folder: 'M3 6h6l2 2h10v11H3z',
   file: 'M6 3h8l4 4v14H6z M14 3v4h4',

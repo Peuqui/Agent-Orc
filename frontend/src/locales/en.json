@@ -407,7 +407,8 @@
   },
   "keys": {
     "fold": "Fewer extra keys",
-    "unfold": "All extra keys"
+    "unfold": "All extra keys",
+    "hideKeyboard": "Hide keyboard"
   },
   "keysEditor": {
     "title": "Arrange extra keys",

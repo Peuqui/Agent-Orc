@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { Modifier, TerminalKey } from '../api'
+import { TOUCH_FIRST } from '../device'
 import { useSettings } from '../composables/useSettings'
 import AppIcon from './AppIcon.vue'
 
@@ -14,6 +15,12 @@ const emit = defineEmits<{
 // for every terminal on this device.
 const { extraKeysUnfolded } = useSettings()
 const shownRows = computed(() => (extraKeysUnfolded.value ? props.rows : props.rows.slice(0, 1)))
+
+// The focus leaves the terminal's input field, so Android closes the keyboard; a tap into the
+// terminal or the text field opens it again.
+function hideKeyboard(): void {
+  if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
+}
 
 function press(key: TerminalKey): void {
   if (key.modifier) emit('toggle', key.modifier)
@@ -40,6 +47,16 @@ function press(key: TerminalKey): void {
         @click="press(key)"
       >
         {{ key.label }}
+      </button>
+      <button
+        v-if="index === 0 && TOUCH_FIRST.matches"
+        class="flex h-10 w-8 shrink-0 items-center justify-center rounded-md text-slate-400 select-none hover:bg-slate-800"
+        :aria-label="$t('keys.hideKeyboard')"
+        :title="$t('keys.hideKeyboard')"
+        @pointerdown.prevent
+        @click="hideKeyboard"
+      >
+        <AppIcon name="keyboard" />
       </button>
       <button
         v-if="index === 0 && rows.length > 1"
