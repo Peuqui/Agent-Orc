@@ -25,6 +25,7 @@ import {
   MIN_VISIBLE,
   nameWindow,
   saveTabState,
+  unnamedListed,
   useOtherTabs,
   workspaceRoute,
 } from '../composables/useWorkspaceTab'
@@ -74,12 +75,14 @@ const choosingWorkspace = ref(false)
 const workspaceChooser = ref<HTMLElement>()
 useDismiss(workspaceChooser, () => choosingWorkspace.value, () => (choosingWorkspace.value = false))
 const otherTabs = useOtherTabs()
-// The tabs of all workspaces in a fixed order: the unnamed one (null) first, then the named ones
-// alphabetically. Names given in other tabs since this one loaded join in as they are announced.
-const workspaceOrder = computed<(string | null)[]>(() => [
-  null,
-  ...[...new Set([...savedNames.value, ...otherTabs.value, ...(name.value === null ? [] : [name.value])])].sort(),
-])
+// The tabs of all workspaces in a fixed order: the unnamed one (null) first, if there is one to
+// show, then the named ones alphabetically. Names given in other tabs since this one loaded join
+// in as they are announced.
+const workspaceOrder = computed<(string | null)[]>(() => {
+  const named = [...new Set([...savedNames.value, ...otherTabs.value, ...(name.value === null ? [] : [name.value])])].sort()
+  const unnamedAgents = everyWorkspace.value?.unnamed.tabs.length ?? 0
+  return unnamedListed(named.length, unnamedAgents, name.value === null) ? [null, ...named] : named
+})
 
 const notOpen = computed(() =>
   sessions.value.filter((session) => session.running && !workspace.value.tabs.includes(session.id)),
@@ -540,6 +543,13 @@ async function rename(): Promise<void> {
                 <AppIcon name="workspace" />{{ other ?? $t('workspace.unnamed') }}
               </button>
             </template>
+            <button
+              v-if="!workspaceOrder.includes(null)"
+              class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-slate-400 hover:bg-slate-700"
+              @click="((choosingWorkspace = false), jumpToWorkspace(router, null))"
+            >
+              <AppIcon name="plus" />{{ $t('workspace.new') }}
+            </button>
           </div>
         </div>
       </template>
@@ -548,34 +558,46 @@ async function rename(): Promise<void> {
            here; a middle click opens a new tab. Narrow windows: in a second row, swipeable. -->
       <template v-else>
         <div v-if="!phone" class="order-last h-0 basis-full md:hidden" />
-        <nav
-          class="flex min-w-0 items-center gap-1 overflow-x-auto [scrollbar-width:none]"
+        <div
+          class="flex min-w-0 items-center gap-1"
           :class="phone ? 'flex-1' : 'max-md:order-last max-md:flex-1 md:shrink-0'"
         >
-          <template v-for="tab in workspaceOrder" :key="tab ?? ''">
-            <WorkspaceNameField
-              v-if="tab === name"
-              v-model="nameInput"
-              class="shrink-0"
-              input-class="rounded-md border border-amber-400/70 px-2 py-1 text-sm text-slate-100 placeholder:text-slate-300 field-sizing-content"
-              :placeholder="$t('workspace.unnamed')"
-              :hint="$t('workspace.nameHint')"
-              :deletable="name !== null"
-              @rename="rename"
-              @delete="deleting = true"
-            />
-            <a
-              v-else
-              :href="router.resolve(workspaceRoute(tab)).href"
-              class="flex shrink-0 items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-sm text-slate-300 hover:bg-slate-800 hover:text-slate-100"
-              :title="tab !== null && otherTabs.has(tab) ? $t('workspace.openElsewhere') : $t('workspace.switchHere')"
-              @click.prevent="jumpToWorkspace(router, tab)"
-            >
-              {{ tab ?? $t('workspace.unnamed') }}
-              <AppIcon v-if="tab !== null && otherTabs.has(tab)" name="external" class="size-3.5 text-slate-500" />
-            </a>
-          </template>
-        </nav>
+          <!-- A new workspace starts unnamed; this is not the "+" that adds an agent (right); it stays in view while the tabs scroll. -->
+          <button
+            v-if="!workspaceOrder.includes(null)"
+            class="ml-2 flex shrink-0 items-center gap-1 rounded-md border border-dashed border-slate-600 px-2 py-1 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+            :title="$t('workspace.new')"
+            :aria-label="$t('workspace.new')"
+            @click="jumpToWorkspace(router, null)"
+          >
+            <AppIcon name="plus" class="size-3.5" /><AppIcon name="workspace" class="size-4" />
+          </button>
+          <nav class="flex min-w-0 items-center gap-1 overflow-x-auto [scrollbar-width:none]">
+            <template v-for="tab in workspaceOrder" :key="tab ?? ''">
+              <WorkspaceNameField
+                v-if="tab === name"
+                v-model="nameInput"
+                class="shrink-0"
+                input-class="rounded-md border border-amber-400/70 px-2 py-1 text-sm text-slate-100 placeholder:text-slate-300 field-sizing-content"
+                :placeholder="$t('workspace.unnamed')"
+                :hint="$t('workspace.nameHint')"
+                :deletable="name !== null"
+                @rename="rename"
+                @delete="deleting = true"
+              />
+              <a
+                v-else
+                :href="router.resolve(workspaceRoute(tab)).href"
+                class="flex shrink-0 items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-sm text-slate-300 hover:bg-slate-800 hover:text-slate-100"
+                :title="tab !== null && otherTabs.has(tab) ? $t('workspace.openElsewhere') : $t('workspace.switchHere')"
+                @click.prevent="jumpToWorkspace(router, tab)"
+              >
+                {{ tab ?? $t('workspace.unnamed') }}
+                <AppIcon v-if="tab !== null && otherTabs.has(tab)" name="external" class="size-3.5 text-slate-500" />
+              </a>
+            </template>
+          </nav>
+        </div>
       </template>
       <!-- Claude's usage, centred in the room between the workspaces and the buttons; it shrinks
            with the window. Not on phones: the name gets the room (the overview shows it). -->

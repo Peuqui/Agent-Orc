@@ -52,8 +52,8 @@ detaches: the agents keep working, and you pick them up again from any device.
 - Several agents side by side as columns; drag the column heads to sort them and the dividers
   to set their width.
 - Workspaces live on the server, so every device shows the same and a change appears
-  everywhere at once. "Default" is the one workspace without a name; give it a name and it
-  becomes a named one, which shows up in the overview and in the bar of every workspace. An
+  everywhere at once. "Default" stands there while there is no workspace yet, and the "+" in the bar starts a new
+  one; give it a name and it becomes a named one, which shows up in the overview and in the bar of every workspace. An
   agent stands in exactly one workspace: adding it to another moves it. One click jumps to the
   tab that shows a workspace – handy for spreading workspaces over several monitors. On the
   phone the bar switches in place.

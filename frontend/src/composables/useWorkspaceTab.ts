@@ -17,6 +17,11 @@ export interface TabState {
   name: string | null
 }
 
+/** The unnamed workspace is listed while it is shown, holds agents, or is the only one there is. */
+export function unnamedListed(namedCount: number, unnamedAgents: number, shown: boolean): boolean {
+  return shown || namedCount === 0 || unnamedAgents > 0
+}
+
 /** The workspace an agent lives in: its name, null for the unnamed one, undefined for none. */
 export function homeOf(workspaces: WorkspaceSet, agent: string): string | null | undefined {
   if (workspaces.unnamed.tabs.includes(agent)) return null

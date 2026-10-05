@@ -18,7 +18,7 @@ import { moveInList, useReorder } from '../composables/useReorder'
 import { cardKey, sessionName, useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
 import { useWorkspaceChanges } from '../composables/useWorkspaceChanges'
-import { homeOf, openWorkspace, useOtherTabs, workspaceRoute } from '../composables/useWorkspaceTab'
+import { homeOf, openWorkspace, unnamedListed, useOtherTabs, workspaceRoute } from '../composables/useWorkspaceTab'
 
 const { sessions, profiles, refresh } = useSessions()
 const toast = useToast()
@@ -109,6 +109,12 @@ const drag = reorder.drag
 // Named workspaces, opened again with one tap; the unnamed one has a button of its own.
 const workspaces = ref<WorkspaceSet | null>(null)
 const workspaceNames = computed(() => Object.keys(workspaces.value?.named ?? {}).sort())
+// The unnamed workspace is listed while it holds agents or is the only one; otherwise "+" starts one.
+const showUnnamed = computed(
+  () =>
+    workspaces.value !== null &&
+    unnamedListed(workspaceNames.value.length, workspaces.value.unnamed.tabs.length, false),
+)
 const deletingWorkspace = ref<string | null>(null)
 const removingWorktree = ref<AgentSession | null>(null)
 
@@ -209,6 +215,9 @@ function resume(session: AgentSession): void {
       <RouterLink to="/files" class="btn-primary w-full sm:w-auto">
         <AppIcon name="plus" />{{ $t('sessions.startNew') }}
       </RouterLink>
+      <button v-if="showUnnamed" class="btn-secondary btn-small" @click="openWorkspace(router, null)">
+        <AppIcon name="workspace" />{{ $t('workspace.unnamed') }}
+      </button>
       <span v-for="workspace in workspaceNames" :key="workspace" class="card flex items-center">
         <a
           :href="router.resolve({ path: '/workspace', query: { name: workspace } }).href"
@@ -228,8 +237,12 @@ function resume(session: AgentSession): void {
           ×
         </button>
       </span>
-      <button class="btn-secondary btn-small" @click="openWorkspace(router, null)">
-        <AppIcon name="workspace" />{{ $t('workspace.unnamed') }}
+      <button
+        v-if="workspaces !== null && !showUnnamed"
+        class="btn-secondary btn-small"
+        @click="openWorkspace(router, null)"
+      >
+        <AppIcon name="plus" />{{ $t('workspace.new') }}
       </button>
       <BroadcastButton />
     </div>

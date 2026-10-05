@@ -187,6 +187,7 @@
     "empty": "Noch kein Agent offen – über „+“ oben einen hinzufügen.",
     "resize": "Ziehen ändert die Breite, Doppelklick setzt sie zurück",
     "unnamed": "Unbenannt",
+    "new": "Neue Arbeitsfläche",
     "nameHint": "Name eingeben speichert die Arbeitsfläche, dann lässt sie sich aus der Übersicht wieder öffnen",
     "nameTaken": "Eine Arbeitsfläche „{name}“ gibt es schon.",
     "delete": "Arbeitsfläche löschen",
@@ -250,7 +251,7 @@
       {
         "title": "Arbeitsflächen",
         "items": [
-          "Alle Arbeitsflächen liegen auf dem Server: Jedes Gerät zeigt dasselbe, Änderungen erscheinen sofort überall. „Unbenannt“ ist die eine Fläche ohne Namen. Ein Agent steht in genau einer Fläche; fügst du ihn in einer anderen hinzu, wandert er aus der alten heraus.",
+          "Alle Arbeitsflächen liegen auf dem Server: Jedes Gerät zeigt dasselbe, Änderungen erscheinen sofort überall. Gibt es noch keine Fläche, steht „Unbenannt“ da; das gestrichelte „+“ in der Leiste (nicht das „+“ für Agenten) beginnt eine neue, ebenfalls unbenannte Fläche, und mit einem Namen wird sie gespeichert. Ein Agent steht in genau einer Fläche; fügst du ihn in einer anderen hinzu, wandert er aus der alten heraus.",
           "Oben einen Namen eintippen und Enter: Die unbenannte Fläche wird zu einer benannten (die unbenannte ist danach wieder leer) und erscheint in der Übersicht und in der Leiste jeder Arbeitsfläche.",
           "Ein Klick auf eine andere Fläche springt in den Tab, der sie schon zeigt (↗︎), sonst wechselt dieser Tab. Mittelklick öffnet einen neuen Tab.",
           "Springen findet nur Tabs, die aus Agent-Orc heraus geöffnet wurden – weitere Flächen also über die Knöpfe öffnen, dann lassen sie sich auch auf andere Monitore abkoppeln.",

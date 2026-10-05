@@ -58,8 +58,8 @@ aus wieder aufnehmen.
 - Mehrere Agenten als Spalten nebeneinander; Spaltenköpfe ziehen sortiert, die Trenner ziehen
   ändert die Breite.
 - Arbeitsflächen liegen auf dem Server: Jedes Gerät zeigt dasselbe, und eine Änderung erscheint
-  sofort überall. „Unbenannt“ ist die eine Fläche ohne Namen; mit einem Namen wird sie zu einer
-  benannten, die in der Übersicht und in der Leiste jeder Arbeitsfläche erscheint. Ein Agent
+  sofort überall. „Unbenannt“ steht da, solange es noch keine Fläche gibt, und das „+“ in der Leiste beginnt
+  eine neue; mit einem Namen wird sie zu einer benannten, die in der Übersicht und in der Leiste jeder Arbeitsfläche erscheint. Ein Agent
   steht in genau einer Fläche: Fügt man ihn in einer anderen hinzu, wandert er. Ein Klick
   springt in den Tab, der eine Fläche zeigt – praktisch, um Arbeitsflächen auf mehrere Monitore
   zu verteilen. Am Handy wechselt die Leiste im selben Fenster.
