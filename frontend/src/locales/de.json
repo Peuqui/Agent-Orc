@@ -184,7 +184,7 @@
     "move": "Ziehen zum Verschieben",
     "empty": "Noch kein Agent offen – über „+“ oben einen hinzufügen.",
     "resize": "Ziehen ändert die Breite, Doppelklick setzt sie zurück",
-    "unnamed": "Ohne Namen",
+    "unnamed": "Unbenannt",
     "nameHint": "Name eingeben speichert die Arbeitsfläche, dann lässt sie sich aus der Übersicht wieder öffnen",
     "nameTaken": "Eine Arbeitsfläche „{name}“ gibt es schon.",
     "delete": "Arbeitsfläche löschen",
