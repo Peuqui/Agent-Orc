@@ -492,8 +492,8 @@ async function rename(): Promise<void> {
       <button class="btn-icon" :aria-label="$t('workspace.fullscreen')" :title="$t('workspace.fullscreen')" @click="fullscreen = true">
         <AppIcon name="expand" />
       </button>
-      <!-- The device's settings (font size …) also here; phones reach the font size via ⋯. -->
-      <SettingsMenu v-if="!phone" />
+      <!-- The device's settings, the same menu as in every other page's header. -->
+      <SettingsMenu />
       <HelpButton />
     </header>
     <!-- The way back from fullscreen, small in the corner above the columns. -->

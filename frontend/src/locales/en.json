@@ -290,7 +290,7 @@
         "title": "Settings (☰)",
         "items": [
           "Font, font size, line spacing and lines per scroll step – stored on this device.",
-          "Notifications: switch them on per device in the ☰ menu. You then get a message when an agent is done or waits for a permission or an answer; tapping it opens the agent. Only over HTTPS; on iPhones only in the installed app.",
+          "Push messages: switch them on per device in the ☰ menu. You then get a message when an agent is done or waits for a permission or an answer; tapping it opens the agent. Only over HTTPS; on iPhones only in the installed app.",
           "Dictation engine: default or one of the engines the Whisper service offers (e.g. Parakeet: fast; Whisper) – per device."
         ]
       }
@@ -310,8 +310,8 @@
     }
   },
   "push": {
-    "title": "Notifications",
-    "hint": "On this device, when an agent is done or waits for a permission or an answer.",
+    "title": "Push messages to this device",
+    "hint": "A message to the device, even with the app closed, when an agent is done or waits for a permission or an answer. Holds for this device only; switch it on on each device.",
     "unsupported": "Only over HTTPS; on iPhones only in the installed app.",
     "denied": "Notifications are blocked in the browser – allow them in its site settings.",
     "test": "Send a test message",

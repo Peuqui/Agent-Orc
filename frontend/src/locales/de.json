@@ -290,7 +290,7 @@
         "title": "Einstellungen (☰)",
         "items": [
           "Schrift, Schriftgröße, Zeilenabstand und Scroll-Zeilen pro Schritt – gespeichert auf diesem Gerät.",
-          "Benachrichtigungen: im Menü ☰ pro Gerät einschalten. Dann kommt eine Nachricht, wenn ein Agent fertig ist oder auf eine Freigabe oder Antwort wartet; Antippen öffnet ihn. Nur über HTTPS, am iPhone nur in der installierten App.",
+          "Push-Meldungen: im Menü ☰ pro Gerät einschalten. Dann kommt eine Nachricht, wenn ein Agent fertig ist oder auf eine Freigabe oder Antwort wartet; Antippen öffnet ihn. Nur über HTTPS, am iPhone nur in der installierten App.",
           "Diktat-Engine: Standard oder eine der Engines, die der Whisper-Dienst anbietet (z. B. Parakeet: schnell; Whisper) – pro Gerät."
         ]
       }
@@ -310,8 +310,8 @@
     }
   },
   "push": {
-    "title": "Benachrichtigungen",
-    "hint": "Auf diesem Gerät, wenn ein Agent fertig ist oder auf eine Freigabe oder Antwort wartet.",
+    "title": "Push-Meldungen auf dieses Gerät",
+    "hint": "Meldung aufs Gerät, auch bei geschlossener App, wenn ein Agent fertig ist oder auf eine Freigabe oder Antwort wartet. Gilt nur für dieses Gerät und muss auf jedem Gerät einzeln eingeschaltet werden.",
     "unsupported": "Nur über HTTPS möglich, am iPhone nur in der installierten App.",
     "denied": "Benachrichtigungen sind im Browser blockiert – dort in den Website-Einstellungen erlauben.",
     "test": "Testnachricht senden",
