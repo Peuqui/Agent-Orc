@@ -155,6 +155,12 @@ export interface Workspace {
   active: string | null
 }
 
+/** The unnamed workspace and the named ones by name. */
+export interface WorkspaceSet {
+  unnamed: Workspace
+  named: Record<string, Workspace>
+}
+
 export interface FileEntry {
   name: string
   path: string
@@ -406,8 +412,11 @@ export const api = {
   /** A sample message to every subscribed device; returns how many took it. */
   testPush: () => request<{ delivered: number }>('POST', 'push/test'),
 
-  /** Named workspaces by name; an unnamed one stays in its browser tab. */
-  workspaces: () => request<Record<string, Workspace>>('GET', 'workspaces'),
+  /** Every workspace, as the server keeps them for all devices. */
+  workspaces: () => request<WorkspaceSet>('GET', 'workspaces'),
+  /** An agent leaves its other workspaces: it lives in one. */
+  storeUnnamedWorkspace: (workspace: Workspace) =>
+    request<void>('PUT', 'unnamed-workspace', { body: workspace }),
   storeWorkspace: (name: string, workspace: Workspace) =>
     request<void>('PUT', `workspaces/${encodeURIComponent(name)}`, { body: workspace }),
   deleteWorkspace: (name: string) => request<void>('DELETE', `workspaces/${encodeURIComponent(name)}`),

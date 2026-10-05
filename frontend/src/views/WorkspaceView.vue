@@ -2,7 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
-import { api, type Workspace } from '../api'
+import { api, type Workspace, type WorkspaceSet } from '../api'
 import { COLUMN_CLOSE_EVENT, COLUMN_FULLSCREEN_EVENT, COLUMN_SWIPE_EVENT } from '../columns'
 import AppIcon from '../components/AppIcon.vue'
 import HelpButton from '../components/HelpButton.vue'
@@ -13,9 +13,11 @@ import { useDismiss } from '../composables/useDismiss'
 import { moveInList, useReorder } from '../composables/useReorder'
 import { sessionName, useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
+import { useWorkspaceChanges } from '../composables/useWorkspaceChanges'
 import {
   announceWorkspace,
   emptyWorkspace,
+  homeOf,
   jumpToWorkspace,
   loadTabState,
   MIN_VISIBLE,
@@ -53,6 +55,8 @@ const name = ref<string | null>(null)
 /** The name field; becomes the name when it is left. */
 const nameInput = ref('')
 const savedNames = ref<string[]>([])
+// What the server held last: where each agent lives.
+const everyWorkspace = ref<WorkspaceSet | null>(null)
 const workspace = ref<Workspace>(emptyWorkspace())
 // Nothing is stored before the workspace has been loaded, or an empty one would replace it.
 const ready = ref(false)
@@ -76,6 +80,12 @@ const otherNames = computed(() =>
 const notOpen = computed(() =>
   sessions.value.filter((session) => session.running && !workspace.value.tabs.includes(session.id)),
 )
+
+/** The other workspace an agent lives in (picking it here moves it); null if it has none. */
+function livesElsewhere(id: string): string | null {
+  const home = everyWorkspace.value ? homeOf(everyWorkspace.value, id) : undefined
+  return home === undefined || home === name.value ? null : (home ?? t('workspace.unnamed'))
+}
 
 // On a phone one column fills the screen and a sideways swipe brings the next; the columns
 // and widths set on a computer stay as they are for it.
@@ -280,15 +290,33 @@ watch(
   },
 )
 
-/** Store the workspace where it lives; a divider is stored once it is let go. */
-function persist(): void {
-  if (!ready.value || resize.value !== null) return
-  if (name.value === null) tabState.unnamed = workspace.value
-  else void api.storeWorkspace(name.value, workspace.value).catch(toast.error)
+// What the server holds of this workspace, as text: a change is stored only when it differs,
+// and what arrived from the server is not stored back.
+let stored = ''
+// Counts the changes sent; an answer fetched before the latest one is already out of date.
+let sent = 0
+
+/** The tab remembers which workspace it shows; the other tabs hear it too. */
+function remember(): void {
   tabState.name = name.value
   saveTabState(tabState)
   nameWindow(name.value)
   announceWorkspace(name.value)
+}
+
+/** Store the workspace on the server, where every device shows it; a divider once it is let go. */
+function persist(): void {
+  if (!ready.value || resize.value !== null) return
+  remember()
+  const current = JSON.stringify(workspace.value)
+  if (current === stored) return
+  stored = current
+  sent++
+  const store =
+    name.value === null
+      ? api.storeUnnamedWorkspace(workspace.value)
+      : api.storeWorkspace(name.value, workspace.value)
+  void store.catch(toast.error)
 }
 
 onBeforeUnmount(() => announceWorkspace(null))
@@ -296,9 +324,38 @@ onBeforeUnmount(() => announceWorkspace(null))
 watch(workspace, persist, { deep: true })
 watch(resize, persist)
 
+/** Which agents are open here, in which order, as the server has it now; widths stay local. */
+function adoptAgents(agents: string[]): void {
+  const current = workspace.value
+  if (current.tabs.join() === agents.join()) return
+  for (const id of current.tabs.filter((tab) => !agents.includes(tab))) {
+    frameIds.value.splice(frameIds.value.indexOf(id), 1)
+    delete current.widths[id]
+  }
+  frameIds.value.push(...agents.filter((id) => !current.tabs.includes(id)))
+  current.tabs = [...agents]
+  if (current.active !== null && !agents.includes(current.active)) current.active = agents[0] ?? null
+  stored = JSON.stringify(current)
+}
+
+/** Another device changed a workspace: show what the server has. */
+async function fetchChanges(): Promise<void> {
+  if (!ready.value) return
+  const before = sent
+  const everything = await api.workspaces()
+  // A change of ours since is newer than this answer; the server's message about it follows.
+  if (before !== sent || !ready.value) return
+  everyWorkspace.value = everything
+  savedNames.value = Object.keys(everything.named)
+  const there = name.value === null ? everything.unnamed : everything.named[name.value]
+  adoptAgents((there ?? emptyWorkspace()).tabs)
+}
+
+useWorkspaceChanges(() => fetchChanges().catch(toast.error))
+
 /** The address names the workspace, so a reload or a bookmark opens the same one. */
 function showName(): void {
-  void router.replace({ path: '/workspace', query: name.value === null ? {} : { name: name.value } })
+  void router.replace({ path: '/workspace', query: name.value === null ? { unnamed: '1' } : { name: name.value } })
 }
 
 // Opened from the agent list, or a new agent started from the "+" menu.
@@ -314,36 +371,36 @@ watch(() => route.query.open, () => ready.value && openRequested())
 
 async function load(): Promise<void> {
   const requested = route.query.name
-  if (route.query.new !== undefined) {
-    name.value = null
-    tabState.unnamed = emptyWorkspace()
-  } else if (route.query.unnamed !== undefined) {
-    // This tab's own unnamed workspace as it is (an agent is added to it).
-    name.value = null
-  } else name.value = typeof requested === 'string' && requested !== '' ? requested : tabState.name
+  if (route.query.unnamed !== undefined) name.value = null
+  else name.value = typeof requested === 'string' && requested !== '' ? requested : tabState.name
   nameInput.value = name.value ?? ''
-  const named = await api.workspaces()
-  savedNames.value = Object.keys(named)
-  workspace.value = name.value === null ? tabState.unnamed : (named[name.value] ?? emptyWorkspace())
+  const everything = await api.workspaces()
+  everyWorkspace.value = everything
+  savedNames.value = Object.keys(everything.named)
+  const there = name.value === null ? everything.unnamed : everything.named[name.value]
+  workspace.value = there ?? emptyWorkspace()
+  stored = JSON.stringify(workspace.value)
   frameIds.value = [...workspace.value.tabs]
   ready.value = true
+  remember()
   if (typeof route.query.open === 'string') openRequested()
   else showName()
 }
 
 load().catch(toast.error)
 
-// Another address while the page stays open: a different name (or "new") loads that workspace,
-// none shows the current name again.
+// Another address while the page stays open: a different name (or the unnamed one) loads that
+// workspace, none shows the current name again.
 watch(
-  () => [route.query.name, route.query.new] as const,
-  ([requested, fresh]) => {
+  () => [route.query.name, route.query.unnamed] as const,
+  ([requested, unnamed]) => {
     if (!ready.value) return
-    if (fresh === undefined && requested === name.value) return
-    if (fresh === undefined && (typeof requested !== 'string' || requested === '')) {
+    const wanted = typeof requested === 'string' && requested !== '' ? requested : null
+    if (unnamed === undefined && wanted === null) {
       showName()
       return
     }
+    if ((unnamed !== undefined ? null : wanted) === name.value) return
     ready.value = false
     load().catch(toast.error)
   },
@@ -372,7 +429,9 @@ async function rename(): Promise<void> {
   savedNames.value = [...savedNames.value.filter((saved) => saved !== current), wanted]
   name.value = wanted
   nameInput.value = wanted
-  if (current === null) tabState.unnamed = emptyWorkspace()
+  // Stored just now, together with the agents leaving their old workspace.
+  stored = JSON.stringify(workspace.value)
+  sent++
   persist()
   showName()
 }
@@ -418,10 +477,11 @@ async function rename(): Promise<void> {
             <AppIcon name="workspace" />{{ other }}
           </button>
           <button
+            v-if="name !== null"
             class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-slate-400 hover:bg-slate-700"
             @click="((choosingWorkspace = false), openWorkspace(router, null))"
           >
-            <AppIcon name="plus" />{{ $t('workspace.new') }}
+            <AppIcon name="workspace" />{{ $t('workspace.unnamed') }}
           </button>
         </div>
       </div>
@@ -441,12 +501,11 @@ async function rename(): Promise<void> {
           {{ other }}<AppIcon v-if="otherTabs.has(other)" name="external" class="size-3.5 text-slate-500" />
         </a>
         <button
+          v-if="name !== null"
           class="flex shrink-0 items-center gap-1 rounded-md border border-dashed border-slate-700 px-2 py-0.5 text-sm text-slate-400 hover:bg-slate-800 hover:text-slate-100"
-          :title="$t('workspace.new')"
-          :aria-label="$t('workspace.new')"
           @click="openWorkspace(router, null)"
         >
-          <AppIcon name="plus" class="size-3.5" /><AppIcon name="workspace" class="size-4" />
+          {{ $t('workspace.unnamed') }}
         </button>
       </nav>
       <!-- Claude's usage, centred in the room between the workspaces and the buttons; it shrinks
@@ -472,6 +531,9 @@ async function rename(): Promise<void> {
             @click="open(session.id)"
           >
             {{ sessionName(session) }}
+            <span v-if="livesElsewhere(session.id)" class="text-xs text-slate-500">
+              · {{ $t('workspace.movesFrom', { name: livesElsewhere(session.id) }) }}
+            </span>
           </button>
           <p v-if="notOpen.length === 0" class="px-3 py-2 text-sm text-slate-500">{{ $t('workspace.allOpen') }}</p>
           <RouterLink :to="{ path: '/files', query: { workspace: '1' } }" class="btn-primary mt-1">

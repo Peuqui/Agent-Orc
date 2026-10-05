@@ -12,7 +12,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response, WebSocket, status
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -51,6 +51,7 @@ from agent_orc.effort import (
     Reasoning,
     set_reasoning_live,
 )
+from agent_orc.events import ChangeNotifier
 from agent_orc.handover import advise, read_auto, write_auto
 from agent_orc.history import (
     CONVERSATION_SEARCHES,
@@ -84,6 +85,8 @@ from agent_orc.sessions import (
     UnknownProfileError,
 )
 from agent_orc.state import (
+    UNNAMED_WORKSPACE,
+    place_workspace,
     read_card_order,
     read_extra_keys,
     read_prompt_templates,
@@ -273,6 +276,16 @@ class Workspace(BaseModel):
     # Columns set wider or narrower, as a share of the screen width.
     widths: dict[str, float]
     active: str | None
+
+
+class WorkspaceSet(BaseModel):
+    """Every workspace: the unnamed one, and the named ones by name."""
+
+    unnamed: Workspace
+    named: dict[str, Workspace]
+
+
+EMPTY_WORKSPACE = {"tabs": [], "visible": 1, "widths": {}, "active": None}
 
 
 class ScheduledPromptRequest(BaseModel):
@@ -667,18 +680,48 @@ def create_app(
     def arrange_cards(body: CardOrderRequest) -> None:
         write_card_order(body.folders)
 
+    workspace_changes = ChangeNotifier()
+
+    @app.get("/api/workspaces/events", dependencies=authenticated)
+    async def workspace_events() -> StreamingResponse:
+        """A message whenever a workspace changed, on any device."""
+        return StreamingResponse(
+            workspace_changes.stream(),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        )
+
     @app.get("/api/workspaces", dependencies=authenticated)
-    def workspaces() -> dict[str, Workspace]:
-        """Named workspaces, kept on the server so every device and browser tab can open them."""
-        return {name: Workspace(**stored) for name, stored in read_workspaces().items()}
+    def workspaces() -> WorkspaceSet:
+        """All workspaces, kept on the server so every device and browser tab shows the same."""
+        stored = read_workspaces()
+        unnamed = stored.get(UNNAMED_WORKSPACE, EMPTY_WORKSPACE)
+        return WorkspaceSet(
+            unnamed=Workspace(**unnamed),
+            named={
+                name: Workspace(**workspace)
+                for name, workspace in stored.items()
+                if name != UNNAMED_WORKSPACE
+            },
+        )
 
     @app.put(
         "/api/workspaces/{name}", dependencies=authenticated, status_code=status.HTTP_204_NO_CONTENT
     )
     def store_workspace(name: str, body: Workspace) -> None:
         stored = read_workspaces()
-        stored[name] = body.model_dump()
+        place_workspace(stored, name, body.model_dump())
         write_workspaces(stored)
+        workspace_changes.notify()
+
+    @app.put(
+        "/api/unnamed-workspace", dependencies=authenticated, status_code=status.HTTP_204_NO_CONTENT
+    )
+    def store_unnamed_workspace(body: Workspace) -> None:
+        stored = read_workspaces()
+        place_workspace(stored, UNNAMED_WORKSPACE, body.model_dump())
+        write_workspaces(stored)
+        workspace_changes.notify()
 
     @app.delete(
         "/api/workspaces/{name}", dependencies=authenticated, status_code=status.HTTP_204_NO_CONTENT
@@ -687,6 +730,7 @@ def create_app(
         stored = read_workspaces()
         stored.pop(name, None)
         write_workspaces(stored)
+        workspace_changes.notify()
 
     @app.get("/api/push/key", dependencies=authenticated)
     def push_key() -> dict[str, str]:

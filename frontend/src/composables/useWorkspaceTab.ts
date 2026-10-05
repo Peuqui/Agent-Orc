@@ -1,10 +1,9 @@
 import { computed, reactive } from 'vue'
 import type { Router } from 'vue-router'
-import type { Workspace } from '../api'
+import type { Workspace, WorkspaceSet } from '../api'
 
-// The workspace of this browser tab, so each tab can show other agents; a reload keeps it. A
-// named workspace lives on the server (every device and tab can open it by name), the tab then
-// only remembers the name.
+// The workspace this browser tab shows, so each tab can show another one; a reload keeps it.
+// All workspaces live on the server (every device shows the same); the tab only remembers which.
 const TAB_STATE_KEY = 'agent-orc-workspace-tab'
 // A named workspace's browser tab carries this window name, so opening it again brings that
 // tab to the front instead of a second one.
@@ -14,9 +13,14 @@ export const MIN_VISIBLE = 1
 const CHANNEL_NAME = 'agent-orc-workspaces'
 
 export interface TabState {
-  /** Name of the workspace this tab shows; null for its own unnamed one. */
+  /** Name of the workspace this tab shows; null for the unnamed one. */
   name: string | null
-  unnamed: Workspace
+}
+
+/** The workspace an agent lives in: its name, null for the unnamed one, undefined for none. */
+export function homeOf(workspaces: WorkspaceSet, agent: string): string | null | undefined {
+  if (workspaces.unnamed.tabs.includes(agent)) return null
+  return Object.entries(workspaces.named).find(([, workspace]) => workspace.tabs.includes(agent))?.[0]
 }
 
 export function emptyWorkspace(): Workspace {
@@ -25,7 +29,12 @@ export function emptyWorkspace(): Workspace {
 
 export function loadTabState(): TabState {
   const stored = sessionStorage.getItem(TAB_STATE_KEY)
-  return stored ? (JSON.parse(stored) as TabState) : { name: null, unnamed: emptyWorkspace() }
+  return { name: stored ? (JSON.parse(stored) as TabState).name : null }
+}
+
+/** This tab has shown a workspace before. */
+function tabShowsWorkspace(): boolean {
+  return sessionStorage.getItem(TAB_STATE_KEY) !== null
 }
 
 export function saveTabState(state: TabState): void {
@@ -43,18 +52,16 @@ const installedApp = window.matchMedia('(display-mode: standalone)').matches
 /** Workspaces get their own browser tabs, unless the installed app has none. */
 export const ownTabs = !installedApp
 
-/** Where a new agent opens: a named workspace, or the unnamed one of this browser tab. */
+/** Where a new agent opens: a named workspace, or the unnamed one. */
 export interface WorkspaceTarget {
   name: string | null
 }
 
-/**
- * Address of a named workspace, or of a new unnamed one (null). With an agent to open: the
- * tab's own unnamed workspace as it is (not a new one), or the named one.
- */
-function workspaceRoute(name: string | null, agent?: string) {
-  if (agent === undefined) return { path: '/workspace', query: name === null ? { new: '1' } : { name } }
-  return { path: '/workspace', query: name === null ? { unnamed: '1', open: agent } : { name, open: agent } }
+/** Address of a named workspace or the unnamed one (null), with an agent to open in it. */
+export function workspaceRoute(name: string | null, agent?: string) {
+  const query: Record<string, string> = name === null ? { unnamed: '1' } : { name }
+  if (agent !== undefined) query.open = agent
+  return { path: '/workspace', query }
 }
 
 /** Show the workspace in this window. */
@@ -65,8 +72,7 @@ function switchWorkspace(router: Router, name: string | null, agent?: string): v
 /**
  * Open the workspace in its own browser tab, or bring that tab to the front if it is open.
  * Browsers find a tab by its window name only among tabs opened from one another, so every
- * tab opens with this one as its opener (no "noopener"); a new unnamed one starts empty anyway
- * ("new" in its address), whatever state it inherits.
+ * tab opens with this one as its opener (no "noopener").
  */
 function openWorkspaceTab(router: Router, name: string | null, agent?: string): void {
   const address = router.resolve(workspaceRoute(name, agent)).href
@@ -130,15 +136,13 @@ export function jumpToWorkspace(router: Router, name: string | null): void {
 }
 
 /**
- * From the overview: in its tab if it has one; in this window if it shows no agents yet (or
- * is the installed app); otherwise in a new browser tab of its own.
+ * From the overview: in its tab if it has one; in this window if it has shown no workspace yet
+ * (or is the installed app); otherwise in a new browser tab of its own. The unnamed one always
+ * opens here.
  */
 export function openWorkspace(router: Router, name: string | null, agent?: string): void {
-  // The unnamed workspace of this tab takes the agent right here.
-  if (name === null && agent !== undefined) return switchWorkspace(router, null, agent)
+  if (name === null) return switchWorkspace(router, null, agent)
   if (openElsewhere(router, name, agent)) return
-  const state = loadTabState()
-  const free = state.name === null && state.unnamed.tabs.length === 0
-  if (!ownTabs || free || (name !== null && state.name === name)) switchWorkspace(router, name, agent)
+  if (!ownTabs || !tabShowsWorkspace() || loadTabState().name === name) switchWorkspace(router, name, agent)
   else openWorkspaceTab(router, name, agent)
 }

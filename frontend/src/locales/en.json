@@ -191,7 +191,7 @@
     "nameTaken": "A workspace \"{name}\" exists already.",
     "delete": "Delete workspace",
     "confirmDelete": "Delete workspace \"{name}\"? The agents keep running.",
-    "new": "New workspace",
+    "movesFrom": "from “{name}”",
     "switchHere": "Switch to it in this tab (middle click: new tab)",
     "openElsewhere": "Open in another tab – jumps there",
     "others": "Other workspaces",
@@ -250,8 +250,8 @@
       {
         "title": "Workspaces",
         "items": [
-          "Every browser tab has its own workspace; a reload keeps it.",
-          "Type a name at the top and press Enter: the workspace is saved and shows up in the overview and in the bar of every workspace.",
+          "All workspaces live on the server: every device shows the same, and changes appear everywhere at once. “Default” is the one workspace without a name. An agent stands in exactly one workspace; add it to another and it leaves the old one.",
+          "Type a name at the top and press Enter: the unnamed workspace becomes a named one (the unnamed one is empty again afterwards) and shows up in the overview and in the bar of every workspace.",
           "Clicking another workspace jumps to the tab that already shows it (↗︎), otherwise this tab switches. A middle click opens a new tab.",
           "Jumping only finds tabs opened from within Agent-Orc – so open further workspaces through the buttons; they can then be detached onto other monitors.",
           "On the phone (installed app) the bar switches within the same window.",

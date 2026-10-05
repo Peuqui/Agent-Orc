@@ -29,7 +29,7 @@ function defaultBranch(): string {
   const part = (value: number) => String(value).padStart(2, '0')
   return `agent-${now.getFullYear()}${part(now.getMonth() + 1)}${part(now.getDate())}-${part(now.getHours())}${part(now.getMinutes())}`
 }
-// The workspace to open the agent in: 'list' (none), 'unnamed' (this tab's), or 'named:<name>'.
+// The workspace to open the agent in: 'list' (none), 'unnamed', or 'named:<name>'.
 const LIST_TARGET = 'list'
 const UNNAMED_TARGET = 'unnamed'
 const NAMED_PREFIX = 'named:'
@@ -142,7 +142,7 @@ watch(model, async (chosen) => {
 })
 
 onMounted(async () => {
-  api.workspaces().then((named) => (workspaceNames.value = Object.keys(named).sort()), toast.error)
+  api.workspaces().then((everything) => (workspaceNames.value = Object.keys(everything.named).sort()), toast.error)
   if (profiles.value.length === 0) await loadProfiles()
   selected.value = profiles.value[0]?.name ?? ''
 })

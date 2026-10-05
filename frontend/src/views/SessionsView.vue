@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { api, type AgentSession, type Approval, type Reasoning } from '../api'
+import { api, type AgentSession, type Approval, type Reasoning, type WorkspaceSet } from '../api'
 import AppIcon from '../components/AppIcon.vue'
 import BaseDialog from '../components/BaseDialog.vue'
 import BroadcastButton from '../components/BroadcastButton.vue'
@@ -17,7 +17,8 @@ import ScheduledList from '../components/ScheduledList.vue'
 import { moveInList, useReorder } from '../composables/useReorder'
 import { cardKey, sessionName, useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
-import { openWorkspace, useOtherTabs } from '../composables/useWorkspaceTab'
+import { useWorkspaceChanges } from '../composables/useWorkspaceChanges'
+import { homeOf, openWorkspace, useOtherTabs, workspaceRoute } from '../composables/useWorkspaceTab'
 
 const { sessions, profiles, refresh } = useSessions()
 const toast = useToast()
@@ -105,8 +106,9 @@ const reorder = useReorder({
 })
 const drag = reorder.drag
 
-// Named workspaces, opened again with one tap; the unnamed one of a browser tab is not listed.
-const workspaceNames = ref<string[]>([])
+// Named workspaces, opened again with one tap; the unnamed one has a button of its own.
+const workspaces = ref<WorkspaceSet | null>(null)
+const workspaceNames = computed(() => Object.keys(workspaces.value?.named ?? {}).sort())
 const deletingWorkspace = ref<string | null>(null)
 const removingWorktree = ref<AgentSession | null>(null)
 
@@ -121,16 +123,23 @@ function confirmRemoveWorktree(): void {
 }
 const otherTabs = useOtherTabs()
 
-function loadWorkspaceNames(): void {
-  api.workspaces().then((named) => (workspaceNames.value = Object.keys(named).sort()), toast.error)
+function loadWorkspaces(): void {
+  api.workspaces().then((everything) => (workspaces.value = everything), toast.error)
 }
 
-loadWorkspaceNames()
+// Loads once the stream connects, and again whenever a workspace changed on any device.
+useWorkspaceChanges(loadWorkspaces)
+
+/** An agent opens in the workspace it lives in; one without any opens in this tab's. */
+function terminalRoute(agent: string) {
+  const home = workspaces.value ? homeOf(workspaces.value, agent) : undefined
+  return home === undefined ? { path: '/workspace', query: { open: agent } } : workspaceRoute(home, agent)
+}
 
 function confirmDeleteWorkspace(): void {
   const workspace = deletingWorkspace.value
   deletingWorkspace.value = null
-  if (workspace !== null) api.deleteWorkspace(workspace).then(loadWorkspaceNames, toast.error)
+  if (workspace !== null) api.deleteWorkspace(workspace).then(loadWorkspaces, toast.error)
 }
 
 /** Known modes by name; a mode added in the config shows as it is written there. */
@@ -220,7 +229,7 @@ function resume(session: AgentSession): void {
         </button>
       </span>
       <button class="btn-secondary btn-small" @click="openWorkspace(router, null)">
-        <AppIcon name="plus" />{{ $t('workspace.new') }}
+        <AppIcon name="workspace" />{{ $t('workspace.unnamed') }}
       </button>
       <BroadcastButton />
     </div>
@@ -373,7 +382,7 @@ function resume(session: AgentSession): void {
         <div class="flex flex-wrap gap-1.5">
           <RouterLink
             v-if="session.running"
-            :to="{ path: '/workspace', query: { open: session.id } }"
+            :to="terminalRoute(session.id)"
             class="btn-primary btn-small"
             :title="$t('sessions.terminal')"
             :aria-label="$t('sessions.terminal')"

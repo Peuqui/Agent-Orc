@@ -9,6 +9,8 @@ CARD_ORDER_FILE = "card-order.json"
 WORKSPACES_FILE = "workspaces.json"
 PROMPT_TEMPLATES_FILE = "prompt-templates.json"
 EXTRA_KEYS_FILE = "extra-keys.json"
+# Key of the unnamed workspace in the workspaces file; a name the user gives is never empty.
+UNNAMED_WORKSPACE = ""
 
 
 def state_dir() -> Path:
@@ -39,7 +41,8 @@ def write_card_order(folders: list[str]) -> None:
 
 
 def read_workspaces() -> dict[str, Any]:
-    """Named workspaces (open agents, columns, widths) by name; empty until one is named."""
+    """Workspaces (open agents, columns, widths) by name, the unnamed one under
+    UNNAMED_WORKSPACE; empty until one is arranged."""
     path = state_dir() / WORKSPACES_FILE
     if not path.is_file():
         return {}
@@ -49,6 +52,18 @@ def read_workspaces() -> dict[str, Any]:
 
 def write_workspaces(workspaces: dict[str, Any]) -> None:
     write_atomically(state_dir() / WORKSPACES_FILE, json.dumps(workspaces))
+
+
+def place_workspace(workspaces: dict[str, Any], key: str, workspace: dict[str, Any]) -> None:
+    """Store a workspace; its agents leave every other one, as an agent lives in one workspace."""
+    workspaces[key] = workspace
+    for other_key, other in workspaces.items():
+        if other_key == key:
+            continue
+        other["tabs"] = [agent for agent in other["tabs"] if agent not in workspace["tabs"]]
+        other["widths"] = {a: w for a, w in other["widths"].items() if a in other["tabs"]}
+        if other["active"] not in other["tabs"]:
+            other["active"] = other["tabs"][0] if other["tabs"] else None
 
 
 def read_prompt_templates() -> list[dict[str, str]]:

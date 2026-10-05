@@ -57,10 +57,12 @@ aus wieder aufnehmen.
 **Arbeitsflächen**
 - Mehrere Agenten als Spalten nebeneinander; Spaltenköpfe ziehen sortiert, die Trenner ziehen
   ändert die Breite.
-- Jeder Browser-Tab hat seine eigene Arbeitsfläche. Mit einem Namen wird sie gespeichert,
-  erscheint in der Übersicht und in der Leiste jeder Arbeitsfläche, und ein Klick springt in den
-  Tab, der sie zeigt – praktisch, um Arbeitsflächen auf mehrere Monitore zu verteilen. Am Handy
-  wechselt die Leiste im selben Fenster.
+- Arbeitsflächen liegen auf dem Server: Jedes Gerät zeigt dasselbe, und eine Änderung erscheint
+  sofort überall. „Unbenannt“ ist die eine Fläche ohne Namen; mit einem Namen wird sie zu einer
+  benannten, die in der Übersicht und in der Leiste jeder Arbeitsfläche erscheint. Ein Agent
+  steht in genau einer Fläche: Fügt man ihn in einer anderen hinzu, wandert er. Ein Klick
+  springt in den Tab, der eine Fläche zeigt – praktisch, um Arbeitsflächen auf mehrere Monitore
+  zu verteilen. Am Handy wechselt die Leiste im selben Fenster.
 - Tastenkürzel am Rechner: Alt+Umschalt+1 … 9 für die Spalten, Alt+Umschalt+← / → für die
   Arbeitsflächen.
 - Am Handy eine Spalte auf einmal: seitlich im Terminal wischen holt die nächste; ein Vollbild

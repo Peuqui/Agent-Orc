@@ -51,9 +51,12 @@ detaches: the agents keep working, and you pick them up again from any device.
 **Workspaces**
 - Several agents side by side as columns; drag the column heads to sort them and the dividers
   to set their width.
-- Every browser tab has its own workspace. Give it a name and it is saved, shows up in the
-  overview and in the bar of every workspace, and one click jumps to the tab that shows it –
-  handy for spreading workspaces over several monitors. On the phone the bar switches in place.
+- Workspaces live on the server, so every device shows the same and a change appears
+  everywhere at once. "Default" is the one workspace without a name; give it a name and it
+  becomes a named one, which shows up in the overview and in the bar of every workspace. An
+  agent stands in exactly one workspace: adding it to another moves it. One click jumps to the
+  tab that shows a workspace – handy for spreading workspaces over several monitors. On the
+  phone the bar switches in place.
 - Shortcuts on a computer: Alt+Shift+1 … 9 for the columns, Alt+Shift+← / → for the
   workspaces.
 - On a phone one column at a time: a sideways swipe in the terminal brings the next; a

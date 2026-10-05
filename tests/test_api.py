@@ -1,5 +1,6 @@
 """End-to-end tests of the HTTP API with a real tmux server and a throwaway home."""
 
+import asyncio
 import json
 import os
 import signal
@@ -19,6 +20,7 @@ from agent_orc.approvals import open_request, wait_for_decision
 from agent_orc.auth import new_credentials
 from agent_orc.config import Config, DictationConfig, default_config_text
 from agent_orc.context import store_activity, store_status
+from agent_orc.events import ChangeNotifier
 from agent_orc.history import claude_project_dir
 from agent_orc.schedule import mark_limited, read_scheduled
 from agent_orc.sessions import SESSION_ENV
@@ -1050,18 +1052,45 @@ def test_card_order_is_kept(
     assert client.get("/api/card-order").json() == ["/w/b", "/w/a"]
 
 
-def test_named_workspaces_are_kept_and_deleted(
+def test_workspaces_are_kept_and_deleted(
     client: TestClient, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
-    assert client.get("/api/workspaces").json() == {}
+    empty = {"tabs": [], "visible": 1, "widths": {}, "active": None}
+    assert client.get("/api/workspaces").json() == {"unnamed": empty, "named": {}}
     left = {"tabs": ["a", "b"], "visible": 2, "widths": {"a": 0.3}, "active": "b"}
     assert client.put("/api/workspaces/Links", json=left).status_code == 204
     right = {"tabs": [], "visible": 1, "widths": {}, "active": None}
     assert client.put("/api/workspaces/Rechts", json=right).status_code == 204
-    assert client.get("/api/workspaces").json() == {"Links": left, "Rechts": right}
+    loose = {"tabs": ["c"], "visible": 1, "widths": {}, "active": "c"}
+    assert client.put("/api/unnamed-workspace", json=loose).status_code == 204
+    assert client.get("/api/workspaces").json() == {
+        "unnamed": loose,
+        "named": {"Links": left, "Rechts": right},
+    }
     assert client.delete("/api/workspaces/Links").status_code == 204
-    assert client.get("/api/workspaces").json() == {"Rechts": right}
+    assert client.get("/api/workspaces").json() == {
+        "unnamed": loose,
+        "named": {"Rechts": right},
+    }
+
+
+def test_an_agent_lives_in_one_workspace(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+    left = {"tabs": ["a", "b"], "visible": 2, "widths": {"a": 0.3, "b": 0.7}, "active": "a"}
+    assert client.put("/api/workspaces/Links", json=left).status_code == 204
+    moved = {"tabs": ["a"], "visible": 1, "widths": {}, "active": "a"}
+    assert client.put("/api/unnamed-workspace", json=moved).status_code == 204
+    shown = client.get("/api/workspaces").json()
+    assert shown["unnamed"] == moved
+    assert shown["named"]["Links"] == {
+        "tabs": ["b"],
+        "visible": 2,
+        "widths": {"b": 0.7},
+        "active": "b",
+    }
 
 
 def test_attachment_lands_in_the_agents_folder(client: TestClient, home: Path) -> None:
@@ -1363,3 +1392,17 @@ def test_a_chosen_model_gets_its_levels_and_environment(client: TestClient, home
     # A restart keeps the model and gives the folder's level again.
     client.post(f"/api/sessions/{thinker['id']}/restart")
     assert wait_for_text(client, thinker["id"], "resumed thinker [high]")
+
+
+def test_change_notifier_wakes_listeners_from_other_threads() -> None:
+    async def scenario() -> list[str]:
+        notifier = ChangeNotifier()
+        stream = notifier.stream()
+        received = [await anext(stream)]
+        await asyncio.to_thread(notifier.notify)
+        received.append(await anext(stream))
+        await stream.aclose()
+        assert not notifier._listeners
+        return received
+
+    assert asyncio.run(scenario()) == [": connected\n\n", "data: changed\n\n"]

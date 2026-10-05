@@ -191,7 +191,7 @@
     "nameTaken": "Eine Arbeitsfläche „{name}“ gibt es schon.",
     "delete": "Arbeitsfläche löschen",
     "confirmDelete": "Arbeitsfläche „{name}“ löschen? Die Agenten laufen weiter.",
-    "new": "Neue Arbeitsfläche",
+    "movesFrom": "aus „{name}“",
     "switchHere": "In diesem Tab hierher wechseln (Mittelklick: neuer Tab)",
     "openElsewhere": "In einem anderen Tab offen – springt dorthin",
     "others": "Andere Arbeitsflächen",
@@ -250,8 +250,8 @@
       {
         "title": "Arbeitsflächen",
         "items": [
-          "Jeder Browser-Tab hat seine eigene Arbeitsfläche; ein Neuladen behält sie.",
-          "Oben einen Namen eintippen und Enter: Die Fläche ist gespeichert und erscheint in der Übersicht und in der Leiste jeder Arbeitsfläche.",
+          "Alle Arbeitsflächen liegen auf dem Server: Jedes Gerät zeigt dasselbe, Änderungen erscheinen sofort überall. „Unbenannt“ ist die eine Fläche ohne Namen. Ein Agent steht in genau einer Fläche; fügst du ihn in einer anderen hinzu, wandert er aus der alten heraus.",
+          "Oben einen Namen eintippen und Enter: Die unbenannte Fläche wird zu einer benannten (die unbenannte ist danach wieder leer) und erscheint in der Übersicht und in der Leiste jeder Arbeitsfläche.",
           "Ein Klick auf eine andere Fläche springt in den Tab, der sie schon zeigt (↗︎), sonst wechselt dieser Tab. Mittelklick öffnet einen neuen Tab.",
           "Springen findet nur Tabs, die aus Agent-Orc heraus geöffnet wurden – weitere Flächen also über die Knöpfe öffnen, dann lassen sie sich auch auf andere Monitore abkoppeln.",
           "Am Handy (installierte App) wechselt die Leiste im selben Fenster.",
