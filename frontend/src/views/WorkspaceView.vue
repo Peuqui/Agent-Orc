@@ -240,6 +240,17 @@ const reorder = useReorder({
 })
 const drag = reorder.drag
 
+/** Scrolls the row to the next (1) or previous (-1) column start, where the swipe was made. */
+function scrollColumns(direction: 1 | -1): void {
+  const box = row.value
+  if (!box) return
+  const edge = box.getBoundingClientRect().left
+  // Where each column starts, relative to the left edge of the screen: negative is scrolled past.
+  const starts = workspace.value.tabs.map((id) => (frameOf(id)?.getBoundingClientRect().left ?? 0) - edge)
+  const target = direction === 1 ? starts.find((start) => start > 1) : starts.findLast((start) => start < -1)
+  if (target !== undefined) box.scrollBy({ left: target, behavior: 'smooth' })
+}
+
 // The iframes share this page's origin, so their pointer events can be watched directly: a
 // touch inside a column makes it the active one (a focus change alone could be the terminal's
 // own autofocus).
@@ -254,9 +265,11 @@ function onFrameLoad(id: string): void {
   )
   // Typing mostly happens inside a column: its shortcuts are caught there, before the terminal.
   frameWindow?.addEventListener('keydown', onShortcut, true)
-  // A sideways swipe in its terminal brings the neighbouring column (phones).
+  // A sideways swipe in any terminal moves the columns: phones bring the neighbouring column,
+  // wider screens scroll the row to the next column start.
   frameWindow?.addEventListener(COLUMN_SWIPE_EVENT, (event) => {
     const direction = (event as CustomEvent<1 | -1>).detail
+    if (!phone.value) return scrollColumns(direction)
     const neighbour = workspace.value.tabs[workspace.value.tabs.indexOf(id) + direction]
     if (neighbour !== undefined) void activate(neighbour)
   })
