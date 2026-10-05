@@ -28,7 +28,7 @@ import {
   useOtherTabs,
   workspaceRoute,
 } from '../composables/useWorkspaceTab'
-import { PHONE_WIDTH, TOUCH_FIRST } from '../device'
+import { PHONE_WIDTH, TABS_WIDTH, TOUCH_FIRST } from '../device'
 
 // Several agents side by side. Every open agent is one column: its tab is the head of that
 // column, both in one grid, so tab order and column order can never differ. The user picks
@@ -99,6 +99,17 @@ const followPhoneWidth = (event: MediaQueryListEvent): void => {
 }
 PHONE_WIDTH.addEventListener('change', followPhoneWidth)
 onBeforeUnmount(() => PHONE_WIDTH.removeEventListener('change', followPhoneWidth))
+// The workspaces as tabs in the header: on computers and wherever one row has room for them.
+const tabsInHeader = ref(!PHONE_WIDTH.matches || TABS_WIDTH.matches)
+const followTabsWidth = (): void => {
+  tabsInHeader.value = !PHONE_WIDTH.matches || TABS_WIDTH.matches
+}
+PHONE_WIDTH.addEventListener('change', followTabsWidth)
+TABS_WIDTH.addEventListener('change', followTabsWidth)
+onBeforeUnmount(() => {
+  PHONE_WIDTH.removeEventListener('change', followTabsWidth)
+  TABS_WIDTH.removeEventListener('change', followTabsWidth)
+})
 
 // Only terminal and input field: no header, tabs, terminal bar or extra keys (the columns hear
 // it as an event); where the browser offers it, its own fullscreen too.
@@ -482,7 +493,7 @@ async function rename(): Promise<void> {
            row (this break starts it). -->
       <div v-if="!phone" class="order-last h-0 basis-full md:hidden" />
       <!-- Phones: the name, and the others in a list behind it, so everything fits in one row. -->
-      <template v-if="phone">
+      <template v-if="!tabsInHeader">
         <WorkspaceNameField
           v-model="nameInput"
           class="flex-1"
@@ -510,13 +521,14 @@ async function rename(): Promise<void> {
           </div>
         </div>
       </template>
-      <!-- Computers: all workspaces as tabs in a fixed order, the one shown is the name field.
-           One click on another goes to the tab that shows it, otherwise here; a middle click
-           opens a new tab. Narrow windows: in a second row, swipeable. -->
+      <!-- Computers and upright tablets: all workspaces as tabs in a fixed order, the one shown
+           is the name field. One click on another goes to the tab that shows it, otherwise
+           here; a middle click opens a new tab. Narrow windows: in a second row, swipeable. -->
       <template v-else>
-        <div class="order-last h-0 basis-full md:hidden" />
+        <div v-if="!phone" class="order-last h-0 basis-full md:hidden" />
         <nav
-          class="flex min-w-0 items-center gap-1 overflow-x-auto [scrollbar-width:none] max-md:order-last max-md:flex-1 md:shrink-0"
+          class="flex min-w-0 items-center gap-1 overflow-x-auto [scrollbar-width:none]"
+          :class="phone ? 'flex-1' : 'max-md:order-last max-md:flex-1 md:shrink-0'"
         >
           <template v-for="tab in workspaceOrder" :key="tab ?? ''">
             <WorkspaceNameField
