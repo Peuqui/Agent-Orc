@@ -454,7 +454,7 @@ async function rename(): Promise<void> {
       <template v-if="phone">
         <WorkspaceNameField
           v-model="nameInput"
-          class="flex-1 placeholder:text-slate-500"
+          class="flex-1 rounded-md px-2 py-1 font-semibold text-amber-300 placeholder:font-normal placeholder:text-slate-500 hover:bg-slate-800 focus:bg-slate-800"
           :placeholder="$t('workspace.unnamed')"
           :hint="$t('workspace.nameHint')"
           @rename="rename"
@@ -488,7 +488,7 @@ async function rename(): Promise<void> {
             <WorkspaceNameField
               v-if="tab === name"
               v-model="nameInput"
-              class="w-28 shrink-0 border border-amber-400/70 bg-slate-800 placeholder:text-amber-300/70 lg:w-44"
+              class="shrink-0 rounded-md border border-amber-400/70 px-2 py-1 text-sm text-slate-100 placeholder:text-slate-300 field-sizing-content"
               :placeholder="$t('workspace.unnamed')"
               :hint="$t('workspace.nameHint')"
               @rename="rename"

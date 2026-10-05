@@ -9,7 +9,7 @@ const emit = defineEmits<{ rename: [] }>()
   <input
     v-model="name"
     size="12"
-    class="min-w-0 shrink rounded-md bg-transparent px-2 py-1 font-semibold text-amber-300 placeholder:font-normal hover:bg-slate-800 focus:bg-slate-800 focus:outline-none"
+    class="min-w-0 shrink bg-transparent focus:outline-none"
     :placeholder="placeholder"
     :title="hint"
     :aria-label="hint"
