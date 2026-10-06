@@ -9,6 +9,7 @@ CARD_ORDER_FILE = "card-order.json"
 WORKSPACES_FILE = "workspaces.json"
 PROMPT_TEMPLATES_FILE = "prompt-templates.json"
 EXTRA_KEYS_FILE = "extra-keys.json"
+NOTEBOOKS_FILE = "notebooks.json"
 # Key of the unnamed workspace in the workspaces file; a name the user gives is never empty.
 UNNAMED_WORKSPACE = ""
 
@@ -139,3 +140,21 @@ def write_extra_keys(rows: list[list[dict[str, Any]]]) -> None:
 
 def reset_extra_keys() -> None:
     (state_dir() / EXTRA_KEYS_FILE).unlink(missing_ok=True)
+
+
+def read_notebooks() -> dict[str, Any]:
+    """Notebooks by name, in the order the user keeps them; empty until one is created."""
+    path = state_dir() / NOTEBOOKS_FILE
+    if not path.is_file():
+        return {}
+    notebooks: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
+    return notebooks
+
+
+def write_notebooks(notebooks: dict[str, Any]) -> None:
+    write_atomically(state_dir() / NOTEBOOKS_FILE, json.dumps(notebooks))
+
+
+def rename_notebook(notebooks: dict[str, Any], old: str, new: str) -> dict[str, Any]:
+    """The notebooks with `old` renamed to `new`, at the same position."""
+    return {(new if name == old else name): notebook for name, notebook in notebooks.items()}

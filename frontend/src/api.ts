@@ -44,6 +44,23 @@ export interface PromptTemplate {
   text: string
 }
 
+/** A note of a notebook; the text is Markdown. */
+export interface Note {
+  title: string
+  text: string
+}
+
+export interface NoteFolder {
+  name: string
+  notes: Note[]
+}
+
+/** Notes, loose and in folders; one tab of the notes page. */
+export interface Notebook {
+  notes: Note[]
+  folders: NoteFolder[]
+}
+
 /** Claude's token consumption of one day, project and model. */
 export interface ConsumptionRow {
   /** YYYY-MM-DD, local time. */
@@ -328,10 +345,15 @@ export const api = {
     worktree: string | null = null,
     /** For profiles with a choice of models (AgentProfile.models). */
     model: string | null = null,
+    /** The workspace the agent joins (null: the one it is in; "": the unnamed one). */
+    workspace: string | null = null,
   ) =>
     request<AgentSession>('POST', 'sessions', {
-      body: { profile, path, model, resume, ...reasoning, conversation, worktree },
+      body: { profile, path, model, resume, ...reasoning, conversation, worktree, workspace },
     }),
+  /** Moves an agent to a workspace ("": the unnamed one); the server keeps it, every device shows it. */
+  moveSession: (sessionId: string, workspace: string) =>
+    request<void>('PUT', `sessions/${encodeURIComponent(sessionId)}/workspace`, { body: { workspace } }),
   /** The models a profile offers at start (e.g. the local ones of llama-swap). */
   agentModels: (profile: string) => request<ModelChoice[]>('GET', `agents/${encodeURIComponent(profile)}/models`),
   /** The levels the profile takes with this model; empty: no level at all. */
@@ -420,6 +442,15 @@ export const api = {
   storeWorkspace: (name: string, workspace: Workspace) =>
     request<void>('PUT', `workspaces/${encodeURIComponent(name)}`, { body: workspace }),
   deleteWorkspace: (name: string) => request<void>('DELETE', `workspaces/${encodeURIComponent(name)}`),
+
+  /** Every notebook by name, in tab order, as the server keeps them for all devices. */
+  notebooks: () => request<Record<string, Notebook>>('GET', 'notebooks'),
+  /** Stores the whole notebook; a new name adds a tab. */
+  storeNotebook: (name: string, notebook: Notebook) =>
+    request<void>('PUT', `notebooks/${encodeURIComponent(name)}`, { body: notebook }),
+  renameNotebook: (name: string, newName: string) =>
+    request<void>('PUT', `notebooks/${encodeURIComponent(name)}/name`, { body: { name: newName } }),
+  deleteNotebook: (name: string) => request<void>('DELETE', `notebooks/${encodeURIComponent(name)}`),
 
   /** Store a file in the agent's folder; returns its path there, as the agent reads it. */
   attach: (sessionId: string, file: File) =>

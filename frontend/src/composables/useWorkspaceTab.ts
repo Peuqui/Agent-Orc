@@ -75,11 +75,6 @@ const installedApp = window.matchMedia('(display-mode: standalone)').matches
 /** Workspaces get their own browser tabs, unless the installed app has none. */
 export const ownTabs = !installedApp
 
-/** Where a new agent opens: a named workspace, or the unnamed one. */
-export interface WorkspaceTarget {
-  name: string | null
-}
-
 /** Address of a named workspace or the unnamed one (null), with an agent to open in it. */
 export function workspaceRoute(name: string | null, agent?: string) {
   const query: Record<string, string> = name === null ? { unnamed: '1' } : { name }

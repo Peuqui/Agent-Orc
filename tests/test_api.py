@@ -1508,3 +1508,28 @@ def test_change_notifier_wakes_listeners_from_other_threads() -> None:
         return received
 
     assert asyncio.run(scenario()) == [": connected\n\n", "data: changed\n\n"]
+
+
+def test_notebooks_are_kept_renamed_and_deleted(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+    assert client.get("/api/notebooks").json() == {}
+    ideas = {
+        "notes": [{"title": "Link", "text": "https://example.org"}],
+        "folders": [{"name": "Code", "notes": [{"title": "Snippet", "text": "```\nls\n```"}]}],
+    }
+    empty: dict[str, list[object]] = {"notes": [], "folders": []}
+    assert client.put("/api/notebooks/Ideen", json=ideas).status_code == 204
+    assert client.put("/api/notebooks/Arbeit", json=empty).status_code == 204
+    assert client.get("/api/notebooks").json() == {"Ideen": ideas, "Arbeit": empty}
+    renamed = client.put("/api/notebooks/Ideen/name", json={"name": "Einfälle"})
+    assert renamed.status_code == 204
+    # The tab keeps its position.
+    assert list(client.get("/api/notebooks").json()) == ["Einfälle", "Arbeit"]
+    taken = client.put("/api/notebooks/Einfälle/name", json={"name": "Arbeit"})
+    assert taken.status_code == 409
+    assert client.put("/api/notebooks/Gibt-es-nicht/name", json={"name": "X"}).status_code == 404
+    assert client.delete("/api/notebooks/Arbeit").status_code == 204
+    assert client.delete("/api/notebooks/Arbeit").status_code == 404
+    assert list(client.get("/api/notebooks").json()) == ["Einfälle"]

@@ -94,12 +94,15 @@ from agent_orc.state import (
     place_workspace,
     read_card_order,
     read_extra_keys,
+    read_notebooks,
     read_prompt_templates,
     read_workspaces,
     remove_workspace,
+    rename_notebook,
     reset_extra_keys,
     write_card_order,
     write_extra_keys,
+    write_notebooks,
     write_prompt_templates,
     write_workspaces,
 )
@@ -150,6 +153,14 @@ class UnknownWorkspaceError(LookupError):
     """No workspace of this name."""
 
 
+class UnknownNotebookError(LookupError):
+    """No notebook of this name."""
+
+
+class NotebookExistsError(ValueError):
+    """A notebook of this name exists already."""
+
+
 class FolderBusyError(RuntimeError):
     """An agent session runs in this folder or below it."""
 
@@ -168,6 +179,8 @@ ERROR_STATUS: dict[type[Exception], int] = {
     ProfileCommandError: status.HTTP_503_SERVICE_UNAVAILABLE,
     UnknownModelError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     UnknownWorkspaceError: status.HTTP_404_NOT_FOUND,
+    UnknownNotebookError: status.HTTP_404_NOT_FOUND,
+    NotebookExistsError: status.HTTP_409_CONFLICT,
     SessionAlreadyRunningError: status.HTTP_409_CONFLICT,
     files.InvalidNameError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     InvalidEffortError: status.HTTP_422_UNPROCESSABLE_CONTENT,
@@ -236,6 +249,28 @@ class StartSessionRequest(BaseModel):
     worktree: str | None = None
     # The workspace the agent joins ("" the unnamed one); None: it keeps the one it is in.
     workspace: str | None = None
+
+
+class Note(BaseModel):
+    title: str
+    # Markdown.
+    text: str
+
+
+class NoteFolder(BaseModel):
+    name: str
+    notes: list[Note]
+
+
+class Notebook(BaseModel):
+    """Notes, loose and in folders; one tab of the notes page."""
+
+    notes: list[Note]
+    folders: list[NoteFolder]
+
+
+class NotebookNameRequest(BaseModel):
+    name: str
 
 
 class AssignWorkspaceRequest(BaseModel):
@@ -764,6 +799,56 @@ def create_app(
             raise SessionNotFoundError(session_id)
         check_workspace(body.workspace)
         assign_workspace(session_id, body.workspace)
+
+    notebook_changes = ChangeNotifier()
+
+    @app.get("/api/notebooks/events", dependencies=authenticated)
+    async def notebook_events() -> StreamingResponse:
+        """A message whenever a notebook changed, on any device."""
+        return StreamingResponse(
+            notebook_changes.stream(),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"},
+        )
+
+    @app.get("/api/notebooks", dependencies=authenticated)
+    def notebooks() -> dict[str, Notebook]:
+        """All notebooks, kept on the server so every device shows the same."""
+        return {name: Notebook(**notebook) for name, notebook in read_notebooks().items()}
+
+    @app.put(
+        "/api/notebooks/{name}", dependencies=authenticated, status_code=status.HTTP_204_NO_CONTENT
+    )
+    def store_notebook(name: str, body: Notebook) -> None:
+        """Stores the whole notebook, creating it at the end of the tabs if it is new."""
+        stored = read_notebooks()
+        stored[name] = body.model_dump()
+        write_notebooks(stored)
+        notebook_changes.notify()
+
+    @app.put(
+        "/api/notebooks/{name}/name",
+        dependencies=authenticated,
+        status_code=status.HTTP_204_NO_CONTENT,
+    )
+    def rename_notebook_route(name: str, body: NotebookNameRequest) -> None:
+        stored = read_notebooks()
+        if name not in stored:
+            raise UnknownNotebookError(name)
+        if body.name != name and body.name in stored:
+            raise NotebookExistsError(body.name)
+        write_notebooks(rename_notebook(stored, name, body.name))
+        notebook_changes.notify()
+
+    @app.delete(
+        "/api/notebooks/{name}", dependencies=authenticated, status_code=status.HTTP_204_NO_CONTENT
+    )
+    def delete_notebook(name: str) -> None:
+        stored = read_notebooks()
+        if stored.pop(name, None) is None:
+            raise UnknownNotebookError(name)
+        write_notebooks(stored)
+        notebook_changes.notify()
 
     @app.delete(
         "/api/workspaces/{name}", dependencies=authenticated, status_code=status.HTTP_204_NO_CONTENT

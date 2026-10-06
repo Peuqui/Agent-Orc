@@ -142,6 +142,15 @@ function terminalRoute(agent: string) {
   return home === undefined ? { path: '/workspace', query: { open: agent } } : workspaceRoute(home, agent)
 }
 
+/** The agent's workspace as the selection's value: "" is the unnamed one. */
+function workspaceOf(agent: string): string {
+  return (workspaces.value ? homeOf(workspaces.value, agent) : null) ?? ''
+}
+
+function moveToWorkspace(session: AgentSession, workspace: string): void {
+  void run(() => api.moveSession(session.id, workspace))
+}
+
 function confirmDeleteWorkspace(): void {
   const workspace = deletingWorkspace.value
   deletingWorkspace.value = null
@@ -298,6 +307,17 @@ function resume(session: AgentSession): void {
                     : $t('sessions.exited', { code: session.exit_status })
               }}
             </span>
+            <label v-if="workspaces" class="flex items-center gap-1 text-xs text-slate-400" :title="$t('sessions.workspace')">
+              <select
+                class="h-7 rounded-lg border border-slate-600 bg-slate-800 pr-1 pl-1.5 text-xs text-slate-200"
+                :aria-label="$t('sessions.workspace')"
+                :value="workspaceOf(session.id)"
+                @change="moveToWorkspace(session, ($event.target as HTMLSelectElement).value)"
+              >
+                <option value="">{{ $t('workspace.unnamed') }}</option>
+                <option v-for="name in workspaceNames" :key="name" :value="name">{{ name }}</option>
+              </select>
+            </label>
             <label
               v-if="permissionModes.get(session.profile)?.length"
               class="flex items-center gap-1 text-xs text-slate-400"

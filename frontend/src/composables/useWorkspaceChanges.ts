@@ -1,12 +1,6 @@
-import { onBeforeUnmount } from 'vue'
+import { useServerEvents } from './useServerEvents'
 
-/**
- * Calls `onChange` whenever a workspace changed on any device (server-sent events), and once
- * the stream (re)connects, so nothing missed while it was down stays missed.
- */
+/** Calls `onChange` whenever a workspace changed on any device, and when the stream connects. */
 export function useWorkspaceChanges(onChange: () => void): void {
-  const source = new EventSource(new URL('api/workspaces/events', document.baseURI))
-  source.onopen = onChange
-  source.onmessage = onChange
-  onBeforeUnmount(() => source.close())
+  useServerEvents('api/workspaces/events', onChange)
 }

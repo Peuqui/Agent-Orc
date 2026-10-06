@@ -3,6 +3,7 @@ import FilesView from './views/FilesView.vue'
 import SessionsView from './views/SessionsView.vue'
 import TrashView from './views/TrashView.vue'
 import ConsumptionView from './views/ConsumptionView.vue'
+import NotesView from './views/NotesView.vue'
 
 // Editor and terminal bring large libraries (CodeMirror, xterm.js), so they load on demand.
 const EditorView = () => import('./views/EditorView.vue')
@@ -16,6 +17,7 @@ export const router = createRouter({
   routes: [
     { path: '/', redirect: '/sessions' },
     { path: '/sessions', component: SessionsView },
+    { path: '/notes', component: NotesView },
     { path: '/files', component: FilesView },
     { path: '/trash', component: TrashView },
     { path: '/consumption', component: ConsumptionView },

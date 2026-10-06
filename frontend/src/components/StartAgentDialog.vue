@@ -5,14 +5,13 @@ import { api, type Conversation, type ConversationHit, type ModelChoice, type Re
 import { useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
 import { baseName, formatDate, formatSize } from '../format'
-import type { WorkspaceTarget } from '../composables/useWorkspaceTab'
 import BaseDialog from './BaseDialog.vue'
 import ReasoningControl from './ReasoningControl.vue'
 import ToggleSwitch from './ToggleSwitch.vue'
 
-// defaultTarget: where the agent opens once started (null: the agent list).
-const props = defineProps<{ path: string; defaultTarget: WorkspaceTarget | null }>()
-const emit = defineEmits<{ started: [id: string, target: WorkspaceTarget | null]; close: [] }>()
+// defaultWorkspace: the workspace preselected for the agent (null: the unnamed one).
+const props = defineProps<{ path: string; defaultWorkspace: string | null }>()
+const emit = defineEmits<{ started: [id: string]; close: [] }>()
 
 const { profiles, loadProfiles, refresh } = useSessions()
 const toast = useToast()
@@ -29,19 +28,10 @@ function defaultBranch(): string {
   const part = (value: number) => String(value).padStart(2, '0')
   return `agent-${now.getFullYear()}${part(now.getMonth() + 1)}${part(now.getDate())}-${part(now.getHours())}${part(now.getMinutes())}`
 }
-// The workspace to open the agent in: 'list' (none), 'unnamed', or 'named:<name>'.
-const LIST_TARGET = 'list'
+// The workspace the agent joins: 'unnamed', or 'named:<name>'.
 const UNNAMED_TARGET = 'unnamed'
 const NAMED_PREFIX = 'named:'
-function targetKey(target: WorkspaceTarget | null): string {
-  if (target === null) return LIST_TARGET
-  return target.name === null ? UNNAMED_TARGET : NAMED_PREFIX + target.name
-}
-function targetOf(key: string): WorkspaceTarget | null {
-  if (key === LIST_TARGET) return null
-  return { name: key === UNNAMED_TARGET ? null : key.slice(NAMED_PREFIX.length) }
-}
-const workspaceTarget = ref(targetKey(props.defaultTarget))
+const workspaceTarget = ref(props.defaultWorkspace === null ? UNNAMED_TARGET : NAMED_PREFIX + props.defaultWorkspace)
 const workspaceNames = ref<string[]>([])
 const conversations = ref<Conversation[]>([])
 // Searching the earlier conversations' messages; shorter queries just show the list.
@@ -158,9 +148,10 @@ async function start(resume: boolean, conversation: string | null = null): Promi
       conversation,
       inWorktree.value ? branch.value.trim() : null,
       model.value,
+      workspaceTarget.value === UNNAMED_TARGET ? '' : workspaceTarget.value.slice(NAMED_PREFIX.length),
     )
     await refresh()
-    emit('started', session.id, targetOf(workspaceTarget.value))
+    emit('started', session.id)
   } catch (error) {
     toast.error(error)
   } finally {
@@ -204,7 +195,6 @@ async function start(resume: boolean, conversation: string | null = null): Promi
     <label class="mb-5 flex flex-col gap-1 text-sm text-slate-400">
       {{ $t('agent.workspace') }}
       <select v-model="workspaceTarget" class="input text-sm text-slate-200">
-        <option :value="LIST_TARGET">{{ $t('agent.workspaceNone') }}</option>
         <option :value="UNNAMED_TARGET">{{ $t('workspace.unnamed') }}</option>
         <option v-for="name in workspaceNames" :key="name" :value="NAMED_PREFIX + name">{{ name }}</option>
       </select>
