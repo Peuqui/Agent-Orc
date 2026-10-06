@@ -7,6 +7,7 @@ transcript is read from its end, so a long conversation costs no more than the t
 
 import base64
 import json
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -17,6 +18,14 @@ from agent_orc.history import lines_from_end, message_texts
 SCAN_BYTES = 32 * 1024 * 1024
 # The transcript entries that matter here; the user's typing ahead is in the queue operations.
 KEPT_TYPES = ("user", "assistant", "queue-operation", "attachment")
+# Claude Code wraps pasted text in marks for the model ("<pasted_content id=...>"); the user
+# does not type them and does not want to read them.
+PASTE_MARK = re.compile(r"</?pasted_content\b[^>]*>")
+
+
+def _typed_text(text: str) -> str:
+    """What the user wrote, without the marks Claude Code puts around pasted text."""
+    return PASTE_MARK.sub("", text).strip()
 
 
 @dataclass
@@ -61,9 +70,9 @@ def _prompt_parts(prompt: str | list[dict[str, Any]]) -> tuple[str, int]:
     """The text of a prompt and how many pictures came with it: Claude writes a prompt with
     pictures as a list of content blocks."""
     if isinstance(prompt, str):
-        return prompt.strip(), 0
+        return _typed_text(prompt), 0
     texts = [str(block.get("text", "")) for block in prompt if block.get("type") == "text"]
-    return "\n\n".join(texts).strip(), sum(block.get("type") == "image" for block in prompt)
+    return _typed_text("\n\n".join(texts)), sum(block.get("type") == "image" for block in prompt)
 
 
 def _is_human_message(entry: dict[str, Any]) -> bool:
@@ -114,7 +123,9 @@ def read_turns(transcript: Path, limit: int) -> list[Turn]:
         elif _is_human_message(entry):
             content = entry["message"]["content"]
             images = _prompt_parts(content)[1] if isinstance(content, list) else 0
-            turns.append(Turn(entry["uuid"], entry["timestamp"], _entry_text(entry), images))
+            turns.append(
+                Turn(entry["uuid"], entry["timestamp"], _typed_text(_entry_text(entry)), images)
+            )
         elif turns and _entry_text(entry):
             text = AnswerText(id=entry["uuid"], time=entry["timestamp"], text=_entry_text(entry))
             turns[-1].texts.append(text)
@@ -123,7 +134,9 @@ def read_turns(transcript: Path, limit: int) -> list[Turn]:
             if entry.get("content"):
                 time = entry["timestamp"]
                 turns[-1].interjections.append(
-                    Interjection(f"queued-{time}", time, entry["content"], 0, pending=True)
+                    Interjection(
+                        f"queued-{time}", time, _typed_text(entry["content"]), 0, pending=True
+                    )
                 )
     return turns
 

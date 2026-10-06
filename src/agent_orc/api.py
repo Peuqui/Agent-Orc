@@ -804,9 +804,7 @@ def create_app(
         """All workspaces, kept on the server so every device and browser tab shows the same."""
         stored = read_workspaces()
         living = {session.id for session in sessions.list()}
-        shown = {
-            name: keep_living_agents(workspace, living) for name, workspace in stored.items()
-        }
+        shown = {name: keep_living_agents(workspace, living) for name, workspace in stored.items()}
         unnamed = shown.get(UNNAMED_WORKSPACE, empty_workspace())
         return WorkspaceSet(
             unnamed=Workspace(**add_unassigned_agents(shown, living, unnamed)),

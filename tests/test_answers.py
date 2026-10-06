@@ -170,3 +170,18 @@ def test_a_picture_of_a_request_or_of_a_message_typed_during_an_answer_is_read(
     for missing in (("u1", 2), ("u3", 0), ("nope", 0)):
         with pytest.raises(FileNotFoundError):
             read_image(transcript, *missing)
+
+
+def test_the_marks_around_pasted_text_are_not_shown(tmp_path: Path) -> None:
+    pasted = '\n\n<pasted_content id="4b3d">\nEingefügt\n</pasted_content id="4b3d">\n'
+    entries = [
+        entry("user", "u1", pasted),
+        entry("assistant", "a2", [{"type": "text", "text": "Ich erkläre <pasted_content> hier."}]),
+        queue("enqueue", "q3", pasted),
+        delivered("d4", pasted),
+    ]
+    turn = read_turns(write(tmp_path / "t.jsonl", entries), limit=10)[0]
+    assert turn.prompt == "Eingefügt"
+    # An answer that speaks about the marks keeps its words.
+    assert turn.texts[0].text == "Ich erkläre <pasted_content> hier."
+    assert [i.text for i in turn.interjections] == ["Eingefügt", "Eingefügt"]
