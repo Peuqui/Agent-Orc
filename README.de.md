@@ -82,7 +82,7 @@ aus wieder aufnehmen.
 - Notizbücher als Reiter, je mit losen Notizen und Ordnern; sie liegen wie die Arbeitsflächen auf dem Server.
 - Eine Notiz ist Markdown mit Formatierungsleiste (fett, kursiv, Überschrift, Liste, Code, Link),
   einer Suche über Titel und Text und Text und Ansicht nebeneinander am Rechner und Tablet.
-- Eine Notiz kopieren oder ins Eingabefeld eines oder mehrerer Agenten legen (auf Wunsch abgeschickt).
+- Per Diktat (Whisper) schreiben, eine Notiz kopieren oder ins Eingabefeld eines oder mehrerer Agenten legen (auf Wunsch abgeschickt).
 
 **Terminal**
 - Ein normales Eingabefeld unter dem Terminal, damit Handytastatur, Autokorrektur und Diktat

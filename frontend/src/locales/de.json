@@ -273,7 +273,7 @@
         "items": [
           "Notizbücher als Reiter: „+“ legt eines an, Stift benennt es um, Papierkorb löscht es samt Notizen. Sie liegen auf dem Server, jedes Gerät zeigt dasselbe.",
           "Ein Notizbuch hat lose Notizen und Ordner (Ordner-Symbol neben der Suche; eine Ebene). Die Suche durchsucht Titel und Text. Eine Notiz lässt sich über das Feld „Kein Ordner“ in einen Ordner verschieben.",
-          "Eine Notiz ist Markdown. Die Leiste (B, I, H, •, </>, Link) setzt die Zeichen um die Auswahl oder in die Zeile; die Ansicht zeigt das Ergebnis, Zeilenumbrüche bleiben erhalten. Auf Rechner und Tablet stehen Text und Ansicht nebeneinander, am Handy schaltet „Ansicht/Bearbeiten“ um. Eine Notiz ohne Text öffnet zum Schreiben.",
+          "Eine Notiz ist Markdown. Die Leiste (B, I, H, •, </>, Link) setzt die Zeichen um die Auswahl oder in die Zeile; die Ansicht zeigt das Ergebnis, Zeilenumbrüche bleiben erhalten. Auf Rechner und Tablet stehen Text und Ansicht nebeneinander, am Handy schaltet „Ansicht/Bearbeiten“ um. Eine Notiz ohne Text öffnet zum Schreiben. Das Mikrofon rechts neben der Leiste diktiert an die Cursorstelle (Whisper mit GPU oder CPU, wie im Terminal).",
           "„Kopieren“ legt den Text in die Zwischenablage. „An Agent“ fügt ihn in das Eingabefeld der gewählten Agenten ein; mit „Abschicken“ wird er zugleich gesendet, sonst schickst du ihn im Terminal selbst ab.",
           "Wird dasselbe Notizbuch auf zwei Geräten gleichzeitig bearbeitet, gilt der zuletzt gespeicherte Stand; ein Gerät mit eigenen offenen Änderungen übernimmt fremde nicht."
         ]

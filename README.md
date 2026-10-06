@@ -76,7 +76,7 @@ detaches: the agents keep working, and you pick them up again from any device.
 - Notebooks as tabs, each with loose notes and folders, kept on the server like the workspaces.
 - A note is Markdown with a formatting bar (bold, italic, heading, list, code, link), a
   search over titles and text, and text and view side by side on computers and tablets.
-- Copy a note, or put it into the input of one or more agents (optionally submitted).
+- Dictate into a note (Whisper), copy it, or put it into the input of one or more agents (optionally submitted).
 
 **Terminal**
 - A plain input field below the terminal, so phone keyboards, autocorrect and dictation work;

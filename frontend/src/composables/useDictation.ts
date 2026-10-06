@@ -1,4 +1,4 @@
-import { computed, ref } from 'vue'
+import { computed, ref, type UnwrapNestedRefs } from 'vue'
 import { useSettings } from './useSettings'
 import { api, type DictationDevice } from '../api'
 import { START_BEEP, STOP_BEEP, playBeep } from '../sounds'
@@ -166,3 +166,6 @@ export function useDictation(
     toggleBrowser,
   }
 }
+
+/** What the dictation buttons need: the result of useDictation, wrapped in reactive(). */
+export type Dictation = UnwrapNestedRefs<ReturnType<typeof useDictation>>

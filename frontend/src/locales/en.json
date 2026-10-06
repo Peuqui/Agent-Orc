@@ -273,7 +273,7 @@
         "items": [
           "Notebooks as tabs: “+” creates one, the pencil renames it, the bin deletes it with its notes. They live on the server, every device shows the same.",
           "A notebook has loose notes and folders (folder icon next to the search; one level). The search covers titles and text. A note moves into a folder with the “No folder” field.",
-          "A note is Markdown. The bar (B, I, H, •, </>, link) writes the characters around the selection or into the line; the view shows the result, line breaks are kept. On computers and tablets the text and the view sit side by side, on phones “View/Edit” switches. A note without text opens for writing.",
+          "A note is Markdown. The bar (B, I, H, •, </>, link) writes the characters around the selection or into the line; the view shows the result, line breaks are kept. On computers and tablets the text and the view sit side by side, on phones “View/Edit” switches. A note without text opens for writing. The microphone right of the bar dictates at the cursor (Whisper on GPU or CPU, as in the terminal).",
           "“Copy” puts the text on the clipboard. “To agent” inserts it into the input of the chosen agents; with “Submit” it is sent at the same time, otherwise you send it in the terminal yourself.",
           "If the same notebook is edited on two devices at once, the state saved last wins; a device with edits of its own on the way does not take over others’."
         ]

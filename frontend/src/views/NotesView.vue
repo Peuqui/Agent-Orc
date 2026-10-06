@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { api, type Note, type Notebook } from '../api'
 import AppIcon from '../components/AppIcon.vue'
 import BroadcastDialog from '../components/BroadcastDialog.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
+import DictationMic from '../components/DictationMic.vue'
+import DictationRetry from '../components/DictationRetry.vue'
 import InputDialog from '../components/InputDialog.vue'
+import { useDictation } from '../composables/useDictation'
 import { useServerEvents } from '../composables/useServerEvents'
 import { useToast } from '../composables/useToast'
 import { renderMarkdown } from '../markdown'
@@ -247,6 +250,23 @@ const placeholders = computed<Placeholders>(() => ({
 
 const field = ref<HTMLTextAreaElement>()
 
+// Dictation (Whisper or the browser) writes at the cursor of the text, as if typed there.
+const dictation = reactive(useDictation('notes', insertDictated, toast.error))
+
+async function insertDictated(dictated: string): Promise<void> {
+  const note = selected.value
+  const element = field.value
+  if (!note || !element) return
+  const at = element.selectionEnd
+  const before = note.text.slice(0, at)
+  const glue = before && !/\s$/.test(before) ? ' ' : ''
+  note.text = before + glue + dictated + note.text.slice(at)
+  changed()
+  await nextTick()
+  const caret = before.length + glue.length + dictated.length
+  element.setSelectionRange(caret, caret)
+}
+
 async function format(id: FormatId): Promise<void> {
   const element = field.value
   const note = selected.value
@@ -378,6 +398,11 @@ function firstLine(note: Note): string {
               >
                 {{ item.label }}
               </button>
+              <!-- Right of the formatting keys: speech input into the text. -->
+              <span class="ml-auto flex items-end gap-1">
+                <DictationRetry :dictation="dictation" />
+                <DictationMic :dictation="dictation" />
+              </span>
             </div>
             <textarea
               ref="field"

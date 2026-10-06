@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { api } from '../api'
 import { MESSAGE_FIELD_ATTRIBUTE } from '../columns'
 import { useDictation } from '../composables/useDictation'
@@ -7,6 +7,8 @@ import { useDismiss } from '../composables/useDismiss'
 import { useToast } from '../composables/useToast'
 import { TOUCH_FIRST } from '../device'
 import AppIcon from './AppIcon.vue'
+import DictationMic from './DictationMic.vue'
+import DictationRetry from './DictationRetry.vue'
 import PromptTemplates from './PromptTemplates.vue'
 
 const props = defineProps<{ sessionId: string }>()
@@ -22,18 +24,7 @@ watch(text, (current) => {
 })
 const field = ref<HTMLTextAreaElement>()
 
-const {
-  state,
-  device,
-  whisper,
-  microphone,
-  browserFallback,
-  failedAudio,
-  retry,
-  toggleDevice,
-  toggleMicrophone,
-  toggleBrowser,
-} = useDictation(props.sessionId, async (dictated) => {
+const dictation = reactive(useDictation(props.sessionId, async (dictated) => {
   text.value = text.value ? `${text.value} ${dictated}` : dictated
   // Ready to send with Enter (or to correct), without clicking into the field first. Not on
   // touch screens: the focus would open the on-screen keyboard; there the send button is ready.
@@ -43,15 +34,7 @@ const {
   if (!input) return
   input.focus()
   input.setSelectionRange(input.value.length, input.value.length)
-}, toast.error)
-
-// Without Whisper the microphone itself listens through the browser.
-const microphoneActive = computed(
-  () => state.value === 'recording' || (whisper.value === false && state.value === 'listening'),
-)
-const microphoneBusy = computed(
-  () => state.value === 'transcribing' || (whisper.value === true && state.value === 'listening'),
-)
+}, toast.error))
 
 defineExpose({ focus: () => field.value?.focus() })
 
@@ -249,27 +232,7 @@ function onKeydown(event: KeyboardEvent): void {
     </div>
   </div>
   <form class="flex items-end gap-1 p-1" @submit.prevent="submit">
-    <button
-      v-if="failedAudio"
-      type="button"
-      class="btn-secondary min-h-10 px-1.5 text-xs"
-      :disabled="state !== 'idle'"
-      :title="$t('dictation.retryHint')"
-      @click="retry"
-    >
-      {{ $t('dictation.retry') }}
-    </button>
-    <button
-      v-if="browserFallback"
-      type="button"
-      class="btn-secondary min-h-10 px-1.5 text-xs"
-      :class="{ 'animate-pulse text-red-400': state === 'listening' }"
-      :disabled="state === 'recording' || state === 'transcribing'"
-      :title="$t('dictation.browserHint')"
-      @click="toggleBrowser"
-    >
-      {{ state === 'listening' ? $t('dictation.browserStop') : $t('dictation.browser') }}
-    </button>
+    <DictationRetry :dictation="dictation" />
     <div ref="attachMenu" class="relative">
       <button
         type="button"
@@ -306,41 +269,14 @@ function onKeydown(event: KeyboardEvent): void {
       <input ref="imageInput" type="file" accept="image/*" class="hidden" @change="onFileChosen" />
       <input ref="fileInput" type="file" class="hidden" @change="onFileChosen" />
     </div>
-    <template v-if="microphone">
-      <!-- Device switch first and small, the microphone right beside the text field and large:
-           the one used most is the easiest to hit. -->
-      <button
-        v-if="whisper"
-        type="button"
-        class="mb-2 ml-0.5 h-6 rounded border border-slate-600 px-1 text-[0.6rem] font-semibold tracking-wide text-slate-300 hover:border-slate-400"
-        :title="$t('dictation.device')"
-        :disabled="state !== 'idle'"
-        @click="toggleDevice"
-      >
-        {{ device === 'cuda' ? 'GPU' : 'CPU' }}
-      </button>
-      <button
-        type="button"
-        class="btn-icon size-11"
-        :class="[
-          microphoneActive ? 'animate-pulse text-red-500' : 'text-amber-300',
-          { 'opacity-50': microphoneBusy },
-        ]"
-        :disabled="microphoneBusy"
-        :aria-label="microphoneActive ? $t('dictation.stop') : $t('dictation.start')"
-        :title="microphoneActive ? $t('dictation.stop') : $t('dictation.start')"
-        @click="toggleMicrophone"
-      >
-        <AppIcon name="mic" class="size-6" />
-      </button>
-    </template>
+    <DictationMic :dictation="dictation" />
     <textarea
       ref="field"
       v-model="text"
       :[MESSAGE_FIELD_ATTRIBUTE]="''"
       rows="1"
       class="input max-h-[40dvh] min-h-10 flex-1 resize-none py-2"
-      :placeholder="state === 'transcribing' ? $t('dictation.transcribing') : $t('terminal.placeholder')"
+      :placeholder="dictation.state === 'transcribing' ? $t('dictation.transcribing') : $t('terminal.placeholder')"
       enterkeyhint="send"
       @keydown="onKeydown"
     />
