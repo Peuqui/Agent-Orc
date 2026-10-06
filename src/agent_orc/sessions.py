@@ -57,6 +57,11 @@ class SessionNotFoundError(SessionError):
     pass
 
 
+class MissingModelError(SessionError):
+    """The command needs a model that was not chosen, e.g. a session started before the profile
+    offered a choice."""
+
+
 @dataclass(frozen=True)
 class AgentSession:
     id: str
@@ -91,6 +96,8 @@ def exact_target(session_id: str) -> str:
 def build_command(arguments: list[str], name: str, model: str | None) -> list[str]:
     command = [argument.replace(NAME_PLACEHOLDER, name) for argument in arguments]
     if model is None:
+        if any(MODEL_PLACEHOLDER in argument for argument in command):
+            raise MissingModelError(name)
         return command
     return [argument.replace(MODEL_PLACEHOLDER, model) for argument in command]
 

@@ -9,6 +9,7 @@ import pytest
 from agent_orc.config import AgentProfile
 from agent_orc.sessions import (
     AgentSession,
+    MissingModelError,
     SessionAlreadyRunningError,
     SessionManager,
     SessionNotFoundError,
@@ -167,6 +168,11 @@ def test_session_id_is_tmux_safe_and_unique() -> None:
 def test_build_command_replaces_placeholders() -> None:
     assert build_command(["x", "--name", "{name}"], "demo", None) == ["x", "--name", "demo"]
     assert build_command(["x", "{model}"], "demo", "qwen") == ["x", "qwen"]
+
+
+def test_build_command_refuses_a_missing_model() -> None:
+    with pytest.raises(MissingModelError):
+        build_command(["x", "--model", "{model}"], "demo", None)
 
 
 def test_server_passes_mouse_clipboard_and_focus_on(

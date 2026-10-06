@@ -79,6 +79,7 @@ from agent_orc.schedule import (
 from agent_orc.scope import AccessScope, OutsideScopeError
 from agent_orc.sessions import (
     AgentSession,
+    MissingModelError,
     SessionAlreadyRunningError,
     SessionManager,
     SessionNotFoundError,
@@ -172,6 +173,7 @@ ERROR_STATUS: dict[type[Exception], int] = {
     files.FileTooLargeError: status.HTTP_413_CONTENT_TOO_LARGE,
     files.NotTextError: status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
     SessionNotFoundError: status.HTTP_404_NOT_FOUND,
+    MissingModelError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     UnknownProfileError: status.HTTP_404_NOT_FOUND,
     TrashEntryNotFoundError: status.HTTP_404_NOT_FOUND,
     ConversationNotFoundError: status.HTTP_404_NOT_FOUND,
