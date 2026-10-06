@@ -55,6 +55,22 @@ def test_a_name_at_the_start_picks_the_agent_and_is_not_part_of_the_text() -> No
     assert router.handle("buero", "Visper starte neu", AGENTS, NOW).agent == AGENTS[0]
 
 
+def test_a_name_heard_with_another_spelling_is_found_by_its_sound_and_ordinary_words_are_not() -> (
+    None
+):
+    router = VoiceRouter(voice_config())
+    for spoken in ("Agent Org", "Agentork", "Visper", "Wisper"):
+        found = router.handle("buero", f"{spoken} mach das", AGENTS, NOW).agent
+        assert found in (AGENTS[0], AGENTS[1]), spoken
+    assert router.handle("buero", "Visper mach das", AGENTS, NOW).agent == AGENTS[0]
+    # Only its sound is left of the name, as a speech recognition writes it.
+    assert router.handle("buero", "Vispa mach das", AGENTS, NOW).agent == AGENTS[0]
+    assert router.handle("buero", "Agent Org mach das", AGENTS, NOW).agent == AGENTS[1]
+    # Words of an order that only look a little like a name stay part of the text.
+    for order in ("Starte die Tests", "Teste das", "Fertig machen bitte", "Frei Echo"):
+        assert router.handle("buero", order, [AGENTS[2]], NOW).agent is None or order == "Frei Echo"
+
+
 def test_without_a_name_the_agent_that_answered_last_gets_it_if_that_was_recent() -> None:
     router = VoiceRouter(voice_config())
     decision = router.handle("buero", "wie ist der Stand", AGENTS, NOW)

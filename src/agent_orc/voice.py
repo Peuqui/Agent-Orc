@@ -12,9 +12,12 @@ from dataclasses import dataclass
 from enum import Enum
 
 from agent_orc.config import VoiceConfig
+from agent_orc.phonetics import cologne
 
-MAX_NAME_WORDS = 3
+MAX_NAME_WORDS = 4
 _NOT_LETTERS = re.compile(r"[\W_]+")
+# The parts of a folder name: words, camel case humps, numbers ("FreeEchoDot2": Free Echo Dot 2).
+_NAME_PART = re.compile(r"[A-Z]?[a-z]+|[A-Z]+(?![a-z])|\d+")
 
 
 @dataclass(frozen=True)
@@ -49,6 +52,17 @@ class _Pending:
 
 def _squash(text: str) -> str:
     return _NOT_LETTERS.sub("", text.casefold())
+
+
+def _similarity(spoken: str, spoken_words: int, name: str) -> float:
+    """How alike a spoken name and an agent's name are: by letters (a typo) or by sound (another
+    spelling), whichever fits better. The sound only counts for as many words as the name has,
+    since it drops vowels and would otherwise take a few small words of an order for a name."""
+    by_letters = difflib.SequenceMatcher(None, _squash(spoken), _squash(name)).ratio()
+    if spoken_words > len(_NAME_PART.findall(name)):
+        return by_letters
+    by_sound = difflib.SequenceMatcher(None, cologne(spoken), cologne(name)).ratio()
+    return max(by_letters, by_sound)
 
 
 def _first_word(text: str) -> str:
@@ -88,9 +102,9 @@ class VoiceRouter:
         words = text.split()
         best: tuple[float, VoiceAgent | None, int] = (0.0, None, 0)
         for count in range(1, min(MAX_NAME_WORDS, len(words) - 1) + 1):
-            spoken = _squash(" ".join(words[:count]))
+            spoken = " ".join(words[:count])
             for agent in agents:
-                similarity = difflib.SequenceMatcher(None, spoken, _squash(agent.name)).ratio()
+                similarity = _similarity(spoken, count, agent.name)
                 if similarity > best[0]:
                     best = (similarity, agent, count)
         similarity, named, count = best
