@@ -78,6 +78,14 @@ aus wieder aufnehmen.
   <img src="docs/screenshots/workspace-de.png" alt="Arbeitsfläche mit einem Agenten und seinem Terminal nebeneinander" width="860">
 </p>
 
+**Antworten**
+- Ein Umschalter in jedem Terminal zeigt nur das, was der Agent geantwortet hat (pro Anfrage
+  der letzte Text, auf Wunsch jeder), statt des Terminals mit Gedanken und Diffs; eine Seite
+  listet die jüngsten Antworten aller laufenden Agenten.
+- Vorlesen mit den Stimmen des Browsers (eine Antwort, ab hier oder alle neuen; Code und
+  Tabellen werden ausgelassen). Die Sprachausgabe ist eine Liste von Engines, eine Server-Stimme
+  lässt sich später ergänzen.
+
 **Notizen**
 - Notizbücher als Reiter, je mit losen Notizen und Ordnern; sie liegen wie die Arbeitsflächen auf dem Server.
 - Eine Notiz ist Markdown mit Formatierungsleiste (fett, kursiv, Überschrift, Liste, Code, Link),

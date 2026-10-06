@@ -73,6 +73,19 @@ const terminalFont = setting<TerminalFont>(
 /** Speech recognition engine of the Whisper service for dictation; empty: the service's default. */
 const dictationEngine = setting('agent-orc-dictation-engine', '', String)
 
+/** What a terminal shows: the terminal itself, or the agent's answers in short (AnswersFeed). */
+export type TerminalView = 'terminal' | 'answers'
+const terminalView = setting<TerminalView>('agent-orc-terminal-view', 'terminal', (stored) => stored as TerminalView)
+/** The answers show every text the agent wrote, not only the last one of each request. */
+const answersAll = setting('agent-orc-answers-all', false, (stored) => stored === 'true')
+
+/** What reads answers aloud: the engine (speech.ts), its voice and its speed. */
+export const DEFAULT_SPEECH_ENGINE = 'browser'
+export const DEFAULT_SPEECH_RATE = 1
+const speechEngine = setting('agent-orc-speech-engine', DEFAULT_SPEECH_ENGINE, String)
+const speechVoice = setting('agent-orc-speech-voice', '', String)
+const speechRate = setting('agent-orc-speech-rate', DEFAULT_SPEECH_RATE, Number)
+
 /** Bumped when the extra keys were arranged anew: every open terminal fetches them again (the
  * arrangement itself is kept on the server, for every device). */
 const extraKeysVersion = setting('agent-orc-extra-keys-version', 0, Number)
@@ -95,5 +108,10 @@ export function useSettings() {
     dictationEngine,
     extraKeysUnfolded,
     extraKeysVersion,
+    terminalView,
+    answersAll,
+    speechEngine,
+    speechVoice,
+    speechRate,
   }
 }

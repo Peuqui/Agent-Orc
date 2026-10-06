@@ -41,6 +41,9 @@ export const ICONS = {
   chart: 'M4 20V10 M10 20V4 M16 20v-7 M22 20H2',
   template: 'M5 4h14v16H5z M8 8h8 M8 12h8 M8 16h5',
   notes: 'M6 3h12v18H6z M9 7h6 M9 11h6 M9 15h3',
+  answers: 'M4 5h16v11H10l-5 4v-4H4z M8 9h8 M8 12h5',
+  pause: 'M8 5v14 M16 5v14',
+  speaker: 'M4 10v4h3l5 4V6l-5 4z M16 9a4 4 0 0 1 0 6',
   menu: 'M4 6h16 M4 12h16 M4 18h16',
   mic: 'M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3z M5 11a7 7 0 0 0 14 0 M12 18v3',
 } as const

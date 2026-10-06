@@ -1614,3 +1614,40 @@ def test_sending_a_note_brings_its_files_into_the_agents_folder(
     copies = list((home / "projects" / "a" / ".agent-orc" / "uploads").glob("*foto.png"))
     # One copy per link, each with the file's content.
     assert len(copies) == 2 and all(copy.read_bytes() == b"png" for copy in copies)
+
+
+def test_answers_come_from_the_transcript_the_agent_reports(
+    client: TestClient, home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
+    session_id = start_shell(client, home / "projects" / "a")
+    answers = f"/api/sessions/{session_id}/answers"
+    # Before the agent has reported where its transcript is: nothing.
+    assert client.get(answers).json() == []
+    transcript = home / ".claude" / "projects" / "-a" / "conversation.jsonl"
+    transcript.parent.mkdir(parents=True)
+    lines = [
+        {
+            "type": "user",
+            "uuid": "u1",
+            "timestamp": "2026-10-06T10:00:00Z",
+            "message": {"content": "Frage"},
+        },
+        {
+            "type": "assistant",
+            "uuid": "a2",
+            "timestamp": "2026-10-06T10:00:05Z",
+            "message": {"content": [{"type": "text", "text": "Antwort"}]},
+        },
+    ]
+    transcript.write_text("\n".join(json.dumps(line) for line in lines), encoding="utf-8")
+    store_status(session_id, {"model": {"display_name": "M"}, "transcript_path": str(transcript)})
+    turns = client.get(answers).json()
+    shown = [(t["prompt"], [x["text"] for x in t["texts"]]) for t in turns]
+    assert shown == [("Frage", ["Antwort"])]
+    # A path outside Claude's own transcripts is not read, whatever the status says.
+    outside = home / "projects" / "secret.jsonl"
+    outside.write_text(transcript.read_text(encoding="utf-8"), encoding="utf-8")
+    store_status(session_id, {"model": {"display_name": "M"}, "transcript_path": str(outside)})
+    assert client.get(answers).json() == []
+    assert client.get("/api/sessions/nope/answers").status_code == 404

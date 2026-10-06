@@ -14,14 +14,16 @@
     "workspace": "Arbeitsfläche",
     "notes": "Notizen",
     "consumption": "Verbrauch",
-    "menu": "Seiten"
+    "menu": "Seiten",
+    "answers": "Antworten"
   },
   "common": {
     "cancel": "Abbrechen",
     "create": "Anlegen",
     "save": "Speichern",
     "confirm": "Bestätigen",
-    "rename": "Umbenennen"
+    "rename": "Umbenennen",
+    "close": "Schließen"
   },
   "login": {
     "title": "Anmelden",
@@ -295,6 +297,15 @@
         ]
       },
       {
+        "title": "Antworten",
+        "items": [
+          "Statt des Terminals zeigt der Umschalter oben (Terminal- / Sprechblasen-Symbol, im Kopf jedes Terminals und jeder Spalte) nur das, was der Agent geantwortet hat – ohne Gedanken, Dateiänderungen und Diffs. Die Wahl gilt für alle Terminals dieses Geräts; das Eingabefeld bleibt unten.",
+          "Pro Anfrage steht deine Frage in einer grauen Zeile (antippen zeigt sie ganz) und darunter die letzte Antwort des Agenten, die Zusammenfassung. „Alles anzeigen“ zeigt auch die Zwischenkommentare. Neue Antworten haben einen roten Streifen, bis sie angesehen wurden.",
+          "Vorlesen: „Vorlesen“ liest eine Antwort, „Ab hier“ diese und alle folgenden, „Neue vorlesen“ die noch nicht gesehenen. Codeblöcke und Tabellen werden ausgelassen („hier folgt ein Codeblock“), Adressen und Formatierung nicht mitgesprochen. Pause und Stopp stehen oben. Das Zahnrad wählt Stimme und Tempo; es sind die Stimmen des Geräts, mit einem Bluetooth-Headset kommt der Ton dort an. Bei gesperrtem Bildschirm bricht das Vorlesen am Handy oft ab.",
+          "Die Seite „Antworten“ zeigt die jüngsten Antworten aller laufenden Agenten untereinander; „Alle neuen vorlesen“ liest sie nacheinander."
+        ]
+      },
+      {
         "title": "Verbrauch",
         "items": [
           "Tokens aus allen Claude-Gesprächen auf diesem Rechner, pro Tag, Projekt und Modell, für 7, 14 oder 30 Tage – auch aus dem Terminal, VS Code und von Hilfsagenten."
@@ -463,7 +474,8 @@
       "all": "Alle Seiten",
       "fewer": "Nur erste Seite",
       "open": "In neuem Tab öffnen"
-    }
+    },
+    "newFolderOption": "Neuer Ordner …"
   },
   "broadcast": {
     "insert": "In {count} einfügen",
@@ -507,5 +519,32 @@
     "control": "Steuerzeichen",
     "characters": "Zeichen",
     "function": "Funktionstasten"
+  },
+  "answers": {
+    "title": "Antworten",
+    "terminal": "Terminal",
+    "viewHint": "Ansicht umschalten: Terminal oder Antworten",
+    "empty": "Noch keine Antworten. Sie erscheinen, sobald der Agent etwas geschrieben hat.",
+    "working": "Der Agent arbeitet noch …",
+    "showAll": "Alles anzeigen",
+    "showSummaries": "Nur Zusammenfassungen",
+    "allHint": "Alle Texte des Agenten anzeigen, nicht nur den letzten pro Anfrage",
+    "readNew": "Neue vorlesen ({count})",
+    "readNewHint": "Die noch nicht gesehenen Antworten vorlesen",
+    "read": "Vorlesen",
+    "readThis": "Diese Antwort vorlesen",
+    "readFromHere": "Ab hier",
+    "readFromHereHint": "Ab dieser Antwort alle folgenden vorlesen",
+    "pause": "Pause / weiter",
+    "stop": "Vorlesen beenden",
+    "voice": "Stimme",
+    "voiceDefault": "Standard des Geräts",
+    "engine": "Sprachausgabe",
+    "speed": "Tempo: {rate}×",
+    "speedReset": "Normal",
+    "skipped": "Hier folgt ein Codeblock oder eine Tabelle, ausgelassen",
+    "open": "Im Terminal öffnen",
+    "readAllNew": "Alle neuen vorlesen",
+    "noAgents": "Kein Agent läuft."
   }
 }

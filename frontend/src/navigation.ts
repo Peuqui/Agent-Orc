@@ -4,6 +4,7 @@ import type { IconName } from './icons'
 export const NAV_ITEMS: { to: string; icon: IconName; label: string }[] = [
   { to: '/sessions', icon: 'agents', label: 'nav.sessions' },
   { to: '/workspace', icon: 'workspace', label: 'nav.workspace' },
+  { to: '/answers', icon: 'answers', label: 'nav.answers' },
   { to: '/notes', icon: 'notes', label: 'nav.notes' },
   { to: '/files', icon: 'folder', label: 'nav.files' },
   { to: '/consumption', icon: 'chart', label: 'nav.consumption' },

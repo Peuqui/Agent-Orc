@@ -72,6 +72,14 @@ detaches: the agents keep working, and you pick them up again from any device.
   <img src="docs/screenshots/workspace-en.png" alt="Workspace with an agent and its terminal side by side" width="860">
 </p>
 
+**Answers**
+- A switch in every terminal shows only what the agent answered (its last text per request, on
+  request every text) instead of the terminal with its thoughts and diffs; a page lists the
+  latest answers of all running agents.
+- Read them aloud with the voices of the browser (one answer, from here on, or all new ones;
+  code and tables are left out). The speech output is a list of engines, so a server voice can
+  be added later.
+
 **Notes**
 - Notebooks as tabs, each with loose notes and folders, kept on the server like the workspaces.
 - A note is Markdown with a formatting bar (bold, italic, heading, list, code, link), a

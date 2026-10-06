@@ -84,6 +84,16 @@ def session_status(session: AgentSession) -> dict[str, Any]:
     }
 
 
+def session_transcript(session: AgentSession) -> Path | None:
+    """Where the agent writes its conversation (Claude's status line reports it); None until it
+    has reported since it started."""
+    path = status_file(session.id)
+    if not path.is_file() or path.stat().st_mtime < session.created:
+        return None
+    transcript = json.loads(path.read_text(encoding="utf-8")).get("transcript_path")
+    return Path(transcript) if transcript else None
+
+
 def claude_rate_limits() -> dict[str, Any] | None:
     """Usage windows from the newest Claude status, e.g. {"five_hour": {"used_percentage": 5,
     "resets_at": 1791111000}, "seven_day": ...}; None until a session has reported them."""

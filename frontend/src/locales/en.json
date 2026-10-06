@@ -14,14 +14,16 @@
     "workspace": "Workspace",
     "notes": "Notes",
     "consumption": "Consumption",
-    "menu": "Pages"
+    "menu": "Pages",
+    "answers": "Answers"
   },
   "common": {
     "cancel": "Cancel",
     "create": "Create",
     "save": "Save",
     "confirm": "Confirm",
-    "rename": "Rename"
+    "rename": "Rename",
+    "close": "Close"
   },
   "login": {
     "title": "Log in",
@@ -295,6 +297,15 @@
         ]
       },
       {
+        "title": "Answers",
+        "items": [
+          "Instead of the terminal, the switch at the top (terminal / speech bubble icon, in the head of every terminal and column) shows only what the agent answered – without thoughts, file edits and diffs. The choice holds for all terminals of this device; the input field stays below.",
+          "For each request your question stands in a grey line (tap to see it whole) and below it the agent’s last answer, the summary. “Show everything” also shows the comments in between. New answers have a red stripe until they were looked at.",
+          "Reading aloud: “Read aloud” reads one answer, “From here” this and all following, “Read new” those not seen yet. Code blocks and tables are left out (“a code block follows”), addresses and formatting are not spoken. Pause and stop are at the top. The cog chooses voice and speed; these are the voices of the device, and a Bluetooth headset plays the sound there. With the screen locked, reading often stops on a phone.",
+          "The “Answers” page shows the latest answers of all running agents one below the other; “Read all new” reads them one after the other."
+        ]
+      },
+      {
         "title": "Consumption",
         "items": [
           "Tokens from all Claude conversations on this machine, per day, project and model, for 7, 14 or 30 days – from the terminal, VS Code and subagents too."
@@ -463,7 +474,8 @@
       "all": "All pages",
       "fewer": "First page only",
       "open": "Open in a new tab"
-    }
+    },
+    "newFolderOption": "New folder …"
   },
   "broadcast": {
     "insert": "Insert into {count}",
@@ -507,5 +519,32 @@
     "control": "Control characters",
     "characters": "Characters",
     "function": "Function keys"
+  },
+  "answers": {
+    "title": "Answers",
+    "terminal": "Terminal",
+    "viewHint": "Switch the view: terminal or answers",
+    "empty": "No answers yet. They appear once the agent has written something.",
+    "working": "The agent is still working …",
+    "showAll": "Show everything",
+    "showSummaries": "Summaries only",
+    "allHint": "Show all the agent's texts, not only the last one per request",
+    "readNew": "Read new ({count})",
+    "readNewHint": "Read the answers not seen yet",
+    "read": "Read aloud",
+    "readThis": "Read this answer aloud",
+    "readFromHere": "From here",
+    "readFromHereHint": "Read this and all following answers aloud",
+    "pause": "Pause / resume",
+    "stop": "Stop reading",
+    "voice": "Voice",
+    "voiceDefault": "Device default",
+    "engine": "Speech output",
+    "speed": "Speed: {rate}×",
+    "speedReset": "Normal",
+    "skipped": "A code block or a table follows, left out",
+    "open": "Open in terminal",
+    "readAllNew": "Read all new",
+    "noAgents": "No agent is running."
   }
 }

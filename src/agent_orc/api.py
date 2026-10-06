@@ -18,6 +18,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from agent_orc import files
+from agent_orc.answers import read_turns
 from agent_orc.approvals import ApprovalNotFoundError, ApprovalRequest, decide, open_requests
 from agent_orc.attachments import NOTE_FILES_URL, UPLOADS_DIR, bring_note_files, store_attachment
 from agent_orc.auth import Clock, Credentials, LoginGuard, TokenSigner, verify_password
@@ -35,7 +36,13 @@ from agent_orc.config import (
     TerminalKey,
 )
 from agent_orc.consumption import claude_consumption
-from agent_orc.context import QUOTA_SOURCES, session_busy, session_status, store_activity
+from agent_orc.context import (
+    QUOTA_SOURCES,
+    session_busy,
+    session_status,
+    session_transcript,
+    store_activity,
+)
 from agent_orc.dictation import (
     Device,
     DictationServiceError,
@@ -55,6 +62,7 @@ from agent_orc.effort import (
 from agent_orc.events import ChangeNotifier
 from agent_orc.handover import advise, read_auto, write_auto
 from agent_orc.history import (
+    CLAUDE_PROJECTS,
     CONVERSATION_SEARCHES,
     CONVERSATION_SOURCES,
     ConversationNotFoundError,
@@ -1206,6 +1214,19 @@ def create_app(
             raise SessionNotFoundError(session_id)
         content = await request.body()
         return {"path": str(store_attachment(session.path, name, content, clock))}
+
+    @app.get("/api/sessions/{session_id}/answers", dependencies=authenticated)
+    def session_answers(session_id: str, turns: int = 20) -> list[dict[str, Any]]:
+        """The last requests of the user and what the agent wrote in answer (no thoughts, tool
+        calls or results); empty for an agent that keeps no Claude transcript."""
+        session = find_session(session_id)
+        if session is None:
+            raise SessionNotFoundError(session_id)
+        transcript = session_transcript(session)
+        # Only Claude's own transcripts, wherever the status document points.
+        if transcript is None or not transcript.resolve().is_relative_to(home / CLAUDE_PROJECTS):
+            return []
+        return [asdict(turn) for turn in read_turns(transcript, turns)]
 
     @app.get("/api/sessions/{session_id}/text", dependencies=authenticated)
     def session_text(session_id: str) -> dict[str, str]:

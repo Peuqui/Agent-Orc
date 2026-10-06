@@ -61,6 +61,23 @@ export interface Notebook {
   folders: NoteFolder[]
 }
 
+/** One text the agent wrote while answering. */
+export interface AnswerText {
+  id: string
+  /** ISO time (UTC). */
+  time: string
+  /** Markdown. */
+  text: string
+}
+
+/** A request of the user and the texts the agent wrote in answer, the last one the summary. */
+export interface Turn {
+  id: string
+  time: string
+  prompt: string
+  texts: AnswerText[]
+}
+
 /** Claude's token consumption of one day, project and model. */
 export interface ConsumptionRow {
   /** YYYY-MM-DD, local time. */
@@ -418,6 +435,9 @@ export const api = {
     request<void>('DELETE', `sessions/${encodeURIComponent(sessionId)}/effort`),
   stopSession: (id: string) => request<void>('DELETE', `sessions/${encodeURIComponent(id)}`),
   /** The terminal as plain text, for selecting and copying. */
+  /** The last requests of the user with the agent's texts, oldest first (no thoughts or tools). */
+  answers: (sessionId: string, turns: number) =>
+    request<Turn[]>('GET', `sessions/${encodeURIComponent(sessionId)}/answers`, { query: { turns: String(turns) } }),
   sessionText: (id: string) =>
     request<{ text: string }>('GET', `sessions/${encodeURIComponent(id)}/text`),
 

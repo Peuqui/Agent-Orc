@@ -17,6 +17,7 @@ import RestartButton from '../components/RestartButton.vue'
 import TerminalButton from '../components/TerminalButton.vue'
 import JogScroller from '../components/JogScroller.vue'
 import KeyBar from '../components/KeyBar.vue'
+import AnswersFeed from '../components/AnswersFeed.vue'
 import MessageInput from '../components/MessageInput.vue'
 import { useDismiss } from '../composables/useDismiss'
 import { onLongPress } from '../composables/useLongPress'
@@ -52,7 +53,7 @@ const settings = ref<TerminalSettings | null>(null)
 const modifiers = ref(new Set<Modifier>())
 const connected = ref(false)
 // One font size for every terminal of this device (set in the settings menu).
-const { lineHeight, fontSize, terminalFont, extraKeysVersion } = useSettings()
+const { lineHeight, fontSize, terminalFont, extraKeysVersion, terminalView } = useSettings()
 
 // Arranged anew (on this or another column of the device): fetch the keys again.
 watch(extraKeysVersion, async () => {
@@ -387,6 +388,32 @@ onBeforeUnmount(() => {
       <!-- Embedded in the workspace, the column's tab names the agent already (not on phones). -->
       <!-- In the light bulb's amber, set off from the usage figure. -->
       <h1 class="ml-2 min-w-0 flex-1 truncate font-semibold text-amber-300">{{ ownTab ? name : '' }}</h1>
+      <!-- The agent's own terminal, or only what it answered (the same for every terminal of this device). -->
+      <div
+        v-if="session && !session.terminal"
+        class="flex shrink-0 overflow-hidden rounded-md border border-slate-600"
+        role="group"
+        :title="$t('answers.viewHint')"
+      >
+        <button
+          class="flex size-8 items-center justify-center hover:bg-slate-700"
+          :class="terminalView === 'terminal' ? 'bg-slate-700 text-amber-300' : 'text-slate-400'"
+          :aria-label="$t('answers.terminal')"
+          :title="$t('answers.terminal')"
+          @click="terminalView = 'terminal'"
+        >
+          <AppIcon name="agents" class="size-4" />
+        </button>
+        <button
+          class="flex size-8 items-center justify-center hover:bg-slate-700"
+          :class="terminalView === 'answers' ? 'bg-slate-700 text-amber-300' : 'text-slate-400'"
+          :aria-label="$t('answers.title')"
+          :title="$t('answers.title')"
+          @click="terminalView = 'answers'"
+        >
+          <AppIcon name="answers" class="size-4" />
+        </button>
+      </div>
       <!-- The actions: side by side on computers, behind ⋯ on phones so the name has room. -->
       <div ref="actionsMenu" class="relative flex items-center">
         <button
@@ -484,6 +511,10 @@ onBeforeUnmount(() => {
     <div class="relative flex min-h-0 flex-1 pt-1 pl-1">
       <div ref="container" class="h-full min-w-0 flex-1" />
       <JogScroller @scroll="onJog" />
+      <!-- Over the terminal, which stays as it is underneath (no resize when switching back). -->
+      <div v-if="terminalView === 'answers' && session && !session.terminal" class="absolute inset-0 z-10 flex flex-col bg-slate-900">
+        <AnswersFeed :session-id="id" />
+      </div>
       <div
         v-if="!connected"
         class="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-900/85"
@@ -498,7 +529,7 @@ onBeforeUnmount(() => {
     <MessageInput ref="messageInput" :session-id="id" @submit="submitText" />
 
     <KeyBar
-      v-if="settings && !fullscreen"
+      v-if="settings && !fullscreen && (terminalView === 'terminal' || session?.terminal)"
       :rows="settings.keys"
       :active="modifiers"
       @send="(sequence) => sendInput(withModifiers(sequence))"

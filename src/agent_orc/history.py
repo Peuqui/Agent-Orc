@@ -48,7 +48,7 @@ def claude_project_dir(home: Path, folder: Path) -> Path:
     return home / CLAUDE_PROJECTS / re.sub(r"[^A-Za-z0-9]", "-", str(folder))
 
 
-def _lines_from_end(path: Path, limit: int) -> Iterator[str]:
+def lines_from_end(path: Path, limit: int) -> Iterator[str]:
     """Complete lines from the end of a file, reading at most `limit` bytes."""
     with path.open("rb") as handle:
         position = handle.seek(0, 2)
@@ -82,7 +82,7 @@ def _first_prompt(path: Path) -> str:
 
 
 def _claude_title(path: Path) -> str:
-    for line in _lines_from_end(path, TITLE_SCAN_BYTES):
+    for line in lines_from_end(path, TITLE_SCAN_BYTES):
         entry: dict[str, Any] = json.loads(line)
         if entry.get("type") == CLAUDE_TITLE_ENTRY and entry.get("aiTitle"):
             return str(entry["aiTitle"])
@@ -122,7 +122,7 @@ class SearchHit:
     matches: int
 
 
-def _message_texts(entry: dict[str, Any]) -> Iterator[str]:
+def message_texts(entry: dict[str, Any]) -> Iterator[str]:
     """What the user and Claude wrote in a transcript entry; tool calls and results are left
     out, as are commands and notices ("<...>")."""
     if entry.get("type") not in ("user", "assistant"):
@@ -162,7 +162,7 @@ def search_claude_conversations(home: Path, folder: Path, query: str) -> list[Se
                 # Cheap check on the raw line first; only lines with the words are parsed.
                 if needle not in line.casefold():
                     continue
-                for text in _message_texts(json.loads(line)):
+                for text in message_texts(json.loads(line)):
                     folded = text.casefold()
                     found = folded.find(needle)
                     if found < 0:

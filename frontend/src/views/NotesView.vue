@@ -30,7 +30,7 @@ type Dialog =
   | { kind: 'newNotebook' }
   | { kind: 'renameNotebook' }
   | { kind: 'deleteNotebook' }
-  | { kind: 'newFolder' }
+  | { kind: 'newFolder'; thenMoveNote?: boolean }
   | { kind: 'renameFolder'; folder: number }
   | { kind: 'deleteFolder'; folder: number }
   | { kind: 'deleteNote' }
@@ -194,10 +194,14 @@ function addNote(): void {
   changed()
 }
 
-function addFolder(name: string): void {
+function addFolder(name: string, thenMoveNote: boolean): void {
   dialog.value = null
-  notebook.value?.folders.push({ name, notes: [] })
-  changed()
+  const folders = notebook.value?.folders
+  if (!folders) return
+  folders.push({ name, notes: [] })
+  // Created from the open note's folder field: the note goes in.
+  if (thenMoveNote) moveNote(folders.length - 1)
+  else changed()
 }
 
 function renameFolder(folder: number, name: string): void {
@@ -231,6 +235,19 @@ function moveNote(target: FolderIndex): void {
   notes.push(note)
   selection.value = { folder: target, index: notes.length - 1 }
   changed()
+}
+
+const NEW_FOLDER = 'new'
+
+/** The folder field of the open note: a folder, none, or a new one (asked for by name). */
+function onFolderChosen(field: HTMLSelectElement): void {
+  if (field.value === NEW_FOLDER) {
+    // The field shows the note's folder again until the new one exists.
+    field.value = String(selection.value?.folder ?? '')
+    dialog.value = { kind: 'newFolder', thenMoveNote: true }
+    return
+  }
+  moveNote(field.value === '' ? null : Number(field.value))
 }
 
 async function copyNote(): Promise<void> {
@@ -417,10 +434,11 @@ function firstLine(note: Note): string {
             class="h-9 rounded-lg border border-slate-600 bg-slate-800 px-2 text-sm text-slate-200"
             :aria-label="$t('notes.folder')"
             :value="selection?.folder ?? ''"
-            @change="moveNote(($event.target as HTMLSelectElement).value === '' ? null : Number(($event.target as HTMLSelectElement).value))"
+            @change="onFolderChosen($event.target as HTMLSelectElement)"
           >
             <option value="">{{ $t('notes.noFolder') }}</option>
             <option v-for="(folder, index) in notebook?.folders" :key="index" :value="index">{{ folder.name }}</option>
+            <option :value="NEW_FOLDER">{{ $t('notes.newFolderOption') }}</option>
           </select>
           <button class="btn-secondary btn-small-icon ml-auto" :title="$t('notes.deleteNote')" :aria-label="$t('notes.deleteNote')" @click="dialog = { kind: 'deleteNote' }">
             <AppIcon name="trash" />
@@ -477,7 +495,7 @@ function firstLine(note: Note): string {
     <InputDialog v-if="dialog?.kind === 'newNotebook'" :title="$t('notes.newNotebook')" :label="$t('notes.name')" :submit-label="$t('notes.create')" @submit="createNotebook" @close="dialog = null" />
     <InputDialog v-if="dialog?.kind === 'renameNotebook'" :title="$t('notes.renameNotebook')" :label="$t('notes.name')" :submit-label="$t('notes.rename')" :initial-value="current ?? ''" @submit="renameNotebook" @close="dialog = null" />
     <ConfirmDialog v-if="dialog?.kind === 'deleteNotebook'" :title="$t('notes.deleteNotebook')" :message="$t('notes.confirmDeleteNotebook', { name: current })" :confirm-label="$t('notes.delete')" danger @confirm="deleteNotebook" @close="dialog = null" />
-    <InputDialog v-if="dialog?.kind === 'newFolder'" :title="$t('notes.newFolder')" :label="$t('notes.name')" :submit-label="$t('notes.create')" @submit="addFolder" @close="dialog = null" />
+    <InputDialog v-if="dialog?.kind === 'newFolder'" :title="$t('notes.newFolder')" :label="$t('notes.name')" :submit-label="$t('notes.create')" @submit="(name) => addFolder(name, dialog?.kind === 'newFolder' && Boolean(dialog.thenMoveNote))" @close="dialog = null" />
     <InputDialog
       v-if="dialog?.kind === 'renameFolder'"
       :title="$t('notes.renameFolder')"
