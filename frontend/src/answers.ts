@@ -2,9 +2,20 @@
 // tested without a browser.
 import type { AnswerText, Turn } from './api'
 
-/** The texts of a request that are shown: all of them, or the last one (its summary). */
+/**
+ * The texts of a request that are shown: all of them, or the summaries. What the user typed in
+ * the middle of an answer starts a new stretch, so each message of the user, that of the request
+ * and those typed during the answer, gets the last text written before the next one.
+ */
 export function shownTexts(turn: Turn, all: boolean): AnswerText[] {
-  return all ? turn.texts : turn.texts.slice(-1)
+  if (all) return turn.texts
+  // ISO times in the same format compare as text.
+  const boundaries = turn.interjections.filter((i) => !i.pending).map((i) => i.time).sort()
+  const stretchOf = (text: AnswerText) => boundaries.filter((time) => time <= text.time).length
+  return turn.texts.filter((text, index) => {
+    const next = turn.texts[index + 1]
+    return next === undefined || stretchOf(next) !== stretchOf(text)
+  })
 }
 
 /** The shown texts written after `seen` (an ISO time, which compares as text), in the order written. */
