@@ -48,7 +48,7 @@ function notesOf(folder: FolderIndex): Note[] {
 }
 
 const selected = computed(() => (selection.value === null ? null : (notesOf(selection.value.folder)[selection.value.index] ?? null)))
-const html = computed(() => (selected.value === null ? '' : renderMarkdown(selected.value.text, '')))
+const html = computed(() => (selected.value === null ? '' : renderMarkdown(selected.value.text, '', true)))
 
 interface Section {
   folder: FolderIndex
@@ -169,6 +169,12 @@ async function deleteNotebook(): Promise<void> {
   current.value = null
   selection.value = null
   await reload()
+}
+
+/** Opens a note; one without text opens for writing, one with text for reading. */
+function select(folder: FolderIndex, index: number): void {
+  selection.value = { folder, index }
+  editing.value = notesOf(folder)[index].text === ''
 }
 
 function addNote(): void {
@@ -375,7 +381,7 @@ function firstLine(note: Note): string {
             :key="entry.index"
             class="card flex flex-col items-start px-3 py-2 text-left"
             :class="selection?.folder === section.folder && selection?.index === entry.index ? 'ring-2 ring-red-500' : ''"
-            @click="(selection = { folder: section.folder, index: entry.index }), (editing = false)"
+            @click="select(section.folder, entry.index)"
           >
             <span class="w-full truncate font-medium">{{ entry.note.title || $t('notes.untitled') }}</span>
             <span class="w-full truncate text-xs text-slate-500">{{ firstLine(entry.note) }}</span>
