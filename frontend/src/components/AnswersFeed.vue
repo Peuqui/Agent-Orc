@@ -12,6 +12,7 @@ import { useToast } from '../composables/useToast'
 import { formatMoment } from '../format'
 import { renderMarkdown } from '../markdown'
 import AnswerImages from './AnswerImages.vue'
+import FoldedText from './FoldedText.vue'
 import AppIcon from './AppIcon.vue'
 
 // What an agent answered, in short: per request of the user its last text (the summary), or
@@ -27,7 +28,6 @@ const { sessions } = useSessions()
 const speech = useSpeech()
 const turns = ref<Turn[]>([])
 const loaded = ref(false)
-const expandedPrompts = ref(new Set<string>())
 const box = ref<HTMLElement>()
 let timer: number | undefined
 let seenTimer: number | undefined
@@ -124,18 +124,8 @@ function pictureUrls(entryId: string, text: string, images: number): string[] {
   return [...inTranscript, ...attached]
 }
 
-const FOLD_LINES = 8
-const FOLD_CHARS = 600
-
-/** A request longer than this is folded to a few lines until opened. */
-function foldable(prompt: string): boolean {
-  return prompt.split('\n').length > FOLD_LINES || prompt.length > FOLD_CHARS
-}
-
-function togglePrompt(id: string): void {
-  if (expandedPrompts.value.has(id)) expandedPrompts.value.delete(id)
-  else expandedPrompts.value.add(id)
-}
+// How many lines of a message of the user are shown before "more", in either view.
+const USER_LINES = 2
 </script>
 
 <template>
@@ -187,17 +177,10 @@ function togglePrompt(id: string): void {
     <div ref="box" class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-3">
       <p v-if="loaded && !turns.length" class="text-slate-400">{{ $t('answers.empty') }}</p>
       <section v-for="entry in shown" :key="entry.turn.id" class="flex flex-col gap-2">
-        <!-- What the user asked, in full; a very long request is folded. -->
+        <!-- What the user asked: a few lines, more on a click. -->
         <div class="rounded-lg border-l-4 border-sky-700/70 bg-sky-950/40 px-3 py-2 text-sm text-slate-300">
-          <p
-            v-if="uploadMentions(entry.turn.prompt).text"
-            class="whitespace-pre-wrap break-words"
-            :class="foldable(entry.turn.prompt) && !expandedPrompts.has(entry.turn.id) ? 'line-clamp-6' : ''"
-          >{{ uploadMentions(entry.turn.prompt).text }}</p>
+          <FoldedText v-if="uploadMentions(entry.turn.prompt).text" :text="uploadMentions(entry.turn.prompt).text" :lines="USER_LINES" />
           <AnswerImages :urls="pictureUrls(entry.turn.id, entry.turn.prompt, entry.turn.images)" />
-          <button v-if="foldable(entry.turn.prompt)" type="button" class="mt-1 text-xs text-slate-500 underline" @click="togglePrompt(entry.turn.id)">
-            {{ expandedPrompts.has(entry.turn.id) ? $t('answers.less') : $t('answers.more') }}
-          </button>
         </div>
         <template v-for="item in entry.items" :key="item.id">
           <!-- Typed while the agent was answering. -->
@@ -206,7 +189,7 @@ function togglePrompt(id: string): void {
             class="ml-4 rounded-lg border-l-4 border-sky-700/70 bg-sky-950/40 px-3 py-2 text-sm text-slate-300"
             :class="item.pending ? 'opacity-60' : ''"
           >
-            <p v-if="uploadMentions(item.text).text" class="whitespace-pre-wrap break-words">{{ uploadMentions(item.text).text }}</p>
+            <FoldedText v-if="uploadMentions(item.text).text" :text="uploadMentions(item.text).text" :lines="USER_LINES" />
             <AnswerImages :urls="pictureUrls(item.id, item.text, item.images)" />
             <p class="mt-1 text-xs text-slate-500">
               {{ $t('answers.interjection') }} · {{ formatMoment(new Date(item.time), locale) }}
