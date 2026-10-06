@@ -113,6 +113,16 @@ const actionClass = computed(() =>
 // As in the terminal: with a mouse, a click into the answers gives the focus to the message
 // field (text marked stays marked, so Ctrl+C copies it). Not on touch screens: the on-screen
 // keyboard would rise at once.
+// A plain terminal is typed into directly (history with the arrow keys, completion with Tab, a
+// word begun and finished there); an agent's input goes through our message field, where
+// dictation tools work. The message field of a plain terminal stays for longer texts.
+const directTyping = computed(() => session.value?.terminal === true)
+
+function focusInput(): void {
+  if (directTyping.value) terminal.focus()
+  else messageInput.value?.focus()
+}
+
 function focusFieldAfterClick(event: PointerEvent): void {
   if (TOUCH_FIRST.matches || (event.target as Element).closest('button, a, input, select, textarea')) return
   if (window.getSelection()?.isCollapsed === false) return
@@ -121,7 +131,7 @@ function focusFieldAfterClick(event: PointerEvent): void {
 
 watch(terminalView, async () => {
   await nextTick()
-  if (!TOUCH_FIRST.matches) messageInput.value?.focus()
+  if (!TOUCH_FIRST.matches) focusInput()
 })
 
 function closeColumn(): void {
@@ -301,11 +311,12 @@ function connect(): void {
   socket.onopen = () => {
     connected.value = true
     reconnecting.value = false
-    // Typing goes to our input field first: dictation tools work there, not in the terminal's own
-    // input. In the workspace only the active column takes the focus. Not on touch screens: the
-    // focus would raise the on-screen keyboard at once (a tap into the field does).
+    // An agent's typing goes to our input field first: dictation tools work there, not in the
+    // terminal's own input; a plain terminal is typed into directly. In the workspace only the
+    // active column takes the focus. Not on touch screens: the focus would raise the on-screen
+    // keyboard at once (a tap into the field does).
     if (!TOUCH_FIRST.matches && (!props.embedded || window.frameElement?.getAttribute('data-active') === 'true')) {
-      messageInput.value?.focus()
+      focusInput()
     }
   }
   socket.onmessage = (event: MessageEvent<ArrayBuffer>) => terminal.write(new Uint8Array(event.data))
@@ -338,12 +349,12 @@ onMounted(async () => {
   // hidden input, and the on-screen keyboard rises for it, without our input field and extra
   // keys. Typing goes through our field; a hardware keyboard still reaches this input.
   if (TOUCH_FIRST.matches) terminal.textarea?.setAttribute('inputmode', 'none')
-  // With a mouse, a click into the terminal gives the focus back to our field once it is let go
-  // (dictation tools double words in the terminal's own input); with text marked it stays, so
-  // Ctrl+C copies it.
+  // With a mouse, a click into an agent's terminal gives the focus back to our field once it is
+  // let go (dictation tools double words in the terminal's own input); with text marked it
+  // stays, so Ctrl+C copies it. A plain terminal keeps the focus where it was clicked.
   else {
     container.value.addEventListener('pointerup', () => {
-      if (!terminal.hasSelection()) messageInput.value?.focus()
+      if (!directTyping.value && !terminal.hasSelection()) messageInput.value?.focus()
     })
   }
   // The GPU renderer draws box and block characters itself (customGlyphs), so the agents'

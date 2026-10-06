@@ -209,9 +209,12 @@ function frameOf(id: string): HTMLIFrameElement | undefined {
   return frames.value.find((frame) => frame.dataset.tab === id)
 }
 
-/** The message field of a column's terminal page (see MESSAGE_FIELD_ATTRIBUTE). */
-function messageFieldOf(id: string): HTMLElement | null | undefined {
-  return frameOf(id)?.contentDocument?.querySelector<HTMLElement>(MESSAGE_FIELD_SELECTOR)
+/** What typing goes to in a column: the message field of an agent's terminal page (see
+ * MESSAGE_FIELD_ATTRIBUTE), the terminal itself in a plain terminal. */
+function inputOf(id: string): HTMLElement | null | undefined {
+  const document = frameOf(id)?.contentDocument
+  const plainTerminal = sessions.value.find((session) => session.id === id)?.terminal
+  return document?.querySelector<HTMLElement>(plainTerminal ? '.xterm-helper-textarea' : MESSAGE_FIELD_SELECTOR)
 }
 
 /** Make a tab the active one and scroll its column into view (its tab may be hidden). */
@@ -335,7 +338,9 @@ function onFrameLoad(id: string): void {
     if (target?.closest('input, textarea, select, [contenteditable]')) return
     if (frameWindow.getSelection()?.isCollapsed === false) return
     if (frameWindow.document.querySelector('[data-modal]')) return
-    window.setTimeout(() => messageFieldOf(id)?.focus(), 0)
+    // A plain terminal keeps the focus where it was clicked.
+    if (sessions.value.find((session) => session.id === id)?.terminal) return
+    window.setTimeout(() => inputOf(id)?.focus(), 0)
   })
   // Typing mostly happens inside a column: its shortcuts are caught there, before the terminal.
   frameWindow?.addEventListener('keydown', onShortcut, true)
@@ -366,7 +371,7 @@ function onShortcut(event: KeyboardEvent): void {
     const id = workspace.value.tabs[column]
     if (id === undefined) return
     event.preventDefault()
-    void activate(id).then(() => messageFieldOf(id)?.focus())
+    void activate(id).then(() => inputOf(id)?.focus())
   } else if (step !== undefined) {
     const order = workspaceOrder.value
     if (order.length < 2) return
@@ -396,7 +401,7 @@ watch(
   async (id) => {
     if (id === null || TOUCH_FIRST.matches) return
     await nextTick()
-    messageFieldOf(id)?.focus()
+    inputOf(id)?.focus()
   },
 )
 
