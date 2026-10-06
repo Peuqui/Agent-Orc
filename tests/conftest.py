@@ -176,7 +176,7 @@ class FakeAifred(BaseHTTPRequestHandler):
         body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
         if body["room"] not in ("testraum", "*"):
             self._answer(404, {"detail": "unknown room"})
-        elif len(body["text"]) > MAX_CHARS:
+        elif any(len(text) > MAX_CHARS for text in body["texts"]):
             self._answer(413, {"detail": "too long"})
         else:
             self.spoken.append(body)

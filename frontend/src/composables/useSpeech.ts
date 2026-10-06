@@ -35,14 +35,25 @@ export function useSpeech() {
       await loadServerEngines()
       const speaker = speechEngine(engineId.value)
       const limit = Math.min(speechMaxChars.value, speaker.maxChars)
-      for (const item of items) {
-        playing.value = item.id
+      const options = { voice: voice.value.value, rate: speechRate.value, lang: locale.value }
+      const answers = items.map((item) => {
         const name = speechAnnounceName.value && item.label ? `${item.label}.\n` : ''
         // The name counts towards what the engine takes.
         const answer = spokenText(item.text, t('answers.skipped'), limit - name.length)
-        for (const chunk of speaker.split(name + answer)) {
-          if (reading !== mine) return
-          await speaker.speak(chunk, { voice: voice.value.value, rate: speechRate.value, lang: locale.value })
+        return { item, text: name + answer }
+      })
+      if (speaker.speakAll) {
+        // All answers as one announcement: nothing is known of when each one is spoken.
+        playing.value = items[0]?.id ?? null
+        const texts = answers.flatMap((answer) => speaker.split(answer.text))
+        await speaker.speakAll(texts, options, items[0]?.label ?? '')
+      } else {
+        for (const { item, text } of answers) {
+          playing.value = item.id
+          for (const chunk of speaker.split(text)) {
+            if (reading !== mine) return
+            await speaker.speak(chunk, options)
+          }
         }
       }
     } catch (error) {

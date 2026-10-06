@@ -196,11 +196,15 @@ def test_what_is_said_reaches_the_agent_only_after_the_spoken_yes(
 
     asked = say(client, "starte die Tests")
     assert asked.json() == {"action": "asked", "agent": "whisper"}
-    assert FakeAifred.spoken[-1] == {"room": "testraum", "text": "An whisper, richtig?"}
+    assert FakeAifred.spoken[-1] == {
+        "room": "testraum",
+        "texts": ["An whisper, richtig?"],
+        "speaker": "whisper",
+    }
     assert "starte die Tests" not in client.get(f"/api/sessions/{session_id}/text").json()["text"]
 
     assert say(client, "ja").json() == {"action": "sent", "agent": "whisper"}
-    assert FakeAifred.spoken[-1]["text"] == "Gesendet an whisper."
+    assert FakeAifred.spoken[-1]["texts"] == ["Gesendet an whisper."]
     for _ in range(50):
         if "starte die Tests" in client.get(f"/api/sessions/{session_id}/text").json()["text"]:
             break

@@ -44,7 +44,9 @@ def test_without_a_section_in_the_config_there_is_no_echo(
 ) -> None:
     client = make_client(clock, tmp_path, monkeypatch, url=None)
     assert client.get("/api/announce").json() == {"configured": False, "rooms": [], "max_chars": 0}
-    sent = client.post("/api/announce", json={"room": "testraum", "text": "Hallo"})
+    sent = client.post(
+        "/api/announce", json={"room": "testraum", "texts": ["Hallo"], "speaker": "Whisper"}
+    )
     assert sent.status_code == 404
 
 
@@ -57,12 +59,15 @@ def test_the_rooms_and_the_text_go_to_aifred_with_the_token(
         "rooms": ["testraum"],
         "max_chars": MAX_CHARS,
     }
-    sent = client.post("/api/announce", json={"room": "testraum", "text": "Alles fertig."})
+    announcement = {"room": "testraum", "texts": ["Alles fertig.", "Zweiter Absatz."]}
+    sent = client.post("/api/announce", json={**announcement, "speaker": "Whisper"})
     assert sent.status_code == 204
-    assert FakeAifred.spoken == [{"room": "testraum", "text": "Alles fertig."}]
+    # One announcement of all paragraphs, recorded under the agent's name.
+    assert FakeAifred.spoken == [{**announcement, "speaker": "Whisper"}]
     # AIfred's refusals reach the browser as they are: unknown room, text too long.
-    assert client.post("/api/announce", json={"room": "Küche", "text": "x"}).status_code == 404
-    long_text = {"room": "testraum", "text": "x" * (MAX_CHARS + 1)}
+    unknown = {"room": "Küche", "texts": ["x"], "speaker": "Whisper"}
+    assert client.post("/api/announce", json=unknown).status_code == 404
+    long_text = {"room": "testraum", "texts": ["x" * (MAX_CHARS + 1)], "speaker": "Whisper"}
     assert client.post("/api/announce", json=long_text).status_code == 413
 
 

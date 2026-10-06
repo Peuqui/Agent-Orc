@@ -35,6 +35,12 @@ export interface SpeechEngine {
   voices: (lang: string) => Promise<VoiceChoice[]>
   /** Speaks one piece of text; ends when it was spoken or cancelled. */
   speak: (text: string, options: SpeechOptions) => Promise<void>
+  /**
+   * An engine that takes all the answers as one announcement (the pauses and the tones around it
+   * are its own business) has this instead of being given piece after piece; `speaker` is the
+   * agent they are from.
+   */
+  speakAll?: (texts: string[], options: SpeechOptions, speaker: string) => Promise<void>
   cancel: () => void
   pause: () => void
   resume: () => void
@@ -97,12 +103,13 @@ const ALL_ROOMS = '*'
 
 /** The Echo Dot: AIfred speaks and queues; what is said cannot be stopped or paused from here. */
 function echoDot(maxChars: number): SpeechEngine {
+  const speakAll = (texts: string[], options: SpeechOptions, speaker: string): Promise<void> =>
+    api.announceTexts(options.voice || ALL_ROOMS, texts, speaker)
   return {
     id: 'echo',
     label: 'Echo Dot',
     choiceLabel: 'answers.room',
     maxChars,
-    // One announcement of its own (with the signal tones around it) for each answer.
     split: (text) => [text.replace(/\s*\n\s*/g, ' ')],
     available: () => true,
     async voices() {
@@ -110,7 +117,8 @@ function echoDot(maxChars: number): SpeechEngine {
       const everyRoom = { id: ALL_ROOMS, label: i18n.global.t('answers.allRooms') }
       return [everyRoom, ...rooms.map((room) => ({ id: room, label: room }))]
     },
-    speak: (text, options) => api.announceText(options.voice || ALL_ROOMS, text),
+    speak: (text, options) => speakAll([text], options, ''),
+    speakAll,
     cancel: () => undefined,
     pause: () => undefined,
     resume: () => undefined,

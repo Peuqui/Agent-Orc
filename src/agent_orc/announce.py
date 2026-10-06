@@ -9,9 +9,12 @@ import json
 import urllib.error
 import urllib.request
 from pathlib import Path
+from typing import Any
 
 from agent_orc.config import AnnounceConfig
 
+# Named in AIfred's record of the announcements when no agent is the speaker.
+APP_SPEAKER = "Agent-Orc"
 NOT_FOUND = 404
 TEXT_TOO_LONG = 413
 
@@ -29,7 +32,7 @@ class TextTooLongError(AnnounceError):
 
 
 def _request(
-    config: AnnounceConfig, directory: Path, path: str, body: dict[str, str] | None
+    config: AnnounceConfig, directory: Path, path: str, body: dict[str, Any] | None
 ) -> dict[str, list[str]]:
     token = (directory / config.token_file).read_text(encoding="utf-8").strip()
     request = urllib.request.Request(
@@ -57,7 +60,12 @@ def rooms(config: AnnounceConfig, directory: Path) -> list[str]:
     return _request(config, directory, "/audio/announce/rooms", None)["rooms"]
 
 
-def announce(config: AnnounceConfig, directory: Path, room: str, text: str) -> list[str]:
-    """Queues the text for the room ("*": every room, "@group": a group); returns the rooms it
-    went to. Returns once AIfred has made the speech and queued it, not once it has been played."""
-    return _request(config, directory, "/audio/announce", {"room": room, "text": text})["rooms"]
+def announce(
+    config: AnnounceConfig, directory: Path, room: str, texts: list[str], speaker: str
+) -> list[str]:
+    """Queues the texts as ONE announcement for the room ("*": every room, "@group": a group), with
+    a pause between them and the signal tones around the whole; `speaker` (an agent's name) is
+    what AIfred records it under. Returns the rooms it went to, once AIfred has made the first
+    sentence of speech and queued it, not once it has been played."""
+    body = {"room": room, "texts": texts, "speaker": speaker}
+    return _request(config, directory, "/audio/announce", body)["rooms"]

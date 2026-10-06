@@ -377,7 +377,10 @@ class ScheduledPromptRequest(BaseModel):
 class AnnounceRequest(BaseModel):
     # "*": every room with an Echo connected.
     room: str
-    text: str
+    # One announcement: what an agent answered, paragraph for paragraph.
+    texts: list[str]
+    # The agent the answers are from, as AIfred records the announcement.
+    speaker: str
 
 
 class VoiceRequest(BaseModel):
@@ -1303,7 +1306,7 @@ def create_app(
         """Hands the text to AIfred, which says it on the Echo Dot of the room."""
         if config.announce is None:
             raise AnnounceNotConfiguredError("announce")
-        announcing.announce(config.announce, config_dir(), body.room, body.text)
+        announcing.announce(config.announce, config_dir(), body.room, body.texts, body.speaker)
 
     def require_voice_token(authorization: str | None = Header(default=None)) -> None:
         if config.voice is None:
@@ -1344,7 +1347,9 @@ def create_app(
             sessions.type_line(decision.agent.id, decision.text, config.terminal.submit_delay_ms)
         name = decision.agent.name if decision.agent else ""
         spoken = lines[decision.action].format(agent=name)
-        announcing.announce(config.announce, config_dir(), body.room, spoken)
+        announcing.announce(
+            config.announce, config_dir(), body.room, [spoken], name or announcing.APP_SPEAKER
+        )
         return {"action": decision.action.value, "agent": name or None}
 
     @app.get("/api/sessions/{session_id}/text", dependencies=authenticated)

@@ -20,8 +20,6 @@ Nur was noch aussteht. Erledigtes steht in der Git-Historie.
 - **Folgeaufnahme ohne Wake-Word (Weg B2):** Der Puck hört nach der Rückfrage kurz zu, ein
   Flag `expect_reply` in der Ansage. Braucht Firmware und AIfred, nur falls „Sag Hey Orc, ja oder
   nein“ im Alltag nervt.
-- **Mehrere Hörabsätze als eine Ansage:** Sobald AIfreds Endpunkt mit `texts[]` und `pause_ms`
-  steht, stellt die Echo-Engine von einem POST je Antwort auf eine Liste um.
 - **Automatische Ansage, wenn ein Agent fertig ist:** Zweimal gefragt, nie entschieden.
 - **Anzeigename der Echo-Engine** in der Konfiguration, ebenfalls nie entschieden.
 
