@@ -29,7 +29,10 @@ import {
   loadTabState,
   MIN_VISIBLE,
   nameWindow,
+  rememberLastWorkspace,
   saveTabState,
+  startWorkspace,
+  tabShowsWorkspace,
   unnamedListed,
   useOtherTabs,
   workspaceRoute,
@@ -347,6 +350,7 @@ let sent = 0
 
 /** The tab remembers which workspace it shows; the other tabs hear it too. */
 function remember(): void {
+  if (name.value !== null) rememberLastWorkspace(name.value)
   tabState.name = name.value
   saveTabState(tabState)
   nameWindow(name.value)
@@ -420,10 +424,11 @@ watch(() => route.query.open, () => ready.value && openRequested())
 
 async function load(): Promise<void> {
   const requested = route.query.name
-  if (route.query.unnamed !== undefined) name.value = null
-  else name.value = typeof requested === 'string' && requested !== '' ? requested : tabState.name
-  nameInput.value = name.value ?? ''
   const everything = await api.workspaces()
+  if (route.query.unnamed !== undefined) name.value = null
+  else if (typeof requested === 'string' && requested !== '') name.value = requested
+  else name.value = tabShowsWorkspace() ? tabState.name : startWorkspace(everything)
+  nameInput.value = name.value ?? ''
   everyWorkspace.value = everything
   savedNames.value = Object.keys(everything.named)
   const there = name.value === null ? everything.unnamed : everything.named[name.value]

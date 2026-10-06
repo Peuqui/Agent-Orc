@@ -38,8 +38,26 @@ export function loadTabState(): TabState {
 }
 
 /** This tab has shown a workspace before. */
-function tabShowsWorkspace(): boolean {
+export function tabShowsWorkspace(): boolean {
   return sessionStorage.getItem(TAB_STATE_KEY) !== null
+}
+
+// The workspace shown last on this device; a tab that has shown none yet starts with it.
+const LAST_WORKSPACE_KEY = 'agent-orc-last-workspace'
+
+export function rememberLastWorkspace(name: string): void {
+  localStorage.setItem(LAST_WORKSPACE_KEY, name)
+}
+
+/**
+ * The workspace a tab starts with that has shown none yet: the unnamed one while it holds agents
+ * or nothing else exists, otherwise the one shown last on this device (or the first by name).
+ */
+export function startWorkspace(everything: WorkspaceSet): string | null {
+  const named = Object.keys(everything.named).sort()
+  if (named.length === 0 || everything.unnamed.tabs.length > 0) return null
+  const last = localStorage.getItem(LAST_WORKSPACE_KEY)
+  return last !== null && named.includes(last) ? last : named[0]
 }
 
 export function saveTabState(state: TabState): void {
