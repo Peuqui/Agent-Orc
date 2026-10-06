@@ -14,6 +14,8 @@ dependencies = [
     "uvicorn[standard]",
     "pyyaml",
     "pywebpush",
+    # Forms with a file (the recording AIfred sends with what was said on the Echo Dot).
+    "python-multipart",
 ]
 
 [project.optional-dependencies]

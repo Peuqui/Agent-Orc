@@ -195,12 +195,12 @@ RECORDING = b"RIFF....WAVEfmt "
 
 
 def say(client: TestClient, text: str, token: str = VOICE_TOKEN) -> Any:
-    """As AIfred sends it: the words in the query, the recording as the body."""
+    """As AIfred sends it: a form with the words and the recording."""
     return client.post(
         "/api/voice",
-        params={"room": "testraum", "text": text},
-        content=RECORDING,
-        headers={"Authorization": f"Bearer {token}", "Content-Type": "audio/wav"},
+        data={"room": "testraum", "text": text},
+        files={"audio": ("said.wav", RECORDING, "audio/wav")},
+        headers={"Authorization": f"Bearer {token}"},
     )
 
 
@@ -283,7 +283,12 @@ def test_only_aifred_with_the_token_may_speak_to_the_agents(
 ) -> None:
     client = voice_client(home, socket_name, clock, aifred)
     assert say(client, "hallo", token="wrong").status_code == 401
-    assert client.post("/api/voice", params={"room": "r", "text": "x"}).status_code == 401
+    unsigned = client.post(
+        "/api/voice",
+        data={"room": "r", "text": "x"},
+        files={"audio": ("a.wav", b"x", "audio/wav")},
+    )
+    assert unsigned.status_code == 401
 
 
 def test_the_paragraph_for_listening_is_the_last_marked_one() -> None:

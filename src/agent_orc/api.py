@@ -11,10 +11,21 @@ from contextlib import asynccontextmanager
 from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
 from urllib.parse import urlsplit
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response, WebSocket, status
+from fastapi import (
+    Depends,
+    FastAPI,
+    Form,
+    Header,
+    HTTPException,
+    Request,
+    Response,
+    UploadFile,
+    WebSocket,
+    status,
+)
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -1335,11 +1346,13 @@ def create_app(
         return agents
 
     @app.post("/api/voice", dependencies=[Depends(require_voice_token)])
-    async def voice(room: str, text: str, request: Request) -> dict[str, str | None]:
-        """What the user said on an Echo Dot after the wake word, as words (the query) and as the
-        recording (the body, a WAV): the Echo asks back which agent it understood and the text
-        is typed into that agent after a spoken yes."""
-        recording = await request.body()
+    async def voice(
+        room: Annotated[str, Form()], text: Annotated[str, Form()], audio: UploadFile
+    ) -> dict[str, str | None]:
+        """What the user said on an Echo Dot after the wake word, as words (the form fields) and
+        as the recording (a WAV): the Echo asks back which agent it understood and the text is
+        typed into that agent after a spoken yes."""
+        recording = await audio.read()
         return await asyncio.to_thread(handle_voice, room, text, recording)
 
     def handle_voice(room: str, text: str, recording: bytes) -> dict[str, str | None]:
