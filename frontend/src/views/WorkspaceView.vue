@@ -71,6 +71,8 @@ const everyWorkspace = ref<WorkspaceSet | null>(null)
 const workspace = ref<Workspace>(emptyWorkspace())
 // Nothing is stored before the workspace has been loaded, or an empty one would replace it.
 const ready = ref(false)
+// The first load is through: the page can show everything at once.
+const loaded = ref(false)
 
 // Opened order of the iframes, apart from the column order: only appended and removed.
 const frameIds = ref<string[]>([])
@@ -436,6 +438,7 @@ async function load(): Promise<void> {
   stored = JSON.stringify(workspace.value)
   frameIds.value = [...workspace.value.tabs]
   ready.value = true
+  loaded.value = true
   remember()
   if (typeof route.query.open === 'string') openRequested()
   else showName()
@@ -513,240 +516,243 @@ async function rename(): Promise<void> {
 </script>
 
 <template>
+  <!-- Shown once the workspaces have arrived, so nothing flashes up that is replaced a moment later. -->
   <div class="flex h-dvh flex-col bg-slate-900">
-    <ConfirmDialog
-      v-if="deleting"
-      :title="$t('workspace.delete')"
-      :message="$t('workspace.confirmDelete', { name: name ?? '' })"
-      :confirm-label="$t('workspace.delete')"
-      danger
-      @confirm="deleteThis"
-      @close="deleting = false"
-    />
-    <!-- Compact buttons below md, so name, workspaces and usage fit on a phone. -->
-    <header
-      v-if="!fullscreen"
-      class="flex flex-wrap items-center gap-1 border-b border-slate-800 px-1 py-1 max-md:[&_.btn-icon]:size-8"
-    >
-      <NavMenu />
-      <!-- Narrow windows (not phones, which keep one row): name and workspaces move to a second
-           row (this break starts it). -->
-      <div v-if="!phone" class="order-last h-0 basis-full md:hidden" />
-      <!-- Phones: the name, and the others in a list behind it, so everything fits in one row. -->
-      <template v-if="!tabsInHeader">
-        <WorkspaceNameField
-          v-model="nameInput"
-          class="flex-1"
-          input-class="rounded-md px-2 py-1 font-semibold text-amber-300 placeholder:font-normal placeholder:text-slate-500 hover:bg-slate-800 focus:bg-slate-800"
-          :placeholder="$t('workspace.unnamed')"
-          :hint="$t('workspace.nameHint')"
-          :deletable="name !== null"
-          @rename="rename"
-          @delete="deleting = true"
-        />
-        <div ref="workspaceChooser" class="relative">
-          <button class="btn-icon" :aria-label="$t('workspace.others')" :title="$t('workspace.others')" @click="choosingWorkspace = !choosingWorkspace">
-            <AppIcon name="chevron" />
-          </button>
-          <div v-if="choosingWorkspace" class="card absolute top-full left-0 z-40 mt-1 flex w-56 flex-col p-1 shadow-xl">
-            <template v-for="other in workspaceOrder" :key="other ?? ''">
+    <template v-if="loaded">
+      <ConfirmDialog
+        v-if="deleting"
+        :title="$t('workspace.delete')"
+        :message="$t('workspace.confirmDelete', { name: name ?? '' })"
+        :confirm-label="$t('workspace.delete')"
+        danger
+        @confirm="deleteThis"
+        @close="deleting = false"
+      />
+      <!-- Compact buttons below md, so name, workspaces and usage fit on a phone. -->
+      <header
+        v-if="!fullscreen"
+        class="flex flex-wrap items-center gap-1 border-b border-slate-800 px-1 py-1 max-md:[&_.btn-icon]:size-8"
+      >
+        <NavMenu />
+        <!-- Narrow windows (not phones, which keep one row): name and workspaces move to a second
+             row (this break starts it). -->
+        <div v-if="!phone" class="order-last h-0 basis-full md:hidden" />
+        <!-- Phones: the name, and the others in a list behind it, so everything fits in one row. -->
+        <template v-if="!tabsInHeader">
+          <WorkspaceNameField
+            v-model="nameInput"
+            class="flex-1"
+            input-class="rounded-md px-2 py-1 font-semibold text-amber-300 placeholder:font-normal placeholder:text-slate-500 hover:bg-slate-800 focus:bg-slate-800"
+            :placeholder="$t('workspace.unnamed')"
+            :hint="$t('workspace.nameHint')"
+            :deletable="name !== null"
+            @rename="rename"
+            @delete="deleting = true"
+          />
+          <div ref="workspaceChooser" class="relative">
+            <button class="btn-icon" :aria-label="$t('workspace.others')" :title="$t('workspace.others')" @click="choosingWorkspace = !choosingWorkspace">
+              <AppIcon name="chevron" />
+            </button>
+            <div v-if="choosingWorkspace" class="card absolute top-full left-0 z-40 mt-1 flex w-56 flex-col p-1 shadow-xl">
+              <template v-for="other in workspaceOrder" :key="other ?? ''">
+                <button
+                  v-if="other !== name"
+                  class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-slate-300 hover:bg-slate-700"
+                  @click="((choosingWorkspace = false), jumpToWorkspace(router, other))"
+                >
+                  <AppIcon name="workspace" />{{ other ?? $t('workspace.unnamed') }}
+                </button>
+              </template>
               <button
-                v-if="other !== name"
-                class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-slate-300 hover:bg-slate-700"
-                @click="((choosingWorkspace = false), jumpToWorkspace(router, other))"
+                v-if="!workspaceOrder.includes(null)"
+                class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-slate-400 hover:bg-slate-700"
+                @click="((choosingWorkspace = false), jumpToWorkspace(router, null))"
               >
-                <AppIcon name="workspace" />{{ other ?? $t('workspace.unnamed') }}
+                <AppIcon name="plus" />{{ $t('workspace.new') }}
               </button>
-            </template>
+            </div>
+          </div>
+        </template>
+        <!-- Computers and upright tablets: all workspaces as tabs in a fixed order, the one shown
+             is the name field. One click on another goes to the tab that shows it, otherwise
+             here; a middle click opens a new tab. Narrow windows: in a second row, swipeable. -->
+        <template v-else>
+          <div v-if="!phone" class="order-last h-0 basis-full md:hidden" />
+          <div
+            class="flex min-w-0 items-center gap-1"
+            :class="phone ? 'flex-1' : 'max-md:order-last max-md:flex-1 md:shrink-0'"
+          >
+            <!-- A new workspace starts unnamed; this is not the "+" that adds an agent (right); it stays in view while the tabs scroll. -->
             <button
               v-if="!workspaceOrder.includes(null)"
-              class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-slate-400 hover:bg-slate-700"
-              @click="((choosingWorkspace = false), jumpToWorkspace(router, null))"
+              class="ml-2 flex shrink-0 items-center gap-1 rounded-md border border-dashed border-slate-600 px-2 py-1 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+              :title="$t('workspace.new')"
+              :aria-label="$t('workspace.new')"
+              @click="jumpToWorkspace(router, null)"
             >
-              <AppIcon name="plus" />{{ $t('workspace.new') }}
+              <AppIcon name="plus" class="size-3.5" /><AppIcon name="workspace" class="size-4" />
             </button>
+            <nav class="flex min-w-0 items-center gap-1 overflow-x-auto [scrollbar-width:none]">
+              <template v-for="tab in workspaceOrder" :key="tab ?? ''">
+                <WorkspaceNameField
+                  v-if="tab === name"
+                  v-model="nameInput"
+                  class="shrink-0"
+                  input-class="rounded-md border border-amber-400/70 px-2 py-1 text-sm text-slate-100 placeholder:text-slate-300 field-sizing-content"
+                  :placeholder="$t('workspace.unnamed')"
+                  :hint="$t('workspace.nameHint')"
+                  :deletable="name !== null"
+                  @rename="rename"
+                  @delete="deleting = true"
+                />
+                <a
+                  v-else
+                  :href="router.resolve(workspaceRoute(tab)).href"
+                  class="flex shrink-0 items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-sm text-slate-300 hover:bg-slate-800 hover:text-slate-100"
+                  :title="tab !== null && otherTabs.has(tab) ? $t('workspace.openElsewhere') : $t('workspace.switchHere')"
+                  @click.prevent="jumpToWorkspace(router, tab)"
+                >
+                  {{ tab ?? $t('workspace.unnamed') }}
+                  <AppIcon v-if="tab !== null && otherTabs.has(tab)" name="external" class="size-3.5 text-slate-500" />
+                </a>
+              </template>
+            </nav>
+          </div>
+        </template>
+        <!-- Claude's usage, centred in the room between the workspaces and the buttons; it shrinks
+             with the window. Not on phones: the name gets the room (the overview shows it). -->
+        <QuotaPanel v-if="!phone" compact class="min-w-0 flex-1 overflow-hidden sm:px-3" />
+        <div class="relative">
+          <button
+            class="flex size-8 items-center justify-center rounded-md border border-slate-600 text-slate-300 hover:bg-slate-700"
+            :aria-label="$t('workspace.add')"
+            :title="$t('workspace.add')"
+            @click="picking = !picking"
+          >
+            <AppIcon name="plus" class="size-4" />
+          </button>
+          <div
+            v-if="picking"
+            class="card absolute top-full right-0 z-20 mt-1 flex w-64 flex-col gap-1 p-2 shadow-xl"
+          >
+            <button
+              v-for="session in notOpen"
+              :key="session.id"
+              class="rounded-md px-3 py-2 text-left hover:bg-slate-700"
+              @click="open(session.id)"
+            >
+              {{ sessionName(session) }}
+              <span v-if="livesElsewhere(session.id)" class="text-xs text-slate-500">
+                · {{ $t('workspace.movesFrom', { name: livesElsewhere(session.id) }) }}
+              </span>
+            </button>
+            <p v-if="notOpen.length === 0" class="px-3 py-2 text-sm text-slate-500">{{ $t('workspace.allOpen') }}</p>
+            <RouterLink :to="{ path: '/files', query: { workspace: '1' } }" class="btn-primary mt-1">
+              <AppIcon name="plus" />{{ $t('sessions.startNew') }}
+            </RouterLink>
           </div>
         </div>
-      </template>
-      <!-- Computers and upright tablets: all workspaces as tabs in a fixed order, the one shown
-           is the name field. One click on another goes to the tab that shows it, otherwise
-           here; a middle click opens a new tab. Narrow windows: in a second row, swipeable. -->
-      <template v-else>
-        <div v-if="!phone" class="order-last h-0 basis-full md:hidden" />
+        <!-- Columns as one boxed group: fewer | count | more. -->
         <div
-          class="flex min-w-0 items-center gap-1"
-          :class="phone ? 'flex-1' : 'max-md:order-last max-md:flex-1 md:shrink-0'"
+          v-if="!phone"
+          class="flex h-8 shrink-0 items-stretch divide-x divide-slate-600 overflow-hidden rounded-md border border-slate-600 text-sm text-slate-300"
+          :title="$t('workspace.columns')"
         >
-          <!-- A new workspace starts unnamed; this is not the "+" that adds an agent (right); it stays in view while the tabs scroll. -->
-          <button
-            v-if="!workspaceOrder.includes(null)"
-            class="ml-2 flex shrink-0 items-center gap-1 rounded-md border border-dashed border-slate-600 px-2 py-1 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
-            :title="$t('workspace.new')"
-            :aria-label="$t('workspace.new')"
-            @click="jumpToWorkspace(router, null)"
-          >
-            <AppIcon name="plus" class="size-3.5" /><AppIcon name="workspace" class="size-4" />
-          </button>
-          <nav class="flex min-w-0 items-center gap-1 overflow-x-auto [scrollbar-width:none]">
-            <template v-for="tab in workspaceOrder" :key="tab ?? ''">
-              <WorkspaceNameField
-                v-if="tab === name"
-                v-model="nameInput"
-                class="shrink-0"
-                input-class="rounded-md border border-amber-400/70 px-2 py-1 text-sm text-slate-100 placeholder:text-slate-300 field-sizing-content"
-                :placeholder="$t('workspace.unnamed')"
-                :hint="$t('workspace.nameHint')"
-                :deletable="name !== null"
-                @rename="rename"
-                @delete="deleting = true"
-              />
-              <a
-                v-else
-                :href="router.resolve(workspaceRoute(tab)).href"
-                class="flex shrink-0 items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-sm text-slate-300 hover:bg-slate-800 hover:text-slate-100"
-                :title="tab !== null && otherTabs.has(tab) ? $t('workspace.openElsewhere') : $t('workspace.switchHere')"
-                @click.prevent="jumpToWorkspace(router, tab)"
-              >
-                {{ tab ?? $t('workspace.unnamed') }}
-                <AppIcon v-if="tab !== null && otherTabs.has(tab)" name="external" class="size-3.5 text-slate-500" />
-              </a>
-            </template>
-          </nav>
+          <button class="w-7 hover:bg-slate-700" :aria-label="$t('workspace.fewerColumns')" @click="changeVisible(-1)">−</button>
+          <span class="flex w-7 items-center justify-center text-slate-400">{{ workspace.visible }}</span>
+          <button class="w-7 hover:bg-slate-700" :aria-label="$t('workspace.moreColumns')" @click="changeVisible(1)">+</button>
         </div>
-      </template>
-      <!-- Claude's usage, centred in the room between the workspaces and the buttons; it shrinks
-           with the window. Not on phones: the name gets the room (the overview shows it). -->
-      <QuotaPanel v-if="!phone" compact class="min-w-0 flex-1 overflow-hidden sm:px-3" />
-      <div class="relative">
-        <button
-          class="flex size-8 items-center justify-center rounded-md border border-slate-600 text-slate-300 hover:bg-slate-700"
-          :aria-label="$t('workspace.add')"
-          :title="$t('workspace.add')"
-          @click="picking = !picking"
-        >
-          <AppIcon name="plus" class="size-4" />
+        <button class="btn-icon" :aria-label="$t('workspace.fullscreen')" :title="$t('workspace.fullscreen')" @click="fullscreen = true">
+          <AppIcon name="expand" />
         </button>
-        <div
-          v-if="picking"
-          class="card absolute top-full right-0 z-20 mt-1 flex w-64 flex-col gap-1 p-2 shadow-xl"
-        >
-          <button
-            v-for="session in notOpen"
-            :key="session.id"
-            class="rounded-md px-3 py-2 text-left hover:bg-slate-700"
-            @click="open(session.id)"
-          >
-            {{ sessionName(session) }}
-            <span v-if="livesElsewhere(session.id)" class="text-xs text-slate-500">
-              · {{ $t('workspace.movesFrom', { name: livesElsewhere(session.id) }) }}
-            </span>
-          </button>
-          <p v-if="notOpen.length === 0" class="px-3 py-2 text-sm text-slate-500">{{ $t('workspace.allOpen') }}</p>
-          <RouterLink :to="{ path: '/files', query: { workspace: '1' } }" class="btn-primary mt-1">
-            <AppIcon name="plus" />{{ $t('sessions.startNew') }}
-          </RouterLink>
-        </div>
-      </div>
-      <!-- Columns as one boxed group: fewer | count | more. -->
-      <div
-        v-if="!phone"
-        class="flex h-8 shrink-0 items-stretch divide-x divide-slate-600 overflow-hidden rounded-md border border-slate-600 text-sm text-slate-300"
-        :title="$t('workspace.columns')"
+        <!-- The device's settings, the same menu as in every other page's header. -->
+        <SettingsMenu />
+        <HelpButton />
+      </header>
+      <!-- The way back from fullscreen, small in the corner above the columns. -->
+      <button
+        v-if="fullscreen"
+        class="fixed top-1 right-1 z-40 flex size-8 items-center justify-center rounded-md border border-slate-600 bg-slate-900/80 text-slate-300"
+        :aria-label="$t('workspace.leaveFullscreen')"
+        :title="$t('workspace.leaveFullscreen')"
+        @click="fullscreen = false"
       >
-        <button class="w-7 hover:bg-slate-700" :aria-label="$t('workspace.fewerColumns')" @click="changeVisible(-1)">−</button>
-        <span class="flex w-7 items-center justify-center text-slate-400">{{ workspace.visible }}</span>
-        <button class="w-7 hover:bg-slate-700" :aria-label="$t('workspace.moreColumns')" @click="changeVisible(1)">+</button>
-      </div>
-      <button class="btn-icon" :aria-label="$t('workspace.fullscreen')" :title="$t('workspace.fullscreen')" @click="fullscreen = true">
-        <AppIcon name="expand" />
+        <AppIcon name="shrink" class="size-4" />
       </button>
-      <!-- The device's settings, the same menu as in every other page's header. -->
-      <SettingsMenu />
-      <HelpButton />
-    </header>
-    <!-- The way back from fullscreen, small in the corner above the columns. -->
-    <button
-      v-if="fullscreen"
-      class="fixed top-1 right-1 z-40 flex size-8 items-center justify-center rounded-md border border-slate-600 bg-slate-900/80 text-slate-300"
-      :aria-label="$t('workspace.leaveFullscreen')"
-      :title="$t('workspace.leaveFullscreen')"
-      @click="fullscreen = false"
-    >
-      <AppIcon name="shrink" class="size-4" />
-    </button>
 
-    <p v-if="ready && workspace.tabs.length === 0" class="p-6 text-center text-slate-400">{{ $t('workspace.empty') }}</p>
+      <p v-if="ready && workspace.tabs.length === 0" class="p-6 text-center text-slate-400">{{ $t('workspace.empty') }}</p>
 
-    <!-- One scrolling row; 100cqw is its width, so N columns fill it exactly. -->
-    <div
-      ref="row"
-      class="min-h-0 flex-1 overflow-x-auto"
-      :class="{ 'snap-x snap-mandatory': resize === null, '[scrollbar-width:none]': phone }"
-      style="container-type: inline-size"
-    >
-      <div class="grid h-full grid-rows-[auto_minmax(0,1fr)]" :style="gridStyle">
-        <div
-          v-for="id in showTabs ? workspace.tabs : []"
-          :key="`head-${id}`"
-          ref="heads"
-          :data-tab-id="id"
-          class="flex cursor-grab touch-pan-x snap-start items-center gap-1 border-b-2 bg-slate-900 py-1 pl-2 text-sm select-none [-webkit-touch-callout:none]"
-          :class="[
-            workspace.active === id ? 'border-red-500 text-slate-100' : 'border-slate-800 text-slate-400',
-            drag?.active && drag.target === id && drag.id !== id ? 'ring-2 ring-amber-400 ring-inset' : '',
-            drag?.active && drag.id === id ? 'opacity-50' : '',
-          ]"
-          :style="{ gridColumn: column(id), gridRow: '1' }"
-          :title="$t('workspace.move')"
-          @pointerdown="reorder.onPointerDown($event, id)"
-          @pointermove="reorder.onPointerMove"
-          @pointerup="reorder.onPointerUp"
-          @pointercancel="reorder.cancel"
-          @touchmove="reorder.onTouchMove"
-          @contextmenu.prevent
-        >
-          <!-- The grabbing hand here too: the whole head is the handle for sorting. -->
-          <button class="min-w-0 flex-1 cursor-grab truncate text-left font-medium" @click="activate(id)">
-            {{ tabName(id) }}
-          </button>
-          <button
-            class="px-2 text-slate-500 hover:text-slate-200"
-            :aria-label="$t('workspace.close')"
-            data-no-drag
-            @click="closeTab(id)"
+      <!-- One scrolling row; 100cqw is its width, so N columns fill it exactly. -->
+      <div
+        ref="row"
+        class="min-h-0 flex-1 overflow-x-auto"
+        :class="{ 'snap-x snap-mandatory': resize === null, '[scrollbar-width:none]': phone }"
+        style="container-type: inline-size"
+      >
+        <div class="grid h-full grid-rows-[auto_minmax(0,1fr)]" :style="gridStyle">
+          <div
+            v-for="id in showTabs ? workspace.tabs : []"
+            :key="`head-${id}`"
+            ref="heads"
+            :data-tab-id="id"
+            class="flex cursor-grab touch-pan-x snap-start items-center gap-1 border-b-2 bg-slate-900 py-1 pl-2 text-sm select-none [-webkit-touch-callout:none]"
+            :class="[
+              workspace.active === id ? 'border-red-500 text-slate-100' : 'border-slate-800 text-slate-400',
+              drag?.active && drag.target === id && drag.id !== id ? 'ring-2 ring-amber-400 ring-inset' : '',
+              drag?.active && drag.id === id ? 'opacity-50' : '',
+            ]"
+            :style="{ gridColumn: column(id), gridRow: '1' }"
+            :title="$t('workspace.move')"
+            @pointerdown="reorder.onPointerDown($event, id)"
+            @pointermove="reorder.onPointerMove"
+            @pointerup="reorder.onPointerUp"
+            @pointercancel="reorder.cancel"
+            @touchmove="reorder.onTouchMove"
+            @contextmenu.prevent
           >
-            ×
-          </button>
+            <!-- The grabbing hand here too: the whole head is the handle for sorting. -->
+            <button class="min-w-0 flex-1 cursor-grab truncate text-left font-medium" @click="activate(id)">
+              {{ tabName(id) }}
+            </button>
+            <button
+              class="px-2 text-slate-500 hover:text-slate-200"
+              :aria-label="$t('workspace.close')"
+              data-no-drag
+              @click="closeTab(id)"
+            >
+              ×
+            </button>
+          </div>
+          <iframe
+            v-for="id in frameIds"
+            :key="id"
+            ref="frames"
+            :data-tab="id"
+            :data-active="workspace.active === id"
+            :src="frameUrl(id)"
+            :title="tabName(id)"
+            class="h-full w-full snap-start bg-slate-900"
+            :style="{ gridColumn: column(id), gridRow: '2' }"
+            allow="microphone; clipboard-write"
+            @load="onFrameLoad(id)"
+          />
+          <!-- Divider on each column's right edge, above the iframes (which would swallow it); on
+               phones every column fills the screen, so there is nothing to divide. -->
+          <div
+            v-for="id in showTabs ? workspace.tabs : []"
+            :key="`divider-${id}`"
+            class="z-10 w-2 cursor-col-resize touch-none justify-self-end border-r border-slate-700 hover:bg-red-500/30"
+            :class="{ 'bg-red-500/40': resize?.id === id }"
+            :style="{ gridColumn: column(id), gridRow: '1 / span 2' }"
+            :title="$t('workspace.resize')"
+            @pointerdown="onDividerPointerDown($event, id)"
+            @pointermove="onDividerPointerMove"
+            @pointerup="resize = null"
+            @pointercancel="resize = null"
+            @dblclick="resetWidth(id)"
+          />
         </div>
-        <iframe
-          v-for="id in frameIds"
-          :key="id"
-          ref="frames"
-          :data-tab="id"
-          :data-active="workspace.active === id"
-          :src="frameUrl(id)"
-          :title="tabName(id)"
-          class="h-full w-full snap-start bg-slate-900"
-          :style="{ gridColumn: column(id), gridRow: '2' }"
-          allow="microphone; clipboard-write"
-          @load="onFrameLoad(id)"
-        />
-        <!-- Divider on each column's right edge, above the iframes (which would swallow it); on
-             phones every column fills the screen, so there is nothing to divide. -->
-        <div
-          v-for="id in showTabs ? workspace.tabs : []"
-          :key="`divider-${id}`"
-          class="z-10 w-2 cursor-col-resize touch-none justify-self-end border-r border-slate-700 hover:bg-red-500/30"
-          :class="{ 'bg-red-500/40': resize?.id === id }"
-          :style="{ gridColumn: column(id), gridRow: '1 / span 2' }"
-          :title="$t('workspace.resize')"
-          @pointerdown="onDividerPointerDown($event, id)"
-          @pointermove="onDividerPointerMove"
-          @pointerup="resize = null"
-          @pointercancel="resize = null"
-          @dblclick="resetWidth(id)"
-        />
       </div>
-    </div>
+    </template>
   </div>
 </template>
