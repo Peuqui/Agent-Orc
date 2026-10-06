@@ -86,6 +86,17 @@ dictation:
   # CPU transcription of a long dictation can take a while.
   timeout_seconds: 300
 
+# Answers read aloud on an Echo Dot, through AIfred's announce endpoint (POST /audio/announce):
+# the paragraph for listening of an answer, spoken by the Echo plugin's voice. Remove the leading
+# "#" to switch it on; the room is chosen in the settings menu from the rooms AIfred reports.
+# announce:
+#   url: http://127.0.0.1:8002/api
+#   # A file next to this one with AIfred's ANNOUNCE_API_TOKEN, readable by you only (chmod 600).
+#   token_file: announce-token
+#   # AIfred refuses a longer text; Agent-Orc cuts an answer at a sentence below this.
+#   max_chars: 1200
+#   timeout_seconds: 30
+
 tmux:
   # Dedicated tmux server socket, so Agent-Orc never touches your own tmux sessions.
   socket_name: agent-orc

@@ -77,8 +77,9 @@ detaches: the agents keep working, and you pick them up again from any device.
   request every text) instead of the terminal with its thoughts and diffs; what you typed
   during an answer and its pictures are shown too.
 - Read them aloud with the voices of the browser (one answer, from here on, or all new ones;
-  code and tables are left out). The speech output is a list of engines, so a server voice can
-  be added later.
+  code and tables are left out). The speech output is a list of engines: with an `announce:`
+  section in the config, the paragraph for listening can also be said on an Echo Dot through
+  [AIfred](https://github.com/Peuqui/AIfred-Intelligence), in the room chosen in the settings.
 
 **Notes**
 - Notebooks as tabs, each with loose notes and folders, kept on the server like the workspaces.

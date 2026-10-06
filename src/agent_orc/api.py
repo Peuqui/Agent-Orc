@@ -17,6 +17,7 @@ from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from agent_orc import announce as announcing
 from agent_orc import files
 from agent_orc.answers import read_image, read_turns
 from agent_orc.approvals import ApprovalNotFoundError, ApprovalRequest, decide, open_requests
@@ -40,6 +41,7 @@ from agent_orc.config import (
     Config,
     LiveEffortConfig,
     TerminalKey,
+    config_dir,
 )
 from agent_orc.consumption import claude_consumption
 from agent_orc.context import (
@@ -169,6 +171,10 @@ class UnknownWorkspaceError(LookupError):
     """No workspace of this name."""
 
 
+class AnnounceNotConfiguredError(LookupError):
+    """The config has no section for the Echo Dot."""
+
+
 class UnknownNotebookError(LookupError):
     """No notebook of this name."""
 
@@ -196,6 +202,7 @@ ERROR_STATUS: dict[type[Exception], int] = {
     UnknownModelError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     UnknownWorkspaceError: status.HTTP_404_NOT_FOUND,
     UnknownNotebookError: status.HTTP_404_NOT_FOUND,
+    AnnounceNotConfiguredError: status.HTTP_404_NOT_FOUND,
     NotebookExistsError: status.HTTP_409_CONFLICT,
     SessionAlreadyRunningError: status.HTTP_409_CONFLICT,
     files.InvalidNameError: status.HTTP_422_UNPROCESSABLE_CONTENT,
@@ -216,6 +223,9 @@ ERROR_STATUS: dict[type[Exception], int] = {
     UnsupportedAudioError: status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
     GpuUnavailableError: status.HTTP_503_SERVICE_UNAVAILABLE,
     DictationServiceError: status.HTTP_502_BAD_GATEWAY,
+    announcing.UnknownRoomError: status.HTTP_404_NOT_FOUND,
+    announcing.TextTooLongError: status.HTTP_413_CONTENT_TOO_LARGE,
+    announcing.AnnounceError: status.HTTP_502_BAD_GATEWAY,
 }
 
 
@@ -359,6 +369,12 @@ class ScheduledPromptRequest(BaseModel):
     text: str
     # When to type it, in seconds since the epoch.
     at: float
+
+
+class AnnounceRequest(BaseModel):
+    # "*": every room with an Echo connected.
+    room: str
+    text: str
 
 
 class BroadcastRequest(BaseModel):
@@ -1261,6 +1277,23 @@ def create_app(
         if session is None:
             raise SessionNotFoundError(session_id)
         return served_file(uploaded_image(session.path, name), download=False)
+
+    @app.get("/api/announce", dependencies=authenticated)
+    def announce_state() -> dict[str, Any]:
+        """Whether answers can be read on an Echo Dot, in which rooms it is connected now, and how
+        long a text may be."""
+        settings = config.announce
+        if settings is None:
+            return {"configured": False, "rooms": [], "max_chars": 0}
+        rooms = announcing.rooms(settings, config_dir())
+        return {"configured": True, "rooms": rooms, "max_chars": settings.max_chars}
+
+    @app.post("/api/announce", dependencies=authenticated, status_code=status.HTTP_204_NO_CONTENT)
+    def announce_text(body: AnnounceRequest) -> None:
+        """Hands the text to AIfred, which says it on the Echo Dot of the room."""
+        if config.announce is None:
+            raise AnnounceNotConfiguredError("announce")
+        announcing.announce(config.announce, config_dir(), body.room, body.text)
 
     @app.get("/api/sessions/{session_id}/text", dependencies=authenticated)
     def session_text(session_id: str) -> dict[str, str]:

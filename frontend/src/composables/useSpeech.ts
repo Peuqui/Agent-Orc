@@ -1,8 +1,8 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { speechEngine, speechEngines } from '../speech'
-import { speechChunks, spokenText } from '../speechText'
-import { useSettings } from './useSettings'
+import { loadServerEngines, speechEngine, speechEngines } from '../speech'
+import { spokenText } from '../speechText'
+import { useSettings, useSpeechVoice } from './useSettings'
 import { useToast } from './useToast'
 
 /** An answer to read: the id says which one is being read, the text is Markdown. */
@@ -19,24 +19,30 @@ const paused = ref(false)
 let reading = 0
 
 export function useSpeech() {
-  const { speechEngine: engineId, speechVoice, speechRate, speechMaxChars, speechAnnounceName } = useSettings()
+  const { speechEngine: engineId, speechRate, speechMaxChars, speechAnnounceName } = useSettings()
   const { locale, t } = useI18n()
   const toast = useToast()
-  const engine = computed(() => speechEngine(engineId.value))
-  const available = speechEngines.length > 0
+  // Not there while the server's engines are still being asked for (see loadServerEngines).
+  const engine = computed(() => speechEngines.value.find((candidate) => candidate.id === engineId.value))
+  const voice = computed(() => useSpeechVoice(engineId.value))
+  const available = computed(() => speechEngines.value.length > 0)
 
   /** Reads the answers one after the other; what is read now ends. */
   async function play(items: Speakable[]): Promise<void> {
     stop()
     const mine = ++reading
     try {
+      await loadServerEngines()
+      const speaker = speechEngine(engineId.value)
+      const limit = Math.min(speechMaxChars.value, speaker.maxChars)
       for (const item of items) {
         playing.value = item.id
-        const answer = spokenText(item.text, t('answers.skipped'), speechMaxChars.value)
-        const text = speechAnnounceName.value && item.label ? `${item.label}.\n${answer}` : answer
-        for (const chunk of speechChunks(text)) {
+        const name = speechAnnounceName.value && item.label ? `${item.label}.\n` : ''
+        // The name counts towards what the engine takes.
+        const answer = spokenText(item.text, t('answers.skipped'), limit - name.length)
+        for (const chunk of speaker.split(name + answer)) {
           if (reading !== mine) return
-          await engine.value.speak(chunk, { voice: speechVoice.value, rate: speechRate.value, lang: locale.value })
+          await speaker.speak(chunk, { voice: voice.value.value, rate: speechRate.value, lang: locale.value })
         }
       }
     } catch (error) {
@@ -47,7 +53,7 @@ export function useSpeech() {
 
   function stop(): void {
     reading++
-    engine.value.cancel()
+    engine.value?.cancel()
     playing.value = null
     paused.value = false
   }
@@ -55,8 +61,8 @@ export function useSpeech() {
   function togglePause(): void {
     if (playing.value === null) return
     paused.value = !paused.value
-    if (paused.value) engine.value.pause()
-    else engine.value.resume()
+    if (paused.value) engine.value?.pause()
+    else engine.value?.resume()
   }
 
   return {
@@ -65,7 +71,11 @@ export function useSpeech() {
     paused,
     engines: speechEngines,
     engine,
-    voices: () => engine.value.voices(locale.value),
+    /** What can be chosen with the engine now: voices, rooms. */
+    choices: async () => {
+      await loadServerEngines()
+      return speechEngine(engineId.value).voices(locale.value)
+    },
     play,
     stop,
     togglePause,

@@ -148,7 +148,7 @@ function togglePrompt(id: string): void {
       >
         {{ answersAll ? $t('answers.showSummaries') : $t('answers.showAll') }}
       </button>
-      <template v-if="speech.available">
+      <template v-if="speech.available.value">
         <button
           type="button"
           class="btn-primary btn-small"
@@ -205,7 +205,7 @@ function togglePrompt(id: string): void {
             <div class="markdown note select-text" v-html="renderMarkdown(item.text, null)" />
             <div class="flex items-center gap-2 text-xs text-slate-500">
               <span>{{ formatMoment(new Date(item.time), locale) }}</span>
-              <template v-if="speech.available">
+              <template v-if="speech.available.value">
                 <button
                   type="button"
                   class="btn-secondary btn-small ml-auto"

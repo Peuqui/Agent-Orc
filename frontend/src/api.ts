@@ -453,6 +453,10 @@ export const api = {
   /** Where a picture of a request or of something typed during an answer is served (index from 0). */
   answerImageUrl: (sessionId: string, entryId: string, index: number) =>
     `api/sessions/${encodeURIComponent(sessionId)}/images/${encodeURIComponent(entryId)}/${index}`,
+  /** Whether answers can be read on an Echo Dot, the rooms it is connected in now, the longest text. */
+  announce: () => request<{ configured: boolean; rooms: string[]; max_chars: number }>('GET', 'announce'),
+  /** Has the text said on the Echo Dot of the room ("*": all); returns once it is queued. */
+  announceText: (room: string, text: string) => request<void>('POST', 'announce', { body: { room, text } }),
   /** Where a picture attached for the agent is served (the file name in its uploads folder). */
   uploadUrl: (sessionId: string, name: string) =>
     `api/sessions/${encodeURIComponent(sessionId)}/uploads/${encodeURIComponent(name)}`,

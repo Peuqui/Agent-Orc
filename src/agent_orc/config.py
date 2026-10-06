@@ -108,6 +108,19 @@ class DictationConfig(StrictModel):
     timeout_seconds: int
 
 
+class AnnounceConfig(StrictModel):
+    """Answers read aloud on an Echo Dot, through AIfred's announce endpoint (see announce.py)."""
+
+    # AIfred's API, e.g. http://127.0.0.1:8002/api
+    url: str
+    # A file in the config directory holding the bearer token; readable by the user only, so the
+    # token is not in this file (it may be shared) and a new one needs no restart.
+    token_file: str
+    # AIfred refuses a longer text; the answer is cut at a sentence beforehand.
+    max_chars: int
+    timeout_seconds: int
+
+
 class TmuxConfig(StrictModel):
     socket_name: str
 
@@ -202,6 +215,8 @@ class Config(StrictModel):
     handover: HandoverConfig
     limit_resume: LimitResumeConfig
     dictation: DictationConfig
+    # Without it there is no Echo Dot to read answers on.
+    announce: AnnounceConfig | None = None
     tmux: TmuxConfig
     agents: dict[str, AgentProfile]
 

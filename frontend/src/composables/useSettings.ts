@@ -96,7 +96,16 @@ export function readAnswersAll(sessionId: string): boolean {
 export const DEFAULT_SPEECH_ENGINE = 'browser'
 export const DEFAULT_SPEECH_RATE = 1
 const speechEngine = setting('agent-orc-speech-engine', DEFAULT_SPEECH_ENGINE, String)
-const speechVoice = setting('agent-orc-speech-voice', '', String)
+// What is chosen with an engine (a voice of the device, a room of the Echo Dot): one for each.
+const speechVoices = new Map<string, Ref<string>>()
+export function useSpeechVoice(engineId: string): Ref<string> {
+  let voice = speechVoices.get(engineId)
+  if (voice === undefined) {
+    voice = setting(`agent-orc-speech-voice:${engineId}`, '', String)
+    speechVoices.set(engineId, voice)
+  }
+  return voice
+}
 const speechRate = setting('agent-orc-speech-rate', DEFAULT_SPEECH_RATE, Number)
 /** Without a paragraph for listening, an answer is read up to this many characters. */
 /** The agent's name is spoken before its answer, so one hears who is speaking. */
@@ -126,7 +135,6 @@ export function useSettings() {
     extraKeysUnfolded,
     extraKeysVersion,
     speechEngine,
-    speechVoice,
     speechRate,
     speechMaxChars,
     speechAnnounceName,

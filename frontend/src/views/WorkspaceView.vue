@@ -733,7 +733,7 @@ async function rename(): Promise<void> {
           </button>
         </div>
         <button
-          v-if="speech.available"
+          v-if="speech.available.value"
           class="btn-icon"
           :class="speech.playing.value !== null ? 'animate-pulse text-red-400' : ''"
           :aria-label="speech.playing.value !== null ? $t('answers.stop') : $t('answers.readNewColumns')"

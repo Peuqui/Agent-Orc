@@ -302,7 +302,7 @@
         "items": [
           "Instead of the terminal, the switch at the top (terminal / speech bubble icon, in the head of every terminal and column) shows only what the agent answered – without thoughts, file edits and diffs. The choice holds for all terminals of this device; the input field stays below.",
           "For each request your question stands in a grey line (tap to see it whole) and below it the agent’s last answer, the summary. “Show everything” also shows the comments in between. New answers have a red stripe until they were looked at.",
-          "Reading aloud: “Read aloud” reads one answer, “From here” this and all following, “Read new” those not seen yet. Code blocks and tables are left out (“a code block follows”), addresses and formatting are not spoken. Pause and stop are at the top. Voice, speed, saying the agent’s name before each answer and the maximum length are in the ☰ menu (for the whole device); these are the voices of the device, and a Bluetooth headset plays the sound there. With the screen locked, reading often stops on a phone. If the answer ends with a paragraph starting with 🔊 (the “answer for listening” of your global CLAUDE.md), only that is spoken; otherwise the answer up to the number of characters set in the cog. The speaker in the head of the workspace reads the new answers of all columns of that workspace one after the other; a second press stops."
+          "Reading aloud: “Read aloud” reads one answer, “From here” this and all following, “Read new” those not seen yet. Code blocks and tables are left out (“a code block follows”), addresses and formatting are not spoken. Pause and stop are at the top. Voice, speed, saying the agent’s name before each answer and the maximum length are in the ☰ menu (for the whole device); these are the voices of the device, and a Bluetooth headset plays the sound there. With the screen locked, reading often stops on a phone. If the answer ends with a paragraph starting with 🔊 (the “answer for listening” of your global CLAUDE.md), only that is spoken; otherwise the answer up to the number of characters set in the cog. The speaker in the head of the workspace reads the new answers of all columns of that workspace one after the other; a second press stops. With the Echo Dot (☰ menu, “Speech output”, once Agent-Orc knows it) AIfred says the paragraph for listening in the chosen room, with a signal tone before and after; from here such an announcement cannot be stopped."
         ]
       },
       {
@@ -552,6 +552,8 @@
     "pending": "waiting to be delivered",
     "readNewColumns": "Read the new answers of this workspace aloud",
     "nothingNew": "Nothing new to read.",
-    "picture": "Picture"
+    "picture": "Picture",
+    "room": "Room",
+    "allRooms": "Every connected room"
   }
 }

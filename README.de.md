@@ -83,8 +83,10 @@ aus wieder aufnehmen.
   der letzte Text, auf Wunsch jeder), statt des Terminals mit Gedanken und Diffs; was du
   während einer Antwort getippt hast, und seine Bilder erscheinen auch.
 - Vorlesen mit den Stimmen des Browsers (eine Antwort, ab hier oder alle neuen; Code und
-  Tabellen werden ausgelassen). Die Sprachausgabe ist eine Liste von Engines, eine Server-Stimme
-  lässt sich später ergänzen.
+  Tabellen werden ausgelassen). Die Sprachausgabe ist eine Liste von Engines: mit einem Abschnitt
+  `announce:` in der Konfiguration lässt sich der Hörabsatz auch über
+  [AIfred](https://github.com/Peuqui/AIfred-Intelligence) auf einem Echo Dot ansagen, im Raum, den
+  du in den Einstellungen wählst.
 
 **Notizen**
 - Notizbücher als Reiter, je mit losen Notizen und Ordnern; sie liegen wie die Arbeitsflächen auf dem Server.
