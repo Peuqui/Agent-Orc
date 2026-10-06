@@ -14,6 +14,7 @@ import { renderMarkdown } from '../markdown'
 import AnswerImages from './AnswerImages.vue'
 import FoldedText from './FoldedText.vue'
 import AppIcon from './AppIcon.vue'
+import JogScroller from './JogScroller.vue'
 
 // What an agent answered, in short: per request of the user its last text (the summary), or
 // every text it wrote. Newer answers are marked until they were looked at; any of them can be
@@ -126,6 +127,12 @@ function pictureUrls(entryId: string, text: string, images: number): string[] {
 
 // How many lines of a message of the user are shown before "more", in either view.
 const USER_LINES = 2
+// One jog "line" in pixels: about the line height of the answers' text.
+const JOG_LINE_PX = 24
+
+function jog(lines: number): void {
+  box.value?.scrollBy({ top: lines * JOG_LINE_PX })
+}
 </script>
 
 <template>
@@ -174,7 +181,8 @@ const USER_LINES = 2
         </template>
       </template>
     </div>
-    <div ref="box" class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-3">
+    <div class="flex min-h-0 flex-1">
+    <div ref="box" class="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-y-auto p-3 [scrollbar-width:none]">
       <p v-if="loaded && !turns.length" class="text-slate-400">{{ $t('answers.empty') }}</p>
       <section v-for="entry in shown" :key="entry.turn.id" class="flex flex-col gap-2">
         <!-- What the user asked: a few lines, more on a click. -->
@@ -226,6 +234,8 @@ const USER_LINES = 2
           {{ $t('answers.working') }}
         </p>
       </section>
+    </div>
+    <JogScroller @scroll="jog" />
     </div>
   </div>
 </template>

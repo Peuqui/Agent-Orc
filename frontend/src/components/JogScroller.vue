@@ -5,9 +5,12 @@ import { onBeforeUnmount, ref } from 'vue'
 // it itself, full screen): a grip that scrolls while it is pulled away from the middle, the
 // faster the further, and springs back when released. Mouse and finger alike. A touch anywhere
 // on the track grabs the grip, so the track is wide (a finger needs about 40 px, and the
-// phones' own edge gesture eats the outermost ones).
+// phones' own edge gesture eats the outermost ones; see TRACK_WIDTH_PX).
 const emit = defineEmits<{ scroll: [lines: number] }>()
 
+// Track width in pixels, the one place it is set for every view that has a jog. A finger needs
+// about 40 px, a mouse less; kept a little under that, as the grip is touched on the whole track.
+const TRACK_WIDTH_PX = 32
 // Pulls shorter than this do nothing, so a grip that is merely touched stays still.
 const DEAD_ZONE_PX = 6
 // At the end of the track the history moves at this many lines per second; kept moderate, as
@@ -84,7 +87,8 @@ onBeforeUnmount(stop)
 <template>
   <div
     ref="track"
-    class="relative w-10 cursor-ns-resize touch-none select-none"
+    class="relative shrink-0 cursor-ns-resize touch-none select-none"
+    :style="{ width: `${TRACK_WIDTH_PX}px` }"
     :title="$t('terminal.jog')"
     @pointerdown="onPointerDown"
     @pointermove="onPointerMove"
