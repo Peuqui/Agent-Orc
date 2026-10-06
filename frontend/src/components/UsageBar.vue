@@ -16,7 +16,7 @@ const tone = computed(() => usageTone(props.percent))
     <div class="h-1.5 w-20 shrink-0 overflow-hidden rounded-full bg-slate-700">
       <div class="h-full rounded-full" :class="tone.bar" :style="{ width: `${Math.min(100, percent)}%` }" />
     </div>
-    <span class="flex shrink-0 gap-3 whitespace-nowrap" :class="tone.text">
+    <span class="flex shrink-0 gap-4 whitespace-nowrap" :class="tone.text">
       <span class="tabular-nums">{{ Math.round(percent) }} %</span>
       <span>{{ reset }}</span>
     </span>

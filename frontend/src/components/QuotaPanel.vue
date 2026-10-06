@@ -43,7 +43,7 @@ function detail(window: QuotaWindow): string {
       class="flex"
       :class="
         compact
-          ? 'mx-auto w-fit max-w-[38rem] items-center rounded-md border border-slate-600 py-1 @[34rem]:w-auto'
+          ? 'mx-auto w-fit max-w-[38rem] items-center rounded-md border border-slate-600 py-1'
           : 'card mb-4 flex-col gap-x-6 gap-y-1 px-4 py-2.5 md:flex-row md:items-center'
       "
       :title="compact ? $t('quota.title', { agent: quota.label }) : undefined"
@@ -56,7 +56,7 @@ function detail(window: QuotaWindow): string {
       <div
         :class="
           compact
-            ? 'hidden min-w-0 grid-cols-2 divide-x divide-slate-600 @[34rem]:grid'
+            ? 'hidden min-w-0 divide-x divide-slate-600 @[34rem]:flex'
             : 'grid flex-1 gap-x-6 gap-y-1 md:grid-cols-2'
         "
       >
