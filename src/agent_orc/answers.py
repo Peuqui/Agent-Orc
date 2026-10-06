@@ -34,6 +34,8 @@ class Interjection:
     # When it was typed.
     time: str
     text: str
+    # Pictures that came with it (their content is not shown).
+    images: int
     # Not yet delivered to the agent (it takes it at its next step).
     pending: bool
 
@@ -45,6 +47,7 @@ class Turn:
     id: str
     time: str
     prompt: str
+    images: int
     texts: list[AnswerText] = field(default_factory=list)
     interjections: list[Interjection] = field(default_factory=list)
 
@@ -53,8 +56,31 @@ def _entry_text(entry: dict[str, Any]) -> str:
     return "\n\n".join(message_texts(entry)).strip()
 
 
+def _prompt_parts(prompt: str | list[dict[str, Any]]) -> tuple[str, int]:
+    """The text of a prompt and how many pictures came with it: Claude writes a prompt with
+    pictures as a list of content blocks."""
+    if isinstance(prompt, str):
+        return prompt.strip(), 0
+    texts = [str(block.get("text", "")) for block in prompt if block.get("type") == "text"]
+    return "\n\n".join(texts).strip(), sum(block.get("type") == "image" for block in prompt)
+
+
 def _is_human_message(entry: dict[str, Any]) -> bool:
-    return entry["type"] == "user" and bool(_entry_text(entry))
+    if entry["type"] != "user":
+        return False
+    content = entry["message"]["content"]
+    return bool(_entry_text(entry)) or (isinstance(content, list) and _prompt_parts(content)[1] > 0)
+
+
+def _handed_over(entry: dict[str, Any]) -> Interjection | None:
+    """What the user typed during the answer and the agent has taken: an attachment of the next
+    step, written with the time it was typed."""
+    attachment = entry["attachment"]
+    typed_by_user = attachment.get("origin", {}).get("kind") == "human"
+    if attachment.get("type") != "queued_command" or not typed_by_user:
+        return None
+    text, images = _prompt_parts(attachment["prompt"])
+    return Interjection(entry["uuid"], entry["timestamp"], text, images, pending=False)
 
 
 def read_turns(transcript: Path, limit: int) -> list[Turn]:
@@ -73,48 +99,44 @@ def read_turns(transcript: Path, limit: int) -> list[Turn]:
             if prompts == limit:
                 break
     entries.reverse()
-    delivered = {
-        entry["attachment"].get("prompt")
-        for entry in entries
-        if entry["type"] == "attachment" and entry["attachment"].get("type") == "queued_command"
-    }
     turns: list[Turn] = []
-    # Typed while the agent works, not yet taken: the oldest is taken first.
+    # Typed during an answer and not yet taken, in the order typed (a message with pictures has
+    # no text here, it only holds the place).
     waiting: list[dict[str, Any]] = []
     for entry in entries:
         if entry["type"] == "queue-operation":
-            _queue_operation(entry, waiting, delivered, turns)
+            _queue_operation(entry, waiting)
         elif entry["type"] == "attachment":
-            continue
+            handed = _handed_over(entry)
+            if handed is not None and turns:
+                turns[-1].interjections.append(handed)
         elif _is_human_message(entry):
-            turns.append(Turn(id=entry["uuid"], time=entry["timestamp"], prompt=_entry_text(entry)))
+            content = entry["message"]["content"]
+            images = _prompt_parts(content)[1] if isinstance(content, list) else 0
+            turns.append(Turn(entry["uuid"], entry["timestamp"], _entry_text(entry), images))
         elif turns and _entry_text(entry):
             text = AnswerText(id=entry["uuid"], time=entry["timestamp"], text=_entry_text(entry))
             turns[-1].texts.append(text)
     if turns:
-        turns[-1].interjections.extend(_interjection(entry, pending=True) for entry in waiting)
+        for entry in waiting:
+            if entry.get("content"):
+                time = entry["timestamp"]
+                turns[-1].interjections.append(
+                    Interjection(f"queued-{time}", time, entry["content"], 0, pending=True)
+                )
     return turns
 
 
-def _interjection(entry: dict[str, Any], pending: bool) -> Interjection:
-    time = entry["timestamp"]
-    return Interjection(id=f"queued-{time}", time=time, text=entry["content"], pending=pending)
-
-
-def _queue_operation(
-    entry: dict[str, Any], waiting: list[dict[str, Any]], delivered: set[Any], turns: list[Turn]
-) -> None:
+def _queue_operation(entry: dict[str, Any], waiting: list[dict[str, Any]]) -> None:
     """Claude queues what the user types while it works: "enqueue" when typed, then either
     "dequeue" (it becomes a request of its own, the next user entry) or "remove" (it is handed to
-    the running answer, as a "queued_command" attachment)."""
+    the running answer, as an attachment of its next step)."""
     operation = entry.get("operation")
-    if operation == "enqueue" and entry.get("content"):
+    if operation == "enqueue":
         waiting.append(entry)
     elif operation == "dequeue" and waiting:
         waiting.pop(0)
     elif operation == "remove":
-        taken = next((e for e in waiting if e["content"] == entry.get("content")), None)
+        taken = next((e for e in waiting if e.get("content") == entry.get("content")), None)
         if taken is not None:
             waiting.remove(taken)
-            if turns and taken["content"] in delivered:
-                turns[-1].interjections.append(_interjection(taken, pending=False))

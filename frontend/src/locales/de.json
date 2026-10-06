@@ -552,6 +552,7 @@
     "more": "mehr",
     "less": "weniger",
     "interjection": "Eingabe während der Antwort",
-    "pending": "wartet auf Zustellung"
+    "pending": "wartet auf Zustellung",
+    "images": "{count} Bild angehängt"
   }
 }

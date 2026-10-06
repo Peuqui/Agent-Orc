@@ -76,6 +76,8 @@ export interface Interjection {
   /** When it was typed (ISO, UTC). */
   time: string
   text: string
+  /** Pictures that came with it (their content is not shown). */
+  images: number
   /** The agent has not taken it yet. */
   pending: boolean
 }
@@ -85,6 +87,8 @@ export interface Turn {
   id: string
   time: string
   prompt: string
+  /** Pictures that came with the request. */
+  images: number
   texts: AnswerText[]
   interjections: Interjection[]
 }

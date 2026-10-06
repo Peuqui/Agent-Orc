@@ -552,6 +552,7 @@
     "more": "more",
     "less": "less",
     "interjection": "Typed during the answer",
-    "pending": "waiting to be delivered"
+    "pending": "waiting to be delivered",
+    "images": "{count} picture attached"
   }
 }

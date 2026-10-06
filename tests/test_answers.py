@@ -67,12 +67,12 @@ def queue(operation: str, uuid: str, content: str | None = None) -> dict[str, An
     return record
 
 
-def delivered(uuid: str, prompt: str) -> dict[str, Any]:
+def delivered(uuid: str, prompt: str | list[dict[str, Any]]) -> dict[str, Any]:
     return {
         "type": "attachment",
         "uuid": uuid,
         "timestamp": f"2026-10-06T10:00:{uuid[1:].zfill(2)}.000Z",
-        "attachment": {"type": "queued_command", "prompt": prompt},
+        "attachment": {"type": "queued_command", "prompt": prompt, "origin": {"kind": "human"}},
     }
 
 
@@ -94,7 +94,8 @@ def test_what_the_user_types_during_an_answer_is_shown_with_it(tmp_path: Path) -
     assert [turn.prompt for turn in turns] == ["Frage", "Nächste Frage"]
     first = turns[0].interjections
     assert [(i.text, i.pending) for i in first] == [("Noch ein Einwand", False)]
-    assert first[0].time == "2026-10-06T10:00:03.000Z"
+    # The attachment carries the time the message was typed.
+    assert first[0].time == "2026-10-06T10:00:05.000Z"
     # The request taken as its own turn is not also an interjection.
     assert turns[1].interjections == []
 
@@ -118,3 +119,28 @@ def test_a_withdrawn_message_is_not_shown(tmp_path: Path) -> None:
     ]
     turns = read_turns(write(tmp_path / "t.jsonl", entries), limit=10)
     assert turns[0].interjections == []
+
+
+def test_a_message_with_a_picture_and_notices_of_the_system(tmp_path: Path) -> None:
+    picture = {"type": "image", "source": {"type": "base64", "data": "AAAA"}}
+    entries = [
+        entry("user", "u1", [{"type": "text", "text": "Schau mal"}, picture]),
+        # Typed with only a picture: no text in the queue operations, a list in the attachment.
+        queue("enqueue", "q2"),
+        queue("remove", "q3"),
+        delivered("d4", [picture]),
+        # What the system hands to the agent is not what the user typed.
+        {
+            "type": "attachment",
+            "uuid": "d5",
+            "timestamp": "2026-10-06T10:00:05.000Z",
+            "attachment": {
+                "type": "queued_command",
+                "prompt": "<task-notification>",
+                "origin": {"kind": "task-notification"},
+            },
+        },
+    ]
+    turns = read_turns(write(tmp_path / "t.jsonl", entries), limit=10)
+    assert (turns[0].prompt, turns[0].images) == ("Schau mal", 1)
+    assert [(i.text, i.images) for i in turns[0].interjections] == [("", 1)]

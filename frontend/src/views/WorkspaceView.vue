@@ -626,7 +626,7 @@ async function rename(): Promise<void> {
                   :href="router.resolve(workspaceRoute(tab)).href"
                   class="flex shrink-0 items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-sm text-slate-300 hover:bg-slate-800 hover:text-slate-100"
                   :data-workspace-drop="tab ?? ''"
-                  :class="drag?.active && drag.target === WORKSPACE_DROP + (tab ?? '') ? 'ring-2 ring-amber-400' : ''"
+                  :class="drag?.active && drag.target === WORKSPACE_DROP + (tab ?? '') ? 'ring-2 ring-amber-400 ring-inset' : ''"
                   :title="tab !== null && otherTabs.has(tab) ? $t('workspace.openElsewhere') : $t('workspace.switchHere')"
                   @click.prevent="jumpToWorkspace(router, tab)"
                 >
@@ -676,10 +676,10 @@ async function rename(): Promise<void> {
           <button class="w-7 hover:bg-slate-700" :aria-label="$t('workspace.fewerColumns')" @click="changeVisible(-1)">−</button>
           <span class="flex w-7 items-center justify-center text-slate-400">{{ workspace.visible }}</span>
           <button class="w-7 hover:bg-slate-700" :aria-label="$t('workspace.moreColumns')" @click="changeVisible(1)">+</button>
-          <!-- Only while a column has been dragged to another width. -->
+          <!-- Dimmed while no column has been dragged to another width. -->
           <button
-            v-if="Object.keys(workspace.widths).length"
-            class="flex w-8 items-center justify-center hover:bg-slate-700"
+            class="flex w-8 items-center justify-center hover:bg-slate-700 disabled:opacity-30 disabled:hover:bg-transparent"
+            :disabled="!Object.keys(workspace.widths).length"
             :title="$t('workspace.resetWidths')"
             :aria-label="$t('workspace.resetWidths')"
             @click="resetWidths"

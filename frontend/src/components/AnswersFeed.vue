@@ -166,6 +166,7 @@ function togglePrompt(id: string): void {
         <!-- What the user asked, in full; a very long request is folded. -->
         <div class="rounded-lg bg-slate-800/60 px-3 py-2 text-sm text-slate-300">
           <p class="whitespace-pre-wrap break-words" :class="foldable(entry.turn.prompt) && !expandedPrompts.has(entry.turn.id) ? 'line-clamp-6' : ''">{{ entry.turn.prompt }}</p>
+          <p v-if="entry.turn.images" class="mt-1 text-xs text-slate-500">{{ $t('answers.images', { count: entry.turn.images }) }}</p>
           <button v-if="foldable(entry.turn.prompt)" type="button" class="mt-1 text-xs text-slate-500 underline" @click="togglePrompt(entry.turn.id)">
             {{ expandedPrompts.has(entry.turn.id) ? $t('answers.less') : $t('answers.more') }}
           </button>
@@ -178,6 +179,7 @@ function togglePrompt(id: string): void {
             :class="item.pending ? 'opacity-60' : ''"
           >
             <p class="whitespace-pre-wrap break-words">{{ item.text }}</p>
+            <p v-if="item.images" class="mt-1 text-xs text-slate-500">{{ $t('answers.images', { count: item.images }) }}</p>
             <p class="mt-1 text-xs text-slate-500">
               {{ $t('answers.interjection') }} · {{ formatMoment(new Date(item.time), locale) }}
               <span v-if="item.pending"> · {{ $t('answers.pending') }}</span>
