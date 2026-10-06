@@ -1,6 +1,6 @@
 // What of an agent's answers is shown, and what of it is new. Pure functions, so they can be
 // tested without a browser.
-import type { AnswerText, Turn } from './api'
+import type { AnswerText, SpokenRequest, Turn } from './api'
 
 /**
  * The texts of a request that are shown: all of them, or the summaries. What the user typed in
@@ -31,4 +31,10 @@ const UPLOAD_MENTION = /@\.agent-orc\/uploads\/([A-Za-z0-9._-]+\.(?:png|jpe?g|gi
 export function uploadMentions(text: string): { text: string; files: string[] } {
   const files = [...text.matchAll(UPLOAD_MENTION)].map((match) => match[1])
   return { text: text.replace(UPLOAD_MENTION, '').replace(/[ \t]*\n[ \t]*/g, '\n').replace(/[ \t]+/g, ' ').trim(), files }
+}
+
+/** The spoken request a turn is: the latest one sent before it with the same text, if any. */
+export function spokenAs(turn: Turn, spoken: SpokenRequest[]): SpokenRequest | undefined {
+  const asked = Date.parse(turn.time)
+  return spoken.findLast((entry) => entry.request === turn.prompt && Date.parse(entry.time) <= asked)
 }

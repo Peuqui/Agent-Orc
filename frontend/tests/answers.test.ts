@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { shownTexts, unreadTexts, uploadMentions } from '../src/answers.ts'
+import { shownTexts, spokenAs, unreadTexts, uploadMentions } from '../src/answers.ts'
 
 const text = (id: string, time: string) => ({ id, time, text: id })
 const turn = (id: string, texts: ReturnType<typeof text>[]) => ({
@@ -59,4 +59,14 @@ test('pictures attached in Agent-Orc are told apart from the message text', () =
     text: '@.agent-orc/uploads/plan.pdf und @docs/x.png',
     files: [],
   })
+})
+
+test('a request is marked as spoken by the latest one sent before it with the same text', () => {
+  const turn = { id: 't', time: '2026-10-07T10:00:05.000Z', prompt: 'starte die Tests', images: 0, texts: [], interjections: [] }
+  const spoken = (id: string, time: string, request = 'starte die Tests') => ({ id, time, request, heard: 'x', score: null })
+  const earlier = spoken('a', '2026-10-07T10:00:01+00:00')
+  const later = spoken('b', '2026-10-07T10:00:04.500000+00:00')
+  assert.equal(spokenAs(turn, [earlier, later])?.id, 'b')
+  // Sent after the request, or with other words: not this one.
+  assert.equal(spokenAs(turn, [spoken('c', '2026-10-07T10:01:00+00:00'), spoken('d', '2026-10-07T10:00:04+00:00', 'etwas anderes')]), undefined)
 })

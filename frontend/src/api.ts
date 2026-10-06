@@ -93,6 +93,17 @@ export interface Turn {
   interjections: Interjection[]
 }
 
+/** A request spoken to the agent on the Echo Dot and sent on (its time is when it was sent). */
+export interface SpokenRequest {
+  id: string
+  time: string
+  request: string
+  /** The sentence as the recognition heard it, with the agent's name. */
+  heard: string
+  /** How well the spoken name matched the agent's, 0 to 1; null when none was spoken. */
+  score: number | null
+}
+
 /** Claude's token consumption of one day, project and model. */
 export interface ConsumptionRow {
   /** YYYY-MM-DD, local time. */
@@ -464,6 +475,8 @@ export const api = {
   /** The last requests of the user with the agent's texts, oldest first (no thoughts or tools). */
   answers: (sessionId: string, turns: number) =>
     request<Turn[]>('GET', `sessions/${encodeURIComponent(sessionId)}/answers`, { query: { turns: String(turns) } }),
+  /** What was spoken to the agent on the Echo Dot, to mark those requests in its answers. */
+  spoken: (sessionId: string) => request<SpokenRequest[]>('GET', `sessions/${encodeURIComponent(sessionId)}/voice`),
   sessionText: (id: string) =>
     request<{ text: string }>('GET', `sessions/${encodeURIComponent(id)}/text`),
 

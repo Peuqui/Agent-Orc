@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { api, type AnswerText, type Interjection, type Turn } from '../api'
-import { shownTexts, uploadMentions } from '../answers'
+import { api, type AnswerText, type Interjection, type SpokenRequest, type Turn } from '../api'
+import { shownTexts, spokenAs, uploadMentions } from '../answers'
 import { summaryOf } from '../speechText'
 import { markSeen, seenUntil } from '../composables/useAnswerSeen'
 import { useAnswersAll } from '../composables/useSettings'
@@ -28,6 +28,7 @@ const answersAll = useAnswersAll(props.sessionId)
 const { sessions } = useSessions()
 const speech = useSpeech()
 const turns = ref<Turn[]>([])
+const spoken = ref<SpokenRequest[]>([])
 const loaded = ref(false)
 const box = ref<HTMLElement>()
 let timer: number | undefined
@@ -81,7 +82,7 @@ function readUnread(): void {
 async function load(): Promise<void> {
   const bottomBefore = box.value ? box.value.scrollHeight - box.value.scrollTop - box.value.clientHeight < 80 : true
   try {
-    turns.value = await api.answers(props.sessionId, props.turns)
+    ;[turns.value, spoken.value] = await Promise.all([api.answers(props.sessionId, props.turns), api.spoken(props.sessionId)])
   } catch (error) {
     toast.error(error)
     return
@@ -189,6 +190,10 @@ function jog(lines: number): void {
         <div class="rounded-lg border-l-4 border-sky-700/70 bg-sky-950/40 px-3 py-2 text-sm text-slate-300">
           <FoldedText v-if="uploadMentions(entry.turn.prompt).text" :text="uploadMentions(entry.turn.prompt).text" :lines="USER_LINES" />
           <AnswerImages :urls="pictureUrls(entry.turn.id, entry.turn.prompt, entry.turn.images)" />
+          <!-- Said on the Echo Dot: as the recognition heard it, to compare with what was meant. -->
+          <p v-if="spokenAs(entry.turn, spoken)" class="mt-1 flex items-center gap-1 text-xs text-slate-500">
+            <AppIcon name="mic" />{{ $t('answers.spoken', { heard: spokenAs(entry.turn, spoken)?.heard }) }}
+          </p>
         </div>
         <template v-for="item in entry.items" :key="item.id">
           <!-- Typed while the agent was answering. -->

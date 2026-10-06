@@ -29,6 +29,8 @@ from tests.conftest import MAX_CHARS, TOKEN, FakeAifred, FakeClock
 NOW = 1_000_000.0
 MINUTE = 60.0
 VOICE_TOKEN = "voice-secret"
+# 2026-10-07T10:00:05Z, when the agent in the tests answered.
+ANSWERED = 1791367205
 
 
 def voice_config() -> VoiceConfig:
@@ -197,13 +199,8 @@ def say(client: TestClient, text: str, token: str = VOICE_TOKEN) -> Any:
     )
 
 
-def test_what_is_said_reaches_the_agent_only_after_the_spoken_yes(
-    home: Path, socket_name: str, clock: FakeClock, aifred: str
-) -> None:
-    # Shortly after the answer in the transcript below (the login is valid from now on).
-    clock.now = 1791367205 + 60.0
-    client = voice_client(home, socket_name, clock, aifred)
-    assert client.post("/api/login", json={"password": "x" * 16}).status_code == 204
+def start_listener(client: TestClient, home: Path) -> str:
+    """An agent called "whisper" that answered a minute ago, in a transcript Agent-Orc can read."""
     folder = home / "projects" / "whisper"
     folder.mkdir()
     started = {
@@ -215,7 +212,7 @@ def test_what_is_said_reaches_the_agent_only_after_the_spoken_yes(
         "conversation": None,
         "workspace": None,
     }
-    session_id = client.post("/api/sessions", json=started).json()["id"]
+    session_id: str = client.post("/api/sessions", json=started).json()["id"]
     transcript = home / ".claude" / "projects" / "-whisper" / "conversation.jsonl"
     transcript.parent.mkdir(parents=True)
     entries = [
@@ -234,6 +231,17 @@ def test_what_is_said_reaches_the_agent_only_after_the_spoken_yes(
     ]
     transcript.write_text("\n".join(json.dumps(e) for e in entries), encoding="utf-8")
     store_status(session_id, {"model": {"display_name": "M"}, "transcript_path": str(transcript)})
+    return session_id
+
+
+def test_what_is_said_reaches_the_agent_only_after_the_spoken_yes(
+    home: Path, socket_name: str, clock: FakeClock, aifred: str
+) -> None:
+    # Shortly after the answer in the transcript (the login is valid from now on).
+    clock.now = ANSWERED + 60.0
+    client = voice_client(home, socket_name, clock, aifred)
+    assert client.post("/api/login", json={"password": "x" * 16}).status_code == 204
+    session_id = start_listener(client, home)
 
     asked = say(client, "starte die Tests")
     assert asked.json() == {"action": "asked", "agent": "whisper"}
@@ -248,6 +256,10 @@ def test_what_is_said_reaches_the_agent_only_after_the_spoken_yes(
     assert FakeAifred.spoken[-1]["texts"] == ["Gesendet an whisper."]
     # Its next answer is announced in that room.
     assert take_reply_room(session_id) == "testraum"
+    # The request is kept with the sentence as it was recognised, to compare with what was meant.
+    [spoken] = client.get(f"/api/sessions/{session_id}/voice").json()
+    assert (spoken["heard"], spoken["request"]) == ("starte die Tests", "starte die Tests")
+    assert spoken["score"] is None
     for _ in range(50):
         if "starte die Tests" in client.get(f"/api/sessions/{session_id}/text").json()["text"]:
             break
@@ -311,3 +323,20 @@ def test_the_agent_spoken_to_answers_in_the_room_with_its_paragraph_for_listenin
     expect_reply("whisper-1", "testraum")
     finish("Nur Text.")
     assert FakeAifred.spoken[-1]["texts"] == ["whisper ist fertig."]
+
+
+def test_a_request_sent_after_a_no_keeps_the_sentence_it_was_first_said_in(
+    home: Path, socket_name: str, clock: FakeClock, aifred: str
+) -> None:
+    clock.now = ANSWERED + 60.0
+    client = voice_client(home, socket_name, clock, aifred)
+    assert client.post("/api/login", json={"password": "x" * 16}).status_code == 204
+    session_id = start_listener(client, home)
+    actions = [
+        say(client, text).json()["action"] for text in ("starte die Tests", "nein", "Whisper", "ja")
+    ]
+    assert actions == ["asked", "which_agent", "asked", "sent"]
+    [spoken] = client.get(f"/api/sessions/{session_id}/voice").json()
+    assert (spoken["heard"], spoken["request"]) == ("starte die Tests", "starte die Tests")
+    # The name was spoken alone, in the second sentence: the first one carries no name score.
+    assert spoken["score"] is None

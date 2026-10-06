@@ -547,6 +547,7 @@
     "more": "mehr",
     "less": "weniger",
     "interjection": "Eingabe während der Antwort",
+    "spoken": "Gesprochen am Echo Dot · erkannt: „{heard}“",
     "pending": "wartet auf Zustellung",
     "readNewColumns": "Neue Antworten dieser Arbeitsfläche vorlesen",
     "nothingNew": "Nichts Neues zum Vorlesen.",

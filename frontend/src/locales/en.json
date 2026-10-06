@@ -547,6 +547,7 @@
     "more": "more",
     "less": "less",
     "interjection": "Typed during the answer",
+    "spoken": "Spoken on the Echo Dot · recognised: “{heard}”",
     "pending": "waiting to be delivered",
     "readNewColumns": "Read the new answers of this workspace aloud",
     "nothingNew": "Nothing new to read.",
