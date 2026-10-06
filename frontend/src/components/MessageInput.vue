@@ -3,10 +3,11 @@ import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } 
 import { api } from '../api'
 import { MESSAGE_FIELD_ATTRIBUTE } from '../columns'
 import { useDictation } from '../composables/useDictation'
-import { useDismiss } from '../composables/useDismiss'
+import { pastedImages } from '../composables/usePastedImages'
 import { useToast } from '../composables/useToast'
 import { TOUCH_FIRST } from '../device'
 import AppIcon from './AppIcon.vue'
+import AttachMenu from './AttachMenu.vue'
 import DictationMic from './DictationMic.vue'
 import DictationRetry from './DictationRetry.vue'
 import PromptTemplates from './PromptTemplates.vue'
@@ -42,18 +43,6 @@ defineExpose({ focus: () => field.value?.focus() })
 // into the text ("@path", as Claude Code reads files), where the question is added before sending.
 const attaching = ref(false)
 const uploading = ref(false)
-const photoInput = ref<HTMLInputElement>()
-const imageInput = ref<HTMLInputElement>()
-const fileInput = ref<HTMLInputElement>()
-// Capturing the screen is a desktop browser feature; phone browsers have none.
-const screenCaptureSupported = typeof navigator.mediaDevices?.getDisplayMedia === 'function'
-const SCREENSHOT_NAME = 'screenshot.png'
-
-function choose(input: HTMLInputElement | undefined): void {
-  attaching.value = false
-  input?.click()
-}
-
 /** An attached file as the user sees it: a small preview for pictures, the name otherwise. */
 interface Attachment {
   path: string
@@ -79,48 +68,12 @@ async function attachFile(file: File): Promise<void> {
   }
 }
 
-function onFileChosen(event: Event): void {
-  const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
-  // Cleared, so choosing the same file again still counts as a change.
-  input.value = ''
-  if (file) void attachFile(file)
-}
-
-/** The browser asks which screen, window or tab; its current picture is attached. */
-async function captureScreen(): Promise<void> {
-  attaching.value = false
-  let stream: MediaStream
-  try {
-    stream = await navigator.mediaDevices.getDisplayMedia({ video: true })
-  } catch (error) {
-    // The user closed the browser's choice: nothing to attach, nothing to report.
-    if (!(error instanceof DOMException && error.name === 'NotAllowedError')) toast.error(error)
-    return
-  }
-  const video = document.createElement('video')
-  video.srcObject = stream
-  video.muted = true
-  await video.play()
-  const canvas = document.createElement('canvas')
-  canvas.width = video.videoWidth
-  canvas.height = video.videoHeight
-  canvas.getContext('2d')?.drawImage(video, 0, 0)
-  stream.getTracks().forEach((track) => track.stop())
-  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'))
-  if (blob) await attachFile(new File([blob], SCREENSHOT_NAME, { type: 'image/png' }))
-}
-
 const templates = ref<InstanceType<typeof PromptTemplates>>()
-const attachMenu = ref<HTMLElement>()
-useDismiss(
-  attachMenu,
-  () => attaching.value || Boolean(templates.value?.open),
-  () => {
-    attaching.value = false
-    if (templates.value) templates.value.open = false
-  },
-)
+/** The menu or the template list closes when the user turns elsewhere (AttachMenu). */
+function closeMenus(): void {
+  attaching.value = false
+  if (templates.value) templates.value.open = false
+}
 
 /** The paperclip also closes the open template list, which has no button of its own. */
 function toggleAttachMenu(): void {
@@ -144,14 +97,10 @@ function insertTemplate(template: string): void {
 
 /**
  * A picture pasted anywhere on the page (e.g. a screenshot from the clipboard) is attached,
- * also while the terminal has the focus; text is pasted as usual. Clipboard pictures arrive as
- * items of kind "file" (Windows screenshots do not always show up in clipboardData.files).
+ * also while the terminal has the focus; text is pasted as usual.
  */
 function onPaste(event: ClipboardEvent): void {
-  const images = [...(event.clipboardData?.items ?? [])]
-    .filter((item) => item.kind === 'file' && item.type.startsWith('image/'))
-    .map((item) => item.getAsFile())
-    .filter((file) => file !== null)
+  const images = pastedImages(event)
   if (images.length === 0) return
   // Before the terminal sees it, which would paste nothing useful.
   event.preventDefault()
@@ -233,42 +182,19 @@ function onKeydown(event: KeyboardEvent): void {
   </div>
   <form class="flex items-end gap-1 p-1" @submit.prevent="submit">
     <DictationRetry :dictation="dictation" />
-    <div ref="attachMenu" class="relative">
-      <button
-        type="button"
-        class="btn-icon size-10"
-        :class="{ 'animate-pulse': uploading }"
-        :disabled="uploading"
-        :aria-label="$t('attach.title')"
-        :title="$t('attach.title')"
-        @click="toggleAttachMenu"
-      >
-        <AppIcon name="paperclip" />
+    <AttachMenu
+      :open="attaching"
+      :extra-open="Boolean(templates?.open)"
+      :busy="uploading"
+      @toggle="toggleAttachMenu"
+      @close="closeMenus"
+      @file="attachFile"
+    >
+      <button type="button" class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-slate-700" @click="showTemplates">
+        <AppIcon name="template" />{{ $t('templates.title') }}
       </button>
-      <div v-if="attaching" class="card absolute bottom-full left-0 z-30 mb-1 flex w-64 flex-col p-1 shadow-xl">
-        <button type="button" class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-slate-700" @click="choose(photoInput)">
-          <AppIcon name="camera" />{{ $t('attach.photo') }}
-        </button>
-        <button type="button" class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-slate-700" @click="choose(imageInput)">
-          <AppIcon name="image" />{{ $t('attach.image') }}
-        </button>
-        <button v-if="screenCaptureSupported" type="button" class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-slate-700" @click="captureScreen">
-          <AppIcon name="screen" />{{ $t('attach.screen') }}
-        </button>
-        <button type="button" class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-slate-700" @click="choose(fileInput)">
-          <AppIcon name="paperclip" />{{ $t('attach.file') }}
-        </button>
-        <button type="button" class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-slate-700" @click="showTemplates">
-          <AppIcon name="template" />{{ $t('templates.title') }}
-        </button>
-      </div>
-      <PromptTemplates ref="templates" @insert="insertTemplate" />
-      <!-- capture opens the camera directly on phones; without it phones offer their gallery
-           (newest screenshots first); desktops show the file dialog. -->
-      <input ref="photoInput" type="file" accept="image/*" capture="environment" class="hidden" @change="onFileChosen" />
-      <input ref="imageInput" type="file" accept="image/*" class="hidden" @change="onFileChosen" />
-      <input ref="fileInput" type="file" class="hidden" @change="onFileChosen" />
-    </div>
+      <template #popup><PromptTemplates ref="templates" @insert="insertTemplate" /></template>
+    </AttachMenu>
     <DictationMic :dictation="dictation" />
     <textarea
       ref="field"

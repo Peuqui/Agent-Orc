@@ -1579,3 +1579,38 @@ def test_notebooks_are_kept_renamed_and_deleted(
     assert client.delete("/api/notebooks/Arbeit").status_code == 204
     assert client.delete("/api/notebooks/Arbeit").status_code == 404
     assert list(client.get("/api/notebooks").json()) == ["Einfälle"]
+
+
+def test_a_note_file_is_stored_served_and_refused_outside_its_folder(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+    stored = client.post("/api/notes/files", params={"name": "plan.pdf"}, content=b"%PDF-1.4")
+    url = stored.json()["url"]
+    assert url.startswith("api/notes/files/") and url.endswith("-plan.pdf")
+    shown = client.get("/" + url)
+    assert shown.status_code == 200 and shown.content == b"%PDF-1.4"
+    # A PDF is for the browser's viewer, which the sandbox of other files would block.
+    assert "content-security-policy" not in shown.headers
+    picture = client.post("/api/notes/files", params={"name": "a.svg"}, content=b"<svg/>")
+    assert client.get("/" + picture.json()["url"]).headers["content-security-policy"] == "sandbox"
+    assert client.get("/api/notes/files/nope.png").status_code == 404
+    assert client.get("/api/notes/files/..%2Fnotebooks.json").status_code == 404
+
+
+def test_sending_a_note_brings_its_files_into_the_agents_folder(
+    client: TestClient, home: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+    session = start_shell(client, home / "projects" / "a")
+    assert wait_for_text(client, session, "READY")
+    url = client.post("/api/notes/files", params={"name": "foto.png"}, content=b"png").json()["url"]
+    text = f"Schau dir das an: ![Foto]({url}) und [Plan]({url})"
+    response = client.post(
+        "/api/broadcast", json={"sessions": [session], "text": text, "submit": False}
+    )
+    assert response.status_code == 204
+    assert wait_for_text(client, session, "Schau dir das an: @.agent-orc/uploads/")
+    copies = list((home / "projects" / "a" / ".agent-orc" / "uploads").glob("*foto.png"))
+    # One copy per link, each with the file's content.
+    assert len(copies) == 2 and all(copy.read_bytes() == b"png" for copy in copies)

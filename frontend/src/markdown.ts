@@ -17,18 +17,21 @@ export function linkedPath(filePath: string, href: string): string {
 
 /**
  * Markdown as HTML that runs nothing; pictures with relative paths come from the file's folder.
- * lineBreaks: a single line break in the text stays one in the page (notes), instead of
- * merging the lines into a paragraph.
+ * filePath null: a note, which has no file, so pictures stay as written (its own files are linked
+ * by address) and a single line break in the text stays one in the page instead of merging the
+ * lines into a paragraph.
  */
-export function renderMarkdown(text: string, filePath: string, lineBreaks = false): string {
+export function renderMarkdown(text: string, filePath: string | null): string {
+  const isNote = filePath === null
   const marked = new Marked({
     gfm: true,
-    breaks: lineBreaks,
+    breaks: isNote,
     walkTokens(token) {
-      if (token.type === 'image' && !isExternal(token.href)) {
+      if (!isNote && token.type === 'image' && !isExternal(token.href)) {
         token.href = rawFileUrl(linkedPath(filePath, token.href))
       }
     },
   })
-  return DOMPurify.sanitize(marked.parse(text, { async: false }))
+  const html = marked.parse(text, { async: false })
+  return DOMPurify.sanitize(html)
 }

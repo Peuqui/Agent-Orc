@@ -19,6 +19,11 @@ def state_dir() -> Path:
     return Path(state_home) / "agent-orc"
 
 
+def notes_dir() -> Path:
+    """Where the files attached to notes live (in the layout of attachments.py)."""
+    return state_dir() / "notes"
+
+
 def write_atomically(target: Path, text: str) -> Path:
     target.parent.mkdir(parents=True, exist_ok=True)
     # Write to a temporary file and rename, so readers never see a half-written file.

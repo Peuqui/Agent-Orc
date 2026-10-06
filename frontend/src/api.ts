@@ -453,6 +453,9 @@ export const api = {
     request<void>('PUT', `notebooks/${encodeURIComponent(name)}/name`, { body: { name: newName } }),
   deleteNotebook: (name: string) => request<void>('DELETE', `notebooks/${encodeURIComponent(name)}`),
 
+  /** Stores a file for a note; returns the address the note links to it with. */
+  attachToNote: (file: File) =>
+    request<{ url: string }>('POST', 'notes/files', { upload: file, query: { name: file.name } }),
   /** Store a file in the agent's folder; returns its path there, as the agent reads it. */
   attach: (sessionId: string, file: File) =>
     request<{ path: string }>('POST', `sessions/${encodeURIComponent(sessionId)}/attachments`, {

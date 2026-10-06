@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import mimetypes
 import subprocess
 import time
 from collections.abc import AsyncIterator, Awaitable, Callable
@@ -18,7 +19,7 @@ from pydantic import BaseModel
 
 from agent_orc import files
 from agent_orc.approvals import ApprovalNotFoundError, ApprovalRequest, decide, open_requests
-from agent_orc.attachments import store_attachment
+from agent_orc.attachments import NOTE_FILES_URL, UPLOADS_DIR, bring_note_files, store_attachment
 from agent_orc.auth import Clock, Credentials, LoginGuard, TokenSigner, verify_password
 from agent_orc.changes import (
     ChangeNotFoundError,
@@ -91,6 +92,7 @@ from agent_orc.state import (
     assign_agent,
     empty_workspace,
     keep_living_agents,
+    notes_dir,
     place_workspace,
     read_card_order,
     read_extra_keys,
@@ -1241,11 +1243,14 @@ def create_app(
         missing = [session_id for session_id in body.sessions if session_id not in running]
         if missing:
             raise SessionNotFoundError(", ".join(missing))
+        folders = {s.id: s.path for s in sessions.list()}
         for session_id in body.sessions:
+            # Files a note links to go into this agent's folder, so it can read them.
+            text = bring_note_files(body.text, folders[session_id], notes_dir(), clock)
             if body.submit:
-                sessions.type_line(session_id, body.text, config.terminal.submit_delay_ms)
+                sessions.type_line(session_id, text, config.terminal.submit_delay_ms)
             else:
-                sessions.paste_text(session_id, body.text)
+                sessions.paste_text(session_id, text)
 
     @app.post("/api/sessions/{session_id}/remove-worktree", dependencies=authenticated)
     def remove_session_worktree(session_id: str) -> dict[str, Any]:
@@ -1295,20 +1300,40 @@ def create_app(
     def read_file(path: str) -> files.TextFile:
         return files.read_text(scope.resolve(path), max_edit_bytes)
 
+    def served_file(path: Path, download: bool) -> FileResponse:
+        headers = {"X-Content-Type-Options": "nosniff"}
+        # Opened directly, a file the agent wrote (an SVG, an HTML page) runs no script under
+        # Agent-Orc's origin. A PDF is shown by the browser's own viewer, which the sandbox blocks.
+        if mimetypes.guess_type(path.name)[0] != "application/pdf":
+            headers["Content-Security-Policy"] = "sandbox"
+        return FileResponse(
+            path,
+            filename=path.name,
+            content_disposition_type="attachment" if download else "inline",
+            headers=headers,
+        )
+
+    @app.post(f"/api/{NOTE_FILES_URL.removeprefix('api/')}", dependencies=authenticated)
+    async def attach_to_note(name: str, request: Request) -> dict[str, str]:
+        """Store a file for a note; returns where the note links to it."""
+        stored = store_attachment(notes_dir(), name, await request.body(), clock)
+        return {"url": f"{NOTE_FILES_URL}/{stored.name}"}
+
+    @app.get(f"/api/{NOTE_FILES_URL.removeprefix('api/')}/{{name}}", dependencies=authenticated)
+    def note_file(name: str) -> FileResponse:
+        path = notes_dir() / UPLOADS_DIR / name
+        # Only files of the folder itself, never a path out of it.
+        if Path(name).name != name or not path.is_file():
+            raise FileNotFoundError(name)
+        return served_file(path, download=False)
+
     @app.get("/api/files/raw", dependencies=authenticated)
     def raw_file(path: str, download: bool = False) -> FileResponse:
         """The file as it is: pictures for the viewer, anything else to download."""
         resolved = scope.resolve(path)
         if not resolved.is_file():
             raise FileNotFoundError(str(resolved))
-        return FileResponse(
-            resolved,
-            filename=resolved.name,
-            content_disposition_type="attachment" if download else "inline",
-            # Opened directly, a file the agent wrote (an SVG, an HTML page) runs no script
-            # under Agent-Orc's origin.
-            headers={"Content-Security-Policy": "sandbox", "X-Content-Type-Options": "nosniff"},
-        )
+        return served_file(resolved, download)
 
     @app.post("/api/files/existing", dependencies=authenticated)
     def existing_files(body: ExistingPathsRequest) -> dict[str, dict[str, str]]:

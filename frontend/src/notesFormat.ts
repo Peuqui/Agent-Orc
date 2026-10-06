@@ -80,3 +80,34 @@ export function applyFormat(id: FormatId, text: string, from: number, to: number
       return link(text, from, to, placeholders.link)
   }
 }
+
+/** The Markdown for a file stored for a note: a picture shows in the view, any other file is a link. */
+export function fileLink(name: string, url: string, isImage: boolean): string {
+  const label = name.replace(/[[\]]/g, '')
+  return `${isImage ? '!' : ''}[${label}](${url})`
+}
+
+/** Puts a block (a file link) on a line of its own at the cursor, apart from the text around it. */
+export function insertBlock(text: string, at: number, block: string): Edit {
+  const before = text.slice(0, at)
+  const after = text.slice(at)
+  const lead = before === '' || before.endsWith('\n\n') ? '' : before.endsWith('\n') ? '\n' : '\n\n'
+  const trail = after === '' || after.startsWith('\n\n') ? '' : after.startsWith('\n') ? '\n' : '\n\n'
+  const inserted = lead + block + trail
+  const caret = before.length + lead.length + block.length + trail.length
+  return { text: before + inserted + after, from: caret, to: caret }
+}
+
+export interface PdfLink {
+  name: string
+  url: string
+}
+
+/** The PDFs a note links to, in the order they appear (shown below the text as previews). */
+export function pdfLinks(text: string): PdfLink[] {
+  const links: PdfLink[] = []
+  for (const match of text.matchAll(/(?<!!)\[([^\]]*)\]\((api\/notes\/files\/[^)\s]+\.pdf)\)/gi)) {
+    links.push({ name: match[1], url: match[2] })
+  }
+  return links
+}

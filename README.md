@@ -76,6 +76,9 @@ detaches: the agents keep working, and you pick them up again from any device.
 - Notebooks as tabs, each with loose notes and folders, kept on the server like the workspaces.
 - A note is Markdown with a formatting bar (bold, italic, heading, list, code, link), a
   search over titles and text, and text and view side by side on computers and tablets.
+- Attach photos, screenshots and files to a note; they are stored on the server and copied into
+  an agent's folder when the note is sent to it. Pictures show as thumbnails, PDFs with a preview
+  of the first page (all pages on request, drawn by [pdf.js](https://mozilla.github.io/pdf.js/)).
 - Dictate into a note (Whisper), copy it, or put it into the input of one or more agents (optionally submitted).
 
 **Terminal**

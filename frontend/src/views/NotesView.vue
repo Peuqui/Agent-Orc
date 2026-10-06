@@ -3,16 +3,19 @@ import { computed, nextTick, onBeforeUnmount, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { api, type Note, type Notebook } from '../api'
 import AppIcon from '../components/AppIcon.vue'
+import AttachMenu from '../components/AttachMenu.vue'
 import BroadcastDialog from '../components/BroadcastDialog.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
 import DictationMic from '../components/DictationMic.vue'
 import DictationRetry from '../components/DictationRetry.vue'
 import InputDialog from '../components/InputDialog.vue'
+import PdfPreview from '../components/PdfPreview.vue'
 import { useDictation } from '../composables/useDictation'
 import { useServerEvents } from '../composables/useServerEvents'
 import { useToast } from '../composables/useToast'
 import { renderMarkdown } from '../markdown'
-import { applyFormat, FORMATS, type FormatId, type Placeholders } from '../notesFormat'
+import { pastedImages } from '../composables/usePastedImages'
+import { applyFormat, fileLink, FORMATS, insertBlock, pdfLinks, type FormatId, type Placeholders } from '../notesFormat'
 
 // Notebooks as tabs, each with loose notes and folders; a note is Markdown. The server keeps
 // them, so every device shows the same; edits are stored shortly after the last keystroke.
@@ -52,7 +55,8 @@ function notesOf(folder: FolderIndex): Note[] {
 }
 
 const selected = computed(() => (selection.value === null ? null : (notesOf(selection.value.folder)[selection.value.index] ?? null)))
-const html = computed(() => (selected.value === null ? '' : renderMarkdown(selected.value.text, '', true)))
+const pdfs = computed(() => (selected.value === null ? [] : pdfLinks(selected.value.text)))
+const html = computed(() => (selected.value === null ? '' : renderMarkdown(selected.value.text, null)))
 
 interface Section {
   folder: FolderIndex
@@ -250,6 +254,47 @@ const placeholders = computed<Placeholders>(() => ({
 
 const field = ref<HTMLTextAreaElement>()
 
+// A file attached to the note is stored on the server and linked in the text at the cursor.
+const attachMenuOpen = ref(false)
+const uploading = ref(false)
+
+async function attachFile(file: File): Promise<void> {
+  const note = selected.value
+  if (!note) return
+  uploading.value = true
+  try {
+    const { url } = await api.attachToNote(file)
+    const link = fileLink(file.name, url, file.type.startsWith('image/'))
+    const edit = insertBlock(note.text, field.value?.selectionEnd ?? note.text.length, link)
+    note.text = edit.text
+    changed()
+    await nextTick()
+    field.value?.setSelectionRange(edit.to, edit.to)
+  } catch (error) {
+    toast.error(error)
+  } finally {
+    uploading.value = false
+  }
+}
+
+function onPaste(event: ClipboardEvent): void {
+  const images = pastedImages(event)
+  if (images.length === 0) return
+  event.preventDefault()
+  for (const image of images) void attachFile(image)
+}
+
+/** A picture or file in the view opens in a tab of its own, the page stays. */
+function onViewClick(event: MouseEvent): void {
+  const target = event.target
+  if (!(target instanceof Element)) return
+  const link = target.closest('a')
+  const address = link?.getAttribute('href') ?? (target instanceof HTMLImageElement ? target.src : null)
+  if (address === null) return
+  event.preventDefault()
+  window.open(address, '_blank', 'noopener')
+}
+
 // Dictation (Whisper or the browser) writes at the cursor of the text, as if typed there.
 const dictation = reactive(useDictation('notes', insertDictated, toast.error))
 
@@ -398,6 +443,14 @@ function firstLine(note: Note): string {
               >
                 {{ item.label }}
               </button>
+              <AttachMenu
+                below
+                :open="attachMenuOpen"
+                :busy="uploading"
+                @toggle="attachMenuOpen = !attachMenuOpen"
+                @close="attachMenuOpen = false"
+                @file="attachFile"
+              />
               <!-- Right of the formatting keys: speech input into the text. -->
               <span class="ml-auto flex items-end gap-1">
                 <DictationRetry :dictation="dictation" />
@@ -411,10 +464,13 @@ function firstLine(note: Note): string {
               :placeholder="$t('notes.textPlaceholder')"
               spellcheck="false"
               @input="changed"
+              @paste="onPaste"
             />
           </div>
-          <div class="markdown min-w-0 min-h-[20dvh]" :class="editing ? 'max-md:hidden md:border-l md:border-slate-700 md:pl-4' : ''" v-html="html" />
+          <div class="markdown note min-w-0 min-h-[20dvh]" :class="editing ? 'max-md:hidden md:border-l md:border-slate-700 md:pl-4' : ''" v-html="html" @click="onViewClick" />
         </div>
+        <!-- The PDFs of the note, with a preview, below its text. -->
+        <PdfPreview v-for="pdf in pdfs" :key="pdf.url" :url="pdf.url" :name="pdf.name" />
       </div>
     </div>
 

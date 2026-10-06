@@ -123,6 +123,10 @@
   .markdown img {
     @apply max-w-full;
   }
+  /* A picture in a note is a thumbnail; a click opens it at full size. */
+  .markdown.note img {
+    @apply max-h-64 cursor-zoom-in rounded-lg border border-slate-700;
+  }
   .markdown hr {
     @apply border-slate-700;
   }

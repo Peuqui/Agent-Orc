@@ -28,6 +28,7 @@
     "codemirror": "^6.0.2",
     "dompurify": "^3.4.16",
     "marked": "^18.0.14",
+    "pdfjs-dist": "^6.4.299",
     "vue": "^3.5.43",
     "vue-i18n": "^11.4.13",
     "vue-router": "^5.3.1"
