@@ -3,7 +3,12 @@ import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { api, type Workspace, type WorkspaceSet } from '../api'
-import { COLUMN_CLOSE_EVENT, COLUMN_FULLSCREEN_EVENT, COLUMN_SWIPE_EVENT } from '../columns'
+import {
+  COLUMN_CLOSE_EVENT,
+  COLUMN_FULLSCREEN_EVENT,
+  COLUMN_SWIPE_EVENT,
+  MESSAGE_FIELD_SELECTOR,
+} from '../columns'
 import AppIcon from '../components/AppIcon.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
 import HelpButton from '../components/HelpButton.vue'
@@ -173,6 +178,11 @@ function frameOf(id: string): HTMLIFrameElement | undefined {
   return frames.value.find((frame) => frame.dataset.tab === id)
 }
 
+/** The message field of a column's terminal page (see MESSAGE_FIELD_ATTRIBUTE). */
+function messageFieldOf(id: string): HTMLElement | null | undefined {
+  return frameOf(id)?.contentDocument?.querySelector<HTMLElement>(MESSAGE_FIELD_SELECTOR)
+}
+
 /** Make a tab the active one and scroll its column into view (its tab may be hidden). */
 async function activate(id: string): Promise<void> {
   workspace.value.active = id
@@ -295,7 +305,7 @@ function onShortcut(event: KeyboardEvent): void {
     const id = workspace.value.tabs[column]
     if (id === undefined) return
     event.preventDefault()
-    void activate(id).then(() => frameOf(id)?.contentDocument?.querySelector('textarea')?.focus())
+    void activate(id).then(() => messageFieldOf(id)?.focus())
   } else if (step !== undefined) {
     const order = workspaceOrder.value
     if (order.length < 2) return
@@ -325,7 +335,7 @@ watch(
   async (id) => {
     if (id === null || TOUCH_FIRST.matches) return
     await nextTick()
-    frameOf(id)?.contentDocument?.querySelector('textarea')?.focus()
+    messageFieldOf(id)?.focus()
   },
 )
 

@@ -283,9 +283,10 @@ function connect(): void {
   socket.onopen = () => {
     connected.value = true
     reconnecting.value = false
-    // Typing goes to our input field first: dictation tools (and phone keyboards) work there,
-    // not in the terminal's own input. In the workspace only the active column takes the focus.
-    if (!props.embedded || window.frameElement?.getAttribute('data-active') === 'true') {
+    // Typing goes to our input field first: dictation tools work there, not in the terminal's own
+    // input. In the workspace only the active column takes the focus. Not on touch screens: the
+    // focus would raise the on-screen keyboard at once (a tap into the field does).
+    if (!TOUCH_FIRST.matches && (!props.embedded || window.frameElement?.getAttribute('data-active') === 'true')) {
       messageInput.value?.focus()
     }
   }
@@ -319,6 +320,14 @@ onMounted(async () => {
   // hidden input, and the on-screen keyboard rises for it, without our input field and extra
   // keys. Typing goes through our field; a hardware keyboard still reaches this input.
   if (TOUCH_FIRST.matches) terminal.textarea?.setAttribute('inputmode', 'none')
+  // With a mouse, a click into the terminal gives the focus back to our field once it is let go
+  // (dictation tools double words in the terminal's own input); with text marked it stays, so
+  // Ctrl+C copies it.
+  else {
+    container.value.addEventListener('pointerup', () => {
+      if (!terminal.hasSelection()) messageInput.value?.focus()
+    })
+  }
   // The GPU renderer draws box and block characters itself (customGlyphs), so the agents'
   // frames stay closed with any font and line spacing; the DOM renderer takes them from the
   // font. If the browser takes the graphics context away (driver reset, too many contexts),

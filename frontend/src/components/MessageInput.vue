@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { api } from '../api'
+import { MESSAGE_FIELD_ATTRIBUTE } from '../columns'
 import { useDictation } from '../composables/useDictation'
 import { useDismiss } from '../composables/useDismiss'
 import { useToast } from '../composables/useToast'
@@ -336,6 +337,7 @@ function onKeydown(event: KeyboardEvent): void {
     <textarea
       ref="field"
       v-model="text"
+      :[MESSAGE_FIELD_ATTRIBUTE]="''"
       rows="1"
       class="input max-h-[40dvh] min-h-10 flex-1 resize-none py-2"
       :placeholder="state === 'transcribing' ? $t('dictation.transcribing') : $t('terminal.placeholder')"
