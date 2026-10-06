@@ -1319,6 +1319,19 @@ def test_broadcast_types_into_every_chosen_agent(client: TestClient, home: Path)
     assert "nope" not in client.get(f"/api/sessions/{first}/text").json()["text"]
 
 
+def test_broadcast_can_leave_the_text_unsent(client: TestClient, home: Path) -> None:
+    session = start_shell(client, home / "projects" / "a")
+    assert wait_for_text(client, session, "READY")
+    response = client.post(
+        "/api/broadcast", json={"sessions": [session], "text": "draft note", "submit": False}
+    )
+    assert response.status_code == 204
+    assert wait_for_text(client, session, "draft note")
+    time.sleep(0.3)
+    # cat prints a line only once it is submitted: only the terminal's own echo is on screen.
+    assert client.get(f"/api/sessions/{session}/text").json()["text"].count("draft note") == 1
+
+
 def test_raw_file_is_served_without_running_its_scripts(client: TestClient, home: Path) -> None:
     picture = home / "projects" / "logo.svg"
     picture.write_text('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>')
@@ -1494,6 +1507,39 @@ def test_a_chosen_model_gets_its_levels_and_environment(client: TestClient, home
     # A restart keeps the model and gives the folder's level again.
     client.post(f"/api/sessions/{thinker['id']}/restart")
     assert wait_for_text(client, thinker["id"], "resumed thinker [high]")
+
+
+def test_an_agent_without_a_stored_model_is_restarted_with_a_chosen_one(
+    client: TestClient, home: Path, socket_name: str
+) -> None:
+    folder = home / "projects" / "old"
+    folder.mkdir()
+    body = {
+        "profile": "chooser",
+        "path": str(folder),
+        "model": "thinker",
+        "resume": False,
+        "effort": "high",
+        "ultracode": False,
+        "conversation": None,
+    }
+    session = client.post("/api/sessions", json=body).json()["id"]
+    assert wait_for_text(client, session, "started thinker [high]")
+    # Started before the choice of models existed: tmux holds no model for it.
+    subprocess.run(
+        ["tmux", "-L", socket_name, "set-option", "-t", f"={session}:", "@orc_model", ""],
+        check=True,
+    )
+    restart = f"/api/sessions/{session}/restart"
+    assert client.post(restart).status_code == 422
+    assert client.post(restart, json={"model": "other"}).status_code == 422
+    chosen = client.post(restart, json={"model": "thinker"})
+    assert chosen.status_code == 200
+    assert chosen.json()["chosen_model"] == "thinker"
+    assert wait_for_text(client, session, "resumed thinker [high]")
+    # From now on the restart keeps it.
+    client.post(restart)
+    assert client.get("/api/sessions").json()[0]["chosen_model"] == "thinker"
 
 
 def test_change_notifier_wakes_listeners_from_other_threads() -> None:

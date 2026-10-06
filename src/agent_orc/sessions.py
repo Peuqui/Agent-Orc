@@ -179,11 +179,14 @@ class SessionManager:
             raise SessionError(f"tmux session {session_id} vanished right after start")
         return session
 
-    def restart(self, session: AgentSession, env: dict[str, str]) -> AgentSession:
+    def restart(
+        self, session: AgentSession, env: dict[str, str], model: str | None = None
+    ) -> AgentSession:
         """Resume a running agent in its own session (it reads some settings only at start),
-        with the model it was started with."""
-        command = self._command(session.profile, session.path, True, None, session.chosen_model)
-        return self._respawn(session, session.profile, command, session.chosen_model, env)
+        with the model it was started with, or `model` if it has none stored."""
+        chosen = session.chosen_model if model is None else model
+        command = self._command(session.profile, session.path, True, None, chosen)
+        return self._respawn(session, session.profile, command, chosen, env)
 
     def _command(
         self,
@@ -232,6 +235,14 @@ class SessionManager:
         # Enter separately, so the agent sees typed text plus submit, not one pasted block.
         time.sleep(submit_delay_ms / MILLISECONDS_PER_SECOND)
         self._tmux("send-keys", "-t", exact_target(session_id), "-l", "\r")
+
+    def paste_text(self, session_id: str, text: str) -> None:
+        """Put text into the agent's input without submitting it, as one paste (bracketed, if
+        the agent asked for that), so the user can read it there and send it themselves."""
+        buffer = f"agent-orc-{session_id}"
+        self._tmux("set-buffer", "-b", buffer, "--", text)
+        # -r keeps the line breaks as they are, -d drops the buffer afterwards.
+        self._tmux("paste-buffer", "-p", "-r", "-d", "-b", buffer, "-t", exact_target(session_id))
 
     def text(self, session_id: str, history_lines: int) -> str:
         """The session's screen and history as plain text; wrapped lines are joined again."""

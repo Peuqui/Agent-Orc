@@ -26,6 +26,7 @@ AGENTS = {
     "echo": AgentProfile(
         label="Echo", start=["sh", "-c", "echo started {name}; sleep 60"], resume=["sleep", "60"]
     ),
+    "reader": AgentProfile(label="Reader", start=["cat"], resume=["cat"]),
     "chooser": AgentProfile(
         label="Chooser",
         start=["sh", "-c", 'echo "started {model} $ORC_EFFORT"; sleep 60'],
@@ -223,3 +224,17 @@ def test_chosen_model_and_environment_stay_with_the_session(
             break
         time.sleep(0.1)
     assert "resumed qwen xhigh" in manager.text(session.id, 50)
+
+
+def test_an_agent_can_be_pasted_into_without_submitting(
+    manager: SessionManager, workdir: Path, socket_name: str
+) -> None:
+    session = manager.start("reader", workdir, resume=False)
+    manager.paste_text(session.id, "- not sent yet")
+    for _ in range(50):
+        if "not sent yet" in manager.text(session.id, 50):
+            break
+        time.sleep(0.1)
+    time.sleep(0.3)
+    # cat prints a line only once it is submitted: the terminal's own echo is alone on screen.
+    assert manager.text(session.id, 50).count("not sent yet") == 1

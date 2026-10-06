@@ -348,6 +348,13 @@ class ScheduledPromptRequest(BaseModel):
 class BroadcastRequest(BaseModel):
     sessions: list[str]
     text: str
+    # False: the text only lands in each agent's input, the user sends it there.
+    submit: bool = True
+
+
+class RestartRequest(BaseModel):
+    # The model for an agent that has none stored (started before the choice existed).
+    model: str | None = None
 
 
 class ExistingPathsRequest(BaseModel):
@@ -408,6 +415,24 @@ def create_app(
             name, _, note = line.partition("\t")
             choices.append(ModelChoice(name=name.strip(), note=note.strip() or None))
         return choices
+
+    def check_model(profile_name: str, model: str | None) -> None:
+        """A profile with a choice of models needs one of them; any other takes none."""
+        profile = config.agents.get(profile_name)
+        if (profile is not None and profile.models is not None) != (model is not None):
+            raise UnknownModelError(str(model))
+        offered = {choice.name for choice in profile_models(profile_name)}
+        if model is not None and model not in offered:
+            raise UnknownModelError(model)
+
+    def store_start_reasoning(
+        profile_name: str, path: Path, model: str | None, effort: str | None, ultracode: bool
+    ) -> None:
+        """Fixes the folder's reasoning for the model an agent starts with."""
+        if effort is None and effort_levels(profile_name, model):
+            # Started without a choice: the folder's level, or else the configured one.
+            effort = folder_reasoning(profile_name, path).effort
+        store_effort(profile_name, path, Reasoning(effort, ultracode), model)
 
     levels_cache: dict[tuple[str, str | None], tuple[float, list[str]]] = {}
 
@@ -997,17 +1022,8 @@ def create_app(
             ids = {c["id"] for c in conversations_of(body.profile, path)}
             if body.conversation not in ids:
                 raise ConversationNotFoundError(body.conversation)
-        if (profile is not None and profile.models is not None) != (body.model is not None):
-            raise UnknownModelError(str(body.model))
-        if body.model is not None and body.model not in {
-            choice.name for choice in profile_models(body.profile)
-        }:
-            raise UnknownModelError(body.model)
-        effort = body.effort
-        if effort is None and effort_levels(body.profile, body.model):
-            # Started without a choice: the folder's level, or else the configured one.
-            effort = folder_reasoning(body.profile, path).effort
-        store_effort(body.profile, path, Reasoning(effort, body.ultracode), body.model)
+        check_model(body.profile, body.model)
+        store_start_reasoning(body.profile, path, body.model, body.effort, body.ultracode)
         settle_permission_mode(body.profile, path)
         started = sessions.start(
             body.profile,
@@ -1053,19 +1069,28 @@ def create_app(
         decide(body.request, body.allow)
 
     @app.post("/api/sessions/{session_id}/restart", dependencies=authenticated)
-    def restart_session(session_id: str) -> AgentSession:
+    def restart_session(session_id: str, body: RestartRequest | None = None) -> AgentSession:
         """Resume the agent in its own session, ending a running answer and background tasks
-        (the user confirmed that); attached terminals stay connected."""
+        (the user confirmed that); attached terminals stay connected. An agent without a stored
+        model gets the one in the request."""
         session = find_session(session_id)
         if session is None:
             raise SessionNotFoundError(session_id)
+        model = body.model if body else None
+        if model is not None:
+            check_model(session.profile, model)
+        chosen = session.chosen_model if model is None else model
         pending = pending_effort.pop(session_id, None)
         if pending is not None:
             # The agent reads the folder's effort at start: a waiting change comes along.
-            store_effort(session.profile, session.path, pending, session.chosen_model)
+            store_effort(session.profile, session.path, pending, chosen)
+        elif model is not None:
+            # A newly chosen model: the folder's level must be one it takes.
+            kept = folder_reasoning(session.profile, session.path)
+            store_start_reasoning(session.profile, session.path, model, None, kept.ultracode)
         settle_permission_mode(session.profile, session.path)
-        env = start_env(session.profile, session.path, session.chosen_model)
-        restarted = sessions.restart(session, env)
+        env = start_env(session.profile, session.path, chosen)
+        restarted = sessions.restart(session, env, model)
         # The ended agent cannot report that it stopped working.
         store_activity(session_id, busy=False)
         return restarted
@@ -1217,7 +1242,10 @@ def create_app(
         if missing:
             raise SessionNotFoundError(", ".join(missing))
         for session_id in body.sessions:
-            sessions.type_line(session_id, body.text, config.terminal.submit_delay_ms)
+            if body.submit:
+                sessions.type_line(session_id, body.text, config.terminal.submit_delay_ms)
+            else:
+                sessions.paste_text(session_id, body.text)
 
     @app.post("/api/sessions/{session_id}/remove-worktree", dependencies=authenticated)
     def remove_session_worktree(session_id: str) -> dict[str, Any]:
