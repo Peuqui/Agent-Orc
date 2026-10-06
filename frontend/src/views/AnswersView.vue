@@ -2,7 +2,6 @@
 import { computed, ref } from 'vue'
 import AnswersFeed from '../components/AnswersFeed.vue'
 import AppIcon from '../components/AppIcon.vue'
-import SpeechSettings from '../components/SpeechSettings.vue'
 import { useSettings } from '../composables/useSettings'
 import { type Speakable, useSpeech } from '../composables/useSpeech'
 import { sessionName, useSessions } from '../composables/useSessions'
@@ -41,7 +40,6 @@ function readAllNew(): void {
             <AppIcon name="stop" />
           </button>
         </template>
-        <SpeechSettings />
       </template>
     </div>
     <p v-if="!agents.length" class="text-slate-400">{{ $t('answers.noAgents') }}</p>

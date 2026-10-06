@@ -1,61 +1,60 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { DEFAULT_SPEECH_RATE, useSettings } from '../composables/useSettings'
 import { useSpeech } from '../composables/useSpeech'
 import { useToast } from '../composables/useToast'
 import type { VoiceChoice } from '../speech'
-import AppIcon from './AppIcon.vue'
+import ToggleSwitch from './ToggleSwitch.vue'
 
-// Voice and speed of the speech output, and the engine once a device offers more than one.
+// Reading answers aloud, for this device: engine (once more than one is offered), voice, speed,
+// the agent's name before its answer, and how much of an answer without a paragraph for
+// listening is read. A section of the settings menu.
 const MIN_RATE = 0.6
 const MAX_RATE = 1.8
 const RATE_STEP = 0.1
-const { speechEngine, speechVoice, speechRate, speechMaxChars } = useSettings()
+const { speechEngine, speechVoice, speechRate, speechMaxChars, speechAnnounceName } = useSettings()
 const speech = useSpeech()
 const toast = useToast()
-const open = ref(false)
 const voices = ref<VoiceChoice[]>([])
 
-async function show(): Promise<void> {
-  open.value = !open.value
-  if (!open.value) return
+onMounted(async () => {
   try {
     voices.value = await speech.voices()
   } catch (error) {
     toast.error(error)
   }
-}
+})
 </script>
 
 <template>
-  <button type="button" class="btn-secondary btn-small-icon" :title="$t('answers.voice')" :aria-label="$t('answers.voice')" @click="show">
-    <AppIcon name="settings" />
-  </button>
-  <div v-if="open" class="card fixed inset-x-3 top-24 z-40 flex max-w-sm flex-col gap-3 p-3 shadow-xl sm:left-auto">
-    <label v-if="speech.engines.length > 1" class="flex flex-col gap-1 text-sm text-slate-400">
+  <div v-if="speech.available" class="mt-3 flex flex-col gap-2 border-t border-slate-700 pt-3 text-sm text-slate-300">
+    <h3 class="font-semibold text-slate-200">{{ $t('answers.speechTitle') }}</h3>
+    <label v-if="speech.engines.length > 1" class="flex flex-col gap-1 text-slate-400">
       {{ $t('answers.engine') }}
       <select v-model="speechEngine" class="input text-sm text-slate-200">
         <option v-for="engine in speech.engines" :key="engine.id" :value="engine.id">{{ engine.label }}</option>
       </select>
     </label>
-    <label class="flex flex-col gap-1 text-sm text-slate-400">
+    <label class="flex flex-col gap-1 text-slate-400">
       {{ $t('answers.voice') }}
       <select v-model="speechVoice" class="input text-sm text-slate-200">
         <option value="">{{ $t('answers.voiceDefault') }}</option>
         <option v-for="voice in voices" :key="voice.id" :value="voice.id">{{ voice.label }}</option>
       </select>
     </label>
-    <label class="flex flex-col gap-1 text-sm text-slate-400">
-      {{ $t('answers.speed', { rate: speechRate.toFixed(1) }) }}
+    <label class="flex flex-col gap-1 text-slate-400">
+      <span class="flex justify-between">
+        {{ $t('answers.speed', { rate: speechRate.toFixed(1) }) }}
+        <button type="button" class="text-xs underline" @click="speechRate = DEFAULT_SPEECH_RATE">{{ $t('answers.speedReset') }}</button>
+      </span>
       <input v-model.number="speechRate" type="range" :min="MIN_RATE" :max="MAX_RATE" :step="RATE_STEP" />
     </label>
-    <label class="flex flex-col gap-1 text-sm text-slate-400">
+    <ToggleSwitch class="h-7 self-start text-slate-300" :checked="speechAnnounceName" @click="speechAnnounceName = !speechAnnounceName">
+      {{ $t('answers.announceName') }}
+    </ToggleSwitch>
+    <label class="flex flex-col gap-1 text-slate-400">
       {{ $t('answers.maxChars') }}
       <input v-model.number="speechMaxChars" type="number" min="100" step="100" class="input text-sm text-slate-200" />
     </label>
-    <div class="flex justify-between">
-      <button type="button" class="btn-secondary btn-small" @click="speechRate = DEFAULT_SPEECH_RATE">{{ $t('answers.speedReset') }}</button>
-      <button type="button" class="btn-primary btn-small" @click="open = false">{{ $t('common.close') }}</button>
-    </div>
   </div>
 </template>

@@ -88,6 +88,8 @@ const speechEngine = setting('agent-orc-speech-engine', DEFAULT_SPEECH_ENGINE, S
 const speechVoice = setting('agent-orc-speech-voice', '', String)
 const speechRate = setting('agent-orc-speech-rate', DEFAULT_SPEECH_RATE, Number)
 /** Without a paragraph for listening, an answer is read up to this many characters. */
+/** The agent's name is spoken before its answer, so one hears who is speaking. */
+const speechAnnounceName = setting('agent-orc-speech-announce-name', true, (stored) => stored === 'true')
 const speechMaxChars = setting('agent-orc-speech-max-chars', DEFAULT_MAX_SPOKEN_CHARS, Number)
 
 /** Bumped when the extra keys were arranged anew: every open terminal fetches them again (the
@@ -118,5 +120,6 @@ export function useSettings() {
     speechVoice,
     speechRate,
     speechMaxChars,
+    speechAnnounceName,
   }
 }

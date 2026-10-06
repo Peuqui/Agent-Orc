@@ -18,6 +18,7 @@ import AppIcon from './AppIcon.vue'
 import HandoverSettings from './HandoverSettings.vue'
 import KeysEditor from './KeysEditor.vue'
 import PushSettings from './PushSettings.vue'
+import SpeechSettings from './SpeechSettings.vue'
 
 // Settings of this device; more entries join here as they become adjustable.
 const { scrollLines, lineHeight, fontSize, stepFontSize, terminalFont, dictationEngine } = useSettings()
@@ -122,6 +123,7 @@ function changeScrollLines(delta: number): void {
       >
         {{ $t('settings.keys') }}
       </button>
+      <SpeechSettings />
       <PushSettings />
       <HandoverSettings />
     </div>

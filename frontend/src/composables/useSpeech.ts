@@ -9,6 +9,8 @@ import { useToast } from './useToast'
 export interface Speakable {
   id: string
   text: string
+  /** Whose answer it is (the agent's name): spoken first, if the setting asks for it. */
+  label?: string
 }
 
 // One reading at a time on the device, whichever view started it.
@@ -17,7 +19,7 @@ const paused = ref(false)
 let reading = 0
 
 export function useSpeech() {
-  const { speechEngine: engineId, speechVoice, speechRate, speechMaxChars } = useSettings()
+  const { speechEngine: engineId, speechVoice, speechRate, speechMaxChars, speechAnnounceName } = useSettings()
   const { locale, t } = useI18n()
   const toast = useToast()
   const engine = computed(() => speechEngine(engineId.value))
@@ -30,7 +32,8 @@ export function useSpeech() {
     try {
       for (const item of items) {
         playing.value = item.id
-        const text = spokenText(item.text, t('answers.skipped'), speechMaxChars.value)
+        const answer = spokenText(item.text, t('answers.skipped'), speechMaxChars.value)
+        const text = speechAnnounceName.value && item.label ? `${item.label}.\n${answer}` : answer
         for (const chunk of speechChunks(text)) {
           if (reading !== mine) return
           await engine.value.speak(chunk, { voice: speechVoice.value, rate: speechRate.value, lang: locale.value })

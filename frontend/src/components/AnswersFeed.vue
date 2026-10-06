@@ -4,12 +4,12 @@ import { useI18n } from 'vue-i18n'
 import { api, type AnswerText, type Turn } from '../api'
 import { markSeen, seenUntil } from '../composables/useAnswerSeen'
 import { useSettings } from '../composables/useSettings'
+import { sessionName, useSessions } from '../composables/useSessions'
 import { type Speakable, useSpeech } from '../composables/useSpeech'
 import { useToast } from '../composables/useToast'
 import { formatMoment } from '../format'
 import { renderMarkdown } from '../markdown'
 import AppIcon from './AppIcon.vue'
-import SpeechSettings from './SpeechSettings.vue'
 
 // What an agent answered, in short: per request of the user its last text (the summary), or
 // every text it wrote. Newer answers are marked until they were looked at; any of them can be
@@ -23,6 +23,7 @@ const SEEN_AFTER_MS = 2000
 const toast = useToast()
 const { locale } = useI18n()
 const { answersAll } = useSettings()
+const { sessions } = useSessions()
 const speech = useSpeech()
 const turns = ref<Turn[]>([])
 const loaded = ref(false)
@@ -45,8 +46,13 @@ const everyText = computed(() => shown.value.flatMap((entry) => entry.texts))
 const newest = computed(() => everyText.value.at(-1)?.time ?? '')
 const unread = computed(() => everyText.value.filter((text) => text.time > seenBefore.value))
 
+const agentName = computed(() => {
+  const session = sessions.value.find((candidate) => candidate.id === props.sessionId)
+  return session ? sessionName(session) : undefined
+})
+
 function speakable(texts: AnswerText[]): Speakable[] {
-  return texts.map((text) => ({ id: text.id, text: text.text }))
+  return texts.map((text) => ({ id: text.id, text: text.text, label: agentName.value }))
 }
 
 function readFrom(text: AnswerText): void {
@@ -133,7 +139,6 @@ function togglePrompt(id: string): void {
             <AppIcon name="stop" />
           </button>
         </template>
-        <SpeechSettings />
       </template>
     </div>
     <div ref="box" class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-3">
