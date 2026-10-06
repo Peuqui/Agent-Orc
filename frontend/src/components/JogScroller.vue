@@ -10,7 +10,7 @@ const emit = defineEmits<{ scroll: [lines: number] }>()
 
 // Track width in pixels, the one place it is set for every view that has a jog. A finger needs
 // about 40 px, a mouse less; kept a little under that, as the grip is touched on the whole track.
-const TRACK_WIDTH_PX = 16
+const TRACK_WIDTH_PX = 20
 // Pulls shorter than this do nothing, so a grip that is merely touched stays still.
 const DEAD_ZONE_PX = 6
 // At the end of the track the history moves at this many lines per second; kept moderate, as
