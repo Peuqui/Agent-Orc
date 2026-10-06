@@ -3,6 +3,7 @@ import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { api, type Workspace, type WorkspaceSet } from '../api'
+import { unreadTexts } from '../answers'
 import {
   COLUMN_CLOSE_EVENT,
   COLUMN_FULLSCREEN_EVENT,
@@ -17,7 +18,10 @@ import NavMenu from '../components/NavMenu.vue'
 import WorkspaceNameField from '../components/WorkspaceNameField.vue'
 import QuotaPanel from '../components/QuotaPanel.vue'
 import SettingsMenu from '../components/SettingsMenu.vue'
+import { markSeen, seenUntil } from '../composables/useAnswerSeen'
+import { readAnswersAll } from '../composables/useSettings'
 import { moveInList, useReorder } from '../composables/useReorder'
+import { type Speakable, useSpeech } from '../composables/useSpeech'
 import { sessionName, useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
 import { useWorkspaceChanges } from '../composables/useWorkspaceChanges'
@@ -159,6 +163,30 @@ const gridStyle = computed(() => ({
     .map((id) => `calc(100cqw * ${widthShare(id)})`)
     .join(' '),
 }))
+
+const speech = useSpeech()
+// The latest requests of each column looked at for what is new.
+const NEW_ANSWERS_TURNS = 10
+
+/** Reads the answers of this workspace's columns that were not seen yet, one column after the other. */
+async function readNewAnswers(): Promise<void> {
+  if (speech.playing.value !== null) return speech.stop()
+  const items: Speakable[] = []
+  const seen: Record<string, string> = {}
+  try {
+    for (const id of workspace.value.tabs) {
+      const texts = unreadTexts(await api.answers(id, NEW_ANSWERS_TURNS), readAnswersAll(id), seenUntil(id))
+      items.push(...texts.map((text) => ({ id: text.id, text: text.text, label: tabName(id) })))
+      if (texts.length) seen[id] = texts[texts.length - 1].time
+    }
+  } catch (error) {
+    toast.error(error)
+    return
+  }
+  if (!items.length) return toast.info(t('answers.nothingNew'))
+  for (const [id, time] of Object.entries(seen)) markSeen(id, time)
+  await speech.play(items)
+}
 
 function tabName(id: string): string {
   const session = sessions.value.find((candidate) => candidate.id === id)
@@ -699,6 +727,16 @@ async function rename(): Promise<void> {
             <AppIcon name="widths" class="size-4" />
           </button>
         </div>
+        <button
+          v-if="speech.available"
+          class="btn-icon"
+          :class="speech.playing.value !== null ? 'animate-pulse text-red-400' : ''"
+          :aria-label="speech.playing.value !== null ? $t('answers.stop') : $t('answers.readNewColumns')"
+          :title="speech.playing.value !== null ? $t('answers.stop') : $t('answers.readNewColumns')"
+          @click="readNewAnswers"
+        >
+          <AppIcon :name="speech.playing.value !== null ? 'stop' : 'speaker'" />
+        </button>
         <button class="btn-icon" :aria-label="$t('workspace.fullscreen')" :title="$t('workspace.fullscreen')" @click="fullscreen = true">
           <AppIcon name="expand" />
         </button>

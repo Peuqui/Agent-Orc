@@ -8,6 +8,12 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  /* Where the keyboard is: the red of the active navigation text, softer than the browser's white ring. */
+  :focus-visible {
+    outline: 2px solid var(--color-red-400);
+    outline-offset: 2px;
+  }
+
   /* Everything clickable shows the hand, also over the terminal (whose text cursor would
      otherwise show through), and answers a press by sinking in a little. */
   button,

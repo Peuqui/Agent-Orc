@@ -10,12 +10,10 @@
   "nav": {
     "sessions": "Agenten",
     "files": "Dateien",
-    "trash": "Papierkorb",
     "workspace": "Arbeitsfläche",
     "notes": "Notizen",
     "consumption": "Verbrauch",
-    "menu": "Seiten",
-    "answers": "Antworten"
+    "menu": "Seiten"
   },
   "common": {
     "cancel": "Abbrechen",
@@ -103,7 +101,9 @@
     "restore": "Wiederherstellen",
     "deleteForever": "Endgültig löschen",
     "confirmDelete": "„{name}“ endgültig löschen? Das lässt sich nicht rückgängig machen.",
-    "deletedAt": "gelöscht {date}"
+    "deletedAt": "gelöscht {date}",
+    "title": "Papierkorb",
+    "dropHint": "Eine Datei aus der Liste hierher ziehen legt sie in den Papierkorb."
   },
   "terminal": {
     "back": "Zurück",
@@ -301,8 +301,7 @@
         "items": [
           "Statt des Terminals zeigt der Umschalter oben (Terminal- / Sprechblasen-Symbol, im Kopf jedes Terminals und jeder Spalte) nur das, was der Agent geantwortet hat – ohne Gedanken, Dateiänderungen und Diffs. Die Wahl gilt für alle Terminals dieses Geräts; das Eingabefeld bleibt unten.",
           "Pro Anfrage steht deine Frage in einer grauen Zeile (antippen zeigt sie ganz) und darunter die letzte Antwort des Agenten, die Zusammenfassung. „Alles anzeigen“ zeigt auch die Zwischenkommentare. Neue Antworten haben einen roten Streifen, bis sie angesehen wurden.",
-          "Vorlesen: „Vorlesen“ liest eine Antwort, „Ab hier“ diese und alle folgenden, „Neue vorlesen“ die noch nicht gesehenen. Codeblöcke und Tabellen werden ausgelassen („hier folgt ein Codeblock“), Adressen und Formatierung nicht mitgesprochen. Pause und Stopp stehen oben. Stimme, Tempo, die Ansage des Agentennamens vor jeder Antwort und die Höchstlänge stehen im Menü ☰ (für das ganze Gerät); es sind die Stimmen des Geräts, mit einem Bluetooth-Headset kommt der Ton dort an. Bei gesperrtem Bildschirm bricht das Vorlesen am Handy oft ab. Hat die Antwort am Ende einen Absatz mit 🔊 (der „Antwort zum Hören“ aus deiner globalen CLAUDE.md), wird nur er gesprochen; sonst die Antwort bis zur im Zahnrad eingestellten Zeichenzahl.",
-          "Die Seite „Antworten“ zeigt die jüngsten Antworten aller laufenden Agenten untereinander; „Alle neuen vorlesen“ liest sie nacheinander."
+          "Vorlesen: „Vorlesen“ liest eine Antwort, „Ab hier“ diese und alle folgenden, „Neue vorlesen“ die noch nicht gesehenen. Codeblöcke und Tabellen werden ausgelassen („hier folgt ein Codeblock“), Adressen und Formatierung nicht mitgesprochen. Pause und Stopp stehen oben. Stimme, Tempo, die Ansage des Agentennamens vor jeder Antwort und die Höchstlänge stehen im Menü ☰ (für das ganze Gerät); es sind die Stimmen des Geräts, mit einem Bluetooth-Headset kommt der Ton dort an. Bei gesperrtem Bildschirm bricht das Vorlesen am Handy oft ab. Hat die Antwort am Ende einen Absatz mit 🔊 (der „Antwort zum Hören“ aus deiner globalen CLAUDE.md), wird nur er gesprochen; sonst die Antwort bis zur im Zahnrad eingestellten Zeichenzahl. Der Lautsprecher in der Kopfzeile der Arbeitsfläche liest die neuen Antworten aller Spalten dieser Fläche nacheinander vor; ein zweiter Druck beendet."
         ]
       },
       {
@@ -543,9 +542,6 @@
     "speed": "Tempo: {rate}×",
     "speedReset": "Normal",
     "skipped": "Hier folgt ein Codeblock oder eine Tabelle, ausgelassen",
-    "open": "Im Terminal öffnen",
-    "readAllNew": "Alle neuen vorlesen",
-    "noAgents": "Kein Agent läuft.",
     "maxChars": "Ohne Hörabsatz höchstens so viele Zeichen vorlesen",
     "speechTitle": "Vorlesen",
     "announceName": "Namen des Agenten vorab sagen",
@@ -553,6 +549,8 @@
     "less": "weniger",
     "interjection": "Eingabe während der Antwort",
     "pending": "wartet auf Zustellung",
-    "images": "{count} Bild angehängt"
+    "images": "{count} Bild angehängt",
+    "readNewColumns": "Neue Antworten dieser Arbeitsfläche vorlesen",
+    "nothingNew": "Nichts Neues zum Vorlesen."
   }
 }

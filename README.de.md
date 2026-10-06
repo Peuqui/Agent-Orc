@@ -80,8 +80,8 @@ aus wieder aufnehmen.
 
 **Antworten**
 - Ein Umschalter in jedem Terminal zeigt nur das, was der Agent geantwortet hat (pro Anfrage
-  der letzte Text, auf Wunsch jeder), statt des Terminals mit Gedanken und Diffs; eine Seite
-  listet die jüngsten Antworten aller laufenden Agenten.
+  der letzte Text, auf Wunsch jeder), statt des Terminals mit Gedanken und Diffs; was du
+  während einer Antwort getippt hast, und seine Bilder erscheinen auch.
 - Vorlesen mit den Stimmen des Browsers (eine Antwort, ab hier oder alle neuen; Code und
   Tabellen werden ausgelassen). Die Sprachausgabe ist eine Liste von Engines, eine Server-Stimme
   lässt sich später ergänzen.
@@ -111,7 +111,8 @@ aus wieder aufnehmen.
   anklickbare Links.
 
 **Dateien und mehr**
-- Dateien in den Projektordnern durchsuchen, bearbeiten und in den Papierkorb legen;
+- Dateien in den Projektordnern durchsuchen, bearbeiten und in den Papierkorb legen (er steht
+  neben der Liste: Datei darauf ziehen, dort wiederherstellen oder leeren);
   Markdown als Vorschau, Bilder als Bild, andere Dateien zum Herunterladen.
 - Dateipfade in der Ausgabe eines Agenten sind anklickbar und öffnen die Datei (an der
   genannten Zeile) oder den Ordner.

@@ -8,6 +8,8 @@ import BaseDialog from '../components/BaseDialog.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
 import InputDialog from '../components/InputDialog.vue'
 import StartAgentDialog from '../components/StartAgentDialog.vue'
+import TrashPanel from '../components/TrashPanel.vue'
+import { DRAG_PATH_TYPE } from '../dragTypes'
 import { loadTabState } from '../composables/useWorkspaceTab'
 import { useScope } from '../composables/useScope'
 import { useSessions } from '../composables/useSessions'
@@ -64,6 +66,8 @@ function edit(path: string): void {
   void router.push({ path: '/edit', query: { path } })
 }
 
+const trashPanel = ref<InstanceType<typeof TrashPanel>>()
+
 async function run(action: () => Promise<unknown>): Promise<void> {
   dialog.value = null
   try {
@@ -72,6 +76,17 @@ async function run(action: () => Promise<unknown>): Promise<void> {
     toast.error(error)
   }
   await loadEntries()
+  // Something may have been trashed or restored: the trash panel shows it.
+  await trashPanel.value?.load()
+}
+
+function trashDropped(path: string): Promise<void> {
+  return run(() => api.moveToTrash(path))
+}
+
+function startDrag(event: DragEvent, entry: FileEntry): void {
+  event.dataTransfer?.setData(DRAG_PATH_TYPE, entry.path)
+  if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move'
 }
 
 async function onLock(): Promise<void> {
@@ -122,7 +137,9 @@ watch(currentPath, loadEntries)
 </script>
 
 <template>
-  <section>
+  <!-- The files, and the trash beside them (below on a phone): a file dragged onto the trash is trashed. -->
+  <section class="md:grid md:grid-cols-[minmax(0,1fr)_20rem] md:items-start md:gap-4">
+    <div class="min-w-0">
     <div
       class="mb-3 flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm"
       :class="unlocked ? 'border-red-700 bg-red-950/60 text-red-200' : 'border-slate-700 text-slate-400'"
@@ -164,7 +181,13 @@ watch(currentPath, loadEntries)
 
     <p v-if="entries.length === 0" class="card p-6 text-center text-slate-400">{{ $t('files.empty') }}</p>
     <ul v-else class="card divide-y divide-slate-700">
-      <li v-for="entry in entries" :key="entry.path" class="flex items-center">
+      <li
+        v-for="entry in entries"
+        :key="entry.path"
+        class="flex items-center"
+        draggable="true"
+        @dragstart="startDrag($event, entry)"
+      >
         <button
           class="flex min-h-14 min-w-0 flex-1 items-center gap-3 px-4 text-left"
           @click="entry.is_dir ? open(entry.path) : edit(entry.path)"
@@ -192,6 +215,11 @@ watch(currentPath, loadEntries)
         </button>
       </li>
     </ul>
+    </div>
+
+    <aside class="mt-4 md:mt-0">
+      <TrashPanel ref="trashPanel" @trash="trashDropped" @restored="loadEntries" />
+    </aside>
 
     <BaseDialog v-if="dialog?.kind === 'actions'" :title="dialog.entry.name" @close="dialog = null">
       <div class="flex flex-col gap-2">

@@ -2,6 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { api, type AnswerText, type Interjection, type Turn } from '../api'
+import { shownTexts } from '../answers'
 import { markSeen, seenUntil } from '../composables/useAnswerSeen'
 import { useAnswersAll } from '../composables/useSettings'
 import { sessionName, useSessions } from '../composables/useSessions'
@@ -14,18 +15,12 @@ import AppIcon from './AppIcon.vue'
 // What an agent answered, in short: per request of the user its last text (the summary), or
 // every text it wrote. Newer answers are marked until they were looked at; any of them can be
 // read aloud, or all that follow.
-// `all` is given by a page that decides for all its feeds; otherwise the feed keeps its own choice.
-const props = withDefaults(defineProps<{ sessionId: string; turns?: number; controls?: boolean; all?: boolean }>(), {
-  turns: 20,
-  controls: true,
-  all: undefined,
-})
+const props = withDefaults(defineProps<{ sessionId: string; turns?: number }>(), { turns: 20 })
 const POLL_MS = 4000
 const SEEN_AFTER_MS = 2000
 const toast = useToast()
 const { locale } = useI18n()
-const ownAll = useAnswersAll(props.sessionId)
-const answersAll = computed(() => props.all ?? ownAll.value)
+const answersAll = useAnswersAll(props.sessionId)
 const { sessions } = useSessions()
 const speech = useSpeech()
 const turns = ref<Turn[]>([])
@@ -47,7 +42,7 @@ interface Shown {
 
 const shown = computed<Shown[]>(() =>
   turns.value.map((turn) => {
-    const texts = answersAll.value ? turn.texts : turn.texts.slice(-1)
+    const texts = shownTexts(turn, answersAll.value)
     const items: Shown['items'] = [
       ...texts.map((text) => ({ kind: 'agent' as const, ...text })),
       ...turn.interjections.map((interjection) => ({ kind: 'user' as const, ...interjection })),
@@ -78,8 +73,7 @@ function readUnread(): void {
   void speech.play(speakable(unread.value))
 }
 
-// For a page that reads the new answers of several agents one after the other.
-defineExpose({ unreadTexts: () => speakable(unread.value) })
+
 
 async function load(): Promise<void> {
   const bottomBefore = box.value ? box.value.scrollHeight - box.value.scrollTop - box.value.clientHeight < 80 : true
@@ -139,12 +133,12 @@ function togglePrompt(id: string): void {
 
 <template>
   <div class="flex min-h-0 flex-1 flex-col">
-    <div v-if="controls" class="flex flex-wrap items-center gap-1.5 border-b border-slate-700 px-2 py-1.5">
+    <div class="flex flex-wrap items-center gap-1.5 border-b border-slate-700 px-2 py-1.5">
       <button
         type="button"
         class="btn-secondary btn-small"
         :title="$t('answers.allHint')"
-        @click="ownAll = !ownAll"
+        @click="answersAll = !answersAll"
       >
         {{ answersAll ? $t('answers.showSummaries') : $t('answers.showAll') }}
       </button>
@@ -174,14 +168,14 @@ function togglePrompt(id: string): void {
         <!-- What the user asked, in full; a very long request is folded. -->
         <div class="rounded-lg border-l-4 border-sky-700/70 bg-sky-950/40 px-3 py-2 text-sm text-slate-300">
           <p class="whitespace-pre-wrap break-words" :class="foldable(entry.turn.prompt) && !expandedPrompts.has(entry.turn.id) ? 'line-clamp-6' : ''">{{ entry.turn.prompt }}</p>
-          <div v-if="entry.turn.images" class="mt-2 flex flex-wrap gap-2">
+          <div v-if="entry.turn.images" class="mt-2 flex flex-row flex-wrap gap-2">
             <img
               v-for="index in entry.turn.images"
               :key="index"
               :src="api.answerImageUrl(sessionId, entry.turn.id, index - 1)"
               :alt="$t('answers.images', { count: entry.turn.images })"
               loading="lazy"
-              class="h-24 max-w-full cursor-zoom-in rounded border border-slate-600 object-cover"
+              class="h-20 w-28 shrink-0 cursor-zoom-in rounded border border-slate-600 object-cover"
               @click="openImage(api.answerImageUrl(sessionId, entry.turn.id, index - 1))"
             />
           </div>
@@ -197,14 +191,14 @@ function togglePrompt(id: string): void {
             :class="item.pending ? 'opacity-60' : ''"
           >
             <p class="whitespace-pre-wrap break-words">{{ item.text }}</p>
-            <div v-if="item.images" class="mt-2 flex flex-wrap gap-2">
+            <div v-if="item.images" class="mt-2 flex flex-row flex-wrap gap-2">
               <img
                 v-for="index in item.images"
                 :key="index"
                 :src="api.answerImageUrl(sessionId, item.id, index - 1)"
                 :alt="$t('answers.images', { count: item.images })"
                 loading="lazy"
-                class="h-24 max-w-full cursor-zoom-in rounded border border-slate-600 object-cover"
+                class="h-20 w-28 shrink-0 cursor-zoom-in rounded border border-slate-600 object-cover"
                 @click="openImage(api.answerImageUrl(sessionId, item.id, index - 1))"
               />
             </div>

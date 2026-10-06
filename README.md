@@ -74,8 +74,8 @@ detaches: the agents keep working, and you pick them up again from any device.
 
 **Answers**
 - A switch in every terminal shows only what the agent answered (its last text per request, on
-  request every text) instead of the terminal with its thoughts and diffs; a page lists the
-  latest answers of all running agents.
+  request every text) instead of the terminal with its thoughts and diffs; what you typed
+  during an answer and its pictures are shown too.
 - Read them aloud with the voices of the browser (one answer, from here on, or all new ones;
   code and tables are left out). The speech output is a list of engines, so a server voice can
   be added later.
@@ -104,7 +104,8 @@ detaches: the agents keep working, and you pick them up again from any device.
   device, a text view for selecting and copying, clickable links.
 
 **Files and more**
-- Browse, edit and trash files in your project folders; Markdown as a preview, pictures as
+- Browse, edit and trash files in your project folders (the trash sits beside the list: drag a
+  file onto it, restore or empty it there); Markdown as a preview, pictures as
   pictures, other files to download.
 - File paths in an agent's output are clickable and open the file (at the line named) or the
   folder.
