@@ -20,10 +20,12 @@ import { isExternal, linkedPath, renderMarkdown } from '../markdown'
 // line: where to start, e.g. from "main.py:42" in an agent's output.
 const props = defineProps<{ path: string; line: number | null }>()
 
-// What the file is shown as: text in the editor, Markdown also as a page, a picture, or (not
-// text, too large) only offered to download.
-type Kind = 'text' | 'markdown' | 'image' | 'binary'
+// What the file is shown as: text in the editor, Markdown also as a page, a picture, a sound or
+// a video the browser plays, or (not text, too large) only offered to download.
+type Kind = 'text' | 'markdown' | 'image' | 'audio' | 'video' | 'binary'
 const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'ico', 'avif']
+const AUDIO_EXTENSIONS = ['wav', 'mp3', 'ogg', 'oga', 'opus', 'flac', 'm4a', 'aac']
+const VIDEO_EXTENSIONS = ['mp4', 'webm', 'ogv', 'mov']
 const MARKDOWN_EXTENSIONS = ['md', 'markdown']
 const NOT_SHOWN_AS_TEXT = ['NotTextError', 'FileTooLargeError']
 
@@ -49,7 +51,13 @@ const language = new Compartment()
 const fontTheme = new Compartment()
 const name = computed(() => baseName(props.path))
 const extension = computed(() => name.value.split('.').pop()?.toLowerCase() ?? '')
-const kind = ref<Kind>(IMAGE_EXTENSIONS.includes(extension.value) ? 'image' : 'text')
+function kindOfExtension(extensionName: string): Kind {
+  if (IMAGE_EXTENSIONS.includes(extensionName)) return 'image'
+  if (AUDIO_EXTENSIONS.includes(extensionName)) return 'audio'
+  if (VIDEO_EXTENSIONS.includes(extensionName)) return 'video'
+  return 'text'
+}
+const kind = ref<Kind>(kindOfExtension(extension.value))
 // Markdown opens as a page; the editor keeps the text for switching back.
 const previewing = ref(MARKDOWN_EXTENSIONS.includes(extension.value))
 const previewHtml = ref('')
@@ -113,7 +121,7 @@ function goToLine(line: number): void {
 }
 
 async function load(): Promise<void> {
-  if (kind.value === 'image') {
+  if (kind.value === 'image' || kind.value === 'audio' || kind.value === 'video') {
     loaded.value = true
     return
   }
@@ -254,6 +262,11 @@ onBeforeUnmount(() => view?.destroy())
     />
     <div v-if="kind === 'image'" class="flex min-h-0 flex-1 items-center justify-center overflow-auto p-3">
       <img :src="rawFileUrl(path)" :alt="name" class="max-h-full max-w-full object-contain" />
+    </div>
+    <div v-if="kind === 'audio' || kind === 'video'" class="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 overflow-auto p-4">
+      <audio v-if="kind === 'audio'" :src="rawFileUrl(path)" controls class="w-full max-w-xl" />
+      <video v-else :src="rawFileUrl(path)" controls class="max-h-full max-w-full" />
+      <a class="btn-secondary" :href="rawFileUrl(path, true)"><AppIcon name="download" />{{ $t('editor.download') }}</a>
     </div>
     <div v-if="kind === 'binary'" class="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
       <p class="text-slate-300">{{ $t('editor.notText') }}</p>

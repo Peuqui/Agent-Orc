@@ -1702,3 +1702,15 @@ def test_a_picture_attached_for_an_agent_is_served_by_its_name(
     assert client.get(f"{base}/..%2F..%2Fsecret.png").status_code == 404
     assert client.get(f"{base}/nope.png").status_code == 404
     assert client.get(f"/api/sessions/nope/uploads/{name}").status_code == 404
+
+
+def test_a_sound_can_be_played_and_sought_in_the_browser(client: TestClient, home: Path) -> None:
+    sound = home / "projects" / "ding.wav"
+    sound.write_bytes(b"RIFF" + bytes(range(60)))
+    whole = client.get("/api/files/raw", params={"path": str(sound)})
+    assert whole.status_code == 200 and whole.headers["content-type"] == "audio/x-wav"
+    assert whole.headers["accept-ranges"] == "bytes"
+    # A player seeks by asking for a part of the file.
+    part = client.get("/api/files/raw", params={"path": str(sound)}, headers={"Range": "bytes=4-7"})
+    assert part.status_code == 206 and part.content == bytes([0, 1, 2, 3])
+    assert part.headers["content-range"] == "bytes 4-7/64"
