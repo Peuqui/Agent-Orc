@@ -1,6 +1,13 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { listeningParagraph, MAX_CHUNK_CHARS, speakableText, speechChunks, spokenText } from '../src/speechText.ts'
+import {
+  listeningParagraph,
+  MAX_CHUNK_CHARS,
+  speakableText,
+  speechChunks,
+  spokenText,
+  summaryOf,
+} from '../src/speechText.ts'
 
 test('markup is dropped and links keep their text', () => {
   const text = '## Ergebnis\n- **Fett** und `code`\n[Heise](https://heise.de) lesen https://x.org/a'
@@ -52,4 +59,11 @@ test('without one the answer is spoken up to the limit, ending at a sentence', (
   const answer = 'Erster Satz. Zweiter Satz. Dritter Satz.'
   assert.equal(spokenText(answer, 'Code', 30), 'Erster Satz. Zweiter Satz.')
   assert.equal(spokenText(answer, 'Code', 900), 'Erster Satz. Zweiter Satz. Dritter Satz.')
+})
+
+test('the summary of an answer is its paragraph for listening, with its marker', () => {
+  const answer = 'Details mit `code` und Pfaden.\n\n🔊 Alles fertig. Eine Entscheidung ist offen.\n\nNoch ein Absatz.'
+  assert.equal(summaryOf(answer), '🔊 Alles fertig. Eine Entscheidung ist offen.')
+  // Without one the answer is shown whole.
+  assert.equal(summaryOf('Nur ein Satz.'), 'Nur ein Satz.')
 })

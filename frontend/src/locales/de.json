@@ -301,7 +301,7 @@
         "title": "Antworten",
         "items": [
           "Statt des Terminals zeigt der Umschalter oben (Terminal- / Sprechblasen-Symbol, im Kopf jedes Terminals und jeder Spalte) nur das, was der Agent geantwortet hat – ohne Gedanken, Dateiänderungen und Diffs. Die Wahl gilt für alle Terminals dieses Geräts; das Eingabefeld bleibt unten.",
-          "Pro Anfrage steht deine Frage in einer grauen Zeile (antippen zeigt sie ganz) und darunter die letzte Antwort des Agenten, die Zusammenfassung. Der Schalter „Zusammenfassungen | Alles“ (hervorgehoben ist, was gilt, je Agent) wählt: zu jeder Eingabe von dir nur den letzten Text des Agenten, oder alle Texte samt Zwischenkommentaren. Neue Antworten haben einen roten Streifen, bis sie angesehen wurden.",
+          "Pro Anfrage steht deine Frage in einer grauen Zeile (antippen zeigt sie ganz) und darunter die letzte Antwort des Agenten, die Zusammenfassung. Der Schalter „Zusammenfassungen | Alles“ (hervorgehoben ist, was gilt, je Agent) wählt: zu jeder Eingabe von dir nur den Hörabsatz aus dem letzten Text des Agenten (ohne Hörabsatz den ganzen letzten Text), oder alle Texte samt Zwischenkommentaren und Details. Neue Antworten haben einen roten Streifen, bis sie angesehen wurden.",
           "Vorlesen: „Vorlesen“ liest eine Antwort, „Ab hier“ diese und alle folgenden, „Neue vorlesen“ die noch nicht gesehenen. Codeblöcke und Tabellen werden ausgelassen („hier folgt ein Codeblock“), Adressen und Formatierung nicht mitgesprochen. Pause und Stopp stehen oben. Stimme, Tempo, die Ansage des Agentennamens vor jeder Antwort und die Höchstlänge stehen im Menü ☰ (für das ganze Gerät); es sind die Stimmen des Geräts, mit einem Bluetooth-Headset kommt der Ton dort an. Bei gesperrtem Bildschirm bricht das Vorlesen am Handy oft ab. Hat die Antwort am Ende einen Absatz mit 🔊 (der „Antwort zum Hören“ aus deiner globalen CLAUDE.md), wird nur er gesprochen; sonst die Antwort bis zur im Zahnrad eingestellten Zeichenzahl. Der Lautsprecher in der Kopfzeile der Arbeitsfläche liest die neuen Antworten aller Spalten dieser Fläche nacheinander vor; ein zweiter Druck beendet. Mit dem Echo Dot (Menü ☰, „Sprachausgabe“, sobald Agent-Orc ihn kennt) sagt AIfred den Hörabsatz im gewählten Raum an, mit Signalton davor und danach; die Ansage lässt sich von hier aus nicht anhalten."
         ]
       },
@@ -556,7 +556,7 @@
     "mode": "Anzeige",
     "modeSummaries": "Zusammenfassungen",
     "modeAll": "Alles",
-    "summariesHint": "Zu jeder Eingabe von dir nur der letzte Text des Agenten",
+    "summariesHint": "Zu jeder Eingabe von dir nur der Hörabsatz des Agenten (nach dem Lautsprecher-Zeichen), ohne Code und Pfade",
     "pictures": "{count} Bild | {count} Bilder"
   }
 }

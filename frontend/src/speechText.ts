@@ -92,11 +92,23 @@ export const LISTEN_MARKER = '🔊'
 /** What is read of an answer without such a paragraph: up to this many characters. */
 export const DEFAULT_MAX_SPOKEN_CHARS = 900
 
+function lastListeningParagraph(markdown: string): string | undefined {
+  const paragraphs = markdown.split(/\n\s*\n/).map((paragraph) => paragraph.trim())
+  return paragraphs.findLast((paragraph) => paragraph.startsWith(LISTEN_MARKER))
+}
+
 /** The last paragraph for listening of an answer, without its marker; null if there is none. */
 export function listeningParagraph(markdown: string): string | null {
-  const paragraphs = markdown.split(/\n\s*\n/).map((paragraph) => paragraph.trim())
-  const found = paragraphs.findLast((paragraph) => paragraph.startsWith(LISTEN_MARKER))
+  const found = lastListeningParagraph(markdown)
   return found === undefined ? null : found.slice(LISTEN_MARKER.length).trim()
+}
+
+/**
+ * What the summaries show of an answer: its paragraph for listening (with its marker), which is
+ * also what is read aloud; an answer without one is shown whole, so there is something to see.
+ */
+export function summaryOf(markdown: string): string {
+  return lastListeningParagraph(markdown) ?? markdown
 }
 
 /** The text cut after its last whole sentence within `max` characters. */

@@ -3,6 +3,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { api, type AnswerText, type Interjection, type Turn } from '../api'
 import { shownTexts, uploadMentions } from '../answers'
+import { summaryOf } from '../speechText'
 import { markSeen, seenUntil } from '../composables/useAnswerSeen'
 import { useAnswersAll } from '../composables/useSettings'
 import { sessionName, useSessions } from '../composables/useSessions'
@@ -217,7 +218,7 @@ function togglePrompt(id: string): void {
             class="card flex flex-col gap-2 p-3"
             :class="item.time > seenBefore ? 'border-l-4 border-l-red-500' : ''"
           >
-            <div class="markdown note select-text" v-html="renderMarkdown(item.text, null)" />
+            <div class="markdown note select-text" v-html="renderMarkdown(answersAll ? item.text : summaryOf(item.text), null)" />
             <div class="flex items-center gap-2 text-xs text-slate-500">
               <span>{{ formatMoment(new Date(item.time), locale) }}</span>
               <template v-if="speech.available.value">
