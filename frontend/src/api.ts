@@ -475,6 +475,8 @@ export const api = {
   /** The last requests of the user with the agent's texts, oldest first (no thoughts or tools). */
   answers: (sessionId: string, turns: number) =>
     request<Turn[]>('GET', `sessions/${encodeURIComponent(sessionId)}/answers`, { query: { turns: String(turns) } }),
+  /** Where the recording of something said on the Echo Dot is served (the id of its entry). */
+  recordingUrl: (id: string) => `api/voice/${encodeURIComponent(id)}/audio`,
   /** What was spoken to the agent on the Echo Dot, to mark those requests in its answers. */
   spoken: (sessionId: string) => request<SpokenRequest[]>('GET', `sessions/${encodeURIComponent(sessionId)}/voice`),
   sessionText: (id: string) =>

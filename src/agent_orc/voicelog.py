@@ -3,6 +3,7 @@ Agent-Orc made of it: to compare with what was meant, and to show a spoken reque
 agent's answers."""
 
 import json
+import re
 import uuid
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
@@ -33,6 +34,26 @@ class VoiceEntry:
 
 def _log_file() -> Path:
     return state_dir() / "voice-log.jsonl"
+
+
+def _recordings_dir() -> Path:
+    return state_dir() / "voice-recordings"
+
+
+def store_recording(entry_id: str, recording: bytes) -> None:
+    """The WAV of what was said, next to the entry (same id)."""
+    _recordings_dir().mkdir(parents=True, exist_ok=True)
+    (_recordings_dir() / f"{entry_id}.wav").write_bytes(recording)
+
+
+def recording_file(entry_id: str) -> Path:
+    """Only an entry's id names a recording: nothing else reaches the folder's other files."""
+    if re.fullmatch(r"[0-9a-f]{32}", entry_id) is None:
+        raise FileNotFoundError(entry_id)
+    path = _recordings_dir() / f"{entry_id}.wav"
+    if not path.is_file():
+        raise FileNotFoundError(entry_id)
+    return path
 
 
 def new_entry(now: float, **fields: Any) -> VoiceEntry:

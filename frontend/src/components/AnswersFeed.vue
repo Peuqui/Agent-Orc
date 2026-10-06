@@ -190,10 +190,12 @@ function jog(lines: number): void {
         <div class="rounded-lg border-l-4 border-sky-700/70 bg-sky-950/40 px-3 py-2 text-sm text-slate-300">
           <FoldedText v-if="uploadMentions(entry.turn.prompt).text" :text="uploadMentions(entry.turn.prompt).text" :lines="USER_LINES" />
           <AnswerImages :urls="pictureUrls(entry.turn.id, entry.turn.prompt, entry.turn.images)" />
-          <!-- Said on the Echo Dot: as the recognition heard it, to compare with what was meant. -->
-          <p v-if="spokenAs(entry.turn, spoken)" class="mt-1 flex items-center gap-1 text-xs text-slate-500">
-            <AppIcon name="mic" />{{ $t('answers.spoken', { heard: spokenAs(entry.turn, spoken)?.heard }) }}
-          </p>
+          <!-- Said on the Echo Dot: as the recognition heard it, to compare with the recording. -->
+          <div v-if="spokenAs(entry.turn, spoken)" class="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+            <AppIcon name="mic" />
+            <span>{{ $t('answers.spoken', { heard: spokenAs(entry.turn, spoken)?.heard }) }}</span>
+            <audio controls preload="none" class="h-8 max-w-full" :src="api.recordingUrl(spokenAs(entry.turn, spoken)?.id ?? '')" />
+          </div>
         </div>
         <template v-for="item in entry.items" :key="item.id">
           <!-- Typed while the agent was answering. -->

@@ -191,11 +191,16 @@ def voice_client(home: Path, socket_name: str, clock: FakeClock, aifred_url: str
     return TestClient(app)
 
 
+RECORDING = b"RIFF....WAVEfmt "
+
+
 def say(client: TestClient, text: str, token: str = VOICE_TOKEN) -> Any:
+    """As AIfred sends it: the words in the query, the recording as the body."""
     return client.post(
         "/api/voice",
-        json={"room": "testraum", "text": text},
-        headers={"Authorization": f"Bearer {token}"},
+        params={"room": "testraum", "text": text},
+        content=RECORDING,
+        headers={"Authorization": f"Bearer {token}", "Content-Type": "audio/wav"},
     )
 
 
@@ -260,6 +265,11 @@ def test_what_is_said_reaches_the_agent_only_after_the_spoken_yes(
     [spoken] = client.get(f"/api/sessions/{session_id}/voice").json()
     assert (spoken["heard"], spoken["request"]) == ("starte die Tests", "starte die Tests")
     assert spoken["score"] is None
+    # What was said is kept as it was recorded, for the answers to play.
+    audio = client.get(f"/api/voice/{spoken['id']}/audio")
+    assert (audio.status_code, audio.content) == (200, RECORDING)
+    assert client.get("/api/voice/not-an-id/audio").status_code == 404
+    assert client.get(f"/api/voice/{'0' * 32}/audio").status_code == 404
     for _ in range(50):
         if "starte die Tests" in client.get(f"/api/sessions/{session_id}/text").json()["text"]:
             break
@@ -273,7 +283,7 @@ def test_only_aifred_with_the_token_may_speak_to_the_agents(
 ) -> None:
     client = voice_client(home, socket_name, clock, aifred)
     assert say(client, "hallo", token="wrong").status_code == 401
-    assert client.post("/api/voice", json={"room": "r", "text": "x"}).status_code == 401
+    assert client.post("/api/voice", params={"room": "r", "text": "x"}).status_code == 401
 
 
 def test_the_paragraph_for_listening_is_the_last_marked_one() -> None:

@@ -130,7 +130,13 @@ from agent_orc.terminal import bridge
 from agent_orc.trash import RestoreConflictError, Trash, TrashEntryNotFoundError, home_trash_dir
 from agent_orc.trust import FOLDER_TRUST
 from agent_orc.voice import Action, VoiceAgent, VoiceRouter, expect_reply
-from agent_orc.voicelog import append_entry, new_entry, requests_to_agent
+from agent_orc.voicelog import (
+    append_entry,
+    new_entry,
+    recording_file,
+    requests_to_agent,
+    store_recording,
+)
 from agent_orc.worktrees import (
     InvalidBranchError,
     WorktreeError,
@@ -382,12 +388,6 @@ class AnnounceRequest(BaseModel):
     texts: list[str]
     # The agent the answers are from, as AIfred records the announcement.
     speaker: str
-
-
-class VoiceRequest(BaseModel):
-    # The Echo's room (where the answers are spoken) and what was said after the wake word.
-    room: str
-    text: str
 
 
 class BroadcastRequest(BaseModel):
@@ -1335,12 +1335,17 @@ def create_app(
         return agents
 
     @app.post("/api/voice", dependencies=[Depends(require_voice_token)])
-    def voice(body: VoiceRequest) -> dict[str, str | None]:
-        """What the user said on an Echo Dot after the wake word: the Echo asks back which agent
-        it understood and the text is typed into that agent after a spoken yes."""
+    async def voice(room: str, text: str, request: Request) -> dict[str, str | None]:
+        """What the user said on an Echo Dot after the wake word, as words (the query) and as the
+        recording (the body, a WAV): the Echo asks back which agent it understood and the text
+        is typed into that agent after a spoken yes."""
+        recording = await request.body()
+        return await asyncio.to_thread(handle_voice, room, text, recording)
+
+    def handle_voice(room: str, text: str, recording: bytes) -> dict[str, str | None]:
         assert config.voice is not None and config.announce is not None and voice_router is not None
         now = clock()
-        decision = voice_router.handle(body.room, body.text, voice_agents(), now)
+        decision = voice_router.handle(room, text, voice_agents(), now)
         lines = {
             Action.ASK: config.voice.ask_line,
             Action.SEND: config.voice.sent_line,
@@ -1350,13 +1355,13 @@ def create_app(
         }
         if decision.action is Action.SEND and decision.agent is not None:
             sessions.type_line(decision.agent.id, decision.text, config.terminal.submit_delay_ms)
-            expect_reply(decision.agent.id, body.room)
+            expect_reply(decision.agent.id, room)
         agent = decision.agent
-        asked_id, asked_action = voice_asked.pop(body.room, (None, None))
+        asked_id, asked_action = voice_asked.pop(room, (None, None))
         entry = new_entry(
             now,
-            room=body.room,
-            heard=body.text,
+            room=room,
+            heard=text,
             action=decision.action.value,
             agent_id=agent.id if agent else None,
             agent=agent.name if agent else None,
@@ -1365,19 +1370,25 @@ def create_app(
             source=asked_id if decision.action is Action.SEND else None,
         )
         append_entry(entry)
+        store_recording(entry.id, recording)
         # The sentence a question is about; after a no the name asked for belongs to the sentence
         # said first, a yes is about the sentence its question was.
         if decision.action is Action.WHICH_AGENT:
-            voice_asked[body.room] = (asked_id, decision.action)
+            voice_asked[room] = (asked_id, decision.action)
         elif decision.action is Action.ASK:
             first = asked_id if asked_action is Action.WHICH_AGENT else entry.id
-            voice_asked[body.room] = (first, decision.action)
+            voice_asked[room] = (first, decision.action)
         name = agent.name if agent else ""
         spoken = lines[decision.action].format(agent=name)
         announcing.announce(
-            config.announce, config_dir(), body.room, [spoken], name or announcing.APP_SPEAKER
+            config.announce, config_dir(), room, [spoken], name or announcing.APP_SPEAKER
         )
         return {"action": decision.action.value, "agent": name or None}
+
+    @app.get("/api/voice/{entry_id}/audio", dependencies=authenticated)
+    def voice_audio(entry_id: str) -> FileResponse:
+        """The recording of something said to an agent on the Echo Dot."""
+        return served_file(recording_file(entry_id), download=False)
 
     @app.get("/api/sessions/{session_id}/voice", dependencies=authenticated)
     def session_voice(session_id: str) -> list[dict[str, Any]]:
