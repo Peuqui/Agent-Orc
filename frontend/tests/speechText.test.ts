@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { MAX_CHUNK_CHARS, speakableText, speechChunks } from '../src/speechText.ts'
+import { listeningParagraph, MAX_CHUNK_CHARS, speakableText, speechChunks, spokenText } from '../src/speechText.ts'
 
 test('markup is dropped and links keep their text', () => {
   const text = '## Ergebnis\n- **Fett** und `code`\n[Heise](https://heise.de) lesen https://x.org/a'
@@ -34,4 +34,22 @@ test('a sentence longer than the limit is cut at spaces', () => {
 
 test('every line is read on its own', () => {
   assert.deepEqual(speechChunks('Eins.\nZwei.'), ['Eins.', 'Zwei.'])
+})
+
+test('the paragraph for listening is found by its marker, the last one counts', () => {
+  const answer = 'Langer Text mit `code`.\n\n🔊 Alles fertig. Zwei Dinge sind offen.\n\nNoch ein Absatz.'
+  assert.equal(listeningParagraph(answer), 'Alles fertig. Zwei Dinge sind offen.')
+  assert.equal(listeningParagraph('Nichts zum Hören.'), null)
+  assert.equal(listeningParagraph('🔊 Erster.\n\n🔊 Zweiter.'), 'Zweiter.')
+})
+
+test('only the listening paragraph is spoken when there is one', () => {
+  const answer = '## Befund\nLang und breit.\n\n🔊 Kurz gesagt: **erledigt**.'
+  assert.equal(spokenText(answer, 'Code', 900), 'Kurz gesagt: erledigt.')
+})
+
+test('without one the answer is spoken up to the limit, ending at a sentence', () => {
+  const answer = 'Erster Satz. Zweiter Satz. Dritter Satz.'
+  assert.equal(spokenText(answer, 'Code', 30), 'Erster Satz. Zweiter Satz.')
+  assert.equal(spokenText(answer, 'Code', 900), 'Erster Satz. Zweiter Satz. Dritter Satz.')
 })

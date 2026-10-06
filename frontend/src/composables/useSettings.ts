@@ -1,4 +1,5 @@
 import { type Ref, ref, watch } from 'vue'
+import { DEFAULT_MAX_SPOKEN_CHARS } from '../speechText'
 
 // Settings of this device (a phone scrolls and reads differently than a desktop), kept in the
 // browser. The workspace's iframes share the storage; the storage event tells them about a
@@ -75,7 +76,8 @@ const dictationEngine = setting('agent-orc-dictation-engine', '', String)
 
 /** What a terminal shows: the terminal itself, or the agent's answers in short (AnswersFeed). */
 export type TerminalView = 'terminal' | 'answers'
-const terminalView = setting<TerminalView>('agent-orc-terminal-view', 'terminal', (stored) => stored as TerminalView)
+// The answers are what a terminal shows first; the terminal itself is one tap away.
+const terminalView = setting<TerminalView>('agent-orc-terminal-view', 'answers', (stored) => stored as TerminalView)
 /** The answers show every text the agent wrote, not only the last one of each request. */
 const answersAll = setting('agent-orc-answers-all', false, (stored) => stored === 'true')
 
@@ -85,6 +87,8 @@ export const DEFAULT_SPEECH_RATE = 1
 const speechEngine = setting('agent-orc-speech-engine', DEFAULT_SPEECH_ENGINE, String)
 const speechVoice = setting('agent-orc-speech-voice', '', String)
 const speechRate = setting('agent-orc-speech-rate', DEFAULT_SPEECH_RATE, Number)
+/** Without a paragraph for listening, an answer is read up to this many characters. */
+const speechMaxChars = setting('agent-orc-speech-max-chars', DEFAULT_MAX_SPOKEN_CHARS, Number)
 
 /** Bumped when the extra keys were arranged anew: every open terminal fetches them again (the
  * arrangement itself is kept on the server, for every device). */
@@ -113,5 +117,6 @@ export function useSettings() {
     speechEngine,
     speechVoice,
     speechRate,
+    speechMaxChars,
   }
 }

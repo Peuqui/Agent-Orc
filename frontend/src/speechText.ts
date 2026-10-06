@@ -86,3 +86,34 @@ function splitLong(sentence: string, max: number): string[] {
   if (current !== '') parts.push(current)
   return parts
 }
+
+/** Agents end an answer with a paragraph for listening, which starts with this (global CLAUDE.md). */
+export const LISTEN_MARKER = '🔊'
+/** What is read of an answer without such a paragraph: up to this many characters. */
+export const DEFAULT_MAX_SPOKEN_CHARS = 900
+
+/** The last paragraph for listening of an answer, without its marker; null if there is none. */
+export function listeningParagraph(markdown: string): string | null {
+  const paragraphs = markdown.split(/\n\s*\n/).map((paragraph) => paragraph.trim())
+  const found = paragraphs.findLast((paragraph) => paragraph.startsWith(LISTEN_MARKER))
+  return found === undefined ? null : found.slice(LISTEN_MARKER.length).trim()
+}
+
+/** The text cut after its last whole sentence within `max` characters. */
+function cutAtSentence(text: string, max: number): string {
+  if (text.length <= max) return text
+  const head = text.slice(0, max)
+  const ends = [...head.matchAll(/[.!?…](?=\s|$)/g)]
+  const last = ends.at(-1)
+  return last?.index === undefined ? head : head.slice(0, last.index + 1)
+}
+
+/**
+ * What is spoken of an answer: its paragraph for listening if it has one, otherwise the answer
+ * itself, as far as `maxChars` allows (the rest stays to be read in the view).
+ */
+export function spokenText(markdown: string, skipped: string, maxChars: number): string {
+  const listening = listeningParagraph(markdown)
+  if (listening !== null) return speakableText(listening, skipped)
+  return cutAtSentence(speakableText(markdown, skipped), maxChars)
+}

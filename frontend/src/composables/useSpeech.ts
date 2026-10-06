@@ -1,7 +1,7 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { speechEngine, speechEngines } from '../speech'
-import { speakableText, speechChunks } from '../speechText'
+import { speechChunks, spokenText } from '../speechText'
 import { useSettings } from './useSettings'
 import { useToast } from './useToast'
 
@@ -17,7 +17,7 @@ const paused = ref(false)
 let reading = 0
 
 export function useSpeech() {
-  const { speechEngine: engineId, speechVoice, speechRate } = useSettings()
+  const { speechEngine: engineId, speechVoice, speechRate, speechMaxChars } = useSettings()
   const { locale, t } = useI18n()
   const toast = useToast()
   const engine = computed(() => speechEngine(engineId.value))
@@ -30,7 +30,7 @@ export function useSpeech() {
     try {
       for (const item of items) {
         playing.value = item.id
-        const text = speakableText(item.text, t('answers.skipped'))
+        const text = spokenText(item.text, t('answers.skipped'), speechMaxChars.value)
         for (const chunk of speechChunks(text)) {
           if (reading !== mine) return
           await engine.value.speak(chunk, { voice: speechVoice.value, rate: speechRate.value, lang: locale.value })

@@ -10,7 +10,7 @@ import AppIcon from './AppIcon.vue'
 const MIN_RATE = 0.6
 const MAX_RATE = 1.8
 const RATE_STEP = 0.1
-const { speechEngine, speechVoice, speechRate } = useSettings()
+const { speechEngine, speechVoice, speechRate, speechMaxChars } = useSettings()
 const speech = useSpeech()
 const toast = useToast()
 const open = ref(false)
@@ -48,6 +48,10 @@ async function show(): Promise<void> {
     <label class="flex flex-col gap-1 text-sm text-slate-400">
       {{ $t('answers.speed', { rate: speechRate.toFixed(1) }) }}
       <input v-model.number="speechRate" type="range" :min="MIN_RATE" :max="MAX_RATE" :step="RATE_STEP" />
+    </label>
+    <label class="flex flex-col gap-1 text-sm text-slate-400">
+      {{ $t('answers.maxChars') }}
+      <input v-model.number="speechMaxChars" type="number" min="100" step="100" class="input text-sm text-slate-200" />
     </label>
     <div class="flex justify-between">
       <button type="button" class="btn-secondary btn-small" @click="speechRate = DEFAULT_SPEECH_RATE">{{ $t('answers.speedReset') }}</button>
