@@ -10,7 +10,7 @@ const emit = defineEmits<{ scroll: [lines: number] }>()
 
 // Track width in pixels, the one place it is set for every view that has a jog. A finger needs
 // about 40 px, a mouse less; kept a little under that, as the grip is touched on the whole track.
-const TRACK_WIDTH_PX = 24
+const TRACK_WIDTH_PX = 16
 // Pulls shorter than this do nothing, so a grip that is merely touched stays still.
 const DEAD_ZONE_PX = 6
 // At the end of the track the history moves at this many lines per second; kept moderate, as
@@ -97,7 +97,7 @@ onBeforeUnmount(stop)
   >
     <div class="absolute inset-y-2 left-1/2 w-0.5 -translate-x-1/2 rounded-full bg-slate-700" />
     <div
-      class="absolute top-1/2 left-1/2 h-12 w-6 -translate-x-1/2 -translate-y-1/2 rounded-full border border-slate-500 bg-slate-600"
+      class="absolute top-1/2 left-1/2 h-12 w-full -translate-x-1/2 -translate-y-1/2 rounded-full border border-slate-500 bg-slate-600"
       :class="{ 'border-amber-300 bg-amber-300/30': pulling }"
       :style="{ marginTop: `${offset}px` }"
     />
