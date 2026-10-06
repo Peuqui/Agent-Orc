@@ -182,6 +182,7 @@
     "columns": "Sichtbare Spalten",
     "fewerColumns": "Eine Spalte weniger",
     "moreColumns": "Eine Spalte mehr",
+    "resetWidths": "Spaltenbreiten zurücksetzen",
     "add": "Agent hinzufügen",
     "allOpen": "Alle laufenden Agenten sind schon offen.",
     "move": "Ziehen zum Verschieben",
@@ -232,7 +233,8 @@
       {
         "title": "Agenten (Übersicht)",
         "items": [
-          "„Neuen Agenten starten“: Ordner wählen, der Agent startet und legt sofort mit seiner Start-Anfrage los (z. B. AI-Connect-Watcher). Fortsetzen startet ohne diese Anfrage.",
+          "„Neuen Agenten starten“: Ordner wählen, der Agent startet und legt sofort mit seiner Start-Anfrage los (z. B. AI-Connect-Watcher). Fortsetzen startet ohne diese Anfrage. Im Feld „Arbeitsfläche“ wählst du, wohin der Agent kommt (Unbenannt oder eine benannte Fläche); nach dem Start bleibst du in der Übersicht.",
+          "Auswahlfeld mit der Arbeitsfläche auf der Karte: weist den Agenten einer Fläche zu oder verschiebt ihn. Ein Agent liegt in genau einer Fläche; hat er keine, steht er in „Unbenannt“. Der Server hält die Zuordnung, jedes Gerät zeigt dasselbe.",
           "Karten sortieren: mit der Maus an einer freien Stelle ziehen, mit dem Finger erst kurz halten. Die Reihenfolge gilt auf allen Geräten.",
           "Kontext-Ring: grün unter 50 %, gelb darüber, rot ab 70 % – dann bald /compact oder ein neues Gespräch.",
           "Effort-Regler und Ultracode gelten pro Projektordner. Ein laufender Claude übernimmt die neue Stufe ohne Neustart, sobald er mit seiner aktuellen Antwort fertig ist; Hintergrundaufgaben laufen weiter.",
@@ -242,10 +244,10 @@
           "„Änderungen“ (Zweig-Symbol, auf der Karte und im Kopf jedes Terminals) zeigt, was der Agent im Projekt geändert hat: geänderte, neue und gelöschte Dateien seit dem letzten Commit, ein Tipp zeigt den Diff.",
           "Ab der eingestellten Kontextgröße (Voreinstellung 50 %) empfiehlt die Karte eine Übergabe an eine frische Sitzung, eine Benachrichtigung sagt es einmal; „Übergabe schreiben lassen“ bittet den Agenten um ein Übergabe-Dokument. Im Menü der Einstellungen lässt sich das automatisch anstoßen.",
           "„In eigenem Worktree starten“ (Startdialog): Der Agent arbeitet in einer zweiten Arbeitskopie auf einem neuen Branch neben dem Projekt; ist er beendet, entfernt „Worktree entfernen“ auf der Karte sie wieder – ohne ungesicherte Arbeit zu verlieren.",
-          "⟳ (Karte und Terminalleiste) startet den Agenten neu und setzt das Gespräch fort, etwa wenn er hängt oder geänderte Einstellungen lesen soll. Vorher kommt eine Rückfrage; eine laufende Antwort und Hintergrundaufgaben enden dabei.",
+          "⟳ (Karte und Terminalleiste) startet den Agenten neu und setzt das Gespräch fort, etwa wenn er hängt oder geänderte Einstellungen lesen soll. Vorher kommt eine Rückfrage; eine laufende Antwort und Hintergrundaufgaben enden dabei. Hat ein Agent noch kein gespeichertes Modell (gestartet vor der Modellwahl), fragt Agent-Orc beim Neustart und beim Fortsetzen danach – ohne Modell startet kein Agent.",
           "Uhr auf der Karte: einen Prompt für später planen, etwa „Tests laufen lassen und berichten“ um 7 Uhr. Er wird zur Zeit eingetippt, sobald der Agent fertig ist; geplante Prompts stehen auf der Karte und lassen sich mit × entfernen.",
           "Läuft ein Claude-Agent ins Nutzungslimit, plant Agent-Orc das Weitermachen zur nächsten Rücksetzung des Kontingents (gelber Eintrag auf der Karte). Ist er dann noch gesperrt, kommt der nächste Termin.",
-          "„An mehrere“ (neben den Arbeitsflächen, ab zwei laufenden Agenten): denselben Prompt an mehrere Agenten schicken, etwa „committe und pushe“.",
+          "„An mehrere“ (neben den Arbeitsflächen, ab zwei laufenden Agenten): denselben Prompt an mehrere Agenten schicken, etwa „committe und pushe“. „Abschicken“ aus: der Text landet nur im Eingabefeld der Agenten, du sendest ihn dort selbst.",
           "„>_“ (Karte und Terminalleiste) öffnet ein normales Terminal im Projektordner, auch neben dem laufenden Agenten; läuft schon eins, öffnet es dieses. Darin bitte keinen zweiten Agenten im selben Ordner starten."
         ]
       },
@@ -258,12 +260,22 @@
           "Springen findet nur Tabs, die aus Agent-Orc heraus geöffnet wurden – weitere Flächen also über die Knöpfe öffnen, dann lassen sie sich auch auf andere Monitore abkoppeln.",
           "Am Handy (installierte App) wechselt die Leiste im selben Fenster.",
           "„+“ fügt einen laufenden Agenten als Spalte hinzu, „− n +“ legt fest, wie viele Spalten den Bildschirm füllen.",
-          "Spaltenkopf ziehen sortiert die Spalten; den Trenner am rechten Rand ziehen ändert die Breite, Doppelklick setzt sie zurück.",
+          "Spaltenkopf ziehen sortiert die Spalten; auf den Namen einer anderen Arbeitsfläche oben fallen lassen verschiebt den Agenten dorthin. Den Trenner am rechten Rand ziehen ändert die Breite, Doppelklick setzt sie zurück; der Knopf mit den zwei Pfeilen neben „− n +“ (erscheint, sobald eine Breite verändert ist) setzt alle Breiten zurück.",
           "Tastenkürzel am Rechner: Alt+Umschalt+1 … 9 springt in die Spalte, Alt+Umschalt+← / → zur vorigen oder nächsten Arbeitsfläche.",
           "Am Handy zeigt die Arbeitsfläche eine Spalte auf einmal; seitlich im Terminal wischen holt die nächste (nach links) oder vorige (nach rechts), senkrecht wischen scrollt.",
           "Kachel-Symbol oben links: alle Seiten (Agenten, Dateien, Verbrauch …) – die Arbeitsfläche hat keine Leiste unten, damit das Terminal den Platz bekommt.",
           "Vollbild (Symbol mit vier Ecken): nur noch Terminal und Eingabefeld, wo möglich auch ohne Browserleisten; der kleine Knopf oben rechts holt alles zurück.",
           "Am Handy steht der Kopf in einer Zeile; die anderen Arbeitsflächen liegen hinter dem Pfeil neben dem Namen, und die Terminalleiste nennt die Spalte und schließt sie mit ×."
+        ]
+      },
+      {
+        "title": "Notizen",
+        "items": [
+          "Notizbücher als Reiter: „+“ legt eines an, Stift benennt es um, Papierkorb löscht es samt Notizen. Sie liegen auf dem Server, jedes Gerät zeigt dasselbe.",
+          "Ein Notizbuch hat lose Notizen und Ordner (Ordner-Symbol neben der Suche; eine Ebene). Die Suche durchsucht Titel und Text. Eine Notiz lässt sich über das Feld „Kein Ordner“ in einen Ordner verschieben.",
+          "Eine Notiz ist Markdown. Die Leiste (B, I, H, •, </>, Link) setzt die Zeichen um die Auswahl oder in die Zeile; die Ansicht zeigt das Ergebnis, Zeilenumbrüche bleiben erhalten. Auf Rechner und Tablet stehen Text und Ansicht nebeneinander, am Handy schaltet „Ansicht/Bearbeiten“ um. Eine Notiz ohne Text öffnet zum Schreiben.",
+          "„Kopieren“ legt den Text in die Zwischenablage. „An Agent“ fügt ihn in das Eingabefeld der gewählten Agenten ein; mit „Abschicken“ wird er zugleich gesendet, sonst schickst du ihn im Terminal selbst ab.",
+          "Wird dasselbe Notizbuch auf zwei Geräten gleichzeitig bearbeitet, gilt der zuletzt gespeicherte Stand; ein Gerät mit eigenen offenen Änderungen übernimmt fremde nicht."
         ]
       },
       {
@@ -383,6 +395,7 @@
     "removedKeptBranch": "Worktree entfernt; Branch „{branch}“ ist noch nicht zusammengeführt und bleibt erhalten."
   },
   "restart": {
+    "chooseModel": "„{name}“ hat noch kein gespeichertes Modell. Wähle eines; der Agent wird damit neu gestartet und das Gespräch fortgesetzt.",
     "title": "Neu starten",
     "confirm": "Agent in „{name}“ neu starten? Das Gespräch wird fortgesetzt; laufende Hintergrundaufgaben des Agenten enden dabei.",
     "confirmBusy": "„{name}“ arbeitet gerade. Ein Neustart bricht die laufende Antwort und seine Hintergrundaufgaben ab; das Gespräch wird danach fortgesetzt.",
@@ -431,10 +444,24 @@
     "send": "An Agent",
     "folder": "Ordner",
     "noFolder": "Kein Ordner",
-    "placeholder": {"bold": "fett", "italic": "kursiv", "code": "code", "link": "Link"},
-    "format": {"bold": "Fett", "italic": "Kursiv", "heading": "Überschrift", "list": "Aufzählung", "code": "Code", "link": "Link"}
+    "placeholder": {
+      "bold": "fett",
+      "italic": "kursiv",
+      "code": "code",
+      "link": "Link"
+    },
+    "format": {
+      "bold": "Fett",
+      "italic": "Kursiv",
+      "heading": "Überschrift",
+      "list": "Aufzählung",
+      "code": "Code",
+      "link": "Link"
+    }
   },
   "broadcast": {
+    "insert": "In {count} einfügen",
+    "submit": "Abschicken",
     "button": "An mehrere",
     "title": "An Agenten senden",
     "text": "Nachricht an alle gewählten Agenten …",

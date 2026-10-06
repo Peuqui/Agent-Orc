@@ -6,22 +6,25 @@ import { sessionName, useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
 import AppIcon from './AppIcon.vue'
 import BaseDialog from './BaseDialog.vue'
+import ToggleSwitch from './ToggleSwitch.vue'
 
 // One prompt for the chosen agents, e.g. "commit and push", "read the new CLAUDE.md" or a note;
 // typed into each as if the user did it there.
-const props = defineProps<{ initialText?: string }>()
+const props = withDefaults(defineProps<{ initialText?: string; submit?: boolean }>(), { initialText: '', submit: true })
 const emit = defineEmits<{ close: [] }>()
 const { t } = useI18n()
 const toast = useToast()
 const { sessions, refresh } = useSessions()
 
 const chosen = ref<string[]>([])
-const text = ref(props.initialText ?? '')
+const text = ref(props.initialText)
+// Whether the text is also submitted, or only put into each agent's input to be sent there.
+const submit = ref(props.submit)
 const running = computed(() => sessions.value.filter((session) => session.running))
 
 async function send(): Promise<void> {
   try {
-    await api.broadcast(chosen.value, text.value.trim())
+    await api.broadcast(chosen.value, text.value.trim(), submit.value)
     emit('close')
     toast.info(t('broadcast.sent', { count: chosen.value.length }))
   } catch (error) {
@@ -46,9 +49,12 @@ async function send(): Promise<void> {
         </label>
       </div>
       <textarea v-model="text" rows="4" class="input text-sm" :placeholder="$t('broadcast.text')" required />
+      <ToggleSwitch class="h-7 self-start text-sm text-slate-300" :checked="submit" @click="submit = !submit">
+        {{ $t('broadcast.submit') }}
+      </ToggleSwitch>
       <div class="flex gap-2">
         <button type="submit" class="btn-primary flex-1" :disabled="!chosen.length || !text.trim()">
-          <AppIcon name="send" />{{ $t('broadcast.send', { count: chosen.length }) }}
+          <AppIcon name="send" />{{ $t(submit ? 'broadcast.send' : 'broadcast.insert', { count: chosen.length }) }}
         </button>
         <button type="button" class="btn" @click="emit('close')">{{ $t('common.cancel') }}</button>
       </div>

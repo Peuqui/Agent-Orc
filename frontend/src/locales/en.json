@@ -182,6 +182,7 @@
     "columns": "Visible columns",
     "fewerColumns": "One column less",
     "moreColumns": "One more column",
+    "resetWidths": "Reset column widths",
     "add": "Add agent",
     "allOpen": "All running agents are open already.",
     "move": "Drag to move",
@@ -232,7 +233,8 @@
       {
         "title": "Agents (overview)",
         "items": [
-          "“Start new agent”: pick a folder; the agent starts and gets going at once with its start request (e.g. the AI-Connect watcher). Resuming starts without it.",
+          "“Start new agent”: pick a folder; the agent starts and gets going at once with its start request (e.g. the AI-Connect watcher). Resuming starts without it. In the “Workspace” field you choose where the agent goes (Default or a named workspace); after the start you stay in the overview.",
+          "The workspace field on the card assigns the agent to a workspace or moves it. An agent lives in exactly one workspace; without one it is in “Default”. The server keeps the assignment, every device shows the same.",
           "Sorting cards: drag at a free spot with the mouse; with a finger, hold briefly first. The order is the same on every device.",
           "Context ring: green below 50 %, amber above, red from 70 % – time for /compact or a new conversation soon.",
           "Effort slider and ultracode apply per project folder. A running Claude takes the new level without a restart once its current answer is done; background tasks keep running.",
@@ -242,10 +244,10 @@
           "“Changes” (branch icon, on the card and in the header of every terminal) shows what the agent changed in the project: changed, new and deleted files since the last commit; a tap shows the diff.",
           "From the configured context size on (50 % by default) the card advises a handover to a fresh session, a notification says so once; “Ask for a handover” asks the agent for a handover document. The settings menu can make this automatic.",
           "“Start in a worktree of its own” (start dialog): the agent works in a second working copy on a new branch next to the project; once it has ended, “Remove worktree” on the card removes it again – without losing unsaved work.",
-          "⟳ (card and terminal bar) restarts the agent and resumes its conversation, e.g. when it hangs or should read changed settings. It asks first; a running answer and background tasks end.",
+          "⟳ (card and terminal bar) restarts the agent and resumes its conversation, e.g. when it hangs or should read changed settings. It asks first; a running answer and background tasks end. An agent without a stored model (started before models could be chosen) is asked for one on restart and on resume – no agent starts without a model.",
           "Clock on the card: schedule a prompt for later, e.g. “run the tests and report” at 7 am. It is typed in at that time once the agent is idle; scheduled prompts are listed on the card and removed with ×.",
           "When a Claude agent runs into its usage limit, Agent-Orc schedules the resume for the next reset of the quota (yellow entry on the card). Is it still limited then, the next reset follows.",
-          "“To several” (next to the workspaces, from two running agents on): send the same prompt to several agents, e.g. “commit and push”.",
+          "“To several” (next to the workspaces, from two running agents on): send the same prompt to several agents, e.g. “commit and push”. With “Submit” off the text only lands in the agents’ input and you send it there yourself.",
           "“>_” (card and terminal bar) opens a plain terminal in the project folder, also next to the running agent; if one runs already, it opens that one. Please do not start a second agent in the same folder there."
         ]
       },
@@ -258,12 +260,22 @@
           "Jumping only finds tabs opened from within Agent-Orc – so open further workspaces through the buttons; they can then be detached onto other monitors.",
           "On the phone (installed app) the bar switches within the same window.",
           "“+” adds a running agent as a column, “− n +” sets how many columns fill the screen.",
-          "Dragging a column head sorts the columns; dragging the divider on its right edge changes the width, a double click resets it.",
+          "Dragging a column head sorts the columns; dropped on the name of another workspace at the top, it moves the agent there. Dragging the divider on a column’s right edge changes the width, a double click resets it; the button with the two arrows next to “− n +” (it appears once a width was changed) resets all widths.",
           "Shortcuts on a computer: Alt+Shift+1 … 9 jumps to that column, Alt+Shift+← / → to the previous or next workspace.",
           "On a phone the workspace shows one column at a time; a sideways swipe in the terminal brings the next (to the left) or previous one (to the right), up and down scrolls.",
           "Tile icon at the top left: all pages (agents, files, consumption …) – the workspace has no bar at the bottom, so the terminal gets the room.",
           "Fullscreen (four-corner icon): terminal and input field only, where possible without the browser bars too; the small button at the top right brings everything back.",
           "On a phone the header is one row; the other workspaces sit behind the arrow next to the name, and the terminal bar names the column and closes it with ×."
+        ]
+      },
+      {
+        "title": "Notes",
+        "items": [
+          "Notebooks as tabs: “+” creates one, the pencil renames it, the bin deletes it with its notes. They live on the server, every device shows the same.",
+          "A notebook has loose notes and folders (folder icon next to the search; one level). The search covers titles and text. A note moves into a folder with the “No folder” field.",
+          "A note is Markdown. The bar (B, I, H, •, </>, link) writes the characters around the selection or into the line; the view shows the result, line breaks are kept. On computers and tablets the text and the view sit side by side, on phones “View/Edit” switches. A note without text opens for writing.",
+          "“Copy” puts the text on the clipboard. “To agent” inserts it into the input of the chosen agents; with “Submit” it is sent at the same time, otherwise you send it in the terminal yourself.",
+          "If the same notebook is edited on two devices at once, the state saved last wins; a device with edits of its own on the way does not take over others’."
         ]
       },
       {
@@ -383,6 +395,7 @@
     "removedKeptBranch": "Worktree removed; branch “{branch}” is not merged yet and is kept."
   },
   "restart": {
+    "chooseModel": "“{name}” has no model stored yet. Choose one; the agent restarts with it and the conversation is resumed.",
     "title": "Restart",
     "confirm": "Restart the agent in “{name}”? The conversation is resumed; the agent's running background tasks end.",
     "confirmBusy": "“{name}” is working right now. A restart ends the running answer and its background tasks; the conversation is resumed afterwards.",
@@ -431,10 +444,24 @@
     "send": "To agent",
     "folder": "Folder",
     "noFolder": "No folder",
-    "placeholder": {"bold": "bold", "italic": "italic", "code": "code", "link": "link"},
-    "format": {"bold": "Bold", "italic": "Italic", "heading": "Heading", "list": "List", "code": "Code", "link": "Link"}
+    "placeholder": {
+      "bold": "bold",
+      "italic": "italic",
+      "code": "code",
+      "link": "link"
+    },
+    "format": {
+      "bold": "Bold",
+      "italic": "Italic",
+      "heading": "Heading",
+      "list": "List",
+      "code": "Code",
+      "link": "Link"
+    }
   },
   "broadcast": {
+    "insert": "Insert into {count}",
+    "submit": "Submit",
     "button": "To several",
     "title": "Send to agents",
     "text": "Message to all chosen agents …",

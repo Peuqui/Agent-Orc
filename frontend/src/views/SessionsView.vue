@@ -7,6 +7,7 @@ import AppIcon from '../components/AppIcon.vue'
 import BaseDialog from '../components/BaseDialog.vue'
 import BroadcastButton from '../components/BroadcastButton.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
+import ModelDialog from '../components/ModelDialog.vue'
 import ContextMeter from '../components/ContextMeter.vue'
 import ReasoningControl from '../components/ReasoningControl.vue'
 import QuotaPanel from '../components/QuotaPanel.vue'
@@ -197,7 +198,20 @@ function confirmStop(): void {
   if (session) void run(() => api.stopSession(session.id))
 }
 
+const modelProfiles = computed(() => new Set(profiles.value.filter((p) => p.models).map((p) => p.name)))
+// An ended agent that offers models but has none stored: resumed once a model is chosen.
+const resumingWithoutModel = ref<AgentSession | null>(null)
+
 function resume(session: AgentSession): void {
+  if (session.chosen_model === null && modelProfiles.value.has(session.profile)) {
+    resumingWithoutModel.value = session
+    return
+  }
+  resumeWith(session, session.chosen_model)
+}
+
+function resumeWith(session: AgentSession, model: string | null): void {
+  resumingWithoutModel.value = null
   // Resume with the effort the agent last reported, and the model it was started with.
   void run(() =>
     api.startSession(
@@ -208,7 +222,7 @@ function resume(session: AgentSession): void {
       { effort: session.effort_levels.length ? session.effort : null, ultracode: session.ultracode },
       null,
       null,
-      session.chosen_model,
+      model,
     ),
   )
 }
@@ -481,6 +495,15 @@ function resume(session: AgentSession): void {
         <button class="btn" @click="cancelEffort">{{ $t('common.cancel') }}</button>
       </div>
     </BaseDialog>
+    <ModelDialog
+      v-if="resumingWithoutModel"
+      :title="$t('sessions.resume')"
+      :message="$t('restart.chooseModel', { name: sessionName(resumingWithoutModel) })"
+      :confirm-label="$t('sessions.resume')"
+      :profile="resumingWithoutModel.profile"
+      @choose="(model) => resumingWithoutModel && resumeWith(resumingWithoutModel, model)"
+      @close="resumingWithoutModel = null"
+    />
     <ConfirmDialog
       v-if="stopping"
       :title="$t('sessions.stop')"

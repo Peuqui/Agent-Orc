@@ -45,7 +45,10 @@ detaches: the agents keep working, and you pick them up again from any device.
   two agents can work on one project; removed again once it has ended, without losing work.
 - Restart (⟳) with the conversation resumed, schedule prompts for later, and carry on by
   itself after the usage limit once the quota is reset.
-- Send the same prompt to several agents at once.
+- Send the same prompt to several agents at once, submitted or only put into their input.
+- Every card has a workspace field: an agent joins the workspace chosen at start and can be
+  moved to another later; one without a workspace stands in “Default”. An agent that has no
+  stored model is asked for one when it is restarted or resumed.
 - A plain terminal in the project folder (“>_”), also next to the running agent.
 
 **Workspaces**
@@ -57,6 +60,8 @@ detaches: the agents keep working, and you pick them up again from any device.
   agent stands in exactly one workspace: adding it to another moves it. One click jumps to the
   tab that shows a workspace – handy for spreading workspaces over several monitors. On the
   phone the bar switches in place.
+- Drop a column head on another workspace's name in the bar to move the agent there; a button
+  next to the column count resets all widths dragged to another size.
 - Shortcuts on a computer: Alt+Shift+1 … 9 for the columns, Alt+Shift+← / → for the
   workspaces.
 - On a phone one column at a time: a sideways swipe in the terminal brings the next; a
@@ -66,6 +71,12 @@ detaches: the agents keep working, and you pick them up again from any device.
 <p align="center">
   <img src="docs/screenshots/workspace-en.png" alt="Workspace with an agent and its terminal side by side" width="860">
 </p>
+
+**Notes**
+- Notebooks as tabs, each with loose notes and folders, kept on the server like the workspaces.
+- A note is Markdown with a formatting bar (bold, italic, heading, list, code, link), a
+  search over titles and text, and text and view side by side on computers and tablets.
+- Copy a note, or put it into the input of one or more agents (optionally submitted).
 
 **Terminal**
 - A plain input field below the terminal, so phone keyboards, autocorrect and dictation work;
@@ -170,6 +181,13 @@ agents:
 ```
 
 Resuming does not repeat it.
+
+## Tests
+
+```bash
+venv/bin/ruff check . && venv/bin/mypy && venv/bin/python -m pytest   # backend, with a real tmux
+cd frontend && npm test                                               # pure frontend logic (Node's test runner)
+```
 
 ## Security
 

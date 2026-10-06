@@ -224,6 +224,11 @@ function changeVisible(delta: number): void {
   workspace.value.widths = {}
 }
 
+/** Back to equal columns: the ones dragged wider or narrower return to the default. */
+function resetWidths(): void {
+  workspace.value.widths = {}
+}
+
 // A column's right divider sets its width (mouse or finger); a double click resets it.
 function onDividerPointerDown(event: PointerEvent, id: string): void {
   if (event.button !== 0) return
@@ -246,14 +251,27 @@ function resetWidth(id: string): void {
 
 // Sorting: a whole tab is dragged and takes the place of the tab it is dropped on; the columns
 // follow, as they belong to the same grid. Only the horizontal position counts, so the pointer
-// may stray off the tab row.
+// may stray off the tab row. Dropped on another workspace's tab in the header, the agent moves
+// to that workspace (target "workspace:<name>", the unnamed one has an empty name).
+const WORKSPACE_DROP = 'workspace:'
 const reorder = useReorder({
-  targetAt: (x) =>
-    workspace.value.tabs.find((id) => {
-      const box = headOf(id)?.getBoundingClientRect()
-      return box !== undefined && x >= box.left && x < box.right
-    }) ?? null,
-  onDrop: (id, target) => moveInList(workspace.value.tabs, id, target),
+  targetAt: (x, y) => {
+    const workspaceTab = document.elementFromPoint(x, y)?.closest<HTMLElement>('[data-workspace-drop]')
+    if (workspaceTab) return WORKSPACE_DROP + workspaceTab.dataset.workspaceDrop
+    return (
+      workspace.value.tabs.find((id) => {
+        const box = headOf(id)?.getBoundingClientRect()
+        return box !== undefined && x >= box.left && x < box.right
+      }) ?? null
+    )
+  },
+  onDrop: (id, target) => {
+    if (target.startsWith(WORKSPACE_DROP)) {
+      api.moveSession(id, target.slice(WORKSPACE_DROP.length)).catch(toast.error)
+    } else {
+      moveInList(workspace.value.tabs, id, target)
+    }
+  },
   ignore: '[data-no-drag]',
 })
 const drag = reorder.drag
@@ -609,6 +627,8 @@ async function rename(): Promise<void> {
                   v-else
                   :href="router.resolve(workspaceRoute(tab)).href"
                   class="flex shrink-0 items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-sm text-slate-300 hover:bg-slate-800 hover:text-slate-100"
+                  :data-workspace-drop="tab ?? ''"
+                  :class="drag?.active && drag.target === WORKSPACE_DROP + (tab ?? '') ? 'ring-2 ring-amber-400' : ''"
                   :title="tab !== null && otherTabs.has(tab) ? $t('workspace.openElsewhere') : $t('workspace.switchHere')"
                   @click.prevent="jumpToWorkspace(router, tab)"
                 >
@@ -661,6 +681,16 @@ async function rename(): Promise<void> {
           <button class="w-7 hover:bg-slate-700" :aria-label="$t('workspace.fewerColumns')" @click="changeVisible(-1)">−</button>
           <span class="flex w-7 items-center justify-center text-slate-400">{{ workspace.visible }}</span>
           <button class="w-7 hover:bg-slate-700" :aria-label="$t('workspace.moreColumns')" @click="changeVisible(1)">+</button>
+          <!-- Only while a column has been dragged to another width. -->
+          <button
+            v-if="Object.keys(workspace.widths).length"
+            class="flex w-8 items-center justify-center hover:bg-slate-700"
+            :title="$t('workspace.resetWidths')"
+            :aria-label="$t('workspace.resetWidths')"
+            @click="resetWidths"
+          >
+            <AppIcon name="widths" class="size-4" />
+          </button>
         </div>
         <button class="btn-icon" :aria-label="$t('workspace.fullscreen')" :title="$t('workspace.fullscreen')" @click="fullscreen = true">
           <AppIcon name="expand" />

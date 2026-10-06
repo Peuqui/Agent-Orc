@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { api, type Conversation, type ConversationHit, type ModelChoice, type Reasoning } from '../api'
+import { preferredModel, rememberModel } from '../composables/useModelChoice'
 import { useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
 import { baseName, formatDate, formatSize } from '../format'
@@ -71,7 +72,6 @@ const profile = computed(() => profiles.value.find((candidate) => candidate.name
 const models = ref<ModelChoice[]>([])
 const model = ref<string | null>(null)
 const modelLevels = ref<string[]>([])
-const LAST_MODEL_KEY = 'agent-orc-last-model:'
 const effortLevels = computed(() =>
   profile.value?.models ? modelLevels.value : (profile.value?.effort_levels ?? []),
 )
@@ -109,9 +109,7 @@ watch(selected, async (name) => {
     conversations.value = await api.conversations(name, props.path)
     if (profile.value?.models) {
       models.value = await api.agentModels(name)
-      const last = localStorage.getItem(LAST_MODEL_KEY + name)
-      const names = models.value.map((choice) => choice.name)
-      model.value = last !== null && names.includes(last) ? last : (names[0] ?? null)
+      model.value = preferredModel(name, models.value.map((choice) => choice.name))
     } else {
       preselectReasoning()
     }
@@ -122,7 +120,7 @@ watch(selected, async (name) => {
 
 watch(model, async (chosen) => {
   if (chosen === null || !profile.value?.models) return
-  localStorage.setItem(LAST_MODEL_KEY + selected.value, chosen)
+  rememberModel(selected.value, chosen)
   try {
     modelLevels.value = await api.agentLevels(selected.value, chosen)
     preselectReasoning()

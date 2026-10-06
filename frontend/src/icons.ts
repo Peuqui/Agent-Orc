@@ -36,6 +36,7 @@ export const ICONS = {
   download: 'M12 4v11 M7 10l5 5 5-5 M5 20h14',
   image: 'M4 5h16v14H4z M4 16l5-5 4 4 2-2 5 5 M15.5 9.5h.01',
   screen: 'M3 4h18v12H3z M8 20h8 M12 16v4',
+  widths: 'M4 12h16 M8 8l-4 4 4 4 M16 8l4 4-4 4',
   diff: 'M6 3v12 M6 21a2 2 0 1 0 0-4 2 2 0 0 0 0 4z M18 9a2 2 0 1 0 0-4 2 2 0 0 0 0 4z M18 9c0 6-12 3-12 8',
   chart: 'M4 20V10 M10 20V4 M16 20v-7 M22 20H2',
   template: 'M5 4h14v16H5z M8 8h8 M8 12h8 M8 16h5',

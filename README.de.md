@@ -51,7 +51,10 @@ aus wieder aufnehmen.
   entfernt, ohne Arbeit zu verlieren.
 - Neu starten (⟳) mit fortgesetztem Gespräch, Prompts für später planen, und nach dem
   Nutzungslimit automatisch weitermachen, sobald das Kontingent zurückgesetzt ist.
-- Denselben Prompt an mehrere Agenten auf einmal schicken.
+- Denselben Prompt an mehrere Agenten auf einmal schicken, abgeschickt oder nur ins Eingabefeld gelegt.
+- Jede Karte hat ein Feld für die Arbeitsfläche: Ein Agent kommt in die beim Start gewählte
+  Fläche und lässt sich später in eine andere verschieben; ohne Fläche steht er in „Unbenannt“.
+  Hat ein Agent noch kein gespeichertes Modell, fragt Agent-Orc beim Neustart und Fortsetzen danach.
 - Ein normales Terminal im Projektordner („>_“), auch neben dem laufenden Agenten.
 
 **Arbeitsflächen**
@@ -63,6 +66,8 @@ aus wieder aufnehmen.
   steht in genau einer Fläche: Fügt man ihn in einer anderen hinzu, wandert er. Ein Klick
   springt in den Tab, der eine Fläche zeigt – praktisch, um Arbeitsflächen auf mehrere Monitore
   zu verteilen. Am Handy wechselt die Leiste im selben Fenster.
+- Einen Spaltenkopf auf den Namen einer anderen Fläche in der Leiste fallen lassen verschiebt den
+  Agenten dorthin; ein Knopf neben der Spaltenzahl setzt alle verstellten Breiten zurück.
 - Tastenkürzel am Rechner: Alt+Umschalt+1 … 9 für die Spalten, Alt+Umschalt+← / → für die
   Arbeitsflächen.
 - Am Handy eine Spalte auf einmal: seitlich im Terminal wischen holt die nächste; ein Vollbild
@@ -72,6 +77,12 @@ aus wieder aufnehmen.
 <p align="center">
   <img src="docs/screenshots/workspace-de.png" alt="Arbeitsfläche mit einem Agenten und seinem Terminal nebeneinander" width="860">
 </p>
+
+**Notizen**
+- Notizbücher als Reiter, je mit losen Notizen und Ordnern; sie liegen wie die Arbeitsflächen auf dem Server.
+- Eine Notiz ist Markdown mit Formatierungsleiste (fett, kursiv, Überschrift, Liste, Code, Link),
+  einer Suche über Titel und Text und Text und Ansicht nebeneinander am Rechner und Tablet.
+- Eine Notiz kopieren oder ins Eingabefeld eines oder mehrerer Agenten legen (auf Wunsch abgeschickt).
 
 **Terminal**
 - Ein normales Eingabefeld unter dem Terminal, damit Handytastatur, Autokorrektur und Diktat
@@ -179,6 +190,13 @@ agents:
 ```
 
 Beim Fortsetzen wird sie nicht wiederholt.
+
+## Tests
+
+```bash
+venv/bin/ruff check . && venv/bin/mypy && venv/bin/python -m pytest   # Backend, mit echtem tmux
+cd frontend && npm test                                               # reine Frontend-Logik (Test-Runner von Node)
+```
 
 ## Sicherheit
 

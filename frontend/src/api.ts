@@ -393,8 +393,8 @@ export const api = {
     request<void>('PUT', 'prompt-templates', { body: templates }),
   consumption: () => request<ConsumptionRow[]>('GET', 'consumption'),
   /** Resumes the agent in its own session; a running answer and background tasks end. */
-  restartSession: (sessionId: string) =>
-    request<AgentSession>('POST', `sessions/${encodeURIComponent(sessionId)}/restart`),
+  restartSession: (sessionId: string, model: string | null = null) =>
+    request<AgentSession>('POST', `sessions/${encodeURIComponent(sessionId)}/restart`, { body: { model } }),
   /** Types the prompt into the agent at `at` (Unix seconds), once it is idle. */
   schedulePrompt: (sessionId: string, text: string, at: number) =>
     request<ScheduledPrompt>('POST', `sessions/${encodeURIComponent(sessionId)}/scheduled`, {
@@ -402,9 +402,10 @@ export const api = {
     }),
   cancelScheduled: (promptId: string) =>
     request<void>('DELETE', `scheduled/${encodeURIComponent(promptId)}`),
-  /** Types the same prompt into each of the (running) agents. */
-  broadcast: (sessionIds: string[], text: string) =>
-    request<void>('POST', 'broadcast', { body: { sessions: sessionIds, text } }),
+  /** Types the same prompt into each of the (running) agents; without submit it only lands in
+   * their input and the user sends it there. */
+  broadcast: (sessionIds: string[], text: string, submit = true) =>
+    request<void>('POST', 'broadcast', { body: { sessions: sessionIds, text, submit } }),
   /** Types the handover request into the agent. */
   requestHandover: (sessionId: string) =>
     request<void>('POST', `sessions/${encodeURIComponent(sessionId)}/handover`),

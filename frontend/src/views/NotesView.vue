@@ -9,6 +9,7 @@ import InputDialog from '../components/InputDialog.vue'
 import { useServerEvents } from '../composables/useServerEvents'
 import { useToast } from '../composables/useToast'
 import { renderMarkdown } from '../markdown'
+import { applyFormat, FORMATS, type FormatId, type Placeholders } from '../notesFormat'
 
 // Notebooks as tabs, each with loose notes and folders; a note is Markdown. The server keeps
 // them, so every device shows the same; edits are stored shortly after the last keystroke.
@@ -236,77 +237,21 @@ async function copyNote(): Promise<void> {
 }
 
 // The formatting bar: each button writes the Markdown for the selection (or the line) into the
-// text, so nobody has to know the syntax.
-interface Edit {
-  text: string
-  from: number
-  to: number
-}
-interface Format {
-  id: string
-  label: string
-  apply: (text: string, from: number, to: number) => Edit
-}
-
-// The text put in when nothing is selected comes from the translations (notes.placeholder.<kind>).
-function wrap(mark: string, kind: string): Format['apply'] {
-  return (text, from, to) => {
-    const inner = text.slice(from, to) || t('notes.placeholder.' + kind)
-    const start = from + mark.length
-    return { text: text.slice(0, from) + mark + inner + mark + text.slice(to), from: start, to: start + inner.length }
-  }
-}
-
-/** Puts the prefix before every line the selection touches. */
-function prefixLines(prefix: string): Format['apply'] {
-  return (text, from, to) => {
-    const start = text.lastIndexOf('\n', from - 1) + 1
-    const nextBreak = text.indexOf('\n', to)
-    const end = nextBreak === -1 ? text.length : nextBreak
-    const lines = text.slice(start, end).split('\n').map((line) => prefix + line)
-    const block = lines.join('\n')
-    return { text: text.slice(0, start) + block + text.slice(end), from: start, to: start + block.length }
-  }
-}
-
-const LINK_ADDRESS = 'https://'
-const formats: Format[] = [
-  { id: 'bold', label: 'B', apply: wrap('**', 'bold') },
-  { id: 'italic', label: 'I', apply: wrap('*', 'italic') },
-  { id: 'heading', label: 'H', apply: prefixLines('## ') },
-  { id: 'list', label: '•', apply: prefixLines('- ') },
-  {
-    id: 'code',
-    label: '</>',
-    apply: (text, from, to) => {
-      const chosen = text.slice(from, to)
-      if (!chosen.includes('\n')) return wrap('`', 'code')(text, from, to)
-      const block = '```\n' + chosen + '\n```'
-      return { text: text.slice(0, from) + block + text.slice(to), from: from + 4, to: from + 4 + chosen.length }
-    },
-  },
-  {
-    id: 'link',
-    label: '🔗',
-    apply: (text, from, to) => {
-      const label = text.slice(from, to) || t('notes.placeholder.link')
-      const start = from + label.length + 3
-      return {
-        text: `${text.slice(0, from)}[${label}](${LINK_ADDRESS})${text.slice(to)}`,
-        from: start,
-        to: start + LINK_ADDRESS.length,
-      }
-    },
-  },
-]
+// text, so nobody has to know the syntax (notesFormat.ts).
+const placeholders = computed<Placeholders>(() => ({
+  bold: t('notes.placeholder.bold'),
+  italic: t('notes.placeholder.italic'),
+  code: t('notes.placeholder.code'),
+  link: t('notes.placeholder.link'),
+}))
 
 const field = ref<HTMLTextAreaElement>()
 
-async function format(apply: Format['apply']): Promise<void> {
+async function format(id: FormatId): Promise<void> {
   const element = field.value
   const note = selected.value
   if (!element || !note) return
-  const edit = apply(note.text, element.selectionStart, element.selectionEnd)
+  const edit = applyFormat(id, note.text, element.selectionStart, element.selectionEnd, placeholders.value)
   note.text = edit.text
   changed()
   await nextTick()
@@ -422,14 +367,14 @@ function firstLine(note: Note): string {
           <div v-if="editing" class="flex min-w-0 flex-col gap-3">
             <div class="flex flex-wrap gap-1.5">
               <button
-                v-for="item in formats"
+                v-for="item in FORMATS"
                 :key="item.id"
                 class="btn-secondary btn-small min-w-9 justify-center"
                 :class="item.id === 'bold' ? 'font-bold' : item.id === 'italic' ? 'italic' : ''"
                 :title="$t('notes.format.' + item.id)"
                 :aria-label="$t('notes.format.' + item.id)"
                 @pointerdown.prevent
-                @click="format(item.apply)"
+                @click="format(item.id)"
               >
                 {{ item.label }}
               </button>
@@ -471,6 +416,6 @@ function firstLine(note: Note): string {
       @close="dialog = null"
     />
     <ConfirmDialog v-if="dialog?.kind === 'deleteNote'" :title="$t('notes.deleteNote')" :message="$t('notes.confirmDeleteNote', { title: selected?.title || $t('notes.untitled') })" :confirm-label="$t('notes.delete')" danger @confirm="deleteNote" @close="dialog = null" />
-    <BroadcastDialog v-if="dialog?.kind === 'send' && selected" :initial-text="selected.text" @close="dialog = null" />
+    <BroadcastDialog v-if="dialog?.kind === 'send' && selected" :initial-text="selected.text" :submit="false" @close="dialog = null" />
   </section>
 </template>
