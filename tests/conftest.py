@@ -5,7 +5,7 @@ import subprocess
 import threading
 import uuid
 from collections.abc import Iterator
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler, HTTPServer, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
@@ -143,3 +143,53 @@ class Device:
         plain = http_ece.decrypt(body, private_key=self.private_key, auth_secret=self.auth)
         message: dict[str, Any] = json.loads(plain)
         return message
+
+
+TOKEN = "secret-token"
+MAX_CHARS = 50
+
+
+class FakeAifred(BaseHTTPRequestHandler):
+    """Knows one room, "testraum"; keeps what it was asked to say."""
+
+    spoken: list[dict[str, Any]] = []
+
+    def _answer(self, status: int, body: dict[str, Any]) -> None:
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.end_headers()
+        self.wfile.write(json.dumps(body).encode())
+
+    def _allowed(self) -> bool:
+        if self.headers.get("Authorization") != f"Bearer {TOKEN}":
+            self._answer(403, {"detail": "wrong token"})
+            return False
+        return True
+
+    def do_GET(self) -> None:  # noqa: N802
+        if self._allowed():
+            self._answer(200, {"rooms": ["testraum"]})
+
+    def do_POST(self) -> None:  # noqa: N802
+        if not self._allowed():
+            return
+        body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+        if body["room"] not in ("testraum", "*"):
+            self._answer(404, {"detail": "unknown room"})
+        elif len(body["text"]) > MAX_CHARS:
+            self._answer(413, {"detail": "too long"})
+        else:
+            self.spoken.append(body)
+            self._answer(200, {"success": True, "rooms": ["testraum"]})
+
+    def log_message(self, *arguments: Any) -> None:
+        pass
+
+
+@pytest.fixture
+def aifred() -> Iterator[str]:
+    FakeAifred.spoken = []
+    server = HTTPServer(("127.0.0.1", 0), FakeAifred)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    yield f"http://127.0.0.1:{server.server_port}/api"
+    server.shutdown()

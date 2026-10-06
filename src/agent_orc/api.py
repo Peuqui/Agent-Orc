@@ -1,6 +1,7 @@
 """HTTP API of Agent-Orc."""
 
 import asyncio
+import hmac
 import logging
 import mimetypes
 import subprocess
@@ -8,11 +9,12 @@ import time
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from dataclasses import asdict
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
-from fastapi import Depends, FastAPI, HTTPException, Request, Response, WebSocket, status
+from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response, WebSocket, status
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -127,6 +129,7 @@ from agent_orc.state import (
 from agent_orc.terminal import bridge
 from agent_orc.trash import RestoreConflictError, Trash, TrashEntryNotFoundError, home_trash_dir
 from agent_orc.trust import FOLDER_TRUST
+from agent_orc.voice import Action, VoiceAgent, VoiceRouter
 from agent_orc.worktrees import (
     InvalidBranchError,
     WorktreeError,
@@ -377,6 +380,12 @@ class AnnounceRequest(BaseModel):
     text: str
 
 
+class VoiceRequest(BaseModel):
+    # The Echo's room (where the answers are spoken) and what was said after the wake word.
+    room: str
+    text: str
+
+
 class BroadcastRequest(BaseModel):
     sessions: list[str]
     text: str
@@ -425,6 +434,9 @@ def create_app(
 
     # Reasoning changes waiting until their (busy) agent has finished its answer.
     pending_effort: dict[str, Reasoning] = {}
+    # What waits for a spoken yes, per room; gone when the server restarts, which is fine: the
+    # user just says it again.
+    voice_router = VoiceRouter(config.voice) if config.voice is not None else None
 
     def find_session(session_id: str) -> AgentSession | None:
         return next((s for s in sessions.list() if s.id == session_id), None)
@@ -1292,6 +1304,48 @@ def create_app(
         if config.announce is None:
             raise AnnounceNotConfiguredError("announce")
         announcing.announce(config.announce, config_dir(), body.room, body.text)
+
+    def require_voice_token(authorization: str | None = Header(default=None)) -> None:
+        if config.voice is None:
+            raise AnnounceNotConfiguredError("voice")
+        token = (config_dir() / config.voice.token_file).read_text(encoding="utf-8").strip()
+        if not hmac.compare_digest(authorization or "", f"Bearer {token}"):
+            raise HTTPException(status.HTTP_401_UNAUTHORIZED)
+
+    def voice_agents() -> list[VoiceAgent]:
+        """The running agents the user can address, with when each answered last."""
+        agents = []
+        for session in sessions.list():
+            if not session.running or session.terminal:
+                continue
+            transcript = session_transcript(session)
+            last_spoke = None
+            if transcript is not None and transcript.resolve().is_relative_to(
+                home / CLAUDE_PROJECTS
+            ):
+                texts = [t for turn in read_turns(transcript, 1) for t in turn.texts]
+                last_spoke = datetime.fromisoformat(texts[-1].time).timestamp() if texts else None
+            agents.append(VoiceAgent(session.id, session.path.name, last_spoke))
+        return agents
+
+    @app.post("/api/voice", dependencies=[Depends(require_voice_token)])
+    def voice(body: VoiceRequest) -> dict[str, str | None]:
+        """What the user said on an Echo Dot after the wake word: the Echo asks back which agent
+        it understood and the text is typed into that agent after a spoken yes."""
+        assert config.voice is not None and config.announce is not None and voice_router is not None
+        decision = voice_router.handle(body.room, body.text, voice_agents(), clock())
+        lines = {
+            Action.ASK: config.voice.ask_line,
+            Action.SEND: config.voice.sent_line,
+            Action.DISCARD: config.voice.discarded_line,
+            Action.UNKNOWN_AGENT: config.voice.unknown_agent_line,
+        }
+        if decision.action is Action.SEND and decision.agent is not None:
+            sessions.type_line(decision.agent.id, decision.text, config.terminal.submit_delay_ms)
+        name = decision.agent.name if decision.agent else ""
+        spoken = lines[decision.action].format(agent=name)
+        announcing.announce(config.announce, config_dir(), body.room, spoken)
+        return {"action": decision.action.value, "agent": name or None}
 
     @app.get("/api/sessions/{session_id}/text", dependencies=authenticated)
     def session_text(session_id: str) -> dict[str, str]:

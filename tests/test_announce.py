@@ -1,9 +1,5 @@
 """The announce endpoints against a stand-in for AIfred's announce API."""
 
-import json
-import threading
-from collections.abc import Iterator
-from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from typing import Any
 
@@ -14,57 +10,9 @@ from fastapi.testclient import TestClient
 from agent_orc.api import create_app
 from agent_orc.auth import new_credentials
 from agent_orc.config import Config, default_config_text
-from tests.conftest import FakeClock
+from tests.conftest import MAX_CHARS, TOKEN, FakeAifred, FakeClock
 
-TOKEN = "secret-token"
-MAX_CHARS = 50
 PASSWORD = "richtig-langes-passwort"
-
-
-class FakeAifred(BaseHTTPRequestHandler):
-    """Knows one room, "testraum"; keeps what it was asked to say."""
-
-    spoken: list[dict[str, Any]] = []
-
-    def _answer(self, status: int, body: dict[str, Any]) -> None:
-        self.send_response(status)
-        self.send_header("Content-Type", "application/json")
-        self.end_headers()
-        self.wfile.write(json.dumps(body).encode())
-
-    def _allowed(self) -> bool:
-        if self.headers.get("Authorization") != f"Bearer {TOKEN}":
-            self._answer(403, {"detail": "wrong token"})
-            return False
-        return True
-
-    def do_GET(self) -> None:  # noqa: N802
-        if self._allowed():
-            self._answer(200, {"rooms": ["testraum"]})
-
-    def do_POST(self) -> None:  # noqa: N802
-        if not self._allowed():
-            return
-        body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
-        if body["room"] not in ("testraum", "*"):
-            self._answer(404, {"detail": "unknown room"})
-        elif len(body["text"]) > MAX_CHARS:
-            self._answer(413, {"detail": "too long"})
-        else:
-            self.spoken.append(body)
-            self._answer(200, {"success": True, "rooms": ["testraum"]})
-
-    def log_message(self, *arguments: Any) -> None:
-        pass
-
-
-@pytest.fixture
-def aifred() -> Iterator[str]:
-    FakeAifred.spoken = []
-    server = HTTPServer(("127.0.0.1", 0), FakeAifred)
-    threading.Thread(target=server.serve_forever, daemon=True).start()
-    yield f"http://127.0.0.1:{server.server_port}/api"
-    server.shutdown()
 
 
 def make_client(

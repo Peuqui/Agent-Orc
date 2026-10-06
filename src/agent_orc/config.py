@@ -121,6 +121,28 @@ class AnnounceConfig(StrictModel):
     timeout_seconds: int
 
 
+class VoiceConfig(StrictModel):
+    """Speaking to an agent on the Echo Dot: what AIfred hands over after the wake word (see
+    voice.py). The spoken lines are here, not in the code."""
+
+    # A file in the config directory holding the bearer token AIfred sends; readable by the user
+    # only.
+    token_file: str
+    # With no agent named, the text goes to the one that answered last, if within this.
+    window_minutes: int
+    # A question nobody answers is forgotten after this.
+    confirm_minutes: int
+    # How well a spoken name must match an agent's folder name (0 to 1).
+    name_similarity: float
+    yes_words: list[str]
+    no_words: list[str]
+    # Spoken to the room; {agent} is the agent's name.
+    ask_line: str
+    sent_line: str
+    discarded_line: str
+    unknown_agent_line: str
+
+
 class TmuxConfig(StrictModel):
     socket_name: str
 
@@ -217,8 +239,16 @@ class Config(StrictModel):
     dictation: DictationConfig
     # Without it there is no Echo Dot to read answers on.
     announce: AnnounceConfig | None = None
+    # Without it nobody can speak to an agent through the Echo; needs "announce" for its answers.
+    voice: VoiceConfig | None = None
     tmux: TmuxConfig
     agents: dict[str, AgentProfile]
+
+    @model_validator(mode="after")
+    def voice_needs_announce(self) -> Self:
+        if self.voice is not None and self.announce is None:
+            raise ValueError("voice speaks its answers through announce, which is not configured")
+        return self
 
 
 def default_config_text() -> str:

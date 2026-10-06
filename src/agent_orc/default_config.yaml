@@ -97,6 +97,24 @@ dictation:
 #   max_chars: 1200
 #   timeout_seconds: 30
 
+# Speaking to an agent on the Echo Dot ("Hey Orc, ..."): AIfred posts what was said to
+# POST /api/voice with the token below; the Echo asks back which agent it understood and the text
+# is typed in after a spoken yes. Needs "announce". Remove the leading "#" to switch it on.
+# voice:
+#   # A file next to this one with a token AIfred sends as bearer token (chmod 600).
+#   token_file: voice-token
+#   # With no agent named, the text goes to the one that answered last, if within this.
+#   window_minutes: 10
+#   confirm_minutes: 2
+#   # How well a spoken name must match an agent's folder name (0 to 1).
+#   name_similarity: 0.75
+#   yes_words: [ja, jawohl, richtig, genau]
+#   no_words: [nein, falsch, abbrechen]
+#   ask_line: "An {agent}, richtig? Sag Hey Orc, ja oder Hey Orc, nein."
+#   sent_line: "Gesendet an {agent}."
+#   discarded_line: "Verworfen."
+#   unknown_agent_line: "Ich weiß nicht, an welchen Agenten. Nenne den Namen zuerst."
+
 tmux:
   # Dedicated tmux server socket, so Agent-Orc never touches your own tmux sessions.
   socket_name: agent-orc
