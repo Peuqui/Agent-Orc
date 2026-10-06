@@ -96,7 +96,8 @@ def test_without_a_section_in_the_config_there_is_no_echo(
 ) -> None:
     client = make_client(clock, tmp_path, monkeypatch, url=None)
     assert client.get("/api/announce").json() == {"configured": False, "rooms": [], "max_chars": 0}
-    assert client.post("/api/announce", json={"room": "testraum", "text": "Hallo"}).status_code == 404
+    sent = client.post("/api/announce", json={"room": "testraum", "text": "Hallo"})
+    assert sent.status_code == 404
 
 
 def test_the_rooms_and_the_text_go_to_aifred_with_the_token(
