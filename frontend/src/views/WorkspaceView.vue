@@ -10,13 +10,13 @@ import {
   MESSAGE_FIELD_SELECTOR,
 } from '../columns'
 import AppIcon from '../components/AppIcon.vue'
+import DropdownMenu from '../components/DropdownMenu.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
 import HelpButton from '../components/HelpButton.vue'
 import NavMenu from '../components/NavMenu.vue'
 import WorkspaceNameField from '../components/WorkspaceNameField.vue'
 import QuotaPanel from '../components/QuotaPanel.vue'
 import SettingsMenu from '../components/SettingsMenu.vue'
-import { useDismiss } from '../composables/useDismiss'
 import { moveInList, useReorder } from '../composables/useReorder'
 import { sessionName, useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
@@ -82,8 +82,6 @@ const resize = ref<Resize | null>(null)
 const row = ref<HTMLElement>()
 const picking = ref(false)
 const choosingWorkspace = ref(false)
-const workspaceChooser = ref<HTMLElement>()
-useDismiss(workspaceChooser, () => choosingWorkspace.value, () => (choosingWorkspace.value = false))
 const otherTabs = useOtherTabs()
 // The tabs of all workspaces in a fixed order: the unnamed one (null) first, if there is one to
 // show, then the named ones alphabetically. Names given in other tabs since this one loaded join
@@ -567,29 +565,29 @@ async function rename(): Promise<void> {
             @rename="rename"
             @delete="deleting = true"
           />
-          <div ref="workspaceChooser" class="relative">
-            <button class="btn-icon" :aria-label="$t('workspace.others')" :title="$t('workspace.others')" @click="choosingWorkspace = !choosingWorkspace">
-              <AppIcon name="chevron" />
-            </button>
-            <div v-if="choosingWorkspace" class="card absolute top-full left-0 z-40 mt-1 flex w-56 flex-col p-1 shadow-xl">
-              <template v-for="other in workspaceOrder" :key="other ?? ''">
-                <button
-                  v-if="other !== name"
-                  class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-slate-300 hover:bg-slate-700"
-                  @click="((choosingWorkspace = false), jumpToWorkspace(router, other))"
-                >
-                  <AppIcon name="workspace" />{{ other ?? $t('workspace.unnamed') }}
-                </button>
-              </template>
-              <button
-                v-if="!workspaceOrder.includes(null)"
-                class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-slate-400 hover:bg-slate-700"
-                @click="((choosingWorkspace = false), jumpToWorkspace(router, null))"
-              >
-                <AppIcon name="plus" />{{ $t('workspace.new') }}
+          <DropdownMenu v-model:open="choosingWorkspace" panel-class="flex w-56 flex-col p-1">
+            <template #trigger="{ toggle }">
+              <button class="btn-icon" :aria-label="$t('workspace.others')" :title="$t('workspace.others')" @click="toggle">
+                <AppIcon name="chevron" />
               </button>
-            </div>
-          </div>
+            </template>
+            <template v-for="other in workspaceOrder" :key="other ?? ''">
+              <button
+                v-if="other !== name"
+                class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-slate-300 hover:bg-slate-700"
+                @click="((choosingWorkspace = false), jumpToWorkspace(router, other))"
+              >
+                <AppIcon name="workspace" />{{ other ?? $t('workspace.unnamed') }}
+              </button>
+            </template>
+            <button
+              v-if="!workspaceOrder.includes(null)"
+              class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-slate-400 hover:bg-slate-700"
+              @click="((choosingWorkspace = false), jumpToWorkspace(router, null))"
+            >
+              <AppIcon name="plus" />{{ $t('workspace.new') }}
+            </button>
+          </DropdownMenu>
         </template>
         <!-- Computers and upright tablets: all workspaces as tabs in a fixed order, the one shown
              is the name field. One click on another goes to the tab that shows it, otherwise
@@ -642,36 +640,33 @@ async function rename(): Promise<void> {
         <!-- Claude's usage, centred in the room between the workspaces and the buttons; it shrinks
              with the window. Not on phones: the name gets the room (the overview shows it). -->
         <QuotaPanel v-if="!phone" compact class="min-w-0 flex-1 overflow-hidden sm:px-3" />
-        <div class="relative">
-          <button
-            class="flex size-8 items-center justify-center rounded-md border border-slate-600 text-slate-300 hover:bg-slate-700"
-            :aria-label="$t('workspace.add')"
-            :title="$t('workspace.add')"
-            @click="picking = !picking"
-          >
-            <AppIcon name="plus" class="size-4" />
-          </button>
-          <div
-            v-if="picking"
-            class="card absolute top-full right-0 z-20 mt-1 flex w-64 flex-col gap-1 p-2 shadow-xl"
-          >
+        <DropdownMenu v-model:open="picking" right panel-class="flex w-64 flex-col gap-1 p-2">
+          <template #trigger="{ toggle }">
             <button
-              v-for="session in notOpen"
-              :key="session.id"
-              class="rounded-md px-3 py-2 text-left hover:bg-slate-700"
-              @click="open(session.id)"
+              class="flex size-8 items-center justify-center rounded-md border border-slate-600 text-slate-300 hover:bg-slate-700"
+              :aria-label="$t('workspace.add')"
+              :title="$t('workspace.add')"
+              @click="toggle"
             >
-              {{ sessionName(session) }}
-              <span v-if="livesElsewhere(session.id)" class="text-xs text-slate-500">
-                · {{ $t('workspace.movesFrom', { name: livesElsewhere(session.id) }) }}
-              </span>
+              <AppIcon name="plus" class="size-4" />
             </button>
-            <p v-if="notOpen.length === 0" class="px-3 py-2 text-sm text-slate-500">{{ $t('workspace.allOpen') }}</p>
-            <RouterLink :to="{ path: '/files', query: { workspace: '1' } }" class="btn-primary mt-1">
-              <AppIcon name="plus" />{{ $t('sessions.startNew') }}
-            </RouterLink>
-          </div>
-        </div>
+          </template>
+          <button
+            v-for="session in notOpen"
+            :key="session.id"
+            class="rounded-md px-3 py-2 text-left hover:bg-slate-700"
+            @click="open(session.id)"
+          >
+            {{ sessionName(session) }}
+            <span v-if="livesElsewhere(session.id)" class="text-xs text-slate-500">
+              · {{ $t('workspace.movesFrom', { name: livesElsewhere(session.id) }) }}
+            </span>
+          </button>
+          <p v-if="notOpen.length === 0" class="px-3 py-2 text-sm text-slate-500">{{ $t('workspace.allOpen') }}</p>
+          <RouterLink :to="{ path: '/files', query: { workspace: '1' } }" class="btn-primary mt-1">
+            <AppIcon name="plus" />{{ $t('sessions.startNew') }}
+          </RouterLink>
+        </DropdownMenu>
         <!-- Columns as one boxed group: fewer | count | more. -->
         <div
           v-if="!phone"

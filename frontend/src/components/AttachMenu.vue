@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useToast } from '../composables/useToast'
-import { useDismiss } from '../composables/useDismiss'
 import AppIcon from './AppIcon.vue'
+import DropdownMenu from './DropdownMenu.vue'
 
 // The paperclip with its menu: take a photo, choose a picture, capture the screen, choose a
 // file. The chosen file goes to the parent (`file`), which stores it where it belongs (the
 // agent's folder, a note). Its own menu entries and pop-ups go into the slots.
-const props = defineProps<{ open: boolean; busy: boolean; extraOpen?: boolean; below?: boolean }>()
+// below: the menu opens downwards, where there is no room above (the notes' bar).
+defineProps<{ open: boolean; busy: boolean; extraOpen?: boolean; below?: boolean }>()
 const emit = defineEmits<{ toggle: []; close: []; file: [file: File] }>()
 const toast = useToast()
-const root = ref<HTMLElement>()
 const photoInput = ref<HTMLInputElement>()
 const imageInput = ref<HTMLInputElement>()
 const fileInput = ref<HTMLInputElement>()
@@ -19,7 +19,6 @@ const screenCaptureSupported = typeof navigator.mediaDevices?.getDisplayMedia ==
 const SCREENSHOT_NAME = 'screenshot.png'
 const ITEM_CLASS = 'flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-slate-700'
 
-useDismiss(root, () => props.open || Boolean(props.extraOpen), () => emit('close'))
 
 function choose(input: HTMLInputElement | undefined): void {
   emit('close')
@@ -60,42 +59,47 @@ async function captureScreen(): Promise<void> {
 </script>
 
 <template>
-  <div ref="root" class="relative">
-    <button
-      type="button"
-      class="btn-icon size-10"
-      :class="{ 'animate-pulse': busy }"
-      :disabled="busy"
-      :aria-label="$t('attach.title')"
-      :title="$t('attach.title')"
-      @click="emit('toggle')"
-    >
-      <AppIcon name="paperclip" />
+  <DropdownMenu
+    :open="open"
+    :above="!below"
+    :also-open="extraOpen"
+    panel-class="flex w-64 flex-col p-1"
+    @update:open="(isOpen) => !isOpen && emit('close')"
+    @close="emit('close')"
+  >
+    <template #trigger>
+      <button
+        type="button"
+        class="btn-icon size-10"
+        :class="{ 'animate-pulse': busy }"
+        :disabled="busy"
+        :aria-label="$t('attach.title')"
+        :title="$t('attach.title')"
+        @click="emit('toggle')"
+      >
+        <AppIcon name="paperclip" />
+      </button>
+    </template>
+    <button type="button" :class="ITEM_CLASS" @click="choose(photoInput)">
+      <AppIcon name="camera" />{{ $t('attach.photo') }}
     </button>
-    <div
-      v-if="open"
-      class="card absolute left-0 z-30 flex w-64 flex-col p-1 shadow-xl"
-      :class="below ? 'top-full mt-1' : 'bottom-full mb-1'"
-    >
-      <button type="button" :class="ITEM_CLASS" @click="choose(photoInput)">
-        <AppIcon name="camera" />{{ $t('attach.photo') }}
-      </button>
-      <button type="button" :class="ITEM_CLASS" @click="choose(imageInput)">
-        <AppIcon name="image" />{{ $t('attach.image') }}
-      </button>
-      <button v-if="screenCaptureSupported" type="button" :class="ITEM_CLASS" @click="captureScreen">
-        <AppIcon name="screen" />{{ $t('attach.screen') }}
-      </button>
-      <button type="button" :class="ITEM_CLASS" @click="choose(fileInput)">
-        <AppIcon name="paperclip" />{{ $t('attach.file') }}
-      </button>
-      <slot />
-    </div>
-    <slot name="popup" />
-    <!-- capture opens the camera directly on phones; without it phones offer their gallery
-         (newest screenshots first); desktops show the file dialog. -->
-    <input ref="photoInput" type="file" accept="image/*" capture="environment" class="hidden" @change="onFileChosen" />
-    <input ref="imageInput" type="file" accept="image/*" class="hidden" @change="onFileChosen" />
-    <input ref="fileInput" type="file" class="hidden" @change="onFileChosen" />
-  </div>
+    <button type="button" :class="ITEM_CLASS" @click="choose(imageInput)">
+      <AppIcon name="image" />{{ $t('attach.image') }}
+    </button>
+    <button v-if="screenCaptureSupported" type="button" :class="ITEM_CLASS" @click="captureScreen">
+      <AppIcon name="screen" />{{ $t('attach.screen') }}
+    </button>
+    <button type="button" :class="ITEM_CLASS" @click="choose(fileInput)">
+      <AppIcon name="paperclip" />{{ $t('attach.file') }}
+    </button>
+    <slot />
+    <template #extra>
+      <slot name="popup" />
+      <!-- capture opens the camera directly on phones; without it phones offer their gallery
+           (newest screenshots first); desktops show the file dialog. -->
+      <input ref="photoInput" type="file" accept="image/*" capture="environment" class="hidden" @change="onFileChosen" />
+      <input ref="imageInput" type="file" accept="image/*" class="hidden" @change="onFileChosen" />
+      <input ref="fileInput" type="file" class="hidden" @change="onFileChosen" />
+    </template>
+  </DropdownMenu>
 </template>

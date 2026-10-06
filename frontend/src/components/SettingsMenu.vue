@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { api } from '../api'
-import { useDismiss } from '../composables/useDismiss'
 import { useToast } from '../composables/useToast'
 import { useI18n } from 'vue-i18n'
 import {
@@ -15,6 +14,7 @@ import {
   useSettings,
 } from '../composables/useSettings'
 import AppIcon from './AppIcon.vue'
+import DropdownMenu from './DropdownMenu.vue'
 import HandoverSettings from './HandoverSettings.vue'
 import KeysEditor from './KeysEditor.vue'
 import PushSettings from './PushSettings.vue'
@@ -24,8 +24,6 @@ import SpeechSettings from './SpeechSettings.vue'
 const { scrollLines, lineHeight, fontSize, stepFontSize, terminalFont, dictationEngine } = useSettings()
 const toast = useToast()
 const open = ref(false)
-const root = ref<HTMLElement>()
-useDismiss(root, () => open.value, () => (open.value = false))
 // The extra-keys editor stays open after the menu has closed.
 const editingKeys = ref(false)
 // The engines the Whisper service offers; asked when the menu opens.
@@ -54,11 +52,13 @@ function changeScrollLines(delta: number): void {
 </script>
 
 <template>
-  <div ref="root" class="relative">
-    <button class="btn-icon" :title="$t('settings.title')" :aria-label="$t('settings.title')" @click="open = !open">
-      <AppIcon name="menu" />
-    </button>
-    <div v-if="open" class="card absolute top-full right-0 z-30 mt-1 w-64 p-3 shadow-xl">
+  <DropdownMenu v-model:open="open" right panel-class="w-64 p-3">
+    <template #trigger="{ toggle }">
+      <button class="btn-icon" :title="$t('settings.title')" :aria-label="$t('settings.title')" @click="toggle">
+        <AppIcon name="menu" />
+      </button>
+    </template>
+    <div>
       <h2 class="mb-2 text-sm font-semibold text-slate-200">{{ $t('settings.title') }}</h2>
       <div class="flex items-center justify-between gap-2 text-sm text-slate-300">
         <span>{{ $t('settings.font') }}</span>
@@ -127,6 +127,6 @@ function changeScrollLines(delta: number): void {
       <PushSettings />
       <HandoverSettings />
     </div>
-    <KeysEditor v-if="editingKeys" @close="editingKeys = false" />
-  </div>
+    <template #extra><KeysEditor v-if="editingKeys" @close="editingKeys = false" /></template>
+  </DropdownMenu>
 </template>
