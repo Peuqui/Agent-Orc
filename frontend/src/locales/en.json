@@ -177,7 +177,8 @@
     "short": {
       "five_hour": "5 h",
       "seven_day": "Week"
-    }
+    },
+    "reset": "reset {when}"
   },
   "workspace": {
     "close": "Close tab",

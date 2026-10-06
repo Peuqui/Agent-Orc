@@ -22,6 +22,11 @@ function shortLabel(name: string): string {
   return te(`quota.short.${name}`) ? t(`quota.short.${name}`) : name
 }
 
+function resetText(window: QuotaWindow): string {
+  const when = formatMoment(new Date(window.resets_at * MILLISECONDS_PER_SECOND), locale.value)
+  return t('quota.reset', { when })
+}
+
 function detail(window: QuotaWindow): string {
   const when = formatMoment(new Date(window.resets_at * MILLISECONDS_PER_SECOND), locale.value)
   return t('quota.detail', { percent: Math.round(window.used_percentage), when })
@@ -51,7 +56,7 @@ function detail(window: QuotaWindow): string {
       <div
         :class="
           compact
-            ? 'hidden min-w-0 flex-1 grid-cols-2 divide-x divide-slate-600 @[34rem]:grid'
+            ? 'hidden min-w-0 grid-cols-2 divide-x divide-slate-600 @[34rem]:grid'
             : 'grid flex-1 gap-x-6 gap-y-1 md:grid-cols-2'
         "
       >
@@ -61,7 +66,7 @@ function detail(window: QuotaWindow): string {
           :class="{ 'px-3': compact }"
           :label="windowLabel(String(name))"
           :percent="usage.used_percentage"
-          :detail="detail(usage)"
+          :reset="resetText(usage)"
         />
       </div>
       <div v-if="compact" class="flex divide-x divide-slate-600 @[34rem]:hidden">
