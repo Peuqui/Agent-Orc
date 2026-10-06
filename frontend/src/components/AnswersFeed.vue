@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { api, type AnswerText, type Turn } from '../api'
+import { api, type AnswerText, type Interjection, type Turn } from '../api'
 import { markSeen, seenUntil } from '../composables/useAnswerSeen'
 import { useSettings } from '../composables/useSettings'
 import { sessionName, useSessions } from '../composables/useSessions'
@@ -36,11 +36,22 @@ const seenBefore = ref(seenUntil(props.sessionId))
 
 interface Shown {
   turn: Turn
+  /** The agent's texts shown (all of them, or the last), for reading aloud. */
   texts: AnswerText[]
+  /** What is shown below the request in the order it happened: the agent's texts and what the user typed in between. */
+  items: (({ kind: 'agent' } & AnswerText) | ({ kind: 'user' } & Interjection))[]
 }
 
 const shown = computed<Shown[]>(() =>
-  turns.value.map((turn) => ({ turn, texts: answersAll.value ? turn.texts : turn.texts.slice(-1) })),
+  turns.value.map((turn) => {
+    const texts = answersAll.value ? turn.texts : turn.texts.slice(-1)
+    const items: Shown['items'] = [
+      ...texts.map((text) => ({ kind: 'agent' as const, ...text })),
+      ...turn.interjections.map((interjection) => ({ kind: 'user' as const, ...interjection })),
+    ]
+    // ISO times in the same format compare as text.
+    return { turn, texts, items: items.sort((a, b) => a.time.localeCompare(b.time)) }
+  }),
 )
 const everyText = computed(() => shown.value.flatMap((entry) => entry.texts))
 const newest = computed(() => everyText.value.at(-1)?.time ?? '')
@@ -57,7 +68,7 @@ function speakable(texts: AnswerText[]): Speakable[] {
 
 function readFrom(text: AnswerText): void {
   const all = everyText.value
-  void speech.play(speakable(all.slice(all.indexOf(text))))
+  void speech.play(speakable(all.slice(all.findIndex((candidate) => candidate.id === text.id))))
 }
 
 function readUnread(): void {
@@ -104,6 +115,14 @@ onBeforeUnmount(() => {
   window.clearTimeout(seenTimer)
 })
 
+const FOLD_LINES = 8
+const FOLD_CHARS = 600
+
+/** A request longer than this is folded to a few lines until opened. */
+function foldable(prompt: string): boolean {
+  return prompt.split('\n').length > FOLD_LINES || prompt.length > FOLD_CHARS
+}
+
 function togglePrompt(id: string): void {
   if (expandedPrompts.value.has(id)) expandedPrompts.value.delete(id)
   else expandedPrompts.value.add(id)
@@ -144,39 +163,51 @@ function togglePrompt(id: string): void {
     <div ref="box" class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-3">
       <p v-if="loaded && !turns.length" class="text-slate-400">{{ $t('answers.empty') }}</p>
       <section v-for="entry in shown" :key="entry.turn.id" class="flex flex-col gap-2">
-        <button
-          type="button"
-          class="text-left text-sm text-slate-400"
-          :class="expandedPrompts.has(entry.turn.id) ? 'whitespace-pre-wrap' : 'truncate'"
-          @click="togglePrompt(entry.turn.id)"
-        >
-          {{ entry.turn.prompt }}
-        </button>
-        <article
-          v-for="text in entry.texts"
-          :key="text.id"
-          class="card flex flex-col gap-2 p-3"
-          :class="text.time > seenBefore ? 'border-l-4 border-l-red-500' : ''"
-        >
-          <div class="markdown note select-text" v-html="renderMarkdown(text.text, null)" />
-          <div class="flex items-center gap-2 text-xs text-slate-500">
-            <span>{{ formatMoment(new Date(text.time), locale) }}</span>
-            <template v-if="speech.available">
-              <button
-                type="button"
-                class="btn-secondary btn-small ml-auto"
-                :class="speech.playing.value === text.id ? 'animate-pulse' : ''"
-                :title="$t('answers.readThis')"
-                @click="void speech.play(speakable([text]))"
-              >
-                <AppIcon name="speaker" />{{ $t('answers.read') }}
-              </button>
-              <button type="button" class="btn-secondary btn-small" :title="$t('answers.readFromHereHint')" @click="readFrom(text)">
-                {{ $t('answers.readFromHere') }}
-              </button>
-            </template>
+        <!-- What the user asked, in full; a very long request is folded. -->
+        <div class="rounded-lg bg-slate-800/60 px-3 py-2 text-sm text-slate-300">
+          <p class="whitespace-pre-wrap break-words" :class="foldable(entry.turn.prompt) && !expandedPrompts.has(entry.turn.id) ? 'line-clamp-6' : ''">{{ entry.turn.prompt }}</p>
+          <button v-if="foldable(entry.turn.prompt)" type="button" class="mt-1 text-xs text-slate-500 underline" @click="togglePrompt(entry.turn.id)">
+            {{ expandedPrompts.has(entry.turn.id) ? $t('answers.less') : $t('answers.more') }}
+          </button>
+        </div>
+        <template v-for="item in entry.items" :key="item.id">
+          <!-- Typed while the agent was answering. -->
+          <div
+            v-if="item.kind === 'user'"
+            class="ml-4 rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-300"
+            :class="item.pending ? 'opacity-60' : ''"
+          >
+            <p class="whitespace-pre-wrap break-words">{{ item.text }}</p>
+            <p class="mt-1 text-xs text-slate-500">
+              {{ $t('answers.interjection') }} · {{ formatMoment(new Date(item.time), locale) }}
+              <span v-if="item.pending"> · {{ $t('answers.pending') }}</span>
+            </p>
           </div>
-        </article>
+          <article
+            v-else
+            class="card flex flex-col gap-2 p-3"
+            :class="item.time > seenBefore ? 'border-l-4 border-l-red-500' : ''"
+          >
+            <div class="markdown note select-text" v-html="renderMarkdown(item.text, null)" />
+            <div class="flex items-center gap-2 text-xs text-slate-500">
+              <span>{{ formatMoment(new Date(item.time), locale) }}</span>
+              <template v-if="speech.available">
+                <button
+                  type="button"
+                  class="btn-secondary btn-small ml-auto"
+                  :class="speech.playing.value === item.id ? 'animate-pulse' : ''"
+                  :title="$t('answers.readThis')"
+                  @click="void speech.play(speakable([item]))"
+                >
+                  <AppIcon name="speaker" />{{ $t('answers.read') }}
+                </button>
+                <button type="button" class="btn-secondary btn-small" :title="$t('answers.readFromHereHint')" @click="readFrom(item)">
+                  {{ $t('answers.readFromHere') }}
+                </button>
+              </template>
+            </div>
+          </article>
+        </template>
         <!-- The request being answered right now has no text yet. -->
         <p v-if="!entry.texts.length && entry === shown.at(-1)" class="animate-pulse text-sm text-slate-500">
           {{ $t('answers.working') }}

@@ -70,12 +70,23 @@ export interface AnswerText {
   text: string
 }
 
+/** What the user typed while the agent was answering. */
+export interface Interjection {
+  id: string
+  /** When it was typed (ISO, UTC). */
+  time: string
+  text: string
+  /** The agent has not taken it yet. */
+  pending: boolean
+}
+
 /** A request of the user and the texts the agent wrote in answer, the last one the summary. */
 export interface Turn {
   id: string
   time: string
   prompt: string
   texts: AnswerText[]
+  interjections: Interjection[]
 }
 
 /** Claude's token consumption of one day, project and model. */

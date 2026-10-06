@@ -30,6 +30,7 @@ import {
   TERMINAL_FONTS,
   type TerminalFont,
   useSettings,
+  useTerminalView,
 } from '../composables/useSettings'
 import { COLUMN_CLOSE_EVENT, COLUMN_FULLSCREEN_EVENT, COLUMN_SWIPE_EVENT } from '../columns'
 import { useTouchScroll } from '../composables/useTouchScroll'
@@ -53,7 +54,8 @@ const settings = ref<TerminalSettings | null>(null)
 const modifiers = ref(new Set<Modifier>())
 const connected = ref(false)
 // One font size for every terminal of this device (set in the settings menu).
-const { lineHeight, fontSize, terminalFont, extraKeysVersion, terminalView } = useSettings()
+const { lineHeight, fontSize, terminalFont, extraKeysVersion } = useSettings()
+const terminalView = useTerminalView(props.id)
 
 // Arranged anew (on this or another column of the device): fetch the keys again.
 watch(extraKeysVersion, async () => {
@@ -388,7 +390,7 @@ onBeforeUnmount(() => {
       <!-- Embedded in the workspace, the column's tab names the agent already (not on phones). -->
       <!-- In the light bulb's amber, set off from the usage figure. -->
       <h1 class="ml-2 min-w-0 flex-1 truncate font-semibold text-amber-300">{{ ownTab ? name : '' }}</h1>
-      <!-- The agent's own terminal, or only what it answered (the same for every terminal of this device). -->
+      <!-- The agent's own terminal, or only what it answered (each agent keeps its own choice on this device). -->
       <div
         v-if="session && !session.terminal"
         class="flex shrink-0 overflow-hidden rounded-md border border-slate-600"

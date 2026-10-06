@@ -548,6 +548,10 @@
     "noAgents": "Kein Agent läuft.",
     "maxChars": "Ohne Hörabsatz höchstens so viele Zeichen vorlesen",
     "speechTitle": "Vorlesen",
-    "announceName": "Namen des Agenten vorab sagen"
+    "announceName": "Namen des Agenten vorab sagen",
+    "more": "mehr",
+    "less": "weniger",
+    "interjection": "Eingabe während der Antwort",
+    "pending": "wartet auf Zustellung"
   }
 }

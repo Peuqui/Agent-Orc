@@ -76,8 +76,10 @@ const dictationEngine = setting('agent-orc-dictation-engine', '', String)
 
 /** What a terminal shows: the terminal itself, or the agent's answers in short (AnswersFeed). */
 export type TerminalView = 'terminal' | 'answers'
-// The answers are what a terminal shows first; the terminal itself is one tap away.
-const terminalView = setting<TerminalView>('agent-orc-terminal-view', 'answers', (stored) => stored as TerminalView)
+/** What this agent's terminal shows; each agent has its own. The answers are what it shows first, the terminal itself is one tap away. */
+export function useTerminalView(sessionId: string): Ref<TerminalView> {
+  return setting<TerminalView>(`agent-orc-terminal-view:${sessionId}`, 'answers', (stored) => stored as TerminalView)
+}
 /** The answers show every text the agent wrote, not only the last one of each request. */
 const answersAll = setting('agent-orc-answers-all', false, (stored) => stored === 'true')
 
@@ -114,7 +116,6 @@ export function useSettings() {
     dictationEngine,
     extraKeysUnfolded,
     extraKeysVersion,
-    terminalView,
     answersAll,
     speechEngine,
     speechVoice,

@@ -27,7 +27,7 @@ TRANSCRIPT = [
     entry("assistant", "a4", [{"type": "tool_use", "name": "Bash", "input": {}}]),
     entry("user", "u5", [{"type": "tool_result", "content": "ls-Ausgabe"}]),
     entry("assistant", "a6", [{"type": "text", "text": "Fertig, es sind drei Dateien."}]),
-    {"type": "attachment", "uuid": "x7"},
+    {"type": "attachment", "uuid": "x7", "attachment": {"type": "hook_success"}},
     entry("user", "u8", "<command-name>/clear</command-name>"),
     entry("user", "u9", "Zweite Frage"),
     entry("assistant", "a10", [{"type": "text", "text": "Unteragent"}], isSidechain=True),
@@ -54,3 +54,67 @@ def test_a_request_still_being_answered_shows_what_is_written_so_far(tmp_path: P
     turns = read_turns(write(tmp_path / "t.jsonl", started), limit=5)
     assert [t.text for t in turns[0].texts] == ["Ich schaue nach."]
     assert read_turns(write(tmp_path / "e.jsonl", TRANSCRIPT[:1]), limit=5)[0].texts == []
+
+
+def queue(operation: str, uuid: str, content: str | None = None) -> dict[str, Any]:
+    record: dict[str, Any] = {
+        "type": "queue-operation",
+        "operation": operation,
+        "timestamp": f"2026-10-06T10:00:{uuid[1:].zfill(2)}.000Z",
+    }
+    if content is not None:
+        record["content"] = content
+    return record
+
+
+def delivered(uuid: str, prompt: str) -> dict[str, Any]:
+    return {
+        "type": "attachment",
+        "uuid": uuid,
+        "timestamp": f"2026-10-06T10:00:{uuid[1:].zfill(2)}.000Z",
+        "attachment": {"type": "queued_command", "prompt": prompt},
+    }
+
+
+def test_what_the_user_types_during_an_answer_is_shown_with_it(tmp_path: Path) -> None:
+    entries = [
+        entry("user", "u1", "Frage"),
+        entry("assistant", "a2", [{"type": "text", "text": "Ich arbeite."}]),
+        queue("enqueue", "q3", "Noch ein Einwand"),
+        queue("remove", "q4", "Noch ein Einwand"),
+        delivered("d5", "Noch ein Einwand"),
+        entry("assistant", "a6", [{"type": "text", "text": "Verstanden."}]),
+        # Typed while the agent works, taken as a request of its own afterwards.
+        queue("enqueue", "q7", "Nächste Frage"),
+        queue("dequeue", "q8"),
+        entry("user", "u9", "Nächste Frage"),
+        entry("assistant", "a10", [{"type": "text", "text": "Antwort."}]),
+    ]
+    turns = read_turns(write(tmp_path / "t.jsonl", entries), limit=10)
+    assert [turn.prompt for turn in turns] == ["Frage", "Nächste Frage"]
+    first = turns[0].interjections
+    assert [(i.text, i.pending) for i in first] == [("Noch ein Einwand", False)]
+    assert first[0].time == "2026-10-06T10:00:03.000Z"
+    # The request taken as its own turn is not also an interjection.
+    assert turns[1].interjections == []
+
+
+def test_what_is_typed_but_not_yet_taken_shows_as_waiting(tmp_path: Path) -> None:
+    entries = [
+        entry("user", "u1", "Frage"),
+        entry("assistant", "a2", [{"type": "text", "text": "Ich arbeite."}]),
+        queue("enqueue", "q3", "Noch nicht angekommen"),
+    ]
+    turns = read_turns(write(tmp_path / "t.jsonl", entries), limit=10)
+    waiting = [(i.text, i.pending) for i in turns[0].interjections]
+    assert waiting == [("Noch nicht angekommen", True)]
+
+
+def test_a_withdrawn_message_is_not_shown(tmp_path: Path) -> None:
+    entries = [
+        entry("user", "u1", "Frage"),
+        queue("enqueue", "q2", "Zurückgenommen"),
+        queue("remove", "q3", "Zurückgenommen"),
+    ]
+    turns = read_turns(write(tmp_path / "t.jsonl", entries), limit=10)
+    assert turns[0].interjections == []

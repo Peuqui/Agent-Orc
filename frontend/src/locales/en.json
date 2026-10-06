@@ -548,6 +548,10 @@
     "noAgents": "No agent is running.",
     "maxChars": "Without a listening paragraph, read at most this many characters",
     "speechTitle": "Reading aloud",
-    "announceName": "Say the agent’s name first"
+    "announceName": "Say the agent’s name first",
+    "more": "more",
+    "less": "less",
+    "interjection": "Typed during the answer",
+    "pending": "waiting to be delivered"
   }
 }
