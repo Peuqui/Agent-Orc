@@ -110,6 +110,20 @@ const actionClass = computed(() =>
     : 'btn-icon',
 )
 
+// As in the terminal: with a mouse, a click into the answers gives the focus to the message
+// field (text marked stays marked, so Ctrl+C copies it). Not on touch screens: the on-screen
+// keyboard would rise at once.
+function focusFieldAfterClick(event: PointerEvent): void {
+  if (TOUCH_FIRST.matches || (event.target as Element).closest('button, a, input, select, textarea')) return
+  if (window.getSelection()?.isCollapsed === false) return
+  messageInput.value?.focus()
+}
+
+watch(terminalView, async () => {
+  await nextTick()
+  if (!TOUCH_FIRST.matches) messageInput.value?.focus()
+})
+
 function closeColumn(): void {
   window.dispatchEvent(new CustomEvent(COLUMN_CLOSE_EVENT))
 }
@@ -514,7 +528,11 @@ onBeforeUnmount(() => {
       <div ref="container" class="h-full min-w-0 flex-1" />
       <JogScroller @scroll="onJog" />
       <!-- Over the terminal, which stays as it is underneath (no resize when switching back). -->
-      <div v-if="terminalView === 'answers' && session && !session.terminal" class="absolute inset-0 z-10 flex flex-col bg-slate-900">
+      <div
+        v-if="terminalView === 'answers' && session && !session.terminal"
+        class="absolute inset-0 z-10 flex flex-col bg-slate-900"
+        @pointerup="focusFieldAfterClick"
+      >
         <AnswersFeed :session-id="id" />
       </div>
       <div
