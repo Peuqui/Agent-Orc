@@ -118,6 +118,11 @@ onBeforeUnmount(() => {
   window.clearTimeout(seenTimer)
 })
 
+/** A picture opens at full size in a tab of its own. */
+function openImage(address: string): void {
+  window.open(address, '_blank', 'noopener')
+}
+
 const FOLD_LINES = 8
 const FOLD_CHARS = 600
 
@@ -169,7 +174,17 @@ function togglePrompt(id: string): void {
         <!-- What the user asked, in full; a very long request is folded. -->
         <div class="rounded-lg border-l-4 border-sky-700/70 bg-sky-950/40 px-3 py-2 text-sm text-slate-300">
           <p class="whitespace-pre-wrap break-words" :class="foldable(entry.turn.prompt) && !expandedPrompts.has(entry.turn.id) ? 'line-clamp-6' : ''">{{ entry.turn.prompt }}</p>
-          <p v-if="entry.turn.images" class="mt-1 text-xs text-slate-500">{{ $t('answers.images', { count: entry.turn.images }) }}</p>
+          <div v-if="entry.turn.images" class="mt-2 flex flex-wrap gap-2">
+            <img
+              v-for="index in entry.turn.images"
+              :key="index"
+              :src="api.answerImageUrl(sessionId, entry.turn.id, index - 1)"
+              :alt="$t('answers.images', { count: entry.turn.images })"
+              loading="lazy"
+              class="h-24 max-w-full cursor-zoom-in rounded border border-slate-600 object-cover"
+              @click="openImage(api.answerImageUrl(sessionId, entry.turn.id, index - 1))"
+            />
+          </div>
           <button v-if="foldable(entry.turn.prompt)" type="button" class="mt-1 text-xs text-slate-500 underline" @click="togglePrompt(entry.turn.id)">
             {{ expandedPrompts.has(entry.turn.id) ? $t('answers.less') : $t('answers.more') }}
           </button>
@@ -178,11 +193,21 @@ function togglePrompt(id: string): void {
           <!-- Typed while the agent was answering. -->
           <div
             v-if="item.kind === 'user'"
-            class="ml-4 rounded-lg border-l-4 border-sky-800/60 bg-sky-950/20 px-3 py-2 text-sm text-slate-300"
+            class="ml-4 rounded-lg border-l-4 border-sky-700/70 bg-sky-950/40 px-3 py-2 text-sm text-slate-300"
             :class="item.pending ? 'opacity-60' : ''"
           >
             <p class="whitespace-pre-wrap break-words">{{ item.text }}</p>
-            <p v-if="item.images" class="mt-1 text-xs text-slate-500">{{ $t('answers.images', { count: item.images }) }}</p>
+            <div v-if="item.images" class="mt-2 flex flex-wrap gap-2">
+              <img
+                v-for="index in item.images"
+                :key="index"
+                :src="api.answerImageUrl(sessionId, item.id, index - 1)"
+                :alt="$t('answers.images', { count: item.images })"
+                loading="lazy"
+                class="h-24 max-w-full cursor-zoom-in rounded border border-slate-600 object-cover"
+                @click="openImage(api.answerImageUrl(sessionId, item.id, index - 1))"
+              />
+            </div>
             <p class="mt-1 text-xs text-slate-500">
               {{ $t('answers.interjection') }} · {{ formatMoment(new Date(item.time), locale) }}
               <span v-if="item.pending"> · {{ $t('answers.pending') }}</span>

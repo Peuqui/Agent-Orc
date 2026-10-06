@@ -1,8 +1,11 @@
+import base64
 import json
 from pathlib import Path
 from typing import Any
 
-from agent_orc.answers import read_turns
+import pytest
+
+from agent_orc.answers import read_image, read_turns
 
 
 def entry(kind: str, uuid: str, content: Any, **extra: Any) -> dict[str, Any]:
@@ -144,3 +147,26 @@ def test_a_message_with_a_picture_and_notices_of_the_system(tmp_path: Path) -> N
     turns = read_turns(write(tmp_path / "t.jsonl", entries), limit=10)
     assert (turns[0].prompt, turns[0].images) == ("Schau mal", 1)
     assert [(i.text, i.images) for i in turns[0].interjections] == [("", 1)]
+
+
+def test_a_picture_of_a_request_or_of_a_message_typed_during_an_answer_is_read(
+    tmp_path: Path,
+) -> None:
+    def block(data: bytes, media_type: str = "image/png") -> dict[str, Any]:
+        encoded = base64.b64encode(data).decode()
+        source = {"type": "base64", "media_type": media_type, "data": encoded}
+        return {"type": "image", "source": source}
+
+    entries = [
+        entry("user", "u1", [{"type": "text", "text": "Schau"}, block(b"one"), block(b"two")]),
+        delivered("d2", [block(b"typed")]),
+        entry("user", "u3", [{"type": "text", "text": "Skript"}, block(b"<s/>", "image/svg+xml")]),
+    ]
+    transcript = write(tmp_path / "t.jsonl", entries)
+    assert read_image(transcript, "u1", 0) == (b"one", "image/png")
+    assert read_image(transcript, "u1", 1) == (b"two", "image/png")
+    assert read_image(transcript, "d2", 0) == (b"typed", "image/png")
+    # Only pictures a browser shows safely are served, and only ones that exist.
+    for missing in (("u1", 2), ("u3", 0), ("nope", 0)):
+        with pytest.raises(FileNotFoundError):
+            read_image(transcript, *missing)

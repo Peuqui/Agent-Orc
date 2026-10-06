@@ -450,6 +450,9 @@ export const api = {
     request<void>('DELETE', `sessions/${encodeURIComponent(sessionId)}/effort`),
   stopSession: (id: string) => request<void>('DELETE', `sessions/${encodeURIComponent(id)}`),
   /** The terminal as plain text, for selecting and copying. */
+  /** Where a picture of a request or of something typed during an answer is served (index from 0). */
+  answerImageUrl: (sessionId: string, entryId: string, index: number) =>
+    `api/sessions/${encodeURIComponent(sessionId)}/images/${encodeURIComponent(entryId)}/${index}`,
   /** The last requests of the user with the agent's texts, oldest first (no thoughts or tools). */
   answers: (sessionId: string, turns: number) =>
     request<Turn[]>('GET', `sessions/${encodeURIComponent(sessionId)}/answers`, { query: { turns: String(turns) } }),

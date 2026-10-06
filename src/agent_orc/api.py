@@ -18,7 +18,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from agent_orc import files
-from agent_orc.answers import read_turns
+from agent_orc.answers import read_image, read_turns
 from agent_orc.approvals import ApprovalNotFoundError, ApprovalRequest, decide, open_requests
 from agent_orc.attachments import NOTE_FILES_URL, UPLOADS_DIR, bring_note_files, store_attachment
 from agent_orc.auth import Clock, Credentials, LoginGuard, TokenSigner, verify_password
@@ -1227,6 +1227,26 @@ def create_app(
         if transcript is None or not transcript.resolve().is_relative_to(home / CLAUDE_PROJECTS):
             return []
         return [asdict(turn) for turn in read_turns(transcript, turns)]
+
+    @app.get("/api/sessions/{session_id}/images/{entry_id}/{index}", dependencies=authenticated)
+    def session_image(session_id: str, entry_id: str, index: int) -> Response:
+        """A picture of a request or of something typed during an answer (from the transcript)."""
+        session = find_session(session_id)
+        if session is None:
+            raise SessionNotFoundError(session_id)
+        transcript = session_transcript(session)
+        if transcript is None or not transcript.resolve().is_relative_to(home / CLAUDE_PROJECTS):
+            raise FileNotFoundError(entry_id)
+        data, media_type = read_image(transcript, entry_id, index)
+        return Response(
+            data,
+            media_type=media_type,
+            # The entry's id never names another picture: the browser may keep it.
+            headers={
+                "Cache-Control": "private, max-age=31536000, immutable",
+                "X-Content-Type-Options": "nosniff",
+            },
+        )
 
     @app.get("/api/sessions/{session_id}/text", dependencies=authenticated)
     def session_text(session_id: str) -> dict[str, str]:

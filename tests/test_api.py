@@ -1651,3 +1651,32 @@ def test_answers_come_from_the_transcript_the_agent_reports(
     store_status(session_id, {"model": {"display_name": "M"}, "transcript_path": str(outside)})
     assert client.get(answers).json() == []
     assert client.get("/api/sessions/nope/answers").status_code == 404
+
+
+def test_a_picture_of_a_request_is_served_from_the_transcript(
+    client: TestClient, home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
+    session_id = start_shell(client, home / "projects" / "a")
+    picture = {
+        "type": "image",
+        "source": {"type": "base64", "media_type": "image/png", "data": "cG5nLWJ5dGVz"},
+    }
+    line = {
+        "type": "user",
+        "uuid": "u1",
+        "timestamp": "2026-10-06T10:00:00Z",
+        "message": {"content": [{"type": "text", "text": "Schau"}, picture]},
+    }
+    transcript = home / ".claude" / "projects" / "-a" / "conversation.jsonl"
+    transcript.parent.mkdir(parents=True)
+    transcript.write_text(json.dumps(line), encoding="utf-8")
+    url = f"/api/sessions/{session_id}/images/u1/0"
+    assert client.get(url).status_code == 404  # the agent has not reported its transcript yet
+    store_status(session_id, {"model": {"display_name": "M"}, "transcript_path": str(transcript)})
+    shown = client.get(url)
+    assert shown.status_code == 200 and shown.content == b"png-bytes"
+    assert shown.headers["content-type"] == "image/png"
+    assert client.get(f"/api/sessions/{session_id}/images/u1/1").status_code == 404
+    assert client.get(f"/api/sessions/{session_id}/images/nope/0").status_code == 404
+    assert client.get("/api/sessions/nope/images/u1/0").status_code == 404

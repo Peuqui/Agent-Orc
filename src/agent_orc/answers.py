@@ -5,6 +5,7 @@ The last text of a request is its summary, the ones before are comments between 
 transcript is read from its end, so a long conversation costs no more than the turns shown.
 """
 
+import base64
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -140,3 +141,35 @@ def _queue_operation(entry: dict[str, Any], waiting: list[dict[str, Any]]) -> No
         taken = next((e for e in waiting if e.get("content") == entry.get("content")), None)
         if taken is not None:
             waiting.remove(taken)
+
+
+# Pictures shown in the answers; anything else in a transcript is not served.
+IMAGE_TYPES = ("image/png", "image/jpeg", "image/gif", "image/webp")
+
+
+def _image_blocks(entry: dict[str, Any]) -> list[dict[str, Any]]:
+    """The pictures of a request or of what was typed during an answer, in the order they came."""
+    attachment = entry["type"] == "attachment"
+    content = entry["attachment"]["prompt"] if attachment else entry["message"]["content"]
+    if not isinstance(content, list):
+        return []
+    return [block for block in content if block.get("type") == "image"]
+
+
+def read_image(transcript: Path, entry_id: str, index: int) -> tuple[bytes, str]:
+    """The picture `index` (counted from 0) of the entry with this id, and its media type."""
+    for line in lines_from_end(transcript, SCAN_BYTES):
+        # Cheap check on the raw line first; the picture's data makes lines large.
+        if entry_id not in line:
+            continue
+        entry: dict[str, Any] = json.loads(line)
+        if entry.get("uuid") != entry_id or entry.get("type") not in ("user", "attachment"):
+            continue
+        blocks = _image_blocks(entry)
+        if index >= len(blocks):
+            break
+        source = blocks[index]["source"]
+        if source["media_type"] not in IMAGE_TYPES:
+            break
+        return base64.b64decode(source["data"]), source["media_type"]
+    raise FileNotFoundError(f"{entry_id}/{index}")
