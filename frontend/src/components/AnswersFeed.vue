@@ -140,14 +140,29 @@ function togglePrompt(id: string): void {
 <template>
   <div class="flex min-h-0 flex-1 flex-col">
     <div class="flex flex-wrap items-center gap-1.5 border-b border-slate-700 px-2 py-1.5">
-      <button
-        type="button"
-        class="btn-secondary btn-small"
-        :title="$t('answers.allHint')"
-        @click="answersAll = !answersAll"
-      >
-        {{ answersAll ? $t('answers.showSummaries') : $t('answers.showAll') }}
-      </button>
+      <!-- What is shown now is highlighted: a summary for each message of yours, or every text. -->
+      <div class="flex overflow-hidden rounded-md border border-slate-600 text-xs" role="group" :aria-label="$t('answers.mode')">
+        <button
+          type="button"
+          class="px-2.5 py-1.5"
+          :class="!answersAll ? 'bg-slate-600 text-slate-100' : 'text-slate-400 hover:bg-slate-700'"
+          :aria-pressed="!answersAll"
+          :title="$t('answers.summariesHint')"
+          @click="answersAll = false"
+        >
+          {{ $t('answers.modeSummaries') }}
+        </button>
+        <button
+          type="button"
+          class="border-l border-slate-600 px-2.5 py-1.5"
+          :class="answersAll ? 'bg-slate-600 text-slate-100' : 'text-slate-400 hover:bg-slate-700'"
+          :aria-pressed="answersAll"
+          :title="$t('answers.allHint')"
+          @click="answersAll = true"
+        >
+          {{ $t('answers.modeAll') }}
+        </button>
+      </div>
       <template v-if="speech.available.value">
         <button
           type="button"
