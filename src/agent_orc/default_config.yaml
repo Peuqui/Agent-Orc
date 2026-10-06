@@ -117,6 +117,7 @@ dictation:
 #   discarded_line: "Verworfen."
 #   which_agent_line: "Welcher Agent dann? Sag Hey Orc und den Namen."
 #   no_agent_line: "Ich weiß nicht, an welchen Agenten. Nenne den Namen zuerst."
+#   no_summary_line: "{agent} ist fertig."
 
 tmux:
   # Dedicated tmux server socket, so Agent-Orc never touches your own tmux sessions.

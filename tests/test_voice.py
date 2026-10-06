@@ -1,5 +1,6 @@
 """Speaking to an agent on the Echo Dot: who is addressed, the question back, the spoken yes."""
 
+import io
 import json
 import time
 from pathlib import Path
@@ -9,11 +10,20 @@ import pytest
 import yaml
 from fastapi.testclient import TestClient
 
+from agent_orc import cli
 from agent_orc.api import create_app
 from agent_orc.auth import new_credentials
 from agent_orc.config import Config, VoiceConfig, default_config_text
 from agent_orc.context import store_status
-from agent_orc.voice import Action, VoiceAgent, VoiceRouter
+from agent_orc.sessions import SESSION_ENV
+from agent_orc.voice import (
+    Action,
+    VoiceAgent,
+    VoiceRouter,
+    expect_reply,
+    listening_paragraph,
+    take_reply_room,
+)
 from tests.conftest import MAX_CHARS, TOKEN, FakeAifred, FakeClock
 
 NOW = 1_000_000.0
@@ -35,6 +45,7 @@ def voice_config() -> VoiceConfig:
         discarded_line="Verworfen.",
         which_agent_line="Welcher Agent dann?",
         no_agent_line="Welcher Agent?",
+        no_summary_line="{agent} ist fertig.",
     )
 
 
@@ -235,6 +246,8 @@ def test_what_is_said_reaches_the_agent_only_after_the_spoken_yes(
 
     assert say(client, "ja").json() == {"action": "sent", "agent": "whisper"}
     assert FakeAifred.spoken[-1]["texts"] == ["Gesendet an whisper."]
+    # Its next answer is announced in that room.
+    assert take_reply_room(session_id) == "testraum"
     for _ in range(50):
         if "starte die Tests" in client.get(f"/api/sessions/{session_id}/text").json()["text"]:
             break
@@ -249,3 +262,52 @@ def test_only_aifred_with_the_token_may_speak_to_the_agents(
     client = voice_client(home, socket_name, clock, aifred)
     assert say(client, "hallo", token="wrong").status_code == 401
     assert client.post("/api/voice", json={"room": "r", "text": "x"}).status_code == 401
+
+
+def test_the_paragraph_for_listening_is_the_last_marked_one() -> None:
+    answer = (
+        "Langer Text.\n\n🔊 Erster Hörabsatz.\n\nMehr Text.\n\n🔊 Letzter Hörabsatz. Zweiter Satz."
+    )
+    assert listening_paragraph(answer) == "Letzter Hörabsatz. Zweiter Satz."
+    assert listening_paragraph("Nur Text, ohne Absatz zum Hören.") is None
+
+
+def test_a_reply_is_expected_once(home: Path) -> None:
+    assert take_reply_room("a-1") is None
+    expect_reply("a-1", "testraum")
+    assert take_reply_room("a-1") == "testraum"
+    assert take_reply_room("a-1") is None
+
+
+def test_the_agent_spoken_to_answers_in_the_room_with_its_paragraph_for_listening(
+    home: Path, monkeypatch: pytest.MonkeyPatch, aifred: str
+) -> None:
+    raw: dict[str, Any] = yaml.safe_load(default_config_text())
+    raw["announce"] = {
+        "url": aifred,
+        "token_file": "announce-token",
+        "max_chars": MAX_CHARS,
+        "timeout_seconds": 5,
+    }
+    raw["voice"] = voice_config().model_dump()
+    config_file = home.parent / "config" / "agent-orc" / "config.yaml"
+    config_file.write_text(yaml.safe_dump(raw), encoding="utf-8")
+    monkeypatch.setenv(SESSION_ENV, "whisper-1")
+
+    def finish(answer: str) -> None:
+        stop = {"cwd": "/w/whisper", "last_assistant_message": answer}
+        monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(stop)))
+        cli.agent_idle()
+
+    # An answer to something typed in the terminal is not announced.
+    finish("🔊 Nicht für den Echo.")
+    assert FakeAifred.spoken == []
+
+    expect_reply("whisper-1", "testraum")
+    finish("Details.\n\n🔊 Es sind drei Dateien.")
+    assert FakeAifred.spoken == [
+        {"room": "testraum", "texts": ["Es sind drei Dateien."], "speaker": "whisper"}
+    ]
+    expect_reply("whisper-1", "testraum")
+    finish("Nur Text.")
+    assert FakeAifred.spoken[-1]["texts"] == ["whisper ist fertig."]

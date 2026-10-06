@@ -12,6 +12,7 @@ from typing import Any
 
 import uvicorn
 
+from agent_orc.announce import announce
 from agent_orc.api import create_app
 from agent_orc.approvals import (
     close_answered,
@@ -33,6 +34,7 @@ from agent_orc.push import agent_message, send_to_all
 from agent_orc.schedule import mark_limited
 from agent_orc.sessions import SESSION_ENV
 from agent_orc.setup import run_setup
+from agent_orc.voice import listening_paragraph, take_reply_room
 
 
 def set_password() -> None:
@@ -81,7 +83,9 @@ def agent_idle() -> None:
     store_activity(session_id, busy=False)
     close_session_requests(session_id)
     # Absent when the answer ended without text (e.g. interrupted).
-    _notify("done", hook, hook.get("last_assistant_message") or "")
+    answer = hook.get("last_assistant_message") or ""
+    _notify("done", hook, answer)
+    _announce_voice_reply(hook, answer)
 
 
 def agent_limited() -> None:
@@ -120,6 +124,18 @@ def agent_tool_done() -> None:
     permission request for this call was answered, maybe in the terminal."""
     hook = json.load(sys.stdin)
     close_answered(os.environ[SESSION_ENV], hook["tool_name"], hook["tool_input"])
+
+
+def _announce_voice_reply(hook: dict[str, Any], answer: str) -> None:
+    """An agent spoken to on the Echo Dot answers there, with its paragraph for listening."""
+    room = take_reply_room(os.environ[SESSION_ENV])
+    if room is None:
+        return
+    config = load_config(config_dir() / CONFIG_FILE_NAME)
+    assert config.voice is not None and config.announce is not None
+    agent = Path(hook["cwd"]).name
+    text = listening_paragraph(answer) or config.voice.no_summary_line.format(agent=agent)
+    announce(config.announce, config_dir(), room, [text], agent)
 
 
 def _notify(kind: str, hook: dict[str, Any], text: str) -> None:

@@ -10,13 +10,18 @@ import difflib
 import re
 from dataclasses import dataclass
 from enum import Enum
+from pathlib import Path
 
 from agent_orc.config import VoiceConfig
 from agent_orc.phonetics import cologne
+from agent_orc.state import state_dir, write_atomically
 
 MAX_NAME_WORDS = 4
 _NOT_LETTERS = re.compile(r"[\W_]+")
 # The parts of a folder name: words, camel case humps, numbers ("FreeEchoDot2": Free Echo Dot 2).
+# Agents end an answer with a paragraph for listening that starts with this (the same marker the
+# web app reads aloud: LISTEN_MARKER in speechText.ts).
+LISTEN_MARKER = "🔊"
 _NAME_PART = re.compile(r"[A-Z]?[a-z]+|[A-Z]+(?![a-z])|\d+")
 
 
@@ -153,3 +158,30 @@ class VoiceRouter:
         window = self._config.window_minutes * 60
         recent = [a for a in agents if a.last_spoke is not None and now - a.last_spoke <= window]
         return max(recent, key=lambda a: a.last_spoke or 0.0, default=None)
+
+
+def listening_paragraph(answer: str) -> str | None:
+    """The last paragraph for listening of an answer, without its marker."""
+    paragraphs = [paragraph.strip() for paragraph in re.split(r"\n\s*\n", answer)]
+    marked = [p for p in paragraphs if p.startswith(LISTEN_MARKER)]
+    return marked[-1].removeprefix(LISTEN_MARKER).strip() if marked else None
+
+
+def _reply_file(session_id: str) -> Path:
+    return state_dir() / "voice-replies" / session_id
+
+
+def expect_reply(session_id: str, room: str) -> None:
+    """The agent got a request spoken in this room: its next answer is announced there. A file,
+    since the hook that sees the answer is a process of its own."""
+    write_atomically(_reply_file(session_id), room)
+
+
+def take_reply_room(session_id: str) -> str | None:
+    """The room the agent's answer goes to, once; None if no request was spoken to it."""
+    path = _reply_file(session_id)
+    if not path.is_file():
+        return None
+    room = path.read_text(encoding="utf-8")
+    path.unlink()
+    return room

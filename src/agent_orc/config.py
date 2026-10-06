@@ -145,6 +145,8 @@ class VoiceConfig(StrictModel):
     which_agent_line: str
     # Nobody was named and no agent answered within the window.
     no_agent_line: str
+    # Spoken when an agent that was spoken to has finished without a paragraph for listening.
+    no_summary_line: str
 
 
 class TmuxConfig(StrictModel):

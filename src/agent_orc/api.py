@@ -129,7 +129,7 @@ from agent_orc.state import (
 from agent_orc.terminal import bridge
 from agent_orc.trash import RestoreConflictError, Trash, TrashEntryNotFoundError, home_trash_dir
 from agent_orc.trust import FOLDER_TRUST
-from agent_orc.voice import Action, VoiceAgent, VoiceRouter
+from agent_orc.voice import Action, VoiceAgent, VoiceRouter, expect_reply
 from agent_orc.worktrees import (
     InvalidBranchError,
     WorktreeError,
@@ -1346,6 +1346,7 @@ def create_app(
         }
         if decision.action is Action.SEND and decision.agent is not None:
             sessions.type_line(decision.agent.id, decision.text, config.terminal.submit_delay_ms)
+            expect_reply(decision.agent.id, body.room)
         name = decision.agent.name if decision.agent else ""
         spoken = lines[decision.action].format(agent=name)
         announcing.announce(
