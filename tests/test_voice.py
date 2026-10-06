@@ -29,10 +29,12 @@ def voice_config() -> VoiceConfig:
         name_similarity=0.75,
         yes_words=["ja", "richtig"],
         no_words=["nein"],
+        cancel_words=["abbrechen"],
         ask_line="An {agent}, richtig?",
         sent_line="Gesendet an {agent}.",
         discarded_line="Verworfen.",
-        unknown_agent_line="Welcher Agent?",
+        which_agent_line="Welcher Agent dann?",
+        no_agent_line="Welcher Agent?",
     )
 
 
@@ -77,10 +79,10 @@ def test_without_a_name_the_agent_that_answered_last_gets_it_if_that_was_recent(
     assert (decision.agent, decision.text) == (AGENTS[0], "wie ist der Stand")
     # 30 minutes ago is out of the window; the one that never answered is no candidate.
     later = router.handle("buero", "wie ist der Stand", AGENTS, NOW + 10 * MINUTE)
-    assert later.action is Action.UNKNOWN_AGENT
+    assert later.action is Action.NO_AGENT
 
 
-def test_nothing_is_sent_before_a_yes_and_a_no_drops_it() -> None:
+def test_nothing_is_sent_before_a_yes() -> None:
     router = VoiceRouter(voice_config())
     router.handle("buero", "Whisper starte neu", AGENTS, NOW)
     sent = router.handle("buero", "Ja.", AGENTS, NOW + 10)
@@ -88,8 +90,36 @@ def test_nothing_is_sent_before_a_yes_and_a_no_drops_it() -> None:
     # The yes counts once; said again it is only a request, which asks back first.
     assert router.handle("buero", "Ja", AGENTS, NOW + 20).action is Action.ASK
 
+
+def test_after_a_no_the_text_is_kept_and_another_agent_can_be_named() -> None:
+    router = VoiceRouter(voice_config())
     router.handle("buero", "Whisper starte neu", AGENTS, NOW)
-    assert router.handle("buero", "Nein, doch nicht", AGENTS, NOW + 10).action is Action.DISCARD
+    asked_again = router.handle("buero", "Nein, doch nicht", AGENTS, NOW + 10)
+    assert (asked_again.action, asked_again.text) == (Action.WHICH_AGENT, "starte neu")
+    # The name alone is enough; it goes to the one named, after asking back again.
+    other = router.handle("buero", "Agent Orc", AGENTS, NOW + 20)
+    assert (other.action, other.agent, other.text) == (Action.ASK, AGENTS[1], "starte neu")
+    sent = router.handle("buero", "ja", AGENTS, NOW + 30)
+    assert (sent.action, sent.agent, sent.text) == (Action.SEND, AGENTS[1], "starte neu")
+
+
+def test_while_asking_for_the_agent_a_refusal_drops_the_text_and_a_request_replaces_it() -> None:
+    router = VoiceRouter(voice_config())
+    for refusal in ("nein", "abbrechen"):
+        router.handle("buero", "Whisper starte neu", AGENTS, NOW)
+        router.handle("buero", "nein", AGENTS, NOW + 10)
+        assert router.handle("buero", refusal, AGENTS, NOW + 20).action is Action.DISCARD
+        assert router.handle("buero", "ja", AGENTS, NOW + 30).action is Action.ASK
+    router.handle("buero", "Whisper starte neu", AGENTS, NOW)
+    router.handle("buero", "nein", AGENTS, NOW + 10)
+    replaced = router.handle("buero", "Agent Orc baue das", AGENTS, NOW + 20)
+    assert (replaced.agent, replaced.text) == (AGENTS[1], "baue das")
+
+
+def test_cancel_drops_an_open_question_for_good() -> None:
+    router = VoiceRouter(voice_config())
+    router.handle("buero", "Whisper starte neu", AGENTS, NOW)
+    assert router.handle("buero", "Abbrechen", AGENTS, NOW + 10).action is Action.DISCARD
     assert router.handle("buero", "ja", AGENTS, NOW + 20).action is Action.ASK
 
 

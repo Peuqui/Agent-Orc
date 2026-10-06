@@ -33,7 +33,10 @@ class Action(Enum):
     ASK = "asked"
     SEND = "sent"
     DISCARD = "discarded"
-    UNKNOWN_AGENT = "unknown_agent"
+    # After a no: the text is kept, the agent is asked for again.
+    WHICH_AGENT = "which_agent"
+    # No agent named, and none answered lately.
+    NO_AGENT = "no_agent"
 
 
 @dataclass(frozen=True)
@@ -45,7 +48,8 @@ class Decision:
 
 @dataclass(frozen=True)
 class _Pending:
-    agent: VoiceAgent
+    # None: the user said no and has not named another agent yet.
+    agent: VoiceAgent | None
     text: str
     expires: float
 
@@ -80,33 +84,65 @@ class VoiceRouter:
     def handle(self, room: str, text: str, agents: list[VoiceAgent], now: float) -> Decision:
         pending = self._pending.pop(room, None)
         if pending is not None and pending.expires > now:
-            answer = _first_word(text)
-            if answer in self._config.yes_words:
-                return Decision(Action.SEND, pending.agent, pending.text)
-            if answer in self._config.no_words:
-                return Decision(Action.DISCARD, pending.agent, pending.text)
+            answered = self._answer(room, pending, text, agents, now)
+            if answered is not None:
+                return answered
         # Anything else is a new request; nothing was sent for the old one.
         return self._ask(room, text, agents, now)
+
+    def _answer(
+        self, room: str, pending: _Pending, text: str, agents: list[VoiceAgent], now: float
+    ) -> Decision | None:
+        """What the user said to an open question; None if it was no answer to it."""
+        word = _first_word(text)
+        if word in self._config.cancel_words:
+            return Decision(Action.DISCARD, pending.agent, pending.text)
+        if pending.agent is not None:
+            if word in self._config.yes_words:
+                return Decision(Action.SEND, pending.agent, pending.text)
+            if word in self._config.no_words:
+                self._pending[room] = _Pending(None, pending.text, self._expiry(now))
+                return Decision(Action.WHICH_AGENT, text=pending.text)
+            return None
+        if word in self._config.no_words:
+            return Decision(Action.DISCARD, text=pending.text)
+        named = self._named_alone(text, agents)
+        return None if named is None else self._confirm(room, named, pending.text, now)
 
     def _ask(self, room: str, text: str, agents: list[VoiceAgent], now: float) -> Decision:
         named, request = self._address(text, agents)
         agent = named or self._last_spoken(agents, now)
         if agent is None:
-            return Decision(Action.UNKNOWN_AGENT, text=text)
-        expires = now + self._config.confirm_minutes * 60
-        self._pending[room] = _Pending(agent, request, expires)
-        return Decision(Action.ASK, agent, request)
+            return Decision(Action.NO_AGENT, text=text)
+        return self._confirm(room, agent, request, now)
+
+    def _confirm(self, room: str, agent: VoiceAgent, text: str, now: float) -> Decision:
+        self._pending[room] = _Pending(agent, text, self._expiry(now))
+        return Decision(Action.ASK, agent, text)
+
+    def _expiry(self, now: float) -> float:
+        return now + self._config.confirm_minutes * 60
+
+    def _named_alone(self, text: str, agents: list[VoiceAgent]) -> VoiceAgent | None:
+        """The agent when the whole sentence is just its name."""
+        count = len(text.split())
+        similarity, agent = self._best_match(text, count, agents)
+        return agent if similarity >= self._config.name_similarity else None
+
+    def _best_match(
+        self, spoken: str, count: int, agents: list[VoiceAgent]
+    ) -> tuple[float, VoiceAgent | None]:
+        scored = [(_similarity(spoken, count, agent.name), agent) for agent in agents]
+        return max(scored, key=lambda match: match[0], default=(0.0, None))
 
     def _address(self, text: str, agents: list[VoiceAgent]) -> tuple[VoiceAgent | None, str]:
         """The agent named at the start of the sentence and what is left after its name."""
         words = text.split()
         best: tuple[float, VoiceAgent | None, int] = (0.0, None, 0)
         for count in range(1, min(MAX_NAME_WORDS, len(words) - 1) + 1):
-            spoken = " ".join(words[:count])
-            for agent in agents:
-                similarity = _similarity(spoken, count, agent.name)
-                if similarity > best[0]:
-                    best = (similarity, agent, count)
+            similarity, agent = self._best_match(" ".join(words[:count]), count, agents)
+            if similarity > best[0]:
+                best = (similarity, agent, count)
         similarity, named, count = best
         if named is None or similarity < self._config.name_similarity:
             return None, text.strip()

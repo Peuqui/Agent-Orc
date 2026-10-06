@@ -136,11 +136,15 @@ class VoiceConfig(StrictModel):
     name_similarity: float
     yes_words: list[str]
     no_words: list[str]
+    # Drops what was said instead of asking for another agent.
+    cancel_words: list[str]
     # Spoken to the room; {agent} is the agent's name.
     ask_line: str
     sent_line: str
     discarded_line: str
-    unknown_agent_line: str
+    which_agent_line: str
+    # Nobody was named and no agent answered within the window.
+    no_agent_line: str
 
 
 class TmuxConfig(StrictModel):

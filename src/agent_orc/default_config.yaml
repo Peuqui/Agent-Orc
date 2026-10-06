@@ -109,11 +109,14 @@ dictation:
 #   # How well a spoken name must match an agent's folder name (0 to 1).
 #   name_similarity: 0.75
 #   yes_words: [ja, jawohl, richtig, genau]
-#   no_words: [nein, falsch, abbrechen]
+#   # After a no the text is kept and the agent is asked for again; a cancel word drops it.
+#   no_words: [nein, falsch]
+#   cancel_words: [abbrechen, vergiss]
 #   ask_line: "An {agent}, richtig? Sag Hey Orc, ja oder Hey Orc, nein."
 #   sent_line: "Gesendet an {agent}."
 #   discarded_line: "Verworfen."
-#   unknown_agent_line: "Ich weiß nicht, an welchen Agenten. Nenne den Namen zuerst."
+#   which_agent_line: "Welcher Agent dann? Sag Hey Orc und den Namen."
+#   no_agent_line: "Ich weiß nicht, an welchen Agenten. Nenne den Namen zuerst."
 
 tmux:
   # Dedicated tmux server socket, so Agent-Orc never touches your own tmux sessions.

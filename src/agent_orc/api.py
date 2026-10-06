@@ -1341,7 +1341,8 @@ def create_app(
             Action.ASK: config.voice.ask_line,
             Action.SEND: config.voice.sent_line,
             Action.DISCARD: config.voice.discarded_line,
-            Action.UNKNOWN_AGENT: config.voice.unknown_agent_line,
+            Action.WHICH_AGENT: config.voice.which_agent_line,
+            Action.NO_AGENT: config.voice.no_agent_line,
         }
         if decision.action is Action.SEND and decision.agent is not None:
             sessions.type_line(decision.agent.id, decision.text, config.terminal.submit_delay_ms)
