@@ -556,6 +556,7 @@
     "mode": "Anzeige",
     "modeSummaries": "Zusammenfassungen",
     "modeAll": "Alles",
-    "summariesHint": "Zu jeder Eingabe von dir nur der letzte Text des Agenten"
+    "summariesHint": "Zu jeder Eingabe von dir nur der letzte Text des Agenten",
+    "pictures": "{count} Bild | {count} Bilder"
   }
 }

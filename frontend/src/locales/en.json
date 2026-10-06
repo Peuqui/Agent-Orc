@@ -556,6 +556,7 @@
     "mode": "View",
     "modeSummaries": "Summaries",
     "modeAll": "Everything",
-    "summariesHint": "For each message of yours only the agent's last text"
+    "summariesHint": "For each message of yours only the agent's last text",
+    "pictures": "{count} picture | {count} pictures"
   }
 }
