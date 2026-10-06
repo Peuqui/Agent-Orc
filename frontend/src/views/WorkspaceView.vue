@@ -297,6 +297,18 @@ function onFrameLoad(id: string): void {
     },
     true,
   )
+  // A click in the active column (on one of its buttons, say) leaves the focus on what was
+  // clicked; typing goes to the column's message field, as when the column becomes active.
+  // Not where the click was meant for typing, text is marked, a dialog is open, or on touch
+  // screens (the on-screen keyboard would rise).
+  frameWindow?.addEventListener('click', (event) => {
+    if (TOUCH_FIRST.matches || workspace.value.active !== id) return
+    const target = event.target instanceof Element ? event.target : null
+    if (target?.closest('input, textarea, select, [contenteditable]')) return
+    if (frameWindow.getSelection()?.isCollapsed === false) return
+    if (frameWindow.document.querySelector('[data-modal]')) return
+    window.setTimeout(() => messageFieldOf(id)?.focus(), 0)
+  })
   // Typing mostly happens inside a column: its shortcuts are caught there, before the terminal.
   frameWindow?.addEventListener('keydown', onShortcut, true)
   // A sideways swipe in any terminal moves the columns: phones bring the neighbouring column,

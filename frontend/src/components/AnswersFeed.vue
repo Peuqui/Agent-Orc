@@ -3,7 +3,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { api, type AnswerText, type Interjection, type Turn } from '../api'
 import { markSeen, seenUntil } from '../composables/useAnswerSeen'
-import { useSettings } from '../composables/useSettings'
+import { useAnswersAll } from '../composables/useSettings'
 import { sessionName, useSessions } from '../composables/useSessions'
 import { type Speakable, useSpeech } from '../composables/useSpeech'
 import { useToast } from '../composables/useToast'
@@ -14,15 +14,18 @@ import AppIcon from './AppIcon.vue'
 // What an agent answered, in short: per request of the user its last text (the summary), or
 // every text it wrote. Newer answers are marked until they were looked at; any of them can be
 // read aloud, or all that follow.
-const props = withDefaults(defineProps<{ sessionId: string; turns?: number; controls?: boolean }>(), {
+// `all` is given by a page that decides for all its feeds; otherwise the feed keeps its own choice.
+const props = withDefaults(defineProps<{ sessionId: string; turns?: number; controls?: boolean; all?: boolean }>(), {
   turns: 20,
   controls: true,
+  all: undefined,
 })
 const POLL_MS = 4000
 const SEEN_AFTER_MS = 2000
 const toast = useToast()
 const { locale } = useI18n()
-const { answersAll } = useSettings()
+const ownAll = useAnswersAll(props.sessionId)
+const answersAll = computed(() => props.all ?? ownAll.value)
 const { sessions } = useSessions()
 const speech = useSpeech()
 const turns = ref<Turn[]>([])
@@ -136,7 +139,7 @@ function togglePrompt(id: string): void {
         type="button"
         class="btn-secondary btn-small"
         :title="$t('answers.allHint')"
-        @click="answersAll = !answersAll"
+        @click="ownAll = !ownAll"
       >
         {{ answersAll ? $t('answers.showSummaries') : $t('answers.showAll') }}
       </button>
@@ -164,7 +167,7 @@ function togglePrompt(id: string): void {
       <p v-if="loaded && !turns.length" class="text-slate-400">{{ $t('answers.empty') }}</p>
       <section v-for="entry in shown" :key="entry.turn.id" class="flex flex-col gap-2">
         <!-- What the user asked, in full; a very long request is folded. -->
-        <div class="rounded-lg bg-slate-800/60 px-3 py-2 text-sm text-slate-300">
+        <div class="rounded-lg border-l-4 border-sky-700/70 bg-sky-950/40 px-3 py-2 text-sm text-slate-300">
           <p class="whitespace-pre-wrap break-words" :class="foldable(entry.turn.prompt) && !expandedPrompts.has(entry.turn.id) ? 'line-clamp-6' : ''">{{ entry.turn.prompt }}</p>
           <p v-if="entry.turn.images" class="mt-1 text-xs text-slate-500">{{ $t('answers.images', { count: entry.turn.images }) }}</p>
           <button v-if="foldable(entry.turn.prompt)" type="button" class="mt-1 text-xs text-slate-500 underline" @click="togglePrompt(entry.turn.id)">
@@ -175,7 +178,7 @@ function togglePrompt(id: string): void {
           <!-- Typed while the agent was answering. -->
           <div
             v-if="item.kind === 'user'"
-            class="ml-4 rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-300"
+            class="ml-4 rounded-lg border-l-4 border-sky-800/60 bg-sky-950/20 px-3 py-2 text-sm text-slate-300"
             :class="item.pending ? 'opacity-60' : ''"
           >
             <p class="whitespace-pre-wrap break-words">{{ item.text }}</p>

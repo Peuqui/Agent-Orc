@@ -80,8 +80,12 @@ export type TerminalView = 'terminal' | 'answers'
 export function useTerminalView(sessionId: string): Ref<TerminalView> {
   return setting<TerminalView>(`agent-orc-terminal-view:${sessionId}`, 'answers', (stored) => stored as TerminalView)
 }
-/** The answers show every text the agent wrote, not only the last one of each request. */
-const answersAll = setting('agent-orc-answers-all', false, (stored) => stored === 'true')
+/** An agent's answers show every text it wrote, not only the last one of each request; each agent has its own choice. */
+export function useAnswersAll(sessionId: string): Ref<boolean> {
+  return setting(`agent-orc-answers-all:${sessionId}`, false, (stored) => stored === 'true')
+}
+/** The same for the page with the answers of all agents. */
+const answersAllOnPage = setting('agent-orc-answers-all', false, (stored) => stored === 'true')
 
 /** What reads answers aloud: the engine (speech.ts), its voice and its speed. */
 export const DEFAULT_SPEECH_ENGINE = 'browser'
@@ -116,7 +120,7 @@ export function useSettings() {
     dictationEngine,
     extraKeysUnfolded,
     extraKeysVersion,
-    answersAll,
+    answersAllOnPage,
     speechEngine,
     speechVoice,
     speechRate,

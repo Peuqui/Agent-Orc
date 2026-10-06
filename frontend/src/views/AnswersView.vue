@@ -10,7 +10,7 @@ import { sessionName, useSessions } from '../composables/useSessions'
 // until they were looked at, any can be read aloud, and one button reads all the new ones.
 const LATEST_TURNS = 2
 const { sessions } = useSessions()
-const { answersAll } = useSettings()
+const { answersAllOnPage } = useSettings()
 const speech = useSpeech()
 const feeds = ref<Record<string, InstanceType<typeof AnswersFeed> | null>>({})
 // Agents with a terminal of their own only (a plain shell has no answers).
@@ -25,8 +25,8 @@ function readAllNew(): void {
 <template>
   <section class="flex flex-col gap-3">
     <div class="flex flex-wrap items-center gap-1.5">
-      <button type="button" class="btn-secondary btn-small" :title="$t('answers.allHint')" @click="answersAll = !answersAll">
-        {{ answersAll ? $t('answers.showSummaries') : $t('answers.showAll') }}
+      <button type="button" class="btn-secondary btn-small" :title="$t('answers.allHint')" @click="answersAllOnPage = !answersAllOnPage">
+        {{ answersAllOnPage ? $t('answers.showSummaries') : $t('answers.showAll') }}
       </button>
       <template v-if="speech.available">
         <button type="button" class="btn-primary btn-small" :title="$t('answers.readNewHint')" @click="readAllNew">
@@ -55,7 +55,7 @@ function readAllNew(): void {
           </RouterLink>
         </div>
         <div class="flex max-h-96 min-h-32 flex-col">
-          <AnswersFeed :ref="(feed) => (feeds[session.id] = feed as InstanceType<typeof AnswersFeed> | null)" :session-id="session.id" :turns="LATEST_TURNS" :controls="false" />
+          <AnswersFeed :ref="(feed) => (feeds[session.id] = feed as InstanceType<typeof AnswersFeed> | null)" :session-id="session.id" :turns="LATEST_TURNS" :controls="false" :all="answersAllOnPage" />
         </div>
       </li>
     </ul>
