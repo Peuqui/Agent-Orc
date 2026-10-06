@@ -19,6 +19,7 @@ import JogScroller from '../components/JogScroller.vue'
 import KeyBar from '../components/KeyBar.vue'
 import MessageInput from '../components/MessageInput.vue'
 import { useDismiss } from '../composables/useDismiss'
+import { onLongPress } from '../composables/useLongPress'
 import { registerFileLinks } from '../composables/useFileLinks'
 import { sessionName, useSessions } from '../composables/useSessions'
 import { PHONE_WIDTH, TOUCH_FIRST } from '../device'
@@ -343,6 +344,9 @@ onMounted(async () => {
   // Not passive: a swipe must not also scroll or zoom the page.
   container.value.addEventListener('touchmove', touchScroll.onTouchMove, { passive: false })
   container.value.addEventListener('touchend', touchScroll.onTouchEnd, { passive: true })
+  // The terminal is drawn, not text, so the phone's own selection cannot reach it: a long press
+  // opens the plain-text view, where it can.
+  if (TOUCH_FIRST.matches) onLongPress(container.value, () => void showPlainText())
   connect()
 })
 
