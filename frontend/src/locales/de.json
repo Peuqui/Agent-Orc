@@ -550,8 +550,8 @@
     "less": "weniger",
     "interjection": "Eingabe während der Antwort",
     "pending": "wartet auf Zustellung",
-    "images": "{count} Bild angehängt",
     "readNewColumns": "Neue Antworten dieser Arbeitsfläche vorlesen",
-    "nothingNew": "Nichts Neues zum Vorlesen."
+    "nothingNew": "Nichts Neues zum Vorlesen.",
+    "picture": "Bild"
   }
 }

@@ -453,6 +453,9 @@ export const api = {
   /** Where a picture of a request or of something typed during an answer is served (index from 0). */
   answerImageUrl: (sessionId: string, entryId: string, index: number) =>
     `api/sessions/${encodeURIComponent(sessionId)}/images/${encodeURIComponent(entryId)}/${index}`,
+  /** Where a picture attached for the agent is served (the file name in its uploads folder). */
+  uploadUrl: (sessionId: string, name: string) =>
+    `api/sessions/${encodeURIComponent(sessionId)}/uploads/${encodeURIComponent(name)}`,
   /** The last requests of the user with the agent's texts, oldest first (no thoughts or tools). */
   answers: (sessionId: string, turns: number) =>
     request<Turn[]>('GET', `sessions/${encodeURIComponent(sessionId)}/answers`, { query: { turns: String(turns) } }),

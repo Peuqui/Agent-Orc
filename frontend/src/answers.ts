@@ -22,3 +22,13 @@ export function shownTexts(turn: Turn, all: boolean): AnswerText[] {
 export function unreadTexts(turns: Turn[], all: boolean, seen: string): AnswerText[] {
   return turns.flatMap((turn) => shownTexts(turn, all)).filter((text) => text.time > seen)
 }
+
+// A picture attached in Agent-Orc is stored in the agent's folder and its path goes into the
+// message ("@path", as Claude Code reads files); the answers show it as a picture instead.
+const UPLOAD_MENTION = /@\.agent-orc\/uploads\/([A-Za-z0-9._-]+\.(?:png|jpe?g|gif|webp))/gi
+
+/** The text of a message without the pictures it names, and the file names of those pictures. */
+export function uploadMentions(text: string): { text: string; files: string[] } {
+  const files = [...text.matchAll(UPLOAD_MENTION)].map((match) => match[1])
+  return { text: text.replace(UPLOAD_MENTION, '').replace(/[ \t]*\n[ \t]*/g, '\n').replace(/[ \t]+/g, ' ').trim(), files }
+}

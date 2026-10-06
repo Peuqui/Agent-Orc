@@ -550,8 +550,8 @@
     "less": "less",
     "interjection": "Typed during the answer",
     "pending": "waiting to be delivered",
-    "images": "{count} picture attached",
     "readNewColumns": "Read the new answers of this workspace aloud",
-    "nothingNew": "Nothing new to read."
+    "nothingNew": "Nothing new to read.",
+    "picture": "Picture"
   }
 }

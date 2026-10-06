@@ -1680,3 +1680,25 @@ def test_a_picture_of_a_request_is_served_from_the_transcript(
     assert client.get(f"/api/sessions/{session_id}/images/u1/1").status_code == 404
     assert client.get(f"/api/sessions/{session_id}/images/nope/0").status_code == 404
     assert client.get("/api/sessions/nope/images/u1/0").status_code == 404
+
+
+def test_a_picture_attached_for_an_agent_is_served_by_its_name(
+    client: TestClient, home: Path
+) -> None:
+    folder = home / "projects" / "a"
+    session_id = start_shell(client, folder)
+    stored = client.post(
+        f"/api/sessions/{session_id}/attachments", params={"name": "shot.png"}, content=b"png-bytes"
+    ).json()["path"]
+    name = Path(stored).name
+    shown = client.get(f"/api/sessions/{session_id}/uploads/{name}")
+    assert shown.status_code == 200 and shown.content == b"png-bytes"
+    # Only pictures of the uploads folder: no other files, no paths out of it, no unknown agents.
+    document = client.post(
+        f"/api/sessions/{session_id}/attachments", params={"name": "plan.pdf"}, content=b"%PDF"
+    ).json()["path"]
+    base = f"/api/sessions/{session_id}/uploads"
+    assert client.get(f"{base}/{Path(document).name}").status_code == 404
+    assert client.get(f"{base}/..%2F..%2Fsecret.png").status_code == 404
+    assert client.get(f"{base}/nope.png").status_code == 404
+    assert client.get(f"/api/sessions/nope/uploads/{name}").status_code == 404

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { shownTexts, unreadTexts } from '../src/answers.ts'
+import { shownTexts, unreadTexts, uploadMentions } from '../src/answers.ts'
 
 const text = (id: string, time: string) => ({ id, time, text: id })
 const turn = (id: string, texts: ReturnType<typeof text>[]) => ({
@@ -47,4 +47,16 @@ test('what the user typed during an answer gets a summary of its own', () => {
   // A message not delivered yet does not end a stretch.
   const waiting = { ...request, interjections: [interjection('2026-10-06T10:00:10Z', true)] }
   assert.deepEqual(shownTexts(waiting, false).map((t) => t.id), ['c1'])
+})
+
+test('pictures attached in Agent-Orc are told apart from the message text', () => {
+  const shown = uploadMentions('Schau @.agent-orc/uploads/20261006-200131-image.png und\n@.agent-orc/uploads/b.JPG an')
+  assert.deepEqual(shown.files, ['20261006-200131-image.png', 'b.JPG'])
+  assert.equal(shown.text, 'Schau und\nan')
+  assert.deepEqual(uploadMentions('@.agent-orc/uploads/x.png'), { text: '', files: ['x.png'] })
+  // Other files and other folders stay what they are: text.
+  assert.deepEqual(uploadMentions('@.agent-orc/uploads/plan.pdf und @docs/x.png'), {
+    text: '@.agent-orc/uploads/plan.pdf und @docs/x.png',
+    files: [],
+  })
 })

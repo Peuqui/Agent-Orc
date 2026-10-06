@@ -23,6 +23,19 @@ UNNAMED = "attachment"
 TIME_PREFIX_FORMAT = "%Y%m%d-%H%M%S"
 
 
+# What the answers show as pictures of an agent's uploads; anything else is not served.
+IMAGE_SUFFIXES = (".png", ".jpg", ".jpeg", ".gif", ".webp")
+
+
+def uploaded_image(folder: Path, name: str) -> Path:
+    """A picture the user attached for the agent working in `folder`, by its file name."""
+    path = folder / UPLOADS_DIR / name
+    # Only a picture of the uploads folder itself, never a path out of it.
+    if Path(name).name != name or path.suffix.lower() not in IMAGE_SUFFIXES or not path.is_file():
+        raise FileNotFoundError(name)
+    return path
+
+
 def store_attachment(folder: Path, name: str, content: bytes, clock: Clock) -> Path:
     """Store the file and return its path relative to the folder, as the agent addresses it."""
     uploads = folder / UPLOADS_DIR

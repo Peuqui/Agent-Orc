@@ -20,7 +20,13 @@ from pydantic import BaseModel
 from agent_orc import files
 from agent_orc.answers import read_image, read_turns
 from agent_orc.approvals import ApprovalNotFoundError, ApprovalRequest, decide, open_requests
-from agent_orc.attachments import NOTE_FILES_URL, UPLOADS_DIR, bring_note_files, store_attachment
+from agent_orc.attachments import (
+    NOTE_FILES_URL,
+    UPLOADS_DIR,
+    bring_note_files,
+    store_attachment,
+    uploaded_image,
+)
 from agent_orc.auth import Clock, Credentials, LoginGuard, TokenSigner, verify_password
 from agent_orc.changes import (
     ChangeNotFoundError,
@@ -1247,6 +1253,14 @@ def create_app(
                 "X-Content-Type-Options": "nosniff",
             },
         )
+
+    @app.get("/api/sessions/{session_id}/uploads/{name}", dependencies=authenticated)
+    def session_upload(session_id: str, name: str) -> FileResponse:
+        """A picture the user attached for this agent (its message names it by path)."""
+        session = find_session(session_id)
+        if session is None:
+            raise SessionNotFoundError(session_id)
+        return served_file(uploaded_image(session.path, name), download=False)
 
     @app.get("/api/sessions/{session_id}/text", dependencies=authenticated)
     def session_text(session_id: str) -> dict[str, str]:

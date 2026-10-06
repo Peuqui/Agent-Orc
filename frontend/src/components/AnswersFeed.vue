@@ -2,7 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { api, type AnswerText, type Interjection, type Turn } from '../api'
-import { shownTexts } from '../answers'
+import { shownTexts, uploadMentions } from '../answers'
 import { markSeen, seenUntil } from '../composables/useAnswerSeen'
 import { useAnswersAll } from '../composables/useSettings'
 import { sessionName, useSessions } from '../composables/useSessions'
@@ -10,6 +10,7 @@ import { type Speakable, useSpeech } from '../composables/useSpeech'
 import { useToast } from '../composables/useToast'
 import { formatMoment } from '../format'
 import { renderMarkdown } from '../markdown'
+import AnswerImages from './AnswerImages.vue'
 import AppIcon from './AppIcon.vue'
 
 // What an agent answered, in short: per request of the user its last text (the summary), or
@@ -112,9 +113,14 @@ onBeforeUnmount(() => {
   window.clearTimeout(seenTimer)
 })
 
-/** A picture opens at full size in a tab of its own. */
-function openImage(address: string): void {
-  window.open(address, '_blank', 'noopener')
+/**
+ * Where the pictures of a message are served: those the transcript holds (its entry's pictures)
+ * and those named by path in its text (attached in Agent-Orc).
+ */
+function pictureUrls(entryId: string, text: string, images: number): string[] {
+  const inTranscript = Array.from({ length: images }, (_, index) => api.answerImageUrl(props.sessionId, entryId, index))
+  const attached = uploadMentions(text).files.map((name) => api.uploadUrl(props.sessionId, name))
+  return [...inTranscript, ...attached]
 }
 
 const FOLD_LINES = 8
@@ -167,18 +173,12 @@ function togglePrompt(id: string): void {
       <section v-for="entry in shown" :key="entry.turn.id" class="flex flex-col gap-2">
         <!-- What the user asked, in full; a very long request is folded. -->
         <div class="rounded-lg border-l-4 border-sky-700/70 bg-sky-950/40 px-3 py-2 text-sm text-slate-300">
-          <p class="whitespace-pre-wrap break-words" :class="foldable(entry.turn.prompt) && !expandedPrompts.has(entry.turn.id) ? 'line-clamp-6' : ''">{{ entry.turn.prompt }}</p>
-          <div v-if="entry.turn.images" class="mt-2 flex flex-row flex-wrap gap-2">
-            <img
-              v-for="index in entry.turn.images"
-              :key="index"
-              :src="api.answerImageUrl(sessionId, entry.turn.id, index - 1)"
-              :alt="$t('answers.images', { count: entry.turn.images })"
-              loading="lazy"
-              class="h-20 w-28 shrink-0 cursor-zoom-in rounded border border-slate-600 object-cover"
-              @click="openImage(api.answerImageUrl(sessionId, entry.turn.id, index - 1))"
-            />
-          </div>
+          <p
+            v-if="uploadMentions(entry.turn.prompt).text"
+            class="whitespace-pre-wrap break-words"
+            :class="foldable(entry.turn.prompt) && !expandedPrompts.has(entry.turn.id) ? 'line-clamp-6' : ''"
+          >{{ uploadMentions(entry.turn.prompt).text }}</p>
+          <AnswerImages :urls="pictureUrls(entry.turn.id, entry.turn.prompt, entry.turn.images)" />
           <button v-if="foldable(entry.turn.prompt)" type="button" class="mt-1 text-xs text-slate-500 underline" @click="togglePrompt(entry.turn.id)">
             {{ expandedPrompts.has(entry.turn.id) ? $t('answers.less') : $t('answers.more') }}
           </button>
@@ -190,18 +190,8 @@ function togglePrompt(id: string): void {
             class="ml-4 rounded-lg border-l-4 border-sky-700/70 bg-sky-950/40 px-3 py-2 text-sm text-slate-300"
             :class="item.pending ? 'opacity-60' : ''"
           >
-            <p class="whitespace-pre-wrap break-words">{{ item.text }}</p>
-            <div v-if="item.images" class="mt-2 flex flex-row flex-wrap gap-2">
-              <img
-                v-for="index in item.images"
-                :key="index"
-                :src="api.answerImageUrl(sessionId, item.id, index - 1)"
-                :alt="$t('answers.images', { count: item.images })"
-                loading="lazy"
-                class="h-20 w-28 shrink-0 cursor-zoom-in rounded border border-slate-600 object-cover"
-                @click="openImage(api.answerImageUrl(sessionId, item.id, index - 1))"
-              />
-            </div>
+            <p v-if="uploadMentions(item.text).text" class="whitespace-pre-wrap break-words">{{ uploadMentions(item.text).text }}</p>
+            <AnswerImages :urls="pictureUrls(item.id, item.text, item.images)" />
             <p class="mt-1 text-xs text-slate-500">
               {{ $t('answers.interjection') }} · {{ formatMoment(new Date(item.time), locale) }}
               <span v-if="item.pending"> · {{ $t('answers.pending') }}</span>
