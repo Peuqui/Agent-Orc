@@ -319,7 +319,7 @@ ORIGIN = {"origin": "http://testserver"}
 MAX_TERMINAL_FRAMES = 500
 
 
-def start_shell(client: TestClient, folder: Path) -> str:
+def start_shell(client: TestClient, folder: Path, workspace: str | None = None) -> str:
     folder.mkdir(exist_ok=True)
     body = {
         "profile": "shell",
@@ -328,6 +328,7 @@ def start_shell(client: TestClient, folder: Path) -> str:
         "effort": None,
         "ultracode": False,
         "conversation": None,
+        "workspace": workspace,
     }
     session_id: str = client.post("/api/sessions", json=body).json()["id"]
     return session_id
@@ -1063,7 +1064,11 @@ def test_workspaces_are_kept_and_deleted(
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
     a, b, c = start_agents(client, home, 3)
     empty = {"tabs": [], "visible": 1, "widths": {}, "active": None}
-    assert client.get("/api/workspaces").json() == {"unnamed": empty, "named": {}}
+    # Agents in no workspace show in the unnamed one.
+    assert client.get("/api/workspaces").json() == {
+        "unnamed": {**empty, "tabs": sorted([a, b, c]), "active": min(a, b, c)},
+        "named": {},
+    }
     left = {"tabs": [a, b], "visible": 2, "widths": {a: 0.3}, "active": b}
     assert client.put("/api/workspaces/Links", json=left).status_code == 204
     right = {"tabs": [], "visible": 1, "widths": {}, "active": None}
@@ -1079,6 +1084,61 @@ def test_workspaces_are_kept_and_deleted(
         "unnamed": {**loose, "tabs": [c, a, b]},
         "named": {"Rechts": right},
     }
+
+
+def test_an_agent_started_for_a_workspace_joins_it_on_the_server(
+    client: TestClient, home: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+    (a,) = start_agents(client, home, 1)
+    right = {"tabs": [], "visible": 1, "widths": {}, "active": None}
+    assert client.put("/api/workspaces/Rechts", json=right).status_code == 204
+    folder = home / "projects" / "joined"
+    joined = start_shell(client, folder, workspace="Rechts")
+    shown = client.get("/api/workspaces").json()
+    assert shown["named"]["Rechts"]["tabs"] == [joined]
+    assert shown["unnamed"]["tabs"] == [a]
+
+
+def test_starting_for_an_unknown_workspace_starts_nothing(
+    client: TestClient, home: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+    folder = home / "projects" / "nowhere"
+    folder.mkdir()
+    body = {
+        "profile": "shell",
+        "path": str(folder),
+        "resume": False,
+        "effort": None,
+        "ultracode": False,
+        "conversation": None,
+        "workspace": "Gibt-es-nicht",
+    }
+    assert client.post("/api/sessions", json=body).status_code == 404
+    assert client.get("/api/sessions").json() == []
+
+
+def test_an_agent_is_moved_between_workspaces(
+    client: TestClient, home: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+    a, b = start_agents(client, home, 2)
+    left = {"tabs": [a, b], "visible": 2, "widths": {}, "active": a}
+    assert client.put("/api/workspaces/Links", json=left).status_code == 204
+    assert client.put(f"/api/sessions/{b}/workspace", json={"workspace": ""}).status_code == 204
+    shown = client.get("/api/workspaces").json()
+    assert shown["named"]["Links"]["tabs"] == [a]
+    assert shown["unnamed"]["tabs"] == [b]
+    moved = client.put(f"/api/sessions/{b}/workspace", json={"workspace": "Links"})
+    assert moved.status_code == 204
+    shown = client.get("/api/workspaces").json()
+    assert shown["named"]["Links"]["tabs"] == [a, b]
+    assert shown["unnamed"]["tabs"] == []
+    unknown = client.put(f"/api/sessions/{b}/workspace", json={"workspace": "Gibt-es-nicht"})
+    assert unknown.status_code == 404
+    gone = client.put("/api/sessions/gone-123456/workspace", json={"workspace": ""})
+    assert gone.status_code == 404
 
 
 def test_deleting_a_workspace_moves_its_agents_to_the_unnamed_one(

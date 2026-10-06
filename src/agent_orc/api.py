@@ -87,6 +87,8 @@ from agent_orc.sessions import (
 )
 from agent_orc.state import (
     UNNAMED_WORKSPACE,
+    add_unassigned_agents,
+    assign_agent,
     empty_workspace,
     keep_living_agents,
     place_workspace,
@@ -144,6 +146,10 @@ class UnknownModelError(ValueError):
     """Not one of the models the profile offers."""
 
 
+class UnknownWorkspaceError(LookupError):
+    """No workspace of this name."""
+
+
 class FolderBusyError(RuntimeError):
     """An agent session runs in this folder or below it."""
 
@@ -161,6 +167,7 @@ ERROR_STATUS: dict[type[Exception], int] = {
     FolderBusyError: status.HTTP_409_CONFLICT,
     ProfileCommandError: status.HTTP_503_SERVICE_UNAVAILABLE,
     UnknownModelError: status.HTTP_422_UNPROCESSABLE_CONTENT,
+    UnknownWorkspaceError: status.HTTP_404_NOT_FOUND,
     SessionAlreadyRunningError: status.HTTP_409_CONFLICT,
     files.InvalidNameError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     InvalidEffortError: status.HTTP_422_UNPROCESSABLE_CONTENT,
@@ -227,6 +234,13 @@ class StartSessionRequest(BaseModel):
     conversation: str | None
     # Start in a new git worktree on this new branch instead of the folder itself.
     worktree: str | None = None
+    # The workspace the agent joins ("" the unnamed one); None: it keeps the one it is in.
+    workspace: str | None = None
+
+
+class AssignWorkspaceRequest(BaseModel):
+    # "" is the unnamed workspace.
+    workspace: str
 
 
 class PushKeys(BaseModel):
@@ -698,12 +712,15 @@ def create_app(
         """All workspaces, kept on the server so every device and browser tab shows the same."""
         stored = read_workspaces()
         living = {session.id for session in sessions.list()}
-        unnamed = stored.get(UNNAMED_WORKSPACE, empty_workspace())
+        shown = {
+            name: keep_living_agents(workspace, living) for name, workspace in stored.items()
+        }
+        unnamed = shown.get(UNNAMED_WORKSPACE, empty_workspace())
         return WorkspaceSet(
-            unnamed=Workspace(**keep_living_agents(unnamed, living)),
+            unnamed=Workspace(**add_unassigned_agents(shown, living, unnamed)),
             named={
-                name: Workspace(**keep_living_agents(workspace, living))
-                for name, workspace in stored.items()
+                name: Workspace(**workspace)
+                for name, workspace in shown.items()
                 if name != UNNAMED_WORKSPACE
             },
         )
@@ -725,6 +742,28 @@ def create_app(
         place_workspace(stored, UNNAMED_WORKSPACE, body.model_dump())
         write_workspaces(stored)
         workspace_changes.notify()
+
+    def check_workspace(workspace: str) -> None:
+        if workspace != UNNAMED_WORKSPACE and workspace not in read_workspaces():
+            raise UnknownWorkspaceError(workspace)
+
+    def assign_workspace(session_id: str, workspace: str) -> None:
+        stored = read_workspaces()
+        assign_agent(stored, workspace, session_id)
+        write_workspaces(stored)
+        workspace_changes.notify()
+
+    @app.put(
+        "/api/sessions/{session_id}/workspace",
+        dependencies=authenticated,
+        status_code=status.HTTP_204_NO_CONTENT,
+    )
+    def move_session(session_id: str, body: AssignWorkspaceRequest) -> None:
+        """Move an agent to a workspace; the server keeps the assignment, every device shows it."""
+        if find_session(session_id) is None:
+            raise SessionNotFoundError(session_id)
+        check_workspace(body.workspace)
+        assign_workspace(session_id, body.workspace)
 
     @app.delete(
         "/api/workspaces/{name}", dependencies=authenticated, status_code=status.HTTP_204_NO_CONTENT
@@ -859,6 +898,8 @@ def create_app(
         path = scope.resolve(body.path)
         if not path.is_dir():
             raise NotADirectoryError(str(path))
+        if body.workspace is not None:
+            check_workspace(body.workspace)
         if body.worktree is not None:
             # A second working copy next to the project; checked against the scope before
             # it is created.
@@ -883,7 +924,7 @@ def create_app(
             effort = folder_reasoning(body.profile, path).effort
         store_effort(body.profile, path, Reasoning(effort, body.ultracode), body.model)
         settle_permission_mode(body.profile, path)
-        return sessions.start(
+        started = sessions.start(
             body.profile,
             path,
             body.resume,
@@ -891,6 +932,9 @@ def create_app(
             body.model,
             start_env(body.profile, path, body.model),
         )
+        if body.workspace is not None:
+            assign_workspace(started.id, body.workspace)
+        return started
 
     def conversations_of(profile_name: str, folder: Path) -> list[dict[str, Any]]:
         profile = config.agents.get(profile_name)

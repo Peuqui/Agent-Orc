@@ -79,6 +79,25 @@ def keep_living_agents(workspace: dict[str, Any], living: set[str]) -> dict[str,
     }
 
 
+def add_unassigned_agents(
+    workspaces: dict[str, Any], living: set[str], unnamed: dict[str, Any]
+) -> dict[str, Any]:
+    """The unnamed workspace plus every living agent that is in no workspace at all, so no
+    agent is ever invisible."""
+    assigned = {agent for workspace in workspaces.values() for agent in workspace["tabs"]}
+    tabs = unnamed["tabs"] + sorted(living - assigned)
+    return {**unnamed, "tabs": tabs, "active": unnamed["active"] or (tabs[0] if tabs else None)}
+
+
+def assign_agent(workspaces: dict[str, Any], key: str, agent: str) -> None:
+    """Put the agent at the end of the workspace `key`; it leaves the one it was in."""
+    workspace = workspaces.get(key, empty_workspace())
+    if agent not in workspace["tabs"]:
+        workspace["tabs"].append(agent)
+    workspace["active"] = workspace["active"] or agent
+    place_workspace(workspaces, key, workspace)
+
+
 def place_workspace(workspaces: dict[str, Any], key: str, workspace: dict[str, Any]) -> None:
     """Store a workspace; its agents leave every other one, as an agent lives in one workspace."""
     workspaces[key] = workspace
