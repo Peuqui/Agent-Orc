@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { api, type AnswerText, type Interjection, type SpokenRequest, type Turn } from '../api'
 import { isUnread, shownTexts, spokenAs, uploadMentions } from '../answers'
 import { summaryOf } from '../speechText'
 import { markSeen, seenUntil } from '../composables/useAnswerSeen'
 import { useAnswersAll } from '../composables/useSettings'
+import { useSeenOnScreen } from '../composables/useSeenOnScreen'
 import { sessionName, useSessions } from '../composables/useSessions'
 import { type Speakable, useSpeech } from '../composables/useSpeech'
 import { useToast } from '../composables/useToast'
@@ -32,15 +33,22 @@ const spoken = ref<SpokenRequest[]>([])
 const loaded = ref(false)
 const box = ref<HTMLElement>()
 let timer: number | undefined
-let seenTimer: number | undefined
-// What was looked at before this view opened: the marks stay until it is closed.
+// What was looked at before this view opened; what has been looked at or read aloud since is
+// in `seenIds`. A column of the workspace stays open for days, so the marks go by themselves.
 const seenBefore = ref(seenUntil(props.sessionId))
-// What was read aloud since: no longer new, though it is newer than what was seen before.
-const readAloud = ref(new Set<string>())
+const seenIds = ref(new Set<string>())
+
+function markSeenHere(id: string): void {
+  seenIds.value.add(id)
+  const text = everyText.value.find((candidate) => candidate.id === id)
+  if (text) markSeen(props.sessionId, text.time)
+}
 
 function markReadAloud(item: Speakable): void {
-  readAloud.value.add(item.id)
+  markSeenHere(item.id)
 }
+
+const { observe } = useSeenOnScreen(markSeenHere, SEEN_AFTER_MS)
 
 // Another document of this device (a column, another tab, the workspace's speaker) has seen or
 // read answers of this agent; the storage event reaches only the other documents.
@@ -69,8 +77,13 @@ const shown = computed<Shown[]>(() =>
   }),
 )
 const everyText = computed(() => shown.value.flatMap((entry) => entry.texts))
-const newest = computed(() => everyText.value.at(-1)?.time ?? '')
-const unread = computed(() => everyText.value.filter((text) => isUnread(text, seenBefore.value, readAloud.value)))
+const unread = computed(() => everyText.value.filter((text) => isUnread(text, seenBefore.value, seenIds.value)))
+
+// New texts are looked at once they are on screen: observed after each change of what is shown.
+watch(shown, async () => {
+  await nextTick()
+  if (box.value) observe(box.value)
+})
 
 const agentName = computed(() => {
   const session = sessions.value.find((candidate) => candidate.id === props.sessionId)
@@ -107,15 +120,6 @@ async function load(): Promise<void> {
     await nextTick()
     box.value?.scrollTo({ top: box.value.scrollHeight })
   }
-  scheduleSeen()
-}
-
-// Looked at once it has been on screen for a moment.
-function scheduleSeen(): void {
-  window.clearTimeout(seenTimer)
-  seenTimer = window.setTimeout(() => {
-    if (document.visibilityState === 'visible' && newest.value) markSeen(props.sessionId, newest.value)
-  }, SEEN_AFTER_MS)
 }
 
 onMounted(() => {
@@ -128,7 +132,6 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener('storage', followSeenElsewhere)
   window.clearInterval(timer)
-  window.clearTimeout(seenTimer)
 })
 
 /**
@@ -229,7 +232,8 @@ function jog(lines: number): void {
           <article
             v-else
             class="card flex flex-col gap-2 p-3"
-            :class="isUnread(item, seenBefore, readAloud) ? 'border-l-4 border-l-red-500' : ''"
+            :data-seen-id="item.id"
+            :class="isUnread(item, seenBefore, seenIds) ? 'border-l-4 border-l-red-500' : ''"
           >
             <div class="markdown note select-text" v-html="renderMarkdown(answersAll ? item.text : summaryOf(item.text), null)" />
             <div class="flex items-center gap-2 text-xs text-slate-500">
