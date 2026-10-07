@@ -30,7 +30,13 @@ from agent_orc.config import (
     config_dir,
     load_config,
 )
-from agent_orc.context import status_line, store_activity, store_status
+from agent_orc.context import (
+    begin_compaction,
+    end_compaction,
+    status_line,
+    store_activity,
+    store_status,
+)
 from agent_orc.push import agent_message, send_to_all
 from agent_orc.schedule import mark_limited
 from agent_orc.sessions import SESSION_ENV
@@ -75,6 +81,17 @@ def agent_busy() -> None:
     session_id = os.environ[SESSION_ENV]
     store_activity(session_id, busy=True)
     close_session_requests(session_id)
+
+
+def agent_compacting() -> None:
+    """Hook command (Claude: PreCompact): the agent starts shrinking its context."""
+    begin_compaction(os.environ[SESSION_ENV])
+
+
+def agent_compacted() -> None:
+    """Hook command (Claude: PostCompact): the agent has shrunk its context; nothing was
+    answered, so the user's devices hear nothing."""
+    end_compaction(os.environ[SESSION_ENV])
 
 
 def agent_idle() -> None:
@@ -160,6 +177,8 @@ COMMANDS = {
     "statusline": (statusline, "status line command for agent sessions (JSON on stdin)"),
     "agent-busy": (agent_busy, "hook command: the agent started working"),
     "agent-idle": (agent_idle, "hook command: the agent finished its answer"),
+    "agent-compacting": (agent_compacting, "hook command: the agent starts shrinking its context"),
+    "agent-compacted": (agent_compacted, "hook command: the agent has shrunk its context"),
     "agent-limited": (agent_limited, "hook command: the usage limit stopped the agent"),
     "agent-waiting": (agent_waiting, "hook command: the agent waits for the user"),
     "agent-tool-done": (agent_tool_done, "hook command: a tool call ran, failed or was denied"),

@@ -5,10 +5,14 @@ from typing import Any
 import pytest
 
 from agent_orc.context import (
+    begin_compaction,
     claude_rate_limits,
+    end_compaction,
+    session_busy,
     session_status,
     status_file,
     status_line,
+    store_activity,
     store_status,
 )
 from agent_orc.sessions import AgentSession
@@ -93,3 +97,39 @@ def test_rate_limits_come_from_the_newest_report() -> None:
     # Reported later, but without limits (older Claude versions omit them): ignored.
     touch(store_status("c-3", claude_status(1, None)), SESSION_START + 2)
     assert claude_rate_limits() == newer
+
+
+def test_compaction_marks_a_resting_agent_as_working_until_it_is_done(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
+    session = AgentSession("c-1", "claude", tmp_path, True, None, 0.0, False, None)
+    store_activity("c-1", busy=False)
+    assert not session_busy(session)
+    begin_compaction("c-1")
+    assert session_busy(session)
+    end_compaction("c-1")
+    assert not session_busy(session)
+
+
+def test_compaction_in_the_middle_of_an_answer_leaves_the_agent_working(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
+    session = AgentSession("c-2", "claude", tmp_path, True, None, 0.0, False, None)
+    store_activity("c-2", busy=True)
+    begin_compaction("c-2")
+    end_compaction("c-2")
+    # An automatic compaction does not end the answer; only Stop does.
+    assert session_busy(session)
+
+
+def test_compaction_of_an_agent_that_never_reported_counts_as_resting_before(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
+    session = AgentSession("c-3", "claude", tmp_path, True, None, 0.0, False, None)
+    begin_compaction("c-3")
+    assert session_busy(session)
+    end_compaction("c-3")
+    assert not session_busy(session)

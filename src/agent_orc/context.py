@@ -26,6 +26,8 @@ STATUS_SUFFIX = ".json"
 ACTIVITY_SUFFIX = ".activity"
 BUSY = "busy"
 IDLE = "idle"
+# An agent that rested shrinks its context: it works, but no Stop follows (see begin_compaction).
+COMPACTING = "compacting"
 # The input side of the last request: what the model had to read, i.e. the occupied context.
 CONTEXT_FIELDS = ("input_tokens", "cache_creation_input_tokens", "cache_read_input_tokens")
 
@@ -42,16 +44,41 @@ def activity_file(session_id: str) -> Path:
     return status_dir() / f"{session_id}{ACTIVITY_SUFFIX}"
 
 
+def store_activity_state(session_id: str, state: str) -> Path:
+    return write_atomically(activity_file(session_id), state)
+
+
 def store_activity(session_id: str, busy: bool) -> Path:
-    return write_atomically(activity_file(session_id), BUSY if busy else IDLE)
+    return store_activity_state(session_id, BUSY if busy else IDLE)
 
 
 def session_busy(session: AgentSession) -> bool:
-    """True while the agent works on a request (also while it waits for a permission)."""
+    """True while the agent works on a request (also while it waits for a permission, or
+    shrinks its context)."""
     path = activity_file(session.id)
     if not path.is_file() or path.stat().st_mtime < session.created:
         return False
-    return path.read_text(encoding="utf-8") == BUSY
+    return path.read_text(encoding="utf-8") in (BUSY, COMPACTING)
+
+
+def _recorded_activity(session_id: str) -> str | None:
+    path = activity_file(session_id)
+    return path.read_text(encoding="utf-8") if path.is_file() else None
+
+
+def begin_compaction(session_id: str) -> None:
+    """The agent starts shrinking its context (Claude: PreCompact). One that rests is working
+    from now on; compacting is no request, so no hook marks it busy or ends it. One that works
+    already stays as it is: its answer goes on after an automatic compaction."""
+    if _recorded_activity(session_id) not in (BUSY, COMPACTING):
+        store_activity_state(session_id, COMPACTING)
+
+
+def end_compaction(session_id: str) -> None:
+    """The agent has shrunk its context (Claude: PostCompact): it rests again, if it was resting
+    before."""
+    if _recorded_activity(session_id) == COMPACTING:
+        store_activity(session_id, busy=False)
 
 
 def store_status(session_id: str, status: dict[str, Any]) -> Path:
