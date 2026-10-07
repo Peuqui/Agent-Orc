@@ -10,7 +10,7 @@ import BaseDialog from './BaseDialog.vue'
 
 // Plans a prompt for later, e.g. "run the tests and report" at seven in the morning; it is
 // typed in once due and the agent has finished what it is doing then.
-const props = defineProps<{ session: AgentSession; buttonClass: string }>()
+const props = defineProps<{ session: AgentSession; buttonClass: string; withLabel?: boolean }>()
 const { locale, t } = useI18n()
 const toast = useToast()
 const { refresh } = useSessions()
@@ -49,7 +49,7 @@ async function plan(): Promise<void> {
 
 <template>
   <button :class="buttonClass" :title="$t('schedule.title')" :aria-label="$t('schedule.title')" @click="open">
-    <AppIcon name="clock" />
+    <AppIcon name="clock" /><span v-if="withLabel">{{ $t('schedule.title') }}</span>
   </button>
   <BaseDialog v-if="planning" :title="$t('schedule.title')" @close="planning = false">
     <form class="flex flex-col gap-3" @submit.prevent="plan">

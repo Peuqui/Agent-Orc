@@ -118,6 +118,7 @@ def config(home: Path, socket_name: str) -> Config:
             "start": ["sh", "-c", SWAPPER_SCRIPT.replace("{start}", "started {model}")],
             "resume": ["sh", "-c", 'echo "resumed {model}"; exec cat'],
             "clear_command": "/clear",
+            "compact_command": "/compact",
             "model_live": {
                 "command": "/model {model}",
                 "confirm": "Switch model?",
@@ -1625,30 +1626,34 @@ def test_model_switches_in_place_where_the_agent_can(
     assert pane_process(socket_name, session_id) == process
 
 
-def test_context_is_cleared_in_place_for_an_idle_agent(
+def test_context_is_cleared_or_shrunk_in_place_for_an_idle_agent(
     client: TestClient, home: Path, socket_name: str
 ) -> None:
     session_id = start_with_model(client, home, "swapper", "thinker")
     assert wait_for_text(client, session_id, "started thinker")
     process = pane_process(socket_name, session_id)
-    url = f"/api/sessions/{session_id}/clear"
+    clear = f"/api/sessions/{session_id}/context/clear"
     store_activity(session_id, busy=True)
-    assert client.post(url).status_code == 409
+    assert client.post(clear).status_code == 409
     store_activity(session_id, busy=False)
-    assert client.post(url).status_code == 204
+    assert client.post(clear).status_code == 204
+    assert client.post(f"/api/sessions/{session_id}/context/compact").status_code == 204
     # Typed into the running agent (the terminal echoes it), which keeps running.
     assert wait_for_text(client, session_id, "/clear")
+    assert wait_for_text(client, session_id, "/compact")
     assert pane_process(socket_name, session_id) == process
+    assert client.post(f"/api/sessions/{session_id}/context/other").status_code == 422
     agents = {agent["name"]: agent for agent in client.get("/api/agents").json()}
-    assert agents["swapper"]["can_clear"] is True
-    assert agents["chooser"]["can_clear"] is False
+    assert agents["swapper"]["context_actions"] == ["clear", "compact"]
+    assert agents["chooser"]["context_actions"] == []
 
 
-def test_context_of_an_agent_without_clear_command_is_not_cleared(
+def test_context_of_an_agent_without_the_command_is_left_alone(
     client: TestClient, home: Path
 ) -> None:
     session_id = start_with_model(client, home, "chooser", "thinker", effort="high")
-    assert client.post(f"/api/sessions/{session_id}/clear").status_code == 422
+    assert client.post(f"/api/sessions/{session_id}/context/clear").status_code == 422
+    assert client.post(f"/api/sessions/{session_id}/context/compact").status_code == 422
 
 
 def test_pending_model_is_typed_in_when_the_agent_is_done(

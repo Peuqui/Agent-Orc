@@ -9,8 +9,9 @@ import { useToast } from './useToast'
 export interface Speakable {
   id: string
   text: string
-  /** Whose answer it is (the agent's name): spoken first, if the setting asks for it. */
-  label?: string
+  /** Whose answer it is (the agent's name): spoken first, if the setting asks for it; the Echo
+   * names it as the speaker. */
+  label: string
 }
 
 // One reading at a time on the device, whichever view started it.
@@ -30,6 +31,7 @@ export function useSpeech() {
   /** Reads the answers one after the other; what is read now ends. */
   async function play(items: Speakable[]): Promise<void> {
     stop()
+    if (items.length === 0) return
     const mine = ++reading
     try {
       await loadServerEngines()
@@ -37,7 +39,7 @@ export function useSpeech() {
       const limit = Math.min(speechMaxChars.value, speaker.maxChars)
       const options = { voice: voice.value.value, rate: speechRate.value, lang: locale.value }
       const answers = items.map((item) => {
-        const name = speechAnnounceName.value && item.label ? `${item.label}.\n` : ''
+        const name = speechAnnounceName.value ? `${item.label}.\n` : ''
         // The name counts towards what the engine takes.
         const answer = spokenText(item.text, t('answers.skipped'), limit - name.length)
         return { item, text: name + answer }
@@ -46,7 +48,7 @@ export function useSpeech() {
         // All answers as one announcement: nothing is known of when each one is spoken.
         playing.value = items[0]?.id ?? null
         const texts = answers.flatMap((answer) => speaker.split(answer.text))
-        await speaker.speakAll(texts, options, items[0]?.label ?? '')
+        await speaker.speakAll(texts, options, items[0].label)
       } else {
         for (const { item, text } of answers) {
           playing.value = item.id

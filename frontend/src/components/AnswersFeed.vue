@@ -61,7 +61,7 @@ const unread = computed(() => everyText.value.filter((text) => text.time > seenB
 
 const agentName = computed(() => {
   const session = sessions.value.find((candidate) => candidate.id === props.sessionId)
-  return session ? sessionName(session) : undefined
+  return session ? sessionName(session) : props.sessionId
 })
 
 function speakable(texts: AnswerText[]): Speakable[] {

@@ -11,7 +11,7 @@ from contextlib import asynccontextmanager
 from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 from urllib.parse import urlsplit
 
 from fastapi import (
@@ -51,6 +51,7 @@ from agent_orc.changes import (
 from agent_orc.config import (
     EFFORT_PLACEHOLDER,
     MODEL_PLACEHOLDER,
+    AgentProfile,
     Config,
     LiveEffortConfig,
     TerminalKey,
@@ -197,8 +198,8 @@ class AgentBusyError(RuntimeError):
     """The agent is working on an answer; typing into it now would mix with its work."""
 
 
-class ClearNotSupportedError(ValueError):
-    """The agent's profile has no command to empty its context."""
+class ContextCommandNotConfiguredError(ValueError):
+    """The agent's profile has no such command for its context (clear, compact)."""
 
 
 class UnknownWorkspaceError(LookupError):
@@ -233,7 +234,7 @@ ERROR_STATUS: dict[type[Exception], int] = {
     files.FileConflictError: status.HTTP_409_CONFLICT,
     FolderBusyError: status.HTTP_409_CONFLICT,
     AgentBusyError: status.HTTP_409_CONFLICT,
-    ClearNotSupportedError: status.HTTP_422_UNPROCESSABLE_CONTENT,
+    ContextCommandNotConfiguredError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     ProfileCommandError: status.HTTP_503_SERVICE_UNAVAILABLE,
     UnknownModelError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     UnknownWorkspaceError: status.HTTP_404_NOT_FOUND,
@@ -421,6 +422,14 @@ class BroadcastRequest(BaseModel):
     text: str
     # False: the text only lands in each agent's input, the user sends it there.
     submit: bool = True
+
+
+ContextAction = Literal["clear", "compact"]
+
+
+def context_commands(profile: AgentProfile) -> dict[ContextAction, str | None]:
+    """What the profile types into an idle agent for each action on its context."""
+    return {"clear": profile.clear_command, "compact": profile.compact_command}
 
 
 class ModelRequest(BaseModel):
@@ -793,7 +802,9 @@ def create_app(
                 # Switches its reasoning in place, without a restart.
                 "effort_live": bool(p.effort and p.effort.live),
                 "model_live": p.model_live is not None,
-                "can_clear": p.clear_command is not None,
+                "context_actions": [
+                    action for action, command in context_commands(p).items() if command is not None
+                ],
                 "permission_modes": p.permission.modes if p.permission else [],
                 "terminal": p.terminal,
                 # Offers a choice of models at start (GET /api/agents/{name}/models).
@@ -1239,19 +1250,20 @@ def create_app(
         pending_model.pop(session_id, None)
 
     @app.post(
-        "/api/sessions/{session_id}/clear",
+        "/api/sessions/{session_id}/context/{action}",
         dependencies=authenticated,
         status_code=status.HTTP_204_NO_CONTENT,
     )
-    def clear_context(session_id: str) -> None:
-        """Empty the agent's context in place (its process and background tasks keep running).
-        Only an idle agent: clearing in the middle of an answer would throw its work away."""
+    def change_context(session_id: str, action: ContextAction) -> None:
+        """Empty or shrink the agent's context in place (its process and background tasks keep
+        running). Only an idle agent: doing it in the middle of an answer would throw its work
+        away."""
         session = find_session(session_id)
         if session is None:
             raise SessionNotFoundError(session_id)
-        command = config.agents[session.profile].clear_command
+        command = context_commands(config.agents[session.profile])[action]
         if command is None:
-            raise ClearNotSupportedError(session.profile)
+            raise ContextCommandNotConfiguredError(action)
         if not session.running or session_busy(session):
             raise AgentBusyError(session_id)
         sessions.type_line(session_id, command)

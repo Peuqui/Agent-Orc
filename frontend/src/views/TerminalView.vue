@@ -13,7 +13,8 @@ import { api, terminalUrl, type Modifier, type TerminalSettings } from '../api'
 import AppIcon from '../components/AppIcon.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
 import ContextMeter from '../components/ContextMeter.vue'
-import RestartButton from '../components/RestartButton.vue'
+import AgentActions from '../components/AgentActions.vue'
+import DropdownMenu from '../components/DropdownMenu.vue'
 import TerminalButton from '../components/TerminalButton.vue'
 import JogScroller from '../components/JogScroller.vue'
 import KeyBar from '../components/KeyBar.vue'
@@ -460,7 +461,6 @@ onBeforeUnmount(() => {
               : 'flex items-center gap-1'
           "
         >
-          <RestartButton v-if="session?.running" :session="session" :button-class="actionClass" :with-label="phone" />
           <TerminalButton
             v-if="session && !session.terminal"
             :path="session.path"
@@ -496,7 +496,14 @@ onBeforeUnmount(() => {
           >
             <AppIcon name="copy" /><span v-if="phone">{{ $t('terminal.plainText') }}</span>
           </button>
+          <!-- On phones the agent's own actions follow in this menu; on computers they have a
+               menu of their own. An ended agent only offers to stop (remove) it. -->
+          <template v-if="phone && session?.running">
+            <hr class="my-1 border-slate-700" />
+            <AgentActions :session="session" @stop="((actionsOpen = false), (stopping = true))" />
+          </template>
           <button
+            v-else-if="!session?.running"
             :class="actionClass"
             :aria-label="$t('sessions.stop')"
             :title="$t('sessions.stop')"
@@ -505,6 +512,14 @@ onBeforeUnmount(() => {
             <AppIcon name="stop" /><span v-if="phone">{{ $t('sessions.stop') }}</span>
           </button>
         </div>
+        <DropdownMenu v-if="!phone && session?.running" right panel-class="flex w-64 flex-col p-1">
+          <template #trigger="{ toggle }">
+            <button class="btn-icon" :aria-label="$t('terminal.actions')" :title="$t('terminal.actions')" @click="toggle">
+              <AppIcon name="more" />
+            </button>
+          </template>
+          <AgentActions :session="session" @stop="stopping = true" />
+        </DropdownMenu>
       </div>
       <button v-if="embedded && phone" class="btn-icon" :aria-label="$t('workspace.close')" :title="$t('workspace.close')" @click="closeColumn">
         ×

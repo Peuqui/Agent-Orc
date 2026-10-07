@@ -6,6 +6,8 @@ export interface ModelChoice {
   note: string | null
 }
 
+export type ContextAction = 'clear' | 'compact'
+
 export interface AgentProfile {
   name: string
   label: string
@@ -17,8 +19,8 @@ export interface AgentProfile {
   effort_live: boolean
   /** Switches its model in place, without a restart (Claude: /model). */
   model_live: boolean
-  /** Offers to empty the context of a running agent in place (Claude: /clear). */
-  can_clear: boolean
+  /** What a running agent can do with its context in place (Claude: /clear, /compact). */
+  context_actions: ContextAction[]
   /** Permission modes a session may start in; empty if the agent has none. */
   permission_modes: string[]
   /** A plain terminal, no agent: it may run next to a folder's agent. */
@@ -476,9 +478,9 @@ export const api = {
     request<void>('PUT', `sessions/${encodeURIComponent(sessionId)}/permission-mode`, { body: { mode } }),
   cancelEffortChange: (sessionId: string) =>
     request<void>('DELETE', `sessions/${encodeURIComponent(sessionId)}/effort`),
-  /** Empties the context of an idle agent, without a restart. */
-  clearContext: (sessionId: string) =>
-    request<void>('POST', `sessions/${encodeURIComponent(sessionId)}/clear`),
+  /** Empties or shrinks the context of an idle agent, without a restart. */
+  changeContext: (sessionId: string, action: ContextAction) =>
+    request<void>('POST', `sessions/${encodeURIComponent(sessionId)}/context/${action}`),
   cancelModelChange: (sessionId: string) =>
     request<void>('DELETE', `sessions/${encodeURIComponent(sessionId)}/model`),
   stopSession: (id: string) => request<void>('DELETE', `sessions/${encodeURIComponent(id)}`),

@@ -405,11 +405,18 @@
     "removedWithBranch": "Worktree removed; branch “{branch}” was merged and is deleted.",
     "removedKeptBranch": "Worktree removed; branch “{branch}” is not merged yet and is kept."
   },
-  "clear": {
-    "title": "Clear context",
-    "busy": "The agent is working; its context can be cleared after its answer.",
-    "confirm": "Clear the context of “{name}”? The agent forgets the conversation so far; it keeps running and its background tasks stay.",
-    "done": "Context of “{name}” cleared."
+  "context": {
+    "busy": "The agent is working; this works after its answer.",
+    "clear": {
+      "title": "Clear context",
+      "confirm": "Clear the context of “{name}”? The agent forgets the conversation so far; it keeps running and its background tasks stay.",
+      "done": "Context of “{name}” cleared."
+    },
+    "compact": {
+      "title": "Compact context",
+      "confirm": "Compact the context of “{name}” into a summary? The agent keeps running and its background tasks stay.",
+      "done": "Context of “{name}” is being compacted."
+    }
   },
   "restart": {
     "changeModelLive": "Choose the model for “{name}”. The agent switches in place, after its answer if it is working; the conversation and background tasks stay, only the prompt cache starts over for the new model.",

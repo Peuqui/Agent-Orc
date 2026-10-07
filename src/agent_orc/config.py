@@ -258,6 +258,8 @@ class AgentProfile(StrictModel):
     model_live: LiveModelConfig | None = None
     # Typed into an idle agent to empty its context, without a restart (Claude: /clear).
     clear_command: str | None = None
+    # Typed into an idle agent to shrink its context to a summary (Claude: /compact).
+    compact_command: str | None = None
     # Environment of the agent; {effort} is the folder's level (left out when it has none).
     env: dict[str, str] = {}
     # Shown in the start dialog when this profile is chosen (e.g. what to stop first).
