@@ -151,6 +151,7 @@
     "FileNotFoundError": "Nicht gefunden.",
     "UnknownProfileError": "Unbekannter Agent.",
     "SessionNotFoundError": "Diese Sitzung gibt es nicht mehr.",
+    "ApprovalNotFoundError": "Diese Anfrage ist nicht mehr offen, vermutlich wurde sie schon beantwortet.",
     "TrashEntryNotFoundError": "Dieser Eintrag ist nicht mehr im Papierkorb.",
     "http401": "Falsches Passwort.",
     "http429": "Zu viele Fehlversuche. Bitte warte {minutes} Minuten.",
