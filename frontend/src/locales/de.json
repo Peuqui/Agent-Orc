@@ -235,24 +235,37 @@
     "close": "Schließen",
     "sections": [
       {
+        "title": "Kopfzeile und Seiten",
+        "items": [
+          "Die Seiten Agenten, Arbeitsfläche, Notizen, Dateien und Verbrauch stehen ab 1024 px Breite als Reiter in der Kopfzeile, darunter (Handy, Tablet hochkant) in der Leiste unten. Die Arbeitsfläche und die Agentenseite haben keine untere Leiste, damit das Terminal den Platz bekommt; dort öffnet das Kachel-Symbol oben links alle Seiten.",
+          "Rechts oben: Sprachwahl (DE/EN, gilt für dieses Gerät), diese Hilfe (Glühbirne), die Einstellungen (☰) und Abmelden.",
+          "Zahlen bei Tokens stehen in der Sprache der Oberfläche: Deutsch Tsd., Mio., Mrd., Bio. und Brd., Englisch k, M, B, T und Q."
+        ]
+      },
+      {
         "title": "Agenten (Übersicht)",
         "items": [
           "„Neuen Agenten starten“: Ordner wählen, der Agent startet und legt sofort mit seiner Start-Anfrage los (z. B. AI-Connect-Watcher). Fortsetzen startet ohne diese Anfrage. Im Feld „Arbeitsfläche“ wählst du, wohin der Agent kommt (Unbenannt oder eine benannte Fläche); nach dem Start bleibst du in der Übersicht.",
           "Auswahlfeld mit der Arbeitsfläche auf der Karte: weist den Agenten einer Fläche zu oder verschiebt ihn. Ein Agent liegt in genau einer Fläche; hat er keine, steht er in „Unbenannt“. Der Server hält die Zuordnung, jedes Gerät zeigt dasselbe.",
           "Karten sortieren: mit der Maus an einer freien Stelle ziehen, mit dem Finger erst kurz halten. Die Reihenfolge gilt auf allen Geräten.",
           "Kontext-Ring: grün unter 50 %, gelb darüber, rot ab 70 % – dann bald /compact oder ein neues Gespräch.",
-          "Effort-Regler und Ultracode gelten pro Projektordner. Ein laufender Claude übernimmt die neue Stufe ohne Neustart, sobald er mit seiner aktuellen Antwort fertig ist; Hintergrundaufgaben laufen weiter.",
+          "Denkaufwand (Dropdown auf der Karte, kein Schieber, damit ein Wischen über die Karte ihn nicht verstellt) und Ultracode gelten pro Projektordner. Ein laufender Claude übernimmt die neue Stufe ohne Neustart, sobald er mit seiner aktuellen Antwort fertig ist; Hintergrundaufgaben laufen weiter. Auf dem Handy stehen Kontext, Stufe und Ultracode in einer Zeile.",
           "Kontingent oben: verbrauchte 5-Stunden- und Wochen-Quote von Claude, sobald eine Sitzung sie gemeldet hat.",
           "„Start“ auf der Karte: Freigabe-Modus, in dem der Agent startet – Fragen, Bearbeiten (Dateiänderungen ohne Nachfrage), Auto oder Planen. Voreinstellung ist Auto; gilt ab dem nächsten Start, im Agenten wechselt Shift+Tab.",
           "Fragt ein Agent um Erlaubnis, zeigt seine Karte den Befehl mit „Erlauben“ und „Ablehnen“. Im Terminal steht dieselbe Frage; wo zuerst geantwortet wird, das gilt.",
           "„Änderungen“ (Zweig-Symbol, auf der Karte und im Kopf jedes Terminals) zeigt, was der Agent im Projekt geändert hat: geänderte, neue und gelöschte Dateien seit dem letzten Commit, ein Tipp zeigt den Diff.",
           "Ab der eingestellten Kontextgröße (Voreinstellung 50 %) empfiehlt die Karte eine Übergabe an eine frische Sitzung, eine Benachrichtigung sagt es einmal; „Übergabe schreiben lassen“ bittet den Agenten um ein Übergabe-Dokument. Im Menü der Einstellungen lässt sich das automatisch anstoßen.",
           "„In eigenem Worktree starten“ (Startdialog): Der Agent arbeitet in einer zweiten Arbeitskopie auf einem neuen Branch neben dem Projekt; ist er beendet, entfernt „Worktree entfernen“ auf der Karte sie wieder – ohne ungesicherte Arbeit zu verlieren.",
-          "⟳ (Karte und Terminalleiste) startet den Agenten neu und setzt das Gespräch fort, etwa wenn er hängt oder geänderte Einstellungen lesen soll. Vorher kommt eine Rückfrage; eine laufende Antwort und Hintergrundaufgaben enden dabei. Hat ein Agent noch kein gespeichertes Modell (gestartet vor der Modellwahl), fragt Agent-Orc beim Neustart und beim Fortsetzen danach – ohne Modell startet kein Agent.",
-          "Uhr auf der Karte: einen Prompt für später planen, etwa „Tests laufen lassen und berichten“ um 7 Uhr. Er wird zur Zeit eingetippt, sobald der Agent fertig ist; geplante Prompts stehen auf der Karte und lassen sich mit × entfernen.",
+          "Neu starten (Menü ⋮ der Karte und der Agentenseite) startet den Agenten neu und setzt das Gespräch fort, etwa wenn er hängt oder geänderte Einstellungen lesen soll. Vorher kommt eine Rückfrage; eine laufende Antwort und Hintergrundaufgaben enden dabei. Hat ein Agent noch kein gespeichertes Modell (gestartet vor der Modellwahl), fragt Agent-Orc beim Neustart und beim Fortsetzen danach – ohne Modell startet kein Agent.",
+          "Prompt planen (Menü ⋮ der Karte und der Agentenseite): einen Prompt für später planen, etwa „Tests laufen lassen und berichten“ um 7 Uhr. Er wird zur Zeit eingetippt, sobald der Agent fertig ist; geplante Prompts stehen auf der Karte und lassen sich mit × entfernen.",
           "Läuft ein Claude-Agent ins Nutzungslimit, plant Agent-Orc das Weitermachen zur nächsten Rücksetzung des Kontingents (gelber Eintrag auf der Karte). Ist er dann noch gesperrt, kommt der nächste Termin.",
           "„An mehrere“ (neben den Arbeitsflächen, ab zwei laufenden Agenten): denselben Prompt an mehrere Agenten schicken, etwa „committe und pushe“. „Abschicken“ aus: der Text landet nur im Eingabefeld der Agenten, du sendest ihn dort selbst.",
-          "„>_“ (Karte und Terminalleiste) öffnet ein normales Terminal im Projektordner, auch neben dem laufenden Agenten; läuft schon eins, öffnet es dieses. Darin bitte keinen zweiten Agenten im selben Ordner starten."
+          "„>_“ (Karte und Terminalleiste) öffnet ein normales Terminal im Projektordner, auch neben dem laufenden Agenten; läuft schon eins, öffnet es dieses. Darin bitte keinen zweiten Agenten im selben Ordner starten.",
+          "Das Menü ⋮ auf der Karte (rechts unten) und auf der Agentenseite sammelt, was man seltener braucht oder was Folgen hat: Prompt planen, Modell wechseln, Kontext komprimieren, Kontext leeren, Neu starten und, abgesetzt und rot, Beenden. Häufiges bleibt sichtbar: „Terminal“ (öffnet die Agentenseite), Änderungen und „>_“.",
+          "Modell wechseln (Menü ⋮, nur bei Agenten mit Modellauswahl): Der Agent wechselt das Modell im laufenden Betrieb, wo seine Profil-Einstellung das erlaubt (Claude: /model); Gespräch, laufende Antwort und Hintergrundaufgaben bleiben, nur der Prompt-Cache beginnt für das neue Modell von vorn. Arbeitet er gerade, wird der Wechsel vorgemerkt (gelbe Zeile mit „Verwerfen“) und nach der Antwort eingetippt. Kann ein Agent das nicht, startet Agent-Orc ihn mit dem Modell neu und setzt das Gespräch fort.",
+          "Kontext komprimieren und Kontext leeren (Menü ⋮, wo das Profil sie kennt; Claude: /compact und /clear): wirken in den laufenden Agenten, ohne Neustart. Komprimieren fasst das Gespräch zusammen, Leeren vergisst es; beides nur zwischen zwei Antworten, bei laufender Antwort ist der Punkt gesperrt. Beides fragt vorher nach.",
+          "„Beenden“ (Menü ⋮) beendet den Agenten; das Gespräch bleibt gespeichert und lässt sich später mit „Fortsetzen“ auf der Karte wieder aufnehmen. Bei einem beendeten Agenten stehen „Fortsetzen“, „Worktree entfernen“ (falls er einen hatte) und Beenden (entfernt die Karte) direkt auf der Karte.",
+          "Der Name oben auf der Karte zeigt den Ordner, darunter Pfad, Agent-Art und Modell. „läuft“ wechselt zu „arbeitet …“, solange der Agent eine Antwort schreibt."
         ]
       },
       {
@@ -283,14 +296,24 @@
         ]
       },
       {
+        "title": "Dateien",
+        "items": [
+          "Die Dateiansicht zeigt den Projektordner-Bereich des Servers. Ein Ordner öffnet sich mit einem Tipp, eine Datei im Editor; „Eine Ebene höher“ führt zurück.",
+          "„Agent hier starten“ startet einen Agenten im gezeigten Ordner (derselbe Dialog wie bei „Neuen Agenten starten“ auf der Agentenseite, die dich zur Ordnerwahl hierher führt). Läuft dort schon einer, steht „Agent läuft“.",
+          "„Neuer Ordner“ legt einen Ordner im gezeigten Ordner an. Das Aktionen-Menü an jeder Zeile bietet: Agent hier starten, Umbenennen und In den Papierkorb.",
+          "Der Papierkorb (unten, am Rechner rechts neben der Liste) sammelt Gelöschtes: „Wiederherstellen“ holt es zurück, „Endgültig löschen“ und „Papierkorb leeren“ lassen sich nicht rückgängig machen. Eine Datei aus der Liste auf den Papierkorb ziehen legt sie hinein.",
+          "Außerhalb des Bereichs bleibt alles gesperrt. „Außerhalb freischalten“ öffnet nach Passwortabfrage für wenige Minuten das ganze Home-Verzeichnis; „Sperren“ beendet das früher."
+        ]
+      },
+      {
         "title": "Terminal",
         "items": [
           "Eingabefeld unten: Enter sendet, Shift+Enter macht eine neue Zeile.",
           "Mikrofon: Diktat über Whisper; GPU ist sofort fertig, CPU langsamer, aber immer verfügbar. Schlägt es fehl, schickt „Erneut“ dieselbe Aufnahme noch einmal.",
           "Büroklammer: Foto aufnehmen, Bild oder Screenshot aus der Galerie, Bildschirmfoto (am Rechner) oder Datei anhängen – sie landen im Projektordner, sie erscheinen als kleine Vorschau über dem Eingabefeld (× entfernt sie) und gehen mit der nächsten Nachricht an den Agenten. Ein Screenshot aus der Zwischenablage lässt sich auch einfach ins Eingabefeld einfügen (Strg+V).",
           "Griff rechts (Jog): nach oben oder unten ziehen scrollt, je weiter, desto schneller. Mausrad und Wischen scrollen auch.",
-          "Schriftgröße: eine für alle Terminals dieses Geräts – im Menü ☰ (auch im Kopf der Arbeitsfläche) oder am Handy im Menü ⋮ der Terminalleiste. ⋮ enthält am Handy auch Neu starten, Terminal, Projektordner, Änderungen und die Textansicht zum Markieren und Kopieren.",
-          "Die Tastenleiste schickt Esc, Tab, Pfeile, Ctrl usw. – Ctrl und Alt gelten für die nächste Taste.",
+          "Schriftgröße: eine für alle Terminals dieses Geräts – im Menü ☰ (auch im Kopf der Arbeitsfläche). Das Menü ⋮ der Terminalleiste hat die Ansichten (am Handy: Terminal in diesem Ordner, Projektordner, Änderungen, Als Text zum Markieren und Kopieren; am Rechner stehen sie als Symbole daneben) und, wo ein Agent läuft, dessen Steuerung: Prompt planen, Modell wechseln, Kontext leeren und komprimieren, Neu starten und, abgesetzt, Beenden.",
+          "Die Tastenleiste schickt Esc, Tab, Pfeile, Ctrl usw. – Ctrl und Alt gelten für die nächste Taste. Sie steht auch in der Antworten-Ansicht, wo ein Menü wie /model Pfeiltasten und Enter braucht.",
           "Vorlagen (in der Büroklammer): häufige Anweisungen mit einem Tipp ins Eingabefeld setzen; „Vorlagen verwalten“ legt sie an, für alle Geräte.",
           "Dateipfade in der Ausgabe (z. B. src/main.py:42) sind anklickbar, wenn es sie gibt: Dateien öffnen im Editor an der genannten Zeile, Ordner in der Dateiansicht. Das Ordner-Symbol oben öffnet den Projektordner.",
           "Editor: Markdown erscheint als Seite (Stift: bearbeiten), Bilder als Bild; andere Dateien, die keine Textdateien sind, lassen sich herunterladen. „Zurück“ führt dorthin, woher die Datei geöffnet wurde.",
@@ -302,14 +325,14 @@
         "title": "Antworten",
         "items": [
           "Statt des Terminals zeigt der Umschalter oben (Terminal- / Sprechblasen-Symbol, im Kopf jedes Terminals und jeder Spalte) nur das, was der Agent geantwortet hat – ohne Gedanken, Dateiänderungen und Diffs. Die Wahl gilt für alle Terminals dieses Geräts; das Eingabefeld bleibt unten.",
-          "Pro Anfrage steht deine Frage in einer grauen Zeile (antippen zeigt sie ganz) und darunter die letzte Antwort des Agenten, die Zusammenfassung. Der Schalter „Zusammenfassungen | Alles“ (hervorgehoben ist, was gilt, je Agent) wählt: zu jeder Eingabe von dir nur den Hörabsatz aus dem letzten Text des Agenten (ohne Hörabsatz den ganzen letzten Text), oder alle Texte samt Zwischenkommentaren und Details. Neue Antworten haben einen roten Streifen, bis sie angesehen wurden.",
+          "Pro Anfrage steht deine Frage in einer grauen Zeile (antippen zeigt sie ganz) und darunter die letzte Antwort des Agenten, die Zusammenfassung. Der Schalter „Zusammenfassungen | Alles“ (hervorgehoben ist, was gilt, je Agent) wählt: zu jeder Eingabe von dir nur den Hörabsatz aus dem letzten Text des Agenten (ohne Hörabsatz den ganzen letzten Text), oder alle Texte samt Zwischenkommentaren und Details. Neue Antworten haben einen roten Streifen. Er verschwindet von selbst, sobald die Antwort zwei Sekunden überwiegend sichtbar war (eine Antwort weiter oben bleibt rot, bis du zu ihr scrollst), sobald sie vorgelesen wurde oder in einem anderen Fenster dieses Geräts gesehen wurde; ein Knopf zum Markieren ist nicht nötig. „Neue vorlesen (n)“ zählt die Antworten mit rotem Streifen.",
           "Vorlesen: „Vorlesen“ liest eine Antwort, „Ab hier“ diese und alle folgenden, „Neue vorlesen“ die noch nicht gesehenen. Codeblöcke und Tabellen werden ausgelassen („hier folgt ein Codeblock“), Adressen und Formatierung nicht mitgesprochen. Pause und Stopp stehen oben. Stimme, Tempo, die Ansage des Agentennamens vor jeder Antwort und die Höchstlänge stehen im Menü ☰ (für das ganze Gerät); es sind die Stimmen des Geräts, mit einem Bluetooth-Headset kommt der Ton dort an. Bei gesperrtem Bildschirm bricht das Vorlesen am Handy oft ab. Hat die Antwort am Ende einen Absatz mit 🔊 (der „Antwort zum Hören“ aus deiner globalen CLAUDE.md), wird nur er gesprochen; sonst die Antwort bis zur im Zahnrad eingestellten Zeichenzahl. Der Lautsprecher in der Kopfzeile der Arbeitsfläche liest die neuen Antworten aller Spalten dieser Fläche nacheinander vor; ein zweiter Druck beendet. Mit dem Echo (Menü ☰, „Sprachausgabe“, sobald Agent-Orc ihn kennt) sagt AIfred den Hörabsatz im gewählten Raum an, mit Signalton davor und danach; die Ansage lässt sich von hier aus nicht anhalten."
         ]
       },
       {
         "title": "Verbrauch",
         "items": [
-          "Tokens aus allen Claude-Gesprächen auf diesem Rechner, pro Tag, Projekt und Modell, für 7, 14 oder 30 Tage – auch aus dem Terminal, VS Code und von Hilfsagenten."
+          "Tokens aus allen Claude-Gesprächen auf diesem Rechner, pro Tag, Projekt und Modell, für 7, 14 oder 30 Tage – auch aus dem Terminal, VS Code und von Hilfsagenten. Große Zahlen stehen in der Sprache der Oberfläche (Tsd., Mio., Mrd., Bio., Brd. beziehungsweise k, M, B, T, Q)."
         ]
       },
       {

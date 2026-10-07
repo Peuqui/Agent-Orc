@@ -235,24 +235,37 @@
     "close": "Close",
     "sections": [
       {
+        "title": "Header and pages",
+        "items": [
+          "The pages Agents, Workspace, Notes, Files and Consumption are tabs in the header from 1024 px width; below that (phone, tablet upright) they are in the bar at the bottom. The workspace and an agent's page have no bottom bar, so the terminal gets the room; there the tile icon at the top left opens all pages.",
+          "Top right: language (DE/EN, for this device), this help (light bulb), the settings (☰) and log out.",
+          "Token figures are written in the language of the interface: English k, M, B, T and Q; German Tsd., Mio., Mrd., Bio. and Brd."
+        ]
+      },
+      {
         "title": "Agents (overview)",
         "items": [
           "“Start new agent”: pick a folder; the agent starts and gets going at once with its start request (e.g. the AI-Connect watcher). Resuming starts without it. In the “Workspace” field you choose where the agent goes (Default or a named workspace); after the start you stay in the overview.",
           "The workspace field on the card assigns the agent to a workspace or moves it. An agent lives in exactly one workspace; without one it is in “Default”. The server keeps the assignment, every device shows the same.",
           "Sorting cards: drag at a free spot with the mouse; with a finger, hold briefly first. The order is the same on every device.",
           "Context ring: green below 50 %, amber above, red from 70 % – time for /compact or a new conversation soon.",
-          "Effort slider and ultracode apply per project folder. A running Claude takes the new level without a restart once its current answer is done; background tasks keep running.",
+          "Reasoning (a dropdown on the card, not a slider, so a swipe over the card cannot change it) and ultracode apply per project folder. A running Claude takes the new level without a restart as soon as it has finished its current answer; background tasks keep running. On a phone, context, level and ultracode share one row.",
           "Quota at the top: Claude's used five-hour and weekly limits, once a session has reported them.",
           "“Start” on the card: the permission mode the agent starts in – Ask, Edit (file edits without asking), Auto or Plan. Auto by default; applies from the next start, inside the agent Shift+Tab switches it.",
           "When an agent asks for permission, its card shows the command with “Allow” and “Deny”. The terminal asks the same; the first answer counts.",
           "“Changes” (branch icon, on the card and in the header of every terminal) shows what the agent changed in the project: changed, new and deleted files since the last commit; a tap shows the diff.",
           "From the configured context size on (50 % by default) the card advises a handover to a fresh session, a notification says so once; “Ask for a handover” asks the agent for a handover document. The settings menu can make this automatic.",
           "“Start in a worktree of its own” (start dialog): the agent works in a second working copy on a new branch next to the project; once it has ended, “Remove worktree” on the card removes it again – without losing unsaved work.",
-          "⟳ (card and terminal bar) restarts the agent and resumes its conversation, e.g. when it hangs or should read changed settings. It asks first; a running answer and background tasks end. An agent without a stored model (started before models could be chosen) is asked for one on restart and on resume – no agent starts without a model.",
-          "Clock on the card: schedule a prompt for later, e.g. “run the tests and report” at 7 am. It is typed in at that time once the agent is idle; scheduled prompts are listed on the card and removed with ×.",
+          "Restart (menu ⋮ of the card and of the agent's page) restarts the agent and resumes the conversation, e.g. when it hangs or should read changed settings. A confirmation comes first; a running answer and background tasks end. If an agent has no stored model yet (started before the choice of models), Agent-Orc asks on restart and on resume afterwards – no agent starts without a model.",
+          "Schedule a prompt (menu ⋮ of the card and of the agent's page): plan a prompt for later, e.g. \"run the tests and report\" at 7 o'clock. It is typed in at that time, once the agent has finished; scheduled prompts show on the card and can be removed with ×.",
           "When a Claude agent runs into its usage limit, Agent-Orc schedules the resume for the next reset of the quota (yellow entry on the card). Is it still limited then, the next reset follows.",
           "“To several” (next to the workspaces, from two running agents on): send the same prompt to several agents, e.g. “commit and push”. With “Submit” off the text only lands in the agents’ input and you send it there yourself.",
-          "“>_” (card and terminal bar) opens a plain terminal in the project folder, also next to the running agent; if one runs already, it opens that one. Please do not start a second agent in the same folder there."
+          "“>_” (card and terminal bar) opens a plain terminal in the project folder, also next to the running agent; if one runs already, it opens that one. Please do not start a second agent in the same folder there.",
+          "The ⋮ menu on the card (bottom right) and on the agent's page collects what is needed less often or has consequences: Schedule a prompt, Change model, Compact context, Clear context, Restart and, set apart and in red, Stop. What is used often stays visible: \"Terminal\" (opens the agent's page), Changes and \">_\".",
+          "Change model (menu ⋮, only for agents with a choice of models): the agent switches the model in place where its profile allows it (Claude: /model); the conversation, a running answer and background tasks stay, only the prompt cache starts over for the new model. If it is working, the change is scheduled (yellow line with \"Discard\") and typed in after the answer. An agent that cannot do this is restarted with the model and the conversation is resumed.",
+          "Compact context and Clear context (menu ⋮, where the profile has them; Claude: /compact and /clear): act in the running agent, without a restart. Compacting summarises the conversation, clearing forgets it; both only between two answers, the item is disabled while an answer runs. Both ask first.",
+          "\"Stop\" (menu ⋮) ends the agent; the conversation stays saved and can be taken up again later with \"Resume\" on the card. For an ended agent, \"Resume\", \"Remove worktree\" (if it had one) and Stop (removes the card) are right on the card.",
+          "The name at the top of the card shows the folder, below it path, kind of agent and model. \"running\" turns into \"working …\" while the agent writes an answer."
         ]
       },
       {
@@ -283,14 +296,24 @@
         ]
       },
       {
+        "title": "Files",
+        "items": [
+          "The file view shows the area of project folders on the server. A tap opens a folder, or a file in the editor; \"Up one level\" goes back.",
+          "\"Start agent here\" starts an agent in the folder shown (the same dialog as \"Start new agent\" on the Agents page, which leads you here to choose the folder). If one runs there already, it says \"Agent running\".",
+          "\"New folder\" creates a folder in the folder shown. The actions menu on each row offers: Start agent here, Rename and Move to trash.",
+          "The trash (at the bottom, on a computer to the right of the list) collects what was deleted: \"Restore\" brings it back; \"Delete permanently\" and \"Empty trash\" cannot be undone. Dragging a file from the list onto the trash puts it there.",
+          "Outside the area everything stays locked. \"Unlock outside\" opens the whole home directory for a few minutes after the password; \"Lock\" ends that earlier."
+        ]
+      },
+      {
         "title": "Terminal",
         "items": [
           "Input field at the bottom: Enter sends, Shift+Enter starts a new line.",
           "Microphone: dictation through Whisper; the GPU is done at once, the CPU is slower but always there. If it fails, “Retry” sends the same recording again.",
           "Paperclip: take a photo, pick a picture or screenshot from the gallery, capture the screen (desktop) or attach a file – it lands in the project folder and it shows as a small preview above the input field (× removes it) and goes to the agent with the next message. A screenshot from the clipboard can also simply be pasted into the input field (Ctrl+V).",
           "Grip on the right (jog): pull up or down to scroll, the further the faster. Mouse wheel and swiping scroll as well.",
-          "Font size: one for all terminals of this device – in the ☰ menu (also in the workspace header) or, on phones, in the ⋮ menu of the terminal bar. On phones ⋮ also holds restart, terminal, project folder, changes and the text view for selecting and copying.",
-          "The key bar sends Esc, Tab, arrows, Ctrl and so on – Ctrl and Alt apply to the next key.",
+          "Font size: one for all terminals of this device – in the ☰ menu (also in the head of the workspace). The ⋮ menu of the terminal bar has the views (on a phone: Terminal in this folder, Project folder, Changes, As text for selecting and copying; on a computer they are icons next to it) and, where an agent runs, its controls: Schedule a prompt, Change model, Clear and Compact context, Restart and, set apart, Stop.",
+          "The key bar sends Esc, Tab, arrows, Ctrl etc. – Ctrl and Alt apply to the next key. It is shown in the answers view too, where a menu such as /model needs arrow keys and Enter.",
           "Templates (in the paperclip menu): put frequent prompts into the input field with a tap; “Manage templates” creates them, for all devices.",
           "File paths in the output (e.g. src/main.py:42) are clickable when they exist: files open in the editor at that line, folders in the file view. The folder icon at the top opens the project folder.",
           "Editor: Markdown shows as a page (pencil: edit), pictures as pictures; other files that are not text can be downloaded. “Back” returns to where the file was opened from.",
@@ -302,14 +325,14 @@
         "title": "Answers",
         "items": [
           "Instead of the terminal, the switch at the top (terminal / speech bubble icon, in the head of every terminal and column) shows only what the agent answered – without thoughts, file edits and diffs. The choice holds for all terminals of this device; the input field stays below.",
-          "For each request your question stands in a grey line (tap to see it whole) and below it the agent’s last answer, the summary. The switch “Summaries | Everything” (what applies is highlighted, per agent) chooses: for each message of yours only the paragraph for listening from the agent’s last text (the whole last text if it has none), or every text with the comments in between and the details. New answers have a red stripe until they were looked at.",
+          "For each request your question stands in a grey line (tap to see it whole) and below it the agent’s last answer, the summary. The switch “Summaries | Everything” (what applies is highlighted, per agent) chooses: for each message of yours only the paragraph for listening from the agent’s last text (the whole last text if it has none), or every text with the comments in between and the details. New answers have a red stripe. It goes away by itself once the answer was mostly on screen for two seconds (an answer higher up stays red until you scroll to it), once it was read aloud, or once it was seen in another window of this device; no button for marking is needed. \"Read new (n)\" counts the answers with a red stripe.",
           "Reading aloud: “Read aloud” reads one answer, “From here” this and all following, “Read new” those not seen yet. Code blocks and tables are left out (“a code block follows”), addresses and formatting are not spoken. Pause and stop are at the top. Voice, speed, saying the agent’s name before each answer and the maximum length are in the ☰ menu (for the whole device); these are the voices of the device, and a Bluetooth headset plays the sound there. With the screen locked, reading often stops on a phone. If the answer ends with a paragraph starting with 🔊 (the “answer for listening” of your global CLAUDE.md), only that is spoken; otherwise the answer up to the number of characters set in the cog. The speaker in the head of the workspace reads the new answers of all columns of that workspace one after the other; a second press stops. With the Echo (☰ menu, “Speech output”, once Agent-Orc knows it) AIfred says the paragraph for listening in the chosen room, with a signal tone before and after; from here such an announcement cannot be stopped."
         ]
       },
       {
         "title": "Consumption",
         "items": [
-          "Tokens from all Claude conversations on this machine, per day, project and model, for 7, 14 or 30 days – from the terminal, VS Code and subagents too."
+          "Tokens from all Claude conversations on this machine, per day, project and model, for 7, 14 or 30 days – from the terminal, VS Code and subagents too. Large figures are written in the language of the interface (k, M, B, T, Q, or in German Tsd., Mio., Mrd., Bio., Brd.)."
         ]
       },
       {
