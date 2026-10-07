@@ -1,5 +1,5 @@
 // Speech output for answers. An engine speaks one piece of text at a time; the queue and the
-// settings are in useSpeech. The browser's own voices come first; the Echo Dot (through AIfred,
+// settings are in useSpeech. The browser's own voices come first; the Echo (through AIfred,
 // see announce.py) joins when Agent-Orc's config has it. A speech service on the server would be
 // one more engine in this list.
 import { ref } from 'vue'
@@ -101,13 +101,13 @@ const browserSpeech: SpeechEngine = {
 /** Every room with an Echo connected. */
 const ALL_ROOMS = '*'
 
-/** The Echo Dot: AIfred speaks and queues; what is said cannot be stopped or paused from here. */
-function echoDot(maxChars: number): SpeechEngine {
+/** The Echo: AIfred speaks and queues; what is said cannot be stopped or paused from here. */
+function echo(label: string, maxChars: number): SpeechEngine {
   const speakAll = (texts: string[], options: SpeechOptions, speaker: string): Promise<void> =>
     api.announceTexts(options.voice || ALL_ROOMS, texts, speaker)
   return {
     id: 'echo',
-    label: 'Echo Dot',
+    label,
     choiceLabel: 'answers.room',
     maxChars,
     split: (text) => [text.replace(/\s*\n\s*/g, ' ')],
@@ -130,11 +130,11 @@ export const speechEngines = ref<SpeechEngine[]>([browserSpeech].filter((engine)
 
 let serverEngines: Promise<void> | undefined
 
-/** Adds the engines Agent-Orc's server offers (the Echo Dot, if configured); asked once. */
+/** Adds the engines Agent-Orc's server offers (the Echo, if configured); asked once. */
 export function loadServerEngines(): Promise<void> {
   serverEngines ??= api.announce().then(
     (state) => {
-      if (state.configured) speechEngines.value = [...speechEngines.value, echoDot(state.max_chars)]
+      if (state.configured) speechEngines.value = [...speechEngines.value, echo(state.label, state.max_chars)]
     },
     (error: unknown) => {
       // AIfred may be down right now: ask again next time.

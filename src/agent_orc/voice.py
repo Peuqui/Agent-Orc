@@ -7,11 +7,13 @@ done by the caller.
 """
 
 import difflib
+import json
 import re
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 
+from agent_orc.answers import Turn
 from agent_orc.config import VoiceConfig
 from agent_orc.phonetics import cologne
 from agent_orc.state import state_dir, write_atomically
@@ -174,17 +176,27 @@ def _reply_file(session_id: str) -> Path:
     return state_dir() / "voice-replies" / session_id
 
 
-def expect_reply(session_id: str, room: str) -> None:
-    """The agent got a request spoken in this room: its next answer is announced there. A file,
-    since the hook that sees the answer is a process of its own."""
-    write_atomically(_reply_file(session_id), room)
+def expect_reply(session_id: str, room: str, text: str) -> None:
+    """The agent got this request spoken in this room: the answer that takes it in is announced
+    there. A file, since the hook that sees the answer is a process of its own."""
+    write_atomically(_reply_file(session_id), json.dumps({"room": room, "text": text}))
 
 
-def take_reply_room(session_id: str) -> str | None:
-    """The room the agent's answer goes to, once; None if no request was spoken to it."""
+def expected_reply(session_id: str) -> tuple[str, str] | None:
+    """The room and the text of a request spoken to the agent that is not answered yet."""
     path = _reply_file(session_id)
     if not path.is_file():
         return None
-    room = path.read_text(encoding="utf-8")
-    path.unlink()
-    return room
+    expected = json.loads(path.read_text(encoding="utf-8"))
+    return expected["room"], expected["text"]
+
+
+def answered_reply(session_id: str) -> None:
+    _reply_file(session_id).unlink()
+
+
+def took_in(turn: Turn, text: str) -> bool:
+    """Whether the request was started with or typed into during this turn and the agent has
+    taken it in (what is typed ahead and still waits is not)."""
+    taken = [turn.prompt] + [i.text for i in turn.interjections if not i.pending]
+    return text.strip() in taken

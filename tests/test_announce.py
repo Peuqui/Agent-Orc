@@ -31,6 +31,7 @@ def make_client(
             "token_file": "announce-token",
             "max_chars": MAX_CHARS,
             "timeout_seconds": 5,
+            "label": "Echo",
         }
     credentials = new_credentials(PASSWORD)
     app = create_app(Config.model_validate(raw), credentials, static_dir=None, clock=clock)
@@ -43,7 +44,12 @@ def test_without_a_section_in_the_config_there_is_no_echo(
     clock: FakeClock, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     client = make_client(clock, tmp_path, monkeypatch, url=None)
-    assert client.get("/api/announce").json() == {"configured": False, "rooms": [], "max_chars": 0}
+    assert client.get("/api/announce").json() == {
+        "configured": False,
+        "rooms": [],
+        "max_chars": 0,
+        "label": "",
+    }
     sent = client.post(
         "/api/announce", json={"room": "testraum", "texts": ["Hallo"], "speaker": "Whisper"}
     )
@@ -58,6 +64,7 @@ def test_the_rooms_and_the_text_go_to_aifred_with_the_token(
         "configured": True,
         "rooms": ["testraum"],
         "max_chars": MAX_CHARS,
+        "label": "Echo",
     }
     announcement = {"room": "testraum", "texts": ["Alles fertig.", "Zweiter Absatz."]}
     sent = client.post("/api/announce", json={**announcement, "speaker": "Whisper"})

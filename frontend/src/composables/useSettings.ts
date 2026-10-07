@@ -95,7 +95,7 @@ export function readAnswersAll(sessionId: string): boolean {
 export const DEFAULT_SPEECH_ENGINE = 'browser'
 export const DEFAULT_SPEECH_RATE = 1
 const speechEngine = setting('agent-orc-speech-engine', DEFAULT_SPEECH_ENGINE, String)
-// What is chosen with an engine (a voice of the device, a room of the Echo Dot): one for each.
+// What is chosen with an engine (a voice of the device, a room of the Echo): one for each.
 const speechVoices = new Map<string, Ref<string>>()
 export function useSpeechVoice(engineId: string): Ref<string> {
   let voice = speechVoices.get(engineId)

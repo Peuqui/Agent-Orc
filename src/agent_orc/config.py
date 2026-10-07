@@ -119,6 +119,8 @@ class AnnounceConfig(StrictModel):
     # AIfred refuses a longer text; the answer is cut at a sentence beforehand.
     max_chars: int
     timeout_seconds: int
+    # What the speech settings call this output (the device or devices behind it).
+    label: str
 
 
 class VoiceConfig(StrictModel):
@@ -132,6 +134,9 @@ class VoiceConfig(StrictModel):
     window_minutes: int
     # A question nobody answers is forgotten after this.
     confirm_minutes: int
+    # Of what was said, this many of the newest requests stay (with their recordings); what was
+    # said to an agent that is stopped goes with it.
+    keep_entries: int
     # How well a spoken name must match an agent's folder name (0 to 1).
     name_similarity: float
     yes_words: list[str]
@@ -141,6 +146,8 @@ class VoiceConfig(StrictModel):
     # Spoken to the room; {agent} is the agent's name.
     ask_line: str
     sent_line: str
+    # Said instead when the agent is still at work: what was said waits in its input.
+    sent_busy_line: str
     discarded_line: str
     which_agent_line: str
     # Nobody was named and no agent answered within the window.

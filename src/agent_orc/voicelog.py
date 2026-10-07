@@ -61,11 +61,34 @@ def new_entry(now: float, **fields: Any) -> VoiceEntry:
     return VoiceEntry(id=uuid.uuid4().hex, time=time, **fields)
 
 
-def append_entry(entry: VoiceEntry) -> None:
+def append_entry(entry: VoiceEntry, keep: int) -> None:
+    """Adds the entry; of the older ones only the newest `keep` stay, with their recordings."""
     path = _log_file()
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(asdict(entry), ensure_ascii=False) + "\n")
+    entries = read_entries()
+    if len(entries) > keep:
+        _keep_only(entries[len(entries) - keep :], entries)
+
+
+def forget_agent(agent_id: str) -> None:
+    """Drops what was said to an agent that is gone, with its recordings. A sentence another
+    agent was sent on from stays, since that one still shows it."""
+    entries = read_entries()
+    _keep_only([entry for entry in entries if entry["agent_id"] != agent_id], entries)
+
+
+def _keep_only(kept: list[dict[str, Any]], entries: list[dict[str, Any]]) -> None:
+    """Keeps these entries and the sentences they were sent on from; drops the rest."""
+    kept_ids = {entry["id"] for entry in kept} | {
+        entry["source"] for entry in kept if entry["source"]
+    }
+    for entry in entries:
+        if entry["id"] not in kept_ids:
+            (_recordings_dir() / f"{entry['id']}.wav").unlink(missing_ok=True)
+    lines = [json.dumps(e, ensure_ascii=False) + "\n" for e in entries if e["id"] in kept_ids]
+    _log_file().write_text("".join(lines), encoding="utf-8")
 
 
 def read_entries() -> list[dict[str, Any]]:

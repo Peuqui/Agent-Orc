@@ -100,7 +100,7 @@ export interface DictationService {
   cpu: string
 }
 
-/** A request spoken to the agent on the Echo Dot and sent on (its time is when it was sent). */
+/** A request spoken to the agent on the Echo and sent on (its time is when it was sent). */
 export interface SpokenRequest {
   id: string
   time: string
@@ -471,9 +471,10 @@ export const api = {
   /** Where a picture of a request or of something typed during an answer is served (index from 0). */
   answerImageUrl: (sessionId: string, entryId: string, index: number) =>
     `api/sessions/${encodeURIComponent(sessionId)}/images/${encodeURIComponent(entryId)}/${index}`,
-  /** Whether answers can be read on an Echo Dot, the rooms it is connected in now, the longest text. */
-  announce: () => request<{ configured: boolean; rooms: string[]; max_chars: number }>('GET', 'announce'),
-  /** Has the text said on the Echo Dot of the room ("*": all); returns once it is queued. */
+  /** Whether answers can be read on the Echo, what the settings call it, the rooms connected now, the longest text. */
+  announce: () =>
+    request<{ configured: boolean; rooms: string[]; max_chars: number; label: string }>('GET', 'announce'),
+  /** Has the text said on the Echo of the room ("*": all); returns once it is queued. */
   announceTexts: (room: string, texts: string[], speaker: string) =>
     request<void>('POST', 'announce', { body: { room, texts, speaker } }),
   /** Where a picture attached for the agent is served (the file name in its uploads folder). */
@@ -482,9 +483,9 @@ export const api = {
   /** The last requests of the user with the agent's texts, oldest first (no thoughts or tools). */
   answers: (sessionId: string, turns: number) =>
     request<Turn[]>('GET', `sessions/${encodeURIComponent(sessionId)}/answers`, { query: { turns: String(turns) } }),
-  /** Where the recording of something said on the Echo Dot is served (the id of its entry). */
+  /** Where the recording of something said on the Echo is served (the id of its entry). */
   recordingUrl: (id: string) => `api/voice/${encodeURIComponent(id)}/audio`,
-  /** What was spoken to the agent on the Echo Dot, to mark those requests in its answers. */
+  /** What was spoken to the agent on the Echo, to mark those requests in its answers. */
   spoken: (sessionId: string) => request<SpokenRequest[]>('GET', `sessions/${encodeURIComponent(sessionId)}/voice`),
   sessionText: (id: string) =>
     request<{ text: string }>('GET', `sessions/${encodeURIComponent(id)}/text`),

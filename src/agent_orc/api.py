@@ -143,6 +143,7 @@ from agent_orc.trust import FOLDER_TRUST
 from agent_orc.voice import Action, VoiceAgent, VoiceRouter, expect_reply
 from agent_orc.voicelog import (
     append_entry,
+    forget_agent,
     new_entry,
     recording_file,
     requests_to_agent,
@@ -1303,13 +1304,18 @@ def create_app(
 
     @app.get("/api/announce", dependencies=authenticated)
     def announce_state() -> dict[str, Any]:
-        """Whether answers can be read on an Echo Dot, in which rooms it is connected now, and how
-        long a text may be."""
+        """Whether answers can be read on the Echo, what it is called, which rooms are connected now
+        and how long a text may be."""
         settings = config.announce
         if settings is None:
-            return {"configured": False, "rooms": [], "max_chars": 0}
+            return {"configured": False, "rooms": [], "max_chars": 0, "label": ""}
         rooms = announcing.rooms(settings, config_dir())
-        return {"configured": True, "rooms": rooms, "max_chars": settings.max_chars}
+        return {
+            "configured": True,
+            "rooms": rooms,
+            "max_chars": settings.max_chars,
+            "label": settings.label,
+        }
 
     @app.post("/api/announce", dependencies=authenticated, status_code=status.HTTP_204_NO_CONTENT)
     def announce_text(body: AnnounceRequest) -> None:
@@ -1363,8 +1369,11 @@ def create_app(
             Action.NO_AGENT: config.voice.no_agent_line,
         }
         if decision.action is Action.SEND and decision.agent is not None:
+            working = find_session(decision.agent.id)
+            if working is not None and session_busy(working):
+                lines[Action.SEND] = config.voice.sent_busy_line
             sessions.type_line(decision.agent.id, decision.text, config.terminal.submit_delay_ms)
-            expect_reply(decision.agent.id, room)
+            expect_reply(decision.agent.id, room, decision.text)
         agent = decision.agent
         asked_id, asked_action = voice_asked.pop(room, (None, None))
         entry = new_entry(
@@ -1378,7 +1387,7 @@ def create_app(
             score=decision.score,
             source=asked_id if decision.action is Action.SEND else None,
         )
-        append_entry(entry)
+        append_entry(entry, config.voice.keep_entries)
         store_recording(entry.id, recording)
         # The sentence a question is about; after a no the name asked for belongs to the sentence
         # said first, a yes is about the sentence its question was.
@@ -1418,6 +1427,7 @@ def create_app(
     def stop_session(session_id: str) -> None:
         sessions.stop(session_id)
         remove_scheduled_of(session_id)
+        forget_agent(session_id)
 
     @app.post("/api/sessions/{session_id}/scheduled", dependencies=authenticated)
     def schedule_prompt(session_id: str, body: ScheduledPromptRequest) -> ScheduledPrompt:
