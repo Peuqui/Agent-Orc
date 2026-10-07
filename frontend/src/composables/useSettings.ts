@@ -72,7 +72,6 @@ const terminalFont = setting<TerminalFont>(
 )
 
 /** Speech recognition engine of the Whisper service for dictation; empty: the service's default. */
-const dictationEngine = setting('agent-orc-dictation-engine', '', String)
 
 /** What a terminal shows: the terminal itself, or the agent's answers in short (AnswersFeed). */
 export type TerminalView = 'terminal' | 'answers'
@@ -131,7 +130,6 @@ export function useSettings() {
     fontSize,
     stepFontSize,
     terminalFont,
-    dictationEngine,
     extraKeysUnfolded,
     extraKeysVersion,
     speechEngine,

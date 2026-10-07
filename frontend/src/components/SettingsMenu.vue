@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { api } from '../api'
+import { api, type DictationService } from '../api'
 import { useToast } from '../composables/useToast'
 import { useI18n } from 'vue-i18n'
 import {
@@ -21,18 +21,18 @@ import PushSettings from './PushSettings.vue'
 import SpeechSettings from './SpeechSettings.vue'
 
 // Settings of this device; more entries join here as they become adjustable.
-const { scrollLines, lineHeight, fontSize, stepFontSize, terminalFont, dictationEngine } = useSettings()
+const { scrollLines, lineHeight, fontSize, stepFontSize, terminalFont } = useSettings()
 const toast = useToast()
 const open = ref(false)
 // The extra-keys editor stays open after the menu has closed.
 const editingKeys = ref(false)
-// The engines the Whisper service offers; asked when the menu opens.
-const engines = ref<string[]>([])
+// What the Whisper service transcribes with; asked when the menu opens.
+const service = ref<DictationService | null>(null)
 
 watch(open, async (isOpen) => {
   if (!isOpen) return
   try {
-    engines.value = (await api.dictationSettings()).engines
+    service.value = (await api.dictationSettings()).service
   } catch (error) {
     toast.error(error)
   }
@@ -101,21 +101,12 @@ function changeScrollLines(delta: number): void {
         </div>
       </div>
       <p class="mt-1 text-xs text-slate-500">{{ $t('settings.lineHeightHint') }}</p>
-      <div v-if="engines.length" class="mt-3 border-t border-slate-700 pt-3 text-sm text-slate-300">
-        <span>{{ $t('settings.dictationEngine') }}</span>
-        <!-- A row of its own: the service may offer more engines than fit beside the label. -->
-        <div class="mt-1 flex overflow-hidden rounded-md border border-slate-600 text-xs">
-          <button
-            v-for="engine in ['', ...engines]"
-            :key="engine"
-            class="flex-1 px-2 py-1 capitalize"
-            :class="dictationEngine === engine ? 'bg-slate-600 text-slate-100' : 'text-slate-400'"
-            @click="dictationEngine = engine"
-          >
-            {{ engine === '' ? $t('settings.engineDefault') : engine }}
-          </button>
-        </div>
-        <p class="mt-1 text-xs text-slate-500">{{ $t('settings.dictationEngineHint') }}</p>
+      <div v-if="service" class="mt-3 border-t border-slate-700 pt-3 text-sm text-slate-300">
+        <span>{{ $t('settings.dictationService') }}</span>
+        <p class="mt-1 text-xs text-slate-400 capitalize">
+          {{ $t('settings.dictationServiceLine', service) }}
+        </p>
+        <p class="mt-1 text-xs text-slate-500">{{ $t('settings.dictationServiceHint') }}</p>
       </div>
       <button
         class="btn-secondary btn-small mt-3 w-full justify-center"

@@ -215,9 +215,9 @@
     "font": "Schrift im Terminal",
     "fontSize": "Schriftgröße",
     "fontSizeHint": "Gilt für alle Terminals auf diesem Gerät.",
-    "dictationEngine": "Diktat-Engine",
-    "engineDefault": "Standard",
-    "dictationEngineHint": "Spracherkennung des Whisper-Dienstes; „Standard“ nimmt, was der Dienst vorgibt. Gilt für dieses Gerät.",
+    "dictationService": "Diktat-Dienst",
+    "dictationServiceLine": "{engine} · GPU {gpu} · CPU {cpu}",
+    "dictationServiceHint": "Die Spracherkennung stellt der Whisper-Dienst selbst ein (Engine, Qualität, Modell). Hier siehst du nur, was er verwendet. Gewählt wird pro Aufnahme nur GPU oder CPU.",
     "keys": "Sondertasten anpassen …"
   },
   "attach": {
@@ -315,8 +315,7 @@
         "title": "Einstellungen (☰)",
         "items": [
           "Schrift, Schriftgröße, Zeilenabstand und Scroll-Zeilen pro Schritt – gespeichert auf diesem Gerät.",
-          "Push-Meldungen: im Menü ☰ pro Gerät einschalten. Dann kommt eine Nachricht, wenn ein Agent fertig ist oder auf eine Freigabe oder Antwort wartet; Antippen öffnet ihn. Nur über HTTPS, am iPhone nur in der installierten App.",
-          "Diktat-Engine: Standard oder eine der Engines, die der Whisper-Dienst anbietet (z. B. Parakeet: schnell; Whisper) – pro Gerät."
+          "Push-Meldungen: im Menü ☰ pro Gerät einschalten. Dann kommt eine Nachricht, wenn ein Agent fertig ist oder auf eine Freigabe oder Antwort wartet; Antippen öffnet ihn. Nur über HTTPS, am iPhone nur in der installierten App."
         ]
       }
     ]

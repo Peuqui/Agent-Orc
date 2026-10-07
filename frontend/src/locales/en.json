@@ -215,9 +215,9 @@
     "font": "Terminal font",
     "fontSize": "Font size",
     "fontSizeHint": "For all terminals on this device.",
-    "dictationEngine": "Dictation engine",
-    "engineDefault": "Default",
-    "dictationEngineHint": "Speech recognition of the Whisper service; “Default” takes what the service sets. Applies to this device.",
+    "dictationService": "Dictation service",
+    "dictationServiceLine": "{engine} · GPU {gpu} · CPU {cpu}",
+    "dictationServiceHint": "The Whisper service sets its speech recognition itself (engine, quality, model). Here you only see what it uses. Per recording you choose only GPU or CPU.",
     "keys": "Arrange extra keys …"
   },
   "attach": {
@@ -315,8 +315,7 @@
         "title": "Settings (☰)",
         "items": [
           "Font, font size, line spacing and lines per scroll step – stored on this device.",
-          "Push messages: switch them on per device in the ☰ menu. You then get a message when an agent is done or waits for a permission or an answer; tapping it opens the agent. Only over HTTPS; on iPhones only in the installed app.",
-          "Dictation engine: default or one of the engines the Whisper service offers (e.g. Parakeet: fast; Whisper) – per device."
+          "Push messages: switch them on per device in the ☰ menu. You then get a message when an agent is done or waits for a permission or an answer; tapping it opens the agent. Only over HTTPS; on iPhones only in the installed app."
         ]
       }
     ]

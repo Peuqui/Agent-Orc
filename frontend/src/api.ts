@@ -93,6 +93,13 @@ export interface Turn {
   interjections: Interjection[]
 }
 
+/** The Whisper service's engine and, per device, its precision (Parakeet) or model (Whisper). */
+export interface DictationService {
+  engine: string
+  gpu: string
+  cpu: string
+}
+
 /** A request spoken to the agent on the Echo Dot and sent on (its time is when it was sent). */
 export interface SpokenRequest {
   id: string
@@ -524,16 +531,12 @@ export const api = {
       query: { name: file.name },
     }),
 
-  /** engines: what the Whisper service offers to choose from (empty while it does not answer). */
+  /** service: what the Whisper service transcribes with, null while it does not answer. */
   dictationSettings: () =>
-    request<{ language: string; whisper: boolean; engines: string[] }>('GET', 'dictation'),
+    request<{ language: string; whisper: boolean; service: DictationService | null }>('GET', 'dictation'),
   /** Transcribe recorded speech on the chosen device; never switches device by itself. */
-  dictate: (audio: Blob, device: DictationDevice, engine: string) =>
-    request<{ text: string }>('POST', 'dictation', {
-      upload: audio,
-      // No engine: the service's default.
-      query: engine ? { device, engine } : { device },
-    }),
+  dictate: (audio: Blob, device: DictationDevice) =>
+    request<{ text: string }>('POST', 'dictation', { upload: audio, query: { device } }),
 
   listFiles: (path: string) => request<FileEntry[]>('GET', 'files', { query: { path } }),
   createFolder: (parent: string, name: string) =>

@@ -57,7 +57,15 @@ def fake_whisper() -> Iterator[FakeWhisper]:
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self) -> None:
             assert self.path == "/status"
-            body = json.dumps({"engines": ["whisper", "parakeet"]}).encode()
+            status = {
+                "engine": "parakeet",
+                "engines": ["whisper", "parakeet"],
+                "gpu_quality": "fp32",
+                "cpu_quality": "int8",
+                "gpu_model": "large-v3",
+                "cpu_model": "medium",
+            }
+            body = json.dumps(status).encode()
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.send_header("Content-Length", str(len(body)))

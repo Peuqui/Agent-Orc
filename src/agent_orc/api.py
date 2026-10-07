@@ -69,7 +69,7 @@ from agent_orc.dictation import (
     DictationServiceError,
     GpuUnavailableError,
     UnsupportedAudioError,
-    service_engines,
+    service_status,
     transcribe,
 )
 from agent_orc.effort import (
@@ -1010,21 +1010,17 @@ def create_app(
         return {
             "language": config.dictation.language,
             "whisper": config.dictation.whisper_url is not None,
-            # To choose from in the settings; empty while the service does not answer.
-            "engines": service_engines(config.dictation),
+            # Shown in the settings; None while the service does not answer.
+            "service": asdict(status) if (status := service_status(config.dictation)) else None,
         }
 
     @app.post("/api/dictation", dependencies=authenticated)
-    async def dictate(
-        request: Request, device: Device, engine: str | None = None
-    ) -> dict[str, str]:
+    async def dictate(request: Request, device: Device) -> dict[str, str]:
         """Transcribe the recorded audio in the request body."""
         audio = await request.body()
         content_type = request.headers.get("content-type", "")
         # The Whisper call blocks for seconds, on the CPU even longer.
-        text = await asyncio.to_thread(
-            transcribe, audio, content_type, device, engine, config.dictation
-        )
+        text = await asyncio.to_thread(transcribe, audio, content_type, device, config.dictation)
         return {"text": text}
 
     @app.get("/api/sessions", dependencies=authenticated)

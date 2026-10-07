@@ -3,12 +3,15 @@
 Speaks the API of the whisper-stt service: POST /transcribe with a multipart form holding the
 audio file, the device ("cpu" or "cuda") and the language; the answer is JSON with "text".
 The device is the user's choice per dictation; nothing switches between them automatically.
+The engine and its quality are the service's own settings (it keeps one model per device and
+reloads it for a request that wants another): Agent-Orc only shows them.
 """
 
 import json
 import urllib.error
 import urllib.request
 import uuid
+from dataclasses import dataclass
 from typing import Literal
 
 from agent_orc.config import DictationConfig
@@ -32,29 +35,39 @@ class DictationServiceError(RuntimeError):
     """The Whisper service cannot be reached or failed."""
 
 
-# How long a look at the service's engines may take; the settings menu waits for it.
+# How long a look at the service's settings may take; the settings menu waits for it.
 STATUS_TIMEOUT_SECONDS = 3
 
 
-def service_engines(config: DictationConfig) -> list[str]:
-    """The engines the Whisper service offers (whisper-stt GET /status), e.g. whisper and
-    parakeet; none when no service is configured or it does not answer right now."""
+@dataclass(frozen=True)
+class ServiceStatus:
+    """What the service transcribes with: its engine and, per device, what the engine uses."""
+
+    engine: str
+    # Parakeet has one model with a precision (fp32, int8) per device; Whisper has a model
+    # (tiny to large-v3) per device.
+    gpu: str
+    cpu: str
+
+
+def service_status(config: DictationConfig) -> ServiceStatus | None:
+    """The service's settings (whisper-stt GET /status); None when no service is configured or it
+    does not answer right now."""
     if config.whisper_url is None:
-        return []
+        return None
     try:
         with urllib.request.urlopen(
             f"{config.whisper_url}/status", timeout=STATUS_TIMEOUT_SECONDS
         ) as response:
-            engines: list[str] = json.load(response).get("engines", [])
+            status = json.load(response)
     except (urllib.error.URLError, TimeoutError):
-        return []
-    return engines
+        return None
+    engine = status["engine"]
+    parameter = "quality" if engine == "parakeet" else "model"
+    return ServiceStatus(engine, status[f"gpu_{parameter}"], status[f"cpu_{parameter}"])
 
 
-def transcribe(
-    audio: bytes, content_type: str, device: Device, engine: str | None, config: DictationConfig
-) -> str:
-    """engine None: the service's default engine."""
+def transcribe(audio: bytes, content_type: str, device: Device, config: DictationConfig) -> str:
     if config.whisper_url is None:
         raise DictationServiceError("no Whisper service configured")
     media_type = content_type.split(";")[0].strip()
@@ -62,8 +75,6 @@ def transcribe(
         raise UnsupportedAudioError(content_type)
     boundary = uuid.uuid4().hex
     fields = {"device": device, "language": config.language}
-    if engine is not None:
-        fields["engine"] = engine
     body = _multipart(boundary, fields, f"dictation{AUDIO_SUFFIXES[media_type]}", media_type, audio)
     request = urllib.request.Request(
         f"{config.whisper_url}/transcribe",

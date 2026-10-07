@@ -820,11 +820,9 @@ def test_dictation(config: Config, clock: FakeClock, fake_whisper: FakeWhisper) 
     assert client.get("/api/dictation").json() == {
         "language": "de",
         "whisper": True,
-        "engines": ["whisper", "parakeet"],
+        "service": {"engine": "parakeet", "gpu": "fp32", "cpu": "int8"},
     }
     assert dictate("cpu").json() == {"text": "Hallo Welt"}
-    assert dictate("cpu&engine=parakeet").json() == {"text": "Hallo Welt"}
-    assert b'name="engine"\r\n\r\nparakeet' in fake_whisper.bodies[-1]
     assert dictate("tpu").status_code == 422
     fake_whisper.status = 503
     fake_whisper.answer = {"error": "no GPU with enough VRAM"}
