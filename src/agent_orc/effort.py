@@ -145,6 +145,23 @@ def keep_file_while(protected_file: str, action: Callable[[], None]) -> None:
             _write_bytes_keeping_mode(protected, before)
 
 
+# How long after typing a command the agent may take to ask for a confirmation.
+CONFIRM_SECONDS = 2.0
+CONFIRM_POLL_SECONDS = 0.1
+
+
+def confirm_when_asked(
+    read_screen: Callable[[], str], press_enter: Callable[[], None], asking: str
+) -> None:
+    """Press Enter once the agent's screen shows `asking`; nothing if it does not ask."""
+    deadline = time.monotonic() + CONFIRM_SECONDS
+    while time.monotonic() < deadline:
+        if asking in read_screen():
+            press_enter()
+            return
+        time.sleep(CONFIRM_POLL_SECONDS)
+
+
 def _write_bytes_keeping_mode(path: Path, content: bytes) -> None:
     temporary = path.with_name(f"{path.name}.agent-orc-tmp")
     temporary.write_bytes(content)

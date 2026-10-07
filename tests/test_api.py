@@ -40,6 +40,13 @@ def home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return home
 
 
+# Asks for a confirmation after "/model ...", as Claude does for a conversation with content.
+SWAPPER_SCRIPT = (
+    'echo "{start}"; while read line; do case "$line" in '
+    '/model*) echo "Switch model?"; read answer; echo "confirmed";; esac; done'
+)
+
+
 @pytest.fixture
 def config(home: Path, socket_name: str) -> Config:
     raw: dict[str, Any] = yaml.safe_load(default_config_text())
@@ -108,10 +115,11 @@ def config(home: Path, socket_name: str) -> Config:
         "swapper": {
             "label": "Swapper",
             "models": ["printf", "thinker\\nplain\\n"],
-            "start": ["sh", "-c", 'echo "started {model}"; exec cat'],
+            "start": ["sh", "-c", SWAPPER_SCRIPT.replace("{start}", "started {model}")],
             "resume": ["sh", "-c", 'echo "resumed {model}"; exec cat'],
             "model_live": {
                 "command": "/model {model}",
+                "confirm": "Switch model?",
                 "protected_file": str(home / "user-settings.json"),
             },
         },
@@ -1595,8 +1603,10 @@ def test_model_switches_in_place_where_the_agent_can(
     store_activity(session_id, busy=False)
     assert client.post(url, json={"model": "plain"}).json() == {"applied": True}
     assert client.get("/api/sessions").json()[0]["chosen_model"] == "plain"
-    # Typed into the running agent (the terminal echoes it), which keeps running.
+    # Typed into the running agent (the terminal echoes it), which keeps running, and its
+    # question was answered.
     assert wait_for_text(client, session_id, "/model plain")
+    assert wait_for_text(client, session_id, "confirmed")
     assert pane_process(socket_name, session_id) == process
 
 

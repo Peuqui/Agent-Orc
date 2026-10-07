@@ -78,6 +78,7 @@ from agent_orc.effort import (
     InvalidEffortError,
     InvalidPermissionModeError,
     Reasoning,
+    confirm_when_asked,
     keep_file_while,
     set_reasoning_live,
 )
@@ -178,6 +179,8 @@ LEVELS_CACHE_SECONDS = 30
 # How often the server looks after the agents: effort changes waiting for a busy agent,
 # handover advice, scheduled prompts.
 AGENT_CHECK_SECONDS = 2
+# History lines to read with the screen: none, only what is visible (a question being asked).
+SCREEN_ONLY = 0
 
 logger = logging.getLogger(__name__)
 
@@ -1175,12 +1178,19 @@ def create_app(
         if not session.running or live is None:
             return restart_session(session.id, RestartRequest(model=model))
         store_model_reasoning(session, model)
+
+        def switch() -> None:
+            sessions.type_line(session.id, live.command.format(model=model), submit_delay)
+            if live.confirm is not None:
+                confirm_when_asked(
+                    lambda: sessions.text(session.id, SCREEN_ONLY),
+                    lambda: sessions.press_enter(session.id),
+                    live.confirm,
+                )
+            sessions.set_model(session.id, model)
+
         submit_delay = config.terminal.submit_delay_ms
-        keep_file_while(
-            live.protected_file,
-            lambda: sessions.type_line(session.id, live.command.format(model=model), submit_delay),
-        )
-        sessions.set_model(session.id, model)
+        keep_file_while(live.protected_file, switch)
         changed = find_session(session.id)
         if changed is None:
             raise SessionNotFoundError(session.id)

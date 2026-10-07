@@ -8,6 +8,7 @@ from agent_orc.config import LiveEffortConfig
 from agent_orc.effort import (
     CLAUDE_PROJECT_SETTINGS,
     Reasoning,
+    confirm_when_asked,
     read_claude_permission_mode,
     read_claude_project_reasoning,
     set_reasoning_live,
@@ -143,3 +144,18 @@ def test_live_switch_removes_a_protected_file_the_agent_created(tmp_path: Path) 
         Reasoning("high", False),
     )
     assert not protected.exists()
+
+
+def test_confirm_presses_enter_once_the_agent_asks(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("agent_orc.effort.CONFIRM_SECONDS", 0.3)
+    screens = iter(["", "Sure?  1. Yes"])
+    pressed: list[str] = []
+    confirm_when_asked(lambda: next(screens), lambda: pressed.append("enter"), "Sure?")
+    assert pressed == ["enter"]
+
+
+def test_confirm_does_nothing_when_the_agent_does_not_ask(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("agent_orc.effort.CONFIRM_SECONDS", 0.3)
+    pressed: list[str] = []
+    confirm_when_asked(lambda: "no question", lambda: pressed.append("enter"), "Sure?")
+    assert pressed == []

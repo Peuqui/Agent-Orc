@@ -177,6 +177,10 @@ class LiveModelConfig(StrictModel):
 
     # Typed into the agent; {model} becomes the chosen model.
     command: str
+    # Text on the agent's screen that asks to confirm the switch (Claude: a warning that the
+    # conversation is cached for the current model, once it has some content); Enter answers
+    # it with its default, the switch. Without it nothing is confirmed.
+    confirm: str | None = None
     # A file the agent rewrites when its model is set this way (Claude: the user's own settings,
     # which then name the model as default for new sessions); Agent-Orc puts it back as it was.
     protected_file: str

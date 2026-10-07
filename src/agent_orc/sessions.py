@@ -238,6 +238,9 @@ class SessionManager:
         self._tmux("send-keys", "-t", exact_target(session_id), "-l", line)
         # Enter separately, so the agent sees typed text plus submit, not one pasted block.
         time.sleep(submit_delay_ms / MILLISECONDS_PER_SECOND)
+        self.press_enter(session_id)
+
+    def press_enter(self, session_id: str) -> None:
         self._tmux("send-keys", "-t", exact_target(session_id), "-l", "\r")
 
     def paste_text(self, session_id: str, text: str) -> None:
