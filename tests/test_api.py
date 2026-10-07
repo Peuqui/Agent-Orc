@@ -1586,16 +1586,46 @@ def test_model_switches_in_place_where_the_agent_can(
     process = pane_process(socket_name, session_id)
     url = f"/api/sessions/{session_id}/model"
     assert client.post(url, json={"model": "other"}).status_code == 422
-    # Typing into a busy agent would mix with its work: it waits for the end of the answer.
+    # Typing into a busy agent would mix with its work: the change waits for the end of the answer.
     store_activity(session_id, busy=True)
-    assert client.post(url, json={"model": "plain"}).status_code == 409
+    assert client.post(url, json={"model": "plain"}).json() == {"applied": False}
+    assert client.get("/api/sessions").json()[0]["pending_model"] == "plain"
+    assert client.delete(url).status_code == 204
+    assert client.get("/api/sessions").json()[0]["pending_model"] is None
     store_activity(session_id, busy=False)
-    switched = client.post(url, json={"model": "plain"})
-    assert switched.status_code == 200
-    assert switched.json()["chosen_model"] == "plain"
+    assert client.post(url, json={"model": "plain"}).json() == {"applied": True}
+    assert client.get("/api/sessions").json()[0]["chosen_model"] == "plain"
     # Typed into the running agent (the terminal echoes it), which keeps running.
     assert wait_for_text(client, session_id, "/model plain")
     assert pane_process(socket_name, session_id) == process
+
+
+def test_pending_model_is_typed_in_when_the_agent_is_done(
+    config: Config, clock: FakeClock, home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
+    monkeypatch.setattr("agent_orc.api.AGENT_CHECK_SECONDS", 0.1)
+    monkeypatch.setattr("agent_orc.effort.PROTECT_SECONDS", 0.3)
+    # The context manager runs the app's lifespan, i.e. the background watcher.
+    with TestClient(
+        create_app(config, new_credentials(PASSWORD), static_dir=None, clock=clock)
+    ) as client:
+        client.post("/api/login", json={"password": PASSWORD})
+        session_id = start_with_model(client, home, "swapper", "thinker")
+        store_activity(session_id, busy=True)
+        client.post(f"/api/sessions/{session_id}/model", json={"model": "plain"})
+        time.sleep(0.5)
+        assert client.get("/api/sessions").json()[0]["pending_model"] == "plain"
+
+        store_activity(session_id, busy=False)
+        assert wait_for_text(client, session_id, "/model plain")
+        # The model is noted once the agent's rewrite of the protected file has been undone.
+        for _ in range(30):
+            if client.get("/api/sessions").json()[0]["chosen_model"] == "plain":
+                break
+            time.sleep(0.1)
+        assert client.get("/api/sessions").json()[0]["chosen_model"] == "plain"
+        assert client.get("/api/sessions").json()[0]["pending_model"] is None
 
 
 def test_model_change_restarts_an_agent_that_cannot_switch_in_place(
@@ -1605,8 +1635,8 @@ def test_model_change_restarts_an_agent_that_cannot_switch_in_place(
     assert wait_for_text(client, session_id, "started thinker")
     process = pane_process(socket_name, session_id)
     switched = client.post(f"/api/sessions/{session_id}/model", json={"model": "plain"})
-    assert switched.status_code == 200
-    assert switched.json()["chosen_model"] == "plain"
+    assert switched.json() == {"applied": True}
+    assert client.get("/api/sessions").json()[0]["chosen_model"] == "plain"
     assert wait_for_text(client, session_id, "resumed plain")
     assert pane_process(socket_name, session_id) != process
 

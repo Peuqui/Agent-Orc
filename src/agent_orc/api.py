@@ -190,10 +190,6 @@ class UnknownModelError(ValueError):
     """Not one of the models the profile offers."""
 
 
-class AgentBusyError(RuntimeError):
-    """The agent is working on an answer; what was asked waits for its end."""
-
-
 class UnknownWorkspaceError(LookupError):
     """No workspace of this name."""
 
@@ -225,7 +221,6 @@ ERROR_STATUS: dict[type[Exception], int] = {
     RestoreConflictError: status.HTTP_409_CONFLICT,
     files.FileConflictError: status.HTTP_409_CONFLICT,
     FolderBusyError: status.HTTP_409_CONFLICT,
-    AgentBusyError: status.HTTP_409_CONFLICT,
     ProfileCommandError: status.HTTP_503_SERVICE_UNAVAILABLE,
     UnknownModelError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     UnknownWorkspaceError: status.HTTP_404_NOT_FOUND,
@@ -460,6 +455,8 @@ def create_app(
 
     # Reasoning changes waiting until their (busy) agent has finished its answer.
     pending_effort: dict[str, Reasoning] = {}
+    # A model change of a busy agent that switches in place, typed in once it is idle.
+    pending_model: dict[str, str] = {}
     # What waits for a spoken yes, per room; gone when the server restarts, which is fine: the
     # user just says it again.
     voice_router = VoiceRouter(config.voice) if config.voice is not None else None
@@ -648,6 +645,11 @@ def create_app(
                 # Keep watching the other sessions; this one is dropped and logged.
                 logger.exception("applying a pending effort change failed")
                 pending_effort.clear()
+            try:
+                await asyncio.to_thread(apply_pending_models)
+            except Exception:
+                logger.exception("applying a pending model change failed")
+                pending_model.clear()
             try:
                 await asyncio.to_thread(check_handovers)
             except Exception:
@@ -1073,6 +1075,7 @@ def create_app(
             "effort_pending": pending is not None,
             "pending_effort": pending.effort if pending else None,
             "pending_ultracode": pending.ultracode if pending else None,
+            "pending_model": pending_model.get(session.id),
         }
 
     @app.post("/api/sessions", dependencies=authenticated)
@@ -1165,33 +1168,56 @@ def create_app(
         store_activity(session_id, busy=False)
         return restarted
 
+    def apply_model(session: AgentSession, model: str) -> AgentSession:
+        """Typed into a running agent that can switch in place, otherwise by resuming it."""
+        pending_model.pop(session.id, None)
+        live = config.agents[session.profile].model_live
+        if not session.running or live is None:
+            return restart_session(session.id, RestartRequest(model=model))
+        store_model_reasoning(session, model)
+        submit_delay = config.terminal.submit_delay_ms
+        keep_file_while(
+            live.protected_file,
+            lambda: sessions.type_line(session.id, live.command.format(model=model), submit_delay),
+        )
+        sessions.set_model(session.id, model)
+        changed = find_session(session.id)
+        if changed is None:
+            raise SessionNotFoundError(session.id)
+        return changed
+
+    def apply_pending_models() -> None:
+        for session_id, model in list(pending_model.items()):
+            session = find_session(session_id)
+            if session is None:
+                pending_model.pop(session_id, None)
+            elif not session.running or not session_busy(session):
+                apply_model(session, model)
+
     @app.post("/api/sessions/{session_id}/model", dependencies=authenticated)
-    def change_model(session_id: str, body: ModelRequest) -> AgentSession:
+    def change_model(session_id: str, body: ModelRequest) -> dict[str, bool]:
         """Switch the agent to another model: typed into a running agent that can switch in
-        place (its conversation, background tasks and answer stay), otherwise by resuming it."""
+        place (its conversation, background tasks and answer stay; a busy one first finishes
+        its answer), otherwise by resuming it."""
         session = find_session(session_id)
         if session is None:
             raise SessionNotFoundError(session_id)
         check_model(session.profile, body.model)
         live = config.agents[session.profile].model_live
-        if not session.running or live is None:
-            return restart_session(session_id, RestartRequest(model=body.model))
         # Typing into a busy agent would mix with its work.
-        if session_busy(session):
-            raise AgentBusyError(session_id)
-        store_model_reasoning(session, body.model)
-        submit_delay = config.terminal.submit_delay_ms
-        keep_file_while(
-            live.protected_file,
-            lambda: sessions.type_line(
-                session.id, live.command.format(model=body.model), submit_delay
-            ),
-        )
-        sessions.set_model(session.id, body.model)
-        changed = find_session(session_id)
-        if changed is None:
-            raise SessionNotFoundError(session_id)
-        return changed
+        if live is not None and session.running and session_busy(session):
+            pending_model[session_id] = body.model
+            return {"applied": False}
+        apply_model(session, body.model)
+        return {"applied": True}
+
+    @app.delete(
+        "/api/sessions/{session_id}/model",
+        dependencies=authenticated,
+        status_code=status.HTTP_204_NO_CONTENT,
+    )
+    def cancel_model_change(session_id: str) -> None:
+        pending_model.pop(session_id, None)
 
     @app.post(
         "/api/sessions/{session_id}/handover",

@@ -45,6 +45,7 @@
     "changeAfterAnswer": "Nach der Antwort wechseln",
     "changeNow": "Sofort wechseln (bricht ab)",
     "working": "arbeitet …",
+    "modelPending": "Wechsel auf „{model}“ vorgemerkt – nach der aktuellen Antwort",
     "effortPending": "Wechsel auf „{effort}“ vorgemerkt – nach der aktuellen Antwort",
     "applyNow": "Sofort",
     "discard": "Verwerfen",
@@ -405,8 +406,8 @@
     "removedKeptBranch": "Worktree entfernt; Branch „{branch}“ ist noch nicht zusammengeführt und bleibt erhalten."
   },
   "restart": {
-    "changeModelLive": "Modell für „{name}“ wählen. Der Agent wechselt es im laufenden Betrieb; Gespräch und Hintergrundaufgaben bleiben, nur der Prompt-Cache beginnt für das neue Modell von vorn.",
-    "modelWaits": "Der Agent arbeitet; das Modell lässt sich nach seiner Antwort wechseln.",
+    "changeModelLive": "Modell für „{name}“ wählen. Der Agent wechselt es im laufenden Betrieb, bei laufender Antwort danach; Gespräch und Hintergrundaufgaben bleiben, nur der Prompt-Cache beginnt für das neue Modell von vorn.",
+    "modelScheduled": "„{name}“ wechselt nach der aktuellen Antwort auf {model}.",
     "modelChanged": "„{name}“ läuft jetzt mit {model}.",
     "modelTitle": "Modell wechseln",
     "changeModel": "Modell für „{name}“ wählen. Der Agent wird damit neu gestartet und das Gespräch fortgesetzt; laufende Hintergrundaufgaben enden dabei.",

@@ -45,6 +45,7 @@
     "changeAfterAnswer": "Change after the answer",
     "changeNow": "Change now (cancels)",
     "working": "working …",
+    "modelPending": "Change to “{model}” scheduled – after the current answer",
     "effortPending": "Change to “{effort}” scheduled – after the current answer",
     "applyNow": "Now",
     "discard": "Discard",
@@ -405,8 +406,8 @@
     "removedKeptBranch": "Worktree removed; branch “{branch}” is not merged yet and is kept."
   },
   "restart": {
-    "changeModelLive": "Choose the model for “{name}”. The agent switches in place; the conversation and background tasks stay, only the prompt cache starts over for the new model.",
-    "modelWaits": "The agent is working; the model can be changed after its answer.",
+    "changeModelLive": "Choose the model for “{name}”. The agent switches in place, after its answer if it is working; the conversation and background tasks stay, only the prompt cache starts over for the new model.",
+    "modelScheduled": "“{name}” switches to {model} after the current answer.",
     "modelChanged": "“{name}” now runs with {model}.",
     "modelTitle": "Change model",
     "changeModel": "Choose the model for “{name}”. The agent restarts with it and the conversation is resumed; running background tasks end.",

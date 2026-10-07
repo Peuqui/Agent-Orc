@@ -67,6 +67,10 @@ function discardPending(session: AgentSession): void {
   void run(() => api.cancelEffortChange(session.id))
 }
 
+function discardPendingModel(session: AgentSession): void {
+  void run(() => api.cancelModelChange(session.id))
+}
+
 function applyEffort(immediately: boolean): void {
   const change = effortChange.value
   effortChange.value = null
@@ -423,6 +427,15 @@ function resumeWith(session: AgentSession, model: string | null): void {
             {{ $t('sessions.applyNow') }}
           </button>
           <button class="btn min-h-9" @click="discardPending(session)">
+            {{ $t('sessions.discard') }}
+          </button>
+        </div>
+        <div
+          v-if="session.pending_model"
+          class="flex flex-wrap items-center gap-2 rounded-lg border border-amber-700 bg-amber-950/40 px-3 py-2 text-sm text-amber-200"
+        >
+          <span class="flex-1">{{ $t('sessions.modelPending', { model: session.pending_model }) }}</span>
+          <button class="btn min-h-9" @click="discardPendingModel(session)">
             {{ $t('sessions.discard') }}
           </button>
         </div>

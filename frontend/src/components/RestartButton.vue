@@ -11,7 +11,7 @@ import ModelDialog from './ModelDialog.vue'
 // Restarts the agent with its conversation resumed, e.g. when it hangs or should read changed
 // settings; asked first, as it ends a running answer and the agent's background tasks.
 // With `changeModel` it asks for another model instead: an agent that can switch in place does
-// so (only between two answers), any other is restarted with the model.
+// so (a busy one after its answer), any other is restarted with the model.
 const props = defineProps<{
   session: AgentSession
   buttonClass: string
@@ -29,11 +29,8 @@ const needsModel = computed(
 )
 
 const profile = computed(() => profiles.value.find((p) => p.name === props.session.profile))
-// Typed into a busy agent, the switch would mix with its work.
-const waitsForAnswer = computed(() => props.changeModel && profile.value?.model_live && props.session.busy)
 const askModel = computed(() => props.changeModel || needsModel.value)
 const buttonLabel = computed(() => t(props.changeModel ? 'restart.modelTitle' : 'restart.title'))
-const buttonHint = computed(() => (waitsForAnswer.value ? t('restart.modelWaits') : buttonLabel.value))
 const modelMessage = computed(() => {
   const name = sessionName(props.session)
   if (!props.changeModel) return t('restart.chooseModel', { name })
@@ -45,8 +42,9 @@ async function restart(model: string | null): Promise<void> {
   asking.value = false
   try {
     if (props.changeModel && model !== null) {
-      await api.changeModel(props.session.id, model)
-      toast.info(t('restart.modelChanged', { name: sessionName(props.session), model }))
+      const result = await api.changeModel(props.session.id, model)
+      const done = result.applied ? 'restart.modelChanged' : 'restart.modelScheduled'
+      toast.info(t(done, { name: sessionName(props.session), model }))
     } else {
       await api.restartSession(props.session.id, model)
       toast.info(t('restart.done', { name: sessionName(props.session) }))
@@ -59,13 +57,7 @@ async function restart(model: string | null): Promise<void> {
 </script>
 
 <template>
-  <button
-    :class="buttonClass"
-    :title="buttonHint"
-    :aria-label="buttonHint"
-    :disabled="waitsForAnswer"
-    @click="asking = true"
-  >
+  <button :class="buttonClass" :title="buttonLabel" :aria-label="buttonLabel" @click="asking = true">
     <AppIcon :name="changeModel ? 'model' : 'restart'" /><span v-if="withLabel">{{ buttonLabel }}</span>
   </button>
   <ModelDialog

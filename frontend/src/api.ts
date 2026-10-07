@@ -186,6 +186,8 @@ export interface AgentSession {
   effort_pending: boolean
   pending_effort: string | null
   pending_ultracode: boolean | null
+  /** A model change of a busy agent waits until the current answer is finished. */
+  pending_model: string | null
   /** Occupied context window in tokens; null when unknown. */
   context_tokens: number | null
   context_window: number | null
@@ -447,9 +449,10 @@ export const api = {
   /** Resumes the agent in its own session; a running answer and background tasks end. */
   restartSession: (sessionId: string, model: string | null = null) =>
     request<AgentSession>('POST', `sessions/${encodeURIComponent(sessionId)}/restart`, { body: { model } }),
-  /** Switches the agent to the model: in place if it can, otherwise by resuming it. */
+  /** Switches the agent to the model: in place if it can, otherwise by resuming it; applied is
+   * false while a busy agent finishes its answer first. */
   changeModel: (sessionId: string, model: string) =>
-    request<AgentSession>('POST', `sessions/${encodeURIComponent(sessionId)}/model`, { body: { model } }),
+    request<{ applied: boolean }>('POST', `sessions/${encodeURIComponent(sessionId)}/model`, { body: { model } }),
   /** Types the prompt into the agent at `at` (Unix seconds), once it is idle. */
   schedulePrompt: (sessionId: string, text: string, at: number) =>
     request<ScheduledPrompt>('POST', `sessions/${encodeURIComponent(sessionId)}/scheduled`, {
@@ -471,6 +474,8 @@ export const api = {
     request<void>('PUT', `sessions/${encodeURIComponent(sessionId)}/permission-mode`, { body: { mode } }),
   cancelEffortChange: (sessionId: string) =>
     request<void>('DELETE', `sessions/${encodeURIComponent(sessionId)}/effort`),
+  cancelModelChange: (sessionId: string) =>
+    request<void>('DELETE', `sessions/${encodeURIComponent(sessionId)}/model`),
   stopSession: (id: string) => request<void>('DELETE', `sessions/${encodeURIComponent(id)}`),
   /** The terminal as plain text, for selecting and copying. */
   /** Where a picture of a request or of something typed during an answer is served (index from 0). */
