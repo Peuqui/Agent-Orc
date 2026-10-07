@@ -11,6 +11,7 @@ import ModelDialog from '../components/ModelDialog.vue'
 import ContextMeter from '../components/ContextMeter.vue'
 import ReasoningControl from '../components/ReasoningControl.vue'
 import QuotaPanel from '../components/QuotaPanel.vue'
+import ClearButton from '../components/ClearButton.vue'
 import RestartButton from '../components/RestartButton.vue'
 import ScheduleButton from '../components/ScheduleButton.vue'
 import TerminalButton from '../components/TerminalButton.vue'
@@ -202,6 +203,7 @@ function confirmStop(): void {
   if (session) void run(() => api.stopSession(session.id))
 }
 
+const clearProfiles = computed(() => new Set(profiles.value.filter((p) => p.can_clear).map((p) => p.name)))
 const modelProfiles = computed(() => new Set(profiles.value.filter((p) => p.models).map((p) => p.name)))
 // An ended agent that offers models but has none stored: resumed once a model is chosen.
 const resumingWithoutModel = ref<AgentSession | null>(null)
@@ -472,6 +474,11 @@ function resumeWith(session: AgentSession, model: string | null): void {
           </RouterLink>
           <TerminalButton v-if="!session.terminal" :path="session.path" :agent-id="session.id" button-class="btn-secondary btn-small-icon" />
           <ScheduleButton v-if="session.running" :session="session" button-class="btn-secondary btn-small-icon" />
+          <ClearButton
+            v-if="session.running && clearProfiles.has(session.profile)"
+            :session="session"
+            button-class="btn-secondary btn-small-icon"
+          />
           <RestartButton
             v-if="session.running && modelProfiles.has(session.profile)"
             change-model

@@ -405,6 +405,12 @@
     "removedWithBranch": "Worktree entfernt, Branch „{branch}“ war zusammengeführt und ist gelöscht.",
     "removedKeptBranch": "Worktree entfernt; Branch „{branch}“ ist noch nicht zusammengeführt und bleibt erhalten."
   },
+  "clear": {
+    "title": "Kontext leeren",
+    "busy": "Der Agent arbeitet; der Kontext lässt sich nach seiner Antwort leeren.",
+    "confirm": "Kontext von „{name}“ leeren? Das bisherige Gespräch ist danach für den Agenten weg; er läuft weiter, Hintergrundaufgaben bleiben.",
+    "done": "Kontext von „{name}“ geleert."
+  },
   "restart": {
     "changeModelLive": "Modell für „{name}“ wählen. Der Agent wechselt es im laufenden Betrieb, bei laufender Antwort danach; Gespräch und Hintergrundaufgaben bleiben, nur der Prompt-Cache beginnt für das neue Modell von vorn.",
     "modelScheduled": "„{name}“ wechselt nach der aktuellen Antwort auf {model}.",

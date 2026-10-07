@@ -193,6 +193,14 @@ class UnknownModelError(ValueError):
     """Not one of the models the profile offers."""
 
 
+class AgentBusyError(RuntimeError):
+    """The agent is working on an answer; typing into it now would mix with its work."""
+
+
+class ClearNotSupportedError(ValueError):
+    """The agent's profile has no command to empty its context."""
+
+
 class UnknownWorkspaceError(LookupError):
     """No workspace of this name."""
 
@@ -224,6 +232,8 @@ ERROR_STATUS: dict[type[Exception], int] = {
     RestoreConflictError: status.HTTP_409_CONFLICT,
     files.FileConflictError: status.HTTP_409_CONFLICT,
     FolderBusyError: status.HTTP_409_CONFLICT,
+    AgentBusyError: status.HTTP_409_CONFLICT,
+    ClearNotSupportedError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     ProfileCommandError: status.HTTP_503_SERVICE_UNAVAILABLE,
     UnknownModelError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     UnknownWorkspaceError: status.HTTP_404_NOT_FOUND,
@@ -783,6 +793,7 @@ def create_app(
                 # Switches its reasoning in place, without a restart.
                 "effort_live": bool(p.effort and p.effort.live),
                 "model_live": p.model_live is not None,
+                "can_clear": p.clear_command is not None,
                 "permission_modes": p.permission.modes if p.permission else [],
                 "terminal": p.terminal,
                 # Offers a choice of models at start (GET /api/agents/{name}/models).
@@ -1226,6 +1237,24 @@ def create_app(
     )
     def cancel_model_change(session_id: str) -> None:
         pending_model.pop(session_id, None)
+
+    @app.post(
+        "/api/sessions/{session_id}/clear",
+        dependencies=authenticated,
+        status_code=status.HTTP_204_NO_CONTENT,
+    )
+    def clear_context(session_id: str) -> None:
+        """Empty the agent's context in place (its process and background tasks keep running).
+        Only an idle agent: clearing in the middle of an answer would throw its work away."""
+        session = find_session(session_id)
+        if session is None:
+            raise SessionNotFoundError(session_id)
+        command = config.agents[session.profile].clear_command
+        if command is None:
+            raise ClearNotSupportedError(session.profile)
+        if not session.running or session_busy(session):
+            raise AgentBusyError(session_id)
+        sessions.type_line(session_id, command)
 
     @app.post(
         "/api/sessions/{session_id}/handover",

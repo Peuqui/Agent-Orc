@@ -256,6 +256,8 @@ class AgentProfile(StrictModel):
     models: list[str] | None = None
     # Without it, a running agent is restarted (resumed) to take another model.
     model_live: LiveModelConfig | None = None
+    # Typed into an idle agent to empty its context, without a restart (Claude: /clear).
+    clear_command: str | None = None
     # Environment of the agent; {effort} is the folder's level (left out when it has none).
     env: dict[str, str] = {}
     # Shown in the start dialog when this profile is chosen (e.g. what to stop first).

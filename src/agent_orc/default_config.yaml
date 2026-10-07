@@ -198,6 +198,8 @@ agents:
   #   # A running agent takes another model in place (typed into it once it is idle), without a
   #   # restart; Agent-Orc puts the protected file back as the agent rewrote it. Without this,
   #   # changing the model restarts (resumes) the agent.
+  #   # Typed into an idle agent to empty its context without a restart (shown as a button).
+  #   clear_command: /clear
   #   model_live: {command: "/model {model}", confirm: "Switch model?", protected_file: ~/.claude/settings.json}
   #   start: [lclaude, "{model}", --settings, *claude_settings]
   #   resume: [lclaude, "{model}", --settings, *claude_settings, --continue]

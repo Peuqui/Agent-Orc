@@ -14,6 +14,7 @@ export const ICONS = {
   stop: 'M7 7h10v10H7z',
   resume: 'M4 12a8 8 0 1 0 2.4-5.7 M4 4v4h4',
   model: 'M7 7h10v10H7z M10 3v4 M14 3v4 M10 17v4 M14 17v4 M3 10h4 M3 14h4 M17 10h4 M17 14h4',
+  clear: 'M4 20h16 M14 4l6 6-8 8H8l-4-4z M9 9l6 6',
   restart: 'M20 12a8 8 0 1 1-2.4-5.7 M20 4v4h-4',
   more: 'M12 5h.01 M12 12h.01 M12 19h.01',
   lock: 'M6 11h12v9H6z M9 11V8a3 3 0 0 1 6 0v3',

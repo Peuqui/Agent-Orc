@@ -17,6 +17,8 @@ export interface AgentProfile {
   effort_live: boolean
   /** Switches its model in place, without a restart (Claude: /model). */
   model_live: boolean
+  /** Offers to empty the context of a running agent in place (Claude: /clear). */
+  can_clear: boolean
   /** Permission modes a session may start in; empty if the agent has none. */
   permission_modes: string[]
   /** A plain terminal, no agent: it may run next to a folder's agent. */
@@ -474,6 +476,9 @@ export const api = {
     request<void>('PUT', `sessions/${encodeURIComponent(sessionId)}/permission-mode`, { body: { mode } }),
   cancelEffortChange: (sessionId: string) =>
     request<void>('DELETE', `sessions/${encodeURIComponent(sessionId)}/effort`),
+  /** Empties the context of an idle agent, without a restart. */
+  clearContext: (sessionId: string) =>
+    request<void>('POST', `sessions/${encodeURIComponent(sessionId)}/clear`),
   cancelModelChange: (sessionId: string) =>
     request<void>('DELETE', `sessions/${encodeURIComponent(sessionId)}/model`),
   stopSession: (id: string) => request<void>('DELETE', `sessions/${encodeURIComponent(id)}`),
