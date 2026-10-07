@@ -382,6 +382,7 @@
   },
   "approval": {
     "asks": "Möchte {tool} ausführen",
+    "goTo": "Zum Agenten",
     "openAgent": "Zum Agenten wechseln",
     "allow": "Erlauben",
     "deny": "Ablehnen"

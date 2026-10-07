@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { api, type AgentSession, type Approval } from '../api'
+import AppIcon from './AppIcon.vue'
 import { sessionName, useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
 
-// named: shows whose request it is, as a link to that agent (`open`), for places away from it.
+// named: shows whose request it is, with a button that goes to that agent (`open`) to see what it
+// is about before deciding, for places away from it.
 const props = defineProps<{ session: AgentSession; named?: boolean }>()
 const emit = defineEmits<{ open: [] }>()
 
@@ -28,15 +30,7 @@ async function answer(approval: Approval, allow: boolean): Promise<void> {
       :key="approval.id"
       class="flex flex-col gap-2 rounded-lg border border-amber-600 bg-amber-950/40 px-3 py-2 text-sm"
     >
-      <button
-        v-if="named"
-        type="button"
-        class="text-left font-semibold text-amber-100 hover:underline"
-        :title="$t('approval.openAgent')"
-        @click="emit('open')"
-      >
-        {{ sessionName(session) }} →
-      </button>
+      <span v-if="named" class="font-semibold text-amber-100">{{ sessionName(session) }}</span>
       <span class="text-amber-200">
         {{ $t('approval.asks', { tool: approval.tool }) }}
         <span v-if="approval.description" class="text-amber-300/70"> · {{ approval.description }}</span>
@@ -45,6 +39,15 @@ async function answer(approval: Approval, allow: boolean): Promise<void> {
       <div class="flex gap-2">
         <button class="btn-primary btn-small" @click="answer(approval, true)">{{ $t('approval.allow') }}</button>
         <button class="btn-secondary btn-small" @click="answer(approval, false)">{{ $t('approval.deny') }}</button>
+        <button
+          v-if="named"
+          type="button"
+          class="btn-secondary btn-small ml-auto"
+          :title="$t('approval.openAgent')"
+          @click="emit('open')"
+        >
+          <AppIcon name="agents" />{{ $t('approval.goTo') }}
+        </button>
       </div>
     </div>
   </div>
