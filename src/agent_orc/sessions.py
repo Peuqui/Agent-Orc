@@ -197,6 +197,20 @@ class SessionManager:
         command = self._command(session.profile, session.path, True, None, chosen)
         return self._respawn(session, session.profile, command, chosen, env)
 
+    def change_profile(
+        self,
+        session: AgentSession,
+        profile_name: str,
+        resume: bool,
+        model: str | None,
+        env: dict[str, str],
+    ) -> AgentSession:
+        """Replace the agent by another profile's in the same session (ending a running one;
+        open terminals and workspace columns stay valid). `resume` continues the folder's last
+        conversation, which only a profile with the same conversations can do."""
+        command = self._command(profile_name, session.path, resume, None, model)
+        return self._respawn(session, profile_name, command, model, env)
+
     def _command(
         self,
         profile_name: str,

@@ -504,7 +504,7 @@ function resumeWith(session: AgentSession, model: string | null): void {
       :message="$t('restart.chooseModel', { name: sessionName(resumingWithoutModel) })"
       :confirm-label="$t('sessions.resume')"
       :profile="resumingWithoutModel.profile"
-      @choose="(model) => resumingWithoutModel && resumeWith(resumingWithoutModel, model)"
+      @choose="(choice) => resumingWithoutModel && resumeWith(resumingWithoutModel, choice.model)"
       @close="resumingWithoutModel = null"
     />
     <ConfirmDialog

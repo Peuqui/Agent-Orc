@@ -197,6 +197,11 @@ class UnknownModelError(ValueError):
     """Not one of the models the profile offers."""
 
 
+class InvalidProfileChangeError(ValueError):
+    """The agent is already that profile, or the profile is a terminal where an agent is (or the
+    other way round)."""
+
+
 class AgentBusyError(RuntimeError):
     """The agent is working on an answer; typing into it now would mix with its work."""
 
@@ -247,6 +252,7 @@ ERROR_STATUS: dict[type[Exception], int] = {
     SessionAlreadyRunningError: status.HTTP_409_CONFLICT,
     files.InvalidNameError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     InvalidEffortError: status.HTTP_422_UNPROCESSABLE_CONTENT,
+    InvalidProfileChangeError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     InvalidPermissionModeError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     ApprovalNotFoundError: status.HTTP_404_NOT_FOUND,
     ChangeNotFoundError: status.HTTP_404_NOT_FOUND,
@@ -440,6 +446,12 @@ class ModelRequest(BaseModel):
     model: str
 
 
+class ProfileChangeRequest(BaseModel):
+    profile: str
+    # For a profile with a choice of models (AgentProfile.models).
+    model: str | None = None
+
+
 class RestartRequest(BaseModel):
     # The model for an agent that has none stored (started before the choice existed).
     model: str | None = None
@@ -561,6 +573,20 @@ def create_app(
         levels = run_profile_command(command).split()
         levels_cache[(profile_name, model)] = (clock(), levels)
         return levels
+
+    def prepare_start(
+        profile_name: str, path: Path, model: str | None, effort: str | None, ultracode: bool
+    ) -> dict[str, str]:
+        """What an agent needs before its process starts in the folder (new, or another profile
+        taking over): the folder trusted, the model checked, reasoning and permission mode
+        stored; returns its environment."""
+        profile = config.agents.get(profile_name)
+        if profile and profile.trust:
+            FOLDER_TRUST[profile.trust](home, path)
+        check_model(profile_name, model)
+        store_start_reasoning(profile_name, path, model, effort, ultracode)
+        settle_permission_mode(profile_name, path)
+        return start_env(profile_name, path, model)
 
     def start_env(profile_name: str, folder: Path, model: str | None) -> dict[str, str]:
         """The agent's environment; {effort} only for a model that takes levels."""
@@ -821,6 +847,9 @@ def create_app(
                 ],
                 "permission_modes": p.permission.modes if p.permission else [],
                 "terminal": p.terminal,
+                # Where it keeps its conversations; profiles with the same one continue each
+                # other's (a switch between them resumes), None: it keeps none to resume.
+                "conversations": p.conversations.source if p.conversations else None,
                 # Offers a choice of models at start (GET /api/agents/{name}/models).
                 "models": p.models is not None,
                 "hint": p.hint,
@@ -1128,23 +1157,13 @@ def create_app(
             # it is created.
             scope.resolve(str(worktree_path(path, body.worktree)))
             path = create_worktree(path, body.worktree)
-        profile = config.agents.get(body.profile)
-        if profile and profile.trust:
-            FOLDER_TRUST[profile.trust](home, path)
         if body.conversation is not None:
             ids = {c["id"] for c in conversations_of(body.profile, path)}
             if body.conversation not in ids:
                 raise ConversationNotFoundError(body.conversation)
-        check_model(body.profile, body.model)
-        store_start_reasoning(body.profile, path, body.model, body.effort, body.ultracode)
-        settle_permission_mode(body.profile, path)
+        env = prepare_start(body.profile, path, body.model, body.effort, body.ultracode)
         started = sessions.start(
-            body.profile,
-            path,
-            body.resume,
-            body.conversation,
-            body.model,
-            start_env(body.profile, path, body.model),
+            body.profile, path, body.resume, body.conversation, body.model, env
         )
         if body.workspace is not None:
             assign_workspace(started.id, body.workspace)
@@ -1282,6 +1301,36 @@ def create_app(
     )
     def cancel_model_change(session_id: str) -> None:
         pending_model.pop(session_id, None)
+
+    def carries_conversation(from_profile: str, to_profile: str) -> bool:
+        """Whether the folder's conversation goes on with the other profile: both keep it in
+        the same place (Claude Code with the Anthropic models or a local one)."""
+        before = config.agents[from_profile].conversations
+        after = config.agents[to_profile].conversations
+        return before is not None and after is not None and before.source == after.source
+
+    @app.post("/api/sessions/{session_id}/profile", dependencies=authenticated)
+    def change_profile(session_id: str, body: ProfileChangeRequest) -> AgentSession:
+        """Switch the agent to another profile (e.g. from Claude to a local model or Codex) by
+        starting that profile in its place, ending a running answer and background tasks (the
+        user confirmed that). The conversation goes on if both profiles keep it in the same
+        place, otherwise the new one starts a conversation of its own."""
+        session = find_session(session_id)
+        if session is None:
+            raise SessionNotFoundError(session_id)
+        target = config.agents.get(body.profile)
+        if target is None:
+            raise UnknownProfileError(body.profile)
+        if body.profile == session.profile or target.terminal != session.terminal:
+            raise InvalidProfileChangeError(body.profile)
+        resume = carries_conversation(session.profile, body.profile)
+        env = prepare_start(body.profile, session.path, body.model, None, False)
+        pending_effort.pop(session_id, None)
+        pending_model.pop(session_id, None)
+        switched = sessions.change_profile(session, body.profile, resume, body.model, env)
+        # The ended agent cannot report that it stopped working.
+        store_activity(session_id, busy=False)
+        return switched
 
     @app.post(
         "/api/sessions/{session_id}/context/{action}",

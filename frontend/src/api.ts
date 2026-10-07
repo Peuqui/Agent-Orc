@@ -6,6 +6,12 @@ export interface ModelChoice {
   note: string | null
 }
 
+/** What the model dialog hands back: the agent (profile) and its model, if it has a choice. */
+export interface AgentChoice {
+  profile: string
+  model: string | null
+}
+
 export type ContextAction = 'clear' | 'compact'
 
 export interface AgentProfile {
@@ -25,6 +31,8 @@ export interface AgentProfile {
   permission_modes: string[]
   /** A plain terminal, no agent: it may run next to a folder's agent. */
   terminal: boolean
+  /** Where it keeps its conversations; agents with the same one go on with each other's. */
+  conversations: string | null
   /** Offers a choice of models at start (GET agents/{name}/models). */
   models: boolean
   /** Shown in the start dialog when this profile is chosen; from the config. */
@@ -470,6 +478,10 @@ export const api = {
    * false while a busy agent finishes its answer first. */
   changeModel: (sessionId: string, model: string) =>
     request<{ applied: boolean }>('POST', `sessions/${encodeURIComponent(sessionId)}/model`, { body: { model } }),
+  /** Starts another agent (profile) in the session's place; a running answer and background
+   * tasks end. The conversation goes on if both keep it in the same place. */
+  changeProfile: (sessionId: string, choice: AgentChoice) =>
+    request<AgentSession>('POST', `sessions/${encodeURIComponent(sessionId)}/profile`, { body: choice }),
   /** Types the prompt into the agent at `at` (Unix seconds), once it is idle. */
   schedulePrompt: (sessionId: string, text: string, at: number) =>
     request<ScheduledPrompt>('POST', `sessions/${encodeURIComponent(sessionId)}/scheduled`, {

@@ -15,11 +15,17 @@ const { profiles } = useSessions()
 const itemClass =
   'flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-slate-300 hover:bg-slate-700 disabled:opacity-40'
 const profile = computed(() => profiles.value.find((p) => p.name === props.session.profile))
+// There is something to change: models to choose from, or another agent to switch to.
+const canChange = computed(
+  () =>
+    profile.value?.models === true ||
+    profiles.value.some((p) => p.terminal === profile.value?.terminal && p.name !== profile.value?.name),
+)
 </script>
 
 <template>
   <ScheduleButton :session="session" :button-class="itemClass" with-label />
-  <RestartButton v-if="profile?.models" change-model :session="session" :button-class="itemClass" with-label />
+  <RestartButton v-if="canChange" change-model :session="session" :button-class="itemClass" with-label />
   <ContextButton
     v-for="action in profile?.context_actions ?? []"
     :key="action"

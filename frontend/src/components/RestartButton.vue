@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { api, type AgentSession } from '../api'
+import { api, type AgentChoice, type AgentSession } from '../api'
 import { sessionName, useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
 import AppIcon from './AppIcon.vue'
@@ -38,10 +38,15 @@ const modelMessage = computed(() => {
   return t(props.session.busy ? 'restart.changeModelBusy' : 'restart.changeModel', { name })
 })
 
-async function restart(model: string | null): Promise<void> {
+async function restart(choice: AgentChoice | null): Promise<void> {
   asking.value = false
+  const model = choice?.model ?? null
   try {
-    if (props.changeModel && model !== null) {
+    if (choice !== null && choice.profile !== props.session.profile) {
+      await api.changeProfile(props.session.id, choice)
+      const agent = profiles.value.find((p) => p.name === choice.profile)?.label ?? choice.profile
+      toast.info(t('restart.profileChanged', { name: sessionName(props.session), agent }))
+    } else if (props.changeModel && model !== null) {
       const result = await api.changeModel(props.session.id, model)
       const done = result.applied ? 'restart.modelChanged' : 'restart.modelScheduled'
       toast.info(t(done, { name: sessionName(props.session), model }))
@@ -67,6 +72,7 @@ async function restart(model: string | null): Promise<void> {
     :confirm-label="buttonLabel"
     :profile="session.profile"
     :current="session.chosen_model"
+    :choose-profile="changeModel"
     @choose="restart"
     @close="asking = false"
   />

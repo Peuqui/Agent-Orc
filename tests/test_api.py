@@ -96,6 +96,13 @@ def config(home: Path, socket_name: str) -> Config:
                 "resume": ["sh", "-c", "echo resumed {conversation}; sleep 60"],
             },
         },
+        # Keeps its conversations where "talker" does: switching between them resumes.
+        "talker_too": {
+            "label": "Talker too",
+            "start": ["sleep", "63"],
+            "resume": ["sleep", "62"],
+            "conversations": {"source": "claude", "resume": ["sleep", "64"]},
+        },
         # Offers models, "thinker" with a note: it takes two levels, "plain" none (lclaude --levels)
         "chooser": {
             "label": "Chooser",
@@ -1911,3 +1918,58 @@ def test_conversations_are_cleaned_up_within_the_access_scope(
     assert not inside.exists()
     assert delete(outside).status_code == 200 and not outside.exists()
     assert delete(inside).status_code == 404
+
+
+def pane_command(socket_name: str, session_id: str) -> str:
+    return subprocess.run(
+        ["tmux", "-L", socket_name, "display-message", "-p", "-t", f"={session_id}:",
+         "#{pane_start_command}"],
+        capture_output=True, text=True, check=True,
+    ).stdout.strip()  # fmt: skip
+
+
+def start_in(client: TestClient, folder: Path, profile: str) -> str:
+    body = {
+        "profile": profile,
+        "path": str(folder),
+        "resume": False,
+        "effort": None,
+        "ultracode": False,
+        "conversation": None,
+    }
+    session_id: str = client.post("/api/sessions", json=body).json()["id"]
+    return session_id
+
+
+def test_agent_switches_to_another_profile_in_its_session(
+    client: TestClient, home: Path, socket_name: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
+    session_id = start_in(client, home / "projects", "sleeper")
+    url = f"/api/sessions/{session_id}/profile"
+    # Without conversations of its own the old agent has nothing to continue: a fresh start.
+    switched = client.post(url, json={"profile": "talker_too"})
+    assert switched.json()["id"] == session_id and switched.json()["profile"] == "talker_too"
+    assert pane_command(socket_name, session_id) == "sleep 63"
+    # Profiles keeping their conversations in the same place go on with the folder's last one.
+    client.post(url, json={"profile": "talker"})
+    assert client.post(url, json={"profile": "talker_too"}).status_code == 200
+    assert pane_command(socket_name, session_id) == "sleep 62"
+    assert client.get("/api/sessions").json()[0]["profile"] == "talker_too"
+
+
+def test_profile_switch_refuses_what_makes_no_sense(client: TestClient, home: Path) -> None:
+    session_id = start_in(client, home / "projects", "sleeper")
+    url = f"/api/sessions/{session_id}/profile"
+    assert client.post(url, json={"profile": "sleeper"}).status_code == 422  # already that
+    assert client.post(url, json={"profile": "shell"}).status_code == 422  # a terminal
+    assert client.post(url, json={"profile": "nope"}).status_code == 404
+    assert client.post(url, json={"profile": "chooser"}).status_code == 422  # needs a model
+    assert client.post(url, json={"profile": "chooser", "model": "plain"}).status_code == 200
+    assert client.post("/api/sessions/nope/profile", json={"profile": "sleeper"}).status_code == 404
+
+
+def test_agents_tell_where_they_keep_their_conversations(client: TestClient) -> None:
+    kept = {a["name"]: a["conversations"] for a in client.get("/api/agents").json()}
+    assert kept["talker"] == kept["talker_too"] == "claude"
+    assert kept["sleeper"] is None
