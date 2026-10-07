@@ -15,6 +15,7 @@ const props = defineProps<{
   buttonClass: string
   withLabel?: boolean
 }>()
+const emit = defineEmits<{ done: [] }>()
 const { t } = useI18n()
 const toast = useToast()
 const { refresh } = useSessions()
@@ -22,6 +23,7 @@ const asking = ref(false)
 
 async function run(): Promise<void> {
   asking.value = false
+  emit('done')
   try {
     await api.changeContext(props.session.id, props.action)
     toast.info(t(`context.${props.action}.done`, { name: sessionName(props.session) }))
@@ -49,6 +51,6 @@ async function run(): Promise<void> {
     :confirm-label="$t(`context.${action}.title`)"
     :danger="action === 'clear'"
     @confirm="run"
-    @close="asking = false"
+    @close="((asking = false), emit('done'))"
   />
 </template>

@@ -448,7 +448,9 @@ function resumeWith(session: AgentSession, model: string | null, effort: string 
                 <AppIcon name="more" />
               </button>
             </template>
-            <AgentActions :session="session" @stop="stopping = session" />
+            <template #default="{ close }">
+              <AgentActions :session="session" @stop="((stopping = session), close())" @done="close" />
+            </template>
           </DropdownMenu>
           <button
             v-else

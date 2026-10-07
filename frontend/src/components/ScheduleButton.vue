@@ -11,6 +11,7 @@ import BaseDialog from './BaseDialog.vue'
 // Plans a prompt for later, e.g. "run the tests and report" at seven in the morning; it is
 // typed in once due and the agent has finished what it is doing then.
 const props = defineProps<{ session: AgentSession; buttonClass: string; withLabel?: boolean }>()
+const emit = defineEmits<{ done: [] }>()
 const { locale, t } = useI18n()
 const toast = useToast()
 const { refresh } = useSessions()
@@ -40,6 +41,7 @@ async function plan(): Promise<void> {
     await api.schedulePrompt(props.session.id, text.value.trim(), at.getTime() / MILLISECONDS_PER_SECOND)
     planning.value = false
     toast.info(t('schedule.done', { name: sessionName(props.session), when: formatMoment(at, locale.value) }))
+    emit('done')
   } catch (error) {
     toast.error(error)
   }
@@ -51,7 +53,7 @@ async function plan(): Promise<void> {
   <button :class="buttonClass" :title="$t('schedule.title')" :aria-label="$t('schedule.title')" @click="open">
     <AppIcon name="clock" /><span v-if="withLabel">{{ $t('schedule.title') }}</span>
   </button>
-  <BaseDialog v-if="planning" :title="$t('schedule.title')" @close="planning = false">
+  <BaseDialog v-if="planning" :title="$t('schedule.title')" @close="((planning = false), emit('done'))">
     <form class="flex flex-col gap-3" @submit.prevent="plan">
       <textarea v-model="text" rows="4" class="input text-sm" :placeholder="$t('schedule.text')" required />
       <label class="flex flex-col gap-1 text-sm text-slate-300">

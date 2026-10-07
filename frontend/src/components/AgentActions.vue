@@ -10,7 +10,8 @@ import ScheduleButton from './ScheduleButton.vue'
 // What is done to a running agent, less often than looking at it (and partly with consequences):
 // the content of the ⋮ menu on the card and in the agent's page. The last item stops the agent.
 const props = defineProps<{ session: AgentSession }>()
-const emit = defineEmits<{ stop: [] }>()
+// done: an action's dialog is over, so the menu holding these items can close.
+const emit = defineEmits<{ stop: []; done: [] }>()
 const { profiles } = useSessions()
 const itemClass =
   'flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-slate-300 hover:bg-slate-700 disabled:opacity-40'
@@ -24,8 +25,8 @@ const canChange = computed(
 </script>
 
 <template>
-  <ScheduleButton :session="session" :button-class="itemClass" with-label />
-  <RestartButton v-if="canChange" change-model :session="session" :button-class="itemClass" with-label />
+  <ScheduleButton :session="session" :button-class="itemClass" with-label @done="emit('done')" />
+  <RestartButton v-if="canChange" change-model :session="session" :button-class="itemClass" with-label @done="emit('done')" />
   <ContextButton
     v-for="action in profile?.context_actions ?? []"
     :key="action"
@@ -33,8 +34,9 @@ const canChange = computed(
     :action="action"
     :button-class="itemClass"
     with-label
+    @done="emit('done')"
   />
-  <RestartButton :session="session" :button-class="itemClass" with-label />
+  <RestartButton :session="session" :button-class="itemClass" with-label @done="emit('done')" />
   <hr class="my-1 border-slate-700" />
   <button :class="`${itemClass} !text-red-400`" @click="emit('stop')">
     <AppIcon name="stop" />{{ $t('sessions.stop') }}

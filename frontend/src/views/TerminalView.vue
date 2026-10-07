@@ -501,7 +501,7 @@ onBeforeUnmount(() => {
                menu of their own. An ended agent only offers to stop (remove) it. -->
           <template v-if="phone && session?.running">
             <hr class="my-1 border-slate-700" />
-            <AgentActions :session="session" @stop="((actionsOpen = false), (stopping = true))" />
+            <AgentActions :session="session" @stop="((actionsOpen = false), (stopping = true))" @done="actionsOpen = false" />
           </template>
           <button
             v-else-if="!session?.running"
@@ -519,7 +519,9 @@ onBeforeUnmount(() => {
               <AppIcon name="more" />
             </button>
           </template>
-          <AgentActions :session="session" @stop="stopping = true" />
+          <template #default="{ close }">
+            <AgentActions :session="session" @stop="((stopping = true), close())" @done="close" />
+          </template>
         </DropdownMenu>
       </div>
       <button v-if="embedded && phone" class="btn-icon" :aria-label="$t('workspace.close')" :title="$t('workspace.close')" @click="closeColumn">

@@ -18,6 +18,8 @@ const props = defineProps<{
   withLabel?: boolean
   changeModel?: boolean
 }>()
+// done: the dialog is over (confirmed or closed), so a menu holding this button can close.
+const emit = defineEmits<{ done: [] }>()
 const { t } = useI18n()
 const toast = useToast()
 const { profiles, refresh } = useSessions()
@@ -40,6 +42,7 @@ const modelMessage = computed(() => {
 
 async function restart(choice: AgentChoice | null): Promise<void> {
   asking.value = false
+  emit('done')
   const model = choice?.model ?? null
   try {
     if (choice !== null && choice.profile !== props.session.profile) {
@@ -75,7 +78,7 @@ async function restart(choice: AgentChoice | null): Promise<void> {
     :current-effort="session.effort"
     :choose-profile="changeModel"
     @choose="restart"
-    @close="asking = false"
+    @close="((asking = false), emit('done'))"
   />
   <ConfirmDialog
     v-else-if="asking"
@@ -84,6 +87,6 @@ async function restart(choice: AgentChoice | null): Promise<void> {
     :confirm-label="$t('restart.title')"
     :danger="session.busy"
     @confirm="restart(null)"
-    @close="asking = false"
+    @close="((asking = false), emit('done'))"
   />
 </template>
