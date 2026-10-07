@@ -86,12 +86,15 @@ def session_status(session: AgentSession) -> dict[str, Any]:
 
 def session_transcript(session: AgentSession) -> Path | None:
     """Where the agent writes its conversation (Claude's status line reports it); None until it
-    has reported since it started."""
+    has reported since it started, and until the file exists (Claude creates it with the first
+    message, not when it reports the path)."""
     path = status_file(session.id)
     if not path.is_file() or path.stat().st_mtime < session.created:
         return None
     transcript = json.loads(path.read_text(encoding="utf-8")).get("transcript_path")
-    return Path(transcript) if transcript else None
+    if not transcript or not Path(transcript).is_file():
+        return None
+    return Path(transcript)
 
 
 def claude_rate_limits() -> dict[str, Any] | None:

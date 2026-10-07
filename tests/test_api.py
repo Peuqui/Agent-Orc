@@ -1781,6 +1781,9 @@ def test_answers_come_from_the_transcript_the_agent_reports(
     assert client.get(answers).json() == []
     transcript = home / ".claude" / "projects" / "-a" / "conversation.jsonl"
     transcript.parent.mkdir(parents=True)
+    # Claude reports the path at start but creates the file with the first message only.
+    store_status(session_id, {"model": {"display_name": "M"}, "transcript_path": str(transcript)})
+    assert client.get(answers).json() == []
     lines = [
         {
             "type": "user",
@@ -1796,7 +1799,6 @@ def test_answers_come_from_the_transcript_the_agent_reports(
         },
     ]
     transcript.write_text("\n".join(json.dumps(line) for line in lines), encoding="utf-8")
-    store_status(session_id, {"model": {"display_name": "M"}, "transcript_path": str(transcript)})
     turns = client.get(answers).json()
     shown = [(t["prompt"], [x["text"] for x in t["texts"]]) for t in turns]
     assert shown == [("Frage", ["Antwort"])]
