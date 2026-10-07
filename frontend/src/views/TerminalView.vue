@@ -25,7 +25,7 @@ import { useDismiss } from '../composables/useDismiss'
 import { onLongPress } from '../composables/useLongPress'
 import { registerFileLinks } from '../composables/useFileLinks'
 import { sessionName, useSessions } from '../composables/useSessions'
-import { PHONE_WIDTH, TOUCH_FIRST } from '../device'
+import { JOG_TRACK_WIDTH_PX, PHONE_WIDTH, TOUCH_FIRST } from '../device'
 import { useToast } from '../composables/useToast'
 import {
   FONT_SAMPLE,
@@ -562,12 +562,14 @@ onBeforeUnmount(() => {
       >
         <AnswersFeed :session-id="id" />
       </div>
-      <!-- Laid over the bottom edge, right above the input where the user answers, so nothing
-           shifts when a request comes or goes; in every view and workspace column. -->
+      <!-- Laid over the bottom edge, as far in as the answers (p-3), right above the input where
+           the user answers, and clear of the jog strip, so nothing shifts when a request comes or
+           goes; in every view and workspace column. -->
       <ApprovalRequests
         v-if="session"
         :session="session"
-        class="absolute inset-x-1 bottom-1 z-20 max-h-[60%] overflow-y-auto rounded-lg bg-slate-900 shadow-xl"
+        class="absolute bottom-3 left-3 z-20 max-h-[60%] overflow-y-auto rounded-lg bg-slate-900 shadow-xl"
+        :style="{ right: `calc(var(--spacing) * 3 + ${JOG_TRACK_WIDTH_PX}px)` }"
       />
       <div
         v-if="!connected"
