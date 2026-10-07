@@ -47,11 +47,11 @@ async function restart(choice: AgentChoice | null): Promise<void> {
       const agent = profiles.value.find((p) => p.name === choice.profile)?.label ?? choice.profile
       toast.info(t('restart.profileChanged', { name: sessionName(props.session), agent }))
     } else if (props.changeModel && model !== null) {
-      const result = await api.changeModel(props.session.id, model)
+      const result = await api.changeModel(props.session.id, model, choice?.effort ?? null)
       const done = result.applied ? 'restart.modelChanged' : 'restart.modelScheduled'
       toast.info(t(done, { name: sessionName(props.session), model }))
     } else {
-      await api.restartSession(props.session.id, model)
+      await api.restartSession(props.session.id, model, choice?.effort ?? null)
       toast.info(t('restart.done', { name: sessionName(props.session) }))
     }
   } catch (error) {
@@ -72,6 +72,7 @@ async function restart(choice: AgentChoice | null): Promise<void> {
     :confirm-label="buttonLabel"
     :profile="session.profile"
     :current="session.chosen_model"
+    :current-effort="session.effort"
     :choose-profile="changeModel"
     @choose="restart"
     @close="asking = false"

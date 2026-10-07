@@ -5,6 +5,7 @@ import { api, type Conversation, type ConversationHit, type ModelChoice, type Re
 import { preferredModel, rememberModel } from '../composables/useModelChoice'
 import { useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
+import { nearestLevel } from '../effort'
 import { baseName, formatDate, formatSize } from '../format'
 import BaseDialog from './BaseDialog.vue'
 import ReasoningControl from './ReasoningControl.vue'
@@ -78,21 +79,10 @@ const effortLevels = computed(() =>
 // The folder's stored reasoning, preselected where the agent (or its model) takes it.
 const folderReasoning = ref<Reasoning>(NO_REASONING)
 
-/**
- * The folder's level where the model takes it; otherwise the next higher one it takes (as
- * lclaude translates), or its highest. The order is the profile's list of levels.
- */
+/** The folder's level where the model takes it, otherwise the nearest one it takes. */
 function preselectReasoning(): void {
-  const levels = effortLevels.value
   const stored = folderReasoning.value
-  const order = profile.value?.effort_levels ?? []
-  const wanted = order.indexOf(stored.effort ?? '')
-  const effort =
-    levels.length === 0
-      ? null
-      : levels.includes(stored.effort ?? '')
-        ? stored.effort
-        : (levels.find((level) => order.indexOf(level) >= wanted) ?? levels[levels.length - 1])
+  const effort = nearestLevel(stored.effort, effortLevels.value, profile.value?.effort_levels ?? [])
   reasoning.value = { effort, ultracode: stored.ultracode }
 }
 

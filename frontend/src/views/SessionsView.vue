@@ -208,23 +208,15 @@ function resume(session: AgentSession): void {
     resumingWithoutModel.value = session
     return
   }
-  resumeWith(session, session.chosen_model)
+  // The model it was started with, and the effort the agent last reported (a model without
+  // levels gets none, whatever the agent reports).
+  resumeWith(session, session.chosen_model, session.effort_levels.length ? session.effort : null)
 }
 
-function resumeWith(session: AgentSession, model: string | null): void {
+function resumeWith(session: AgentSession, model: string | null, effort: string | null): void {
   resumingWithoutModel.value = null
-  // Resume with the effort the agent last reported, and the model it was started with.
   void run(() =>
-    api.startSession(
-      session.profile,
-      session.path,
-      true,
-      // A model without levels gets none, whatever the agent reports.
-      { effort: session.effort_levels.length ? session.effort : null, ultracode: session.ultracode },
-      null,
-      null,
-      model,
-    ),
+    api.startSession(session.profile, session.path, true, { effort, ultracode: session.ultracode }, null, null, model),
   )
 }
 </script>
@@ -504,7 +496,8 @@ function resumeWith(session: AgentSession, model: string | null): void {
       :message="$t('restart.chooseModel', { name: sessionName(resumingWithoutModel) })"
       :confirm-label="$t('sessions.resume')"
       :profile="resumingWithoutModel.profile"
-      @choose="(choice) => resumingWithoutModel && resumeWith(resumingWithoutModel, choice.model)"
+      :current-effort="resumingWithoutModel.effort"
+      @choose="(choice) => resumingWithoutModel && resumeWith(resumingWithoutModel, choice.model, choice.effort)"
       @close="resumingWithoutModel = null"
     />
     <ConfirmDialog

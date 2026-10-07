@@ -96,6 +96,23 @@ def config(home: Path, socket_name: str) -> Config:
                 "resume": ["sh", "-c", "echo resumed {conversation}; sleep 60"],
             },
         },
+        # Two models with different levels: "wide" takes low/high/max, "narrow" low/medium only.
+        "narrow": {
+            "label": "Narrow",
+            "models": ["printf", "wide\\nnarrow\\n"],
+            "start": ["sh", "-c", "echo started {model}; exec cat"],
+            "resume": ["sh", "-c", "echo resumed {model}; exec cat"],
+            "effort": {
+                "levels": ["low", "medium", "high", "max"],
+                "default": "high",
+                "store": "claude_project",
+                "levels_command": [
+                    "sh",
+                    "-c",
+                    "[ {model} = wide ] && echo low high max || echo low medium",
+                ],
+            },
+        },
         # Keeps its conversations where "talker" does: switching between them resumes.
         "talker_too": {
             "label": "Talker too",
@@ -1973,3 +1990,47 @@ def test_agents_tell_where_they_keep_their_conversations(client: TestClient) -> 
     kept = {a["name"]: a["conversations"] for a in client.get("/api/agents").json()}
     assert kept["talker"] == kept["talker_too"] == "claude"
     assert kept["sleeper"] is None
+
+
+def start_narrow(client: TestClient, folder: Path, model: str, effort: str) -> str:
+    body = {
+        "profile": "narrow", "path": str(folder), "resume": False, "effort": effort,
+        "ultracode": False, "conversation": None, "model": model,
+    }  # fmt: skip
+    session_id: str = client.post("/api/sessions", json=body).json()["id"]
+    return session_id
+
+
+def test_model_change_takes_the_level_chosen_for_the_new_model(
+    client: TestClient, home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
+    folder = home / "projects"
+    session_id = start_narrow(client, folder, "wide", "max")
+    url = f"/api/sessions/{session_id}/model"
+    # The folder's "max" is not one the other model takes: without a level the change fails,
+    # and the agent stays as it was.
+    assert client.post(url, json={"model": "narrow"}).status_code == 422
+    assert client.get("/api/sessions").json()[0]["chosen_model"] == "wide"
+    # With a level of the new model it goes through and the folder keeps that level.
+    assert client.post(url, json={"model": "narrow", "effort": "medium"}).status_code == 200
+    changed = client.get("/api/sessions").json()[0]
+    assert changed["chosen_model"] == "narrow" and changed["effort"] == "medium"
+    # A level the model does not take is refused.
+    assert client.post(url, json={"model": "wide", "effort": "medium"}).status_code == 422
+    assert client.post(url, json={"model": "wide", "effort": "max"}).status_code == 200
+
+
+def test_profile_change_takes_the_level_for_the_chosen_model(
+    client: TestClient, home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
+    session_id = start_in(client, home / "projects", "sleeper")
+    url = f"/api/sessions/{session_id}/profile"
+    # "max" is not a level the "narrow" model takes.
+    refused = client.post(url, json={"profile": "narrow", "model": "narrow", "effort": "max"})
+    assert refused.status_code == 422
+    assert client.get("/api/sessions").json()[0]["profile"] == "sleeper"
+    switched = client.post(url, json={"profile": "narrow", "model": "narrow", "effort": "medium"})
+    assert switched.status_code == 200 and switched.json()["profile"] == "narrow"
+    assert client.get("/api/sessions").json()[0]["effort"] == "medium"

@@ -6,10 +6,12 @@ export interface ModelChoice {
   note: string | null
 }
 
-/** What the model dialog hands back: the agent (profile) and its model, if it has a choice. */
+/** What the model dialog hands back: the agent (profile), its model if it has a choice, and the
+ * level it runs with if it takes levels. */
 export interface AgentChoice {
   profile: string
   model: string | null
+  effort: string | null
 }
 
 export type ContextAction = 'clear' | 'compact'
@@ -472,12 +474,14 @@ export const api = {
     request<void>('PUT', 'prompt-templates', { body: templates }),
   consumption: () => request<ConsumptionRow[]>('GET', 'consumption'),
   /** Resumes the agent in its own session; a running answer and background tasks end. */
-  restartSession: (sessionId: string, model: string | null = null) =>
-    request<AgentSession>('POST', `sessions/${encodeURIComponent(sessionId)}/restart`, { body: { model } }),
+  restartSession: (sessionId: string, model: string | null = null, effort: string | null = null) =>
+    request<AgentSession>('POST', `sessions/${encodeURIComponent(sessionId)}/restart`, { body: { model, effort } }),
   /** Switches the agent to the model: in place if it can, otherwise by resuming it; applied is
    * false while a busy agent finishes its answer first. */
-  changeModel: (sessionId: string, model: string) =>
-    request<{ applied: boolean }>('POST', `sessions/${encodeURIComponent(sessionId)}/model`, { body: { model } }),
+  changeModel: (sessionId: string, model: string, effort: string | null) =>
+    request<{ applied: boolean }>('POST', `sessions/${encodeURIComponent(sessionId)}/model`, {
+      body: { model, effort },
+    }),
   /** Starts another agent (profile) in the session's place; a running answer and background
    * tasks end. The conversation goes on if both keep it in the same place. */
   changeProfile: (sessionId: string, choice: AgentChoice) =>

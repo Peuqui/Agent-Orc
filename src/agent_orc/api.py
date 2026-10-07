@@ -444,17 +444,25 @@ def context_commands(profile: AgentProfile) -> dict[ContextAction, str | None]:
 
 class ModelRequest(BaseModel):
     model: str
+    # The level the new model runs with, for one that takes levels and is restarted for the
+    # change (one that switches in place keeps its level).
+    effort: str | None = None
 
 
 class ProfileChangeRequest(BaseModel):
     profile: str
     # For a profile with a choice of models (AgentProfile.models).
     model: str | None = None
+    # For a profile or model that takes levels.
+    effort: str | None = None
 
 
 class RestartRequest(BaseModel):
-    # The model for an agent that has none stored (started before the choice existed).
+    # The model for an agent that has none stored (started before the choice existed), or the
+    # one it changes to.
     model: str | None = None
+    # The level for that model, if it takes levels.
+    effort: str | None = None
 
 
 class ExistingPathsRequest(BaseModel):
@@ -551,10 +559,11 @@ def create_app(
             effort = folder_reasoning(profile_name, path).effort
         store_effort(profile_name, path, Reasoning(effort, ultracode), model)
 
-    def store_model_reasoning(session: AgentSession, model: str) -> None:
-        """A newly chosen model: the folder's level must be one it takes."""
+    def store_model_reasoning(session: AgentSession, model: str, effort: str | None) -> None:
+        """A newly chosen model: it runs with the chosen level, or, without one, with the
+        folder's, which must then be one the model takes."""
         kept = folder_reasoning(session.profile, session.path)
-        store_start_reasoning(session.profile, session.path, model, None, kept.ultracode)
+        store_start_reasoning(session.profile, session.path, model, effort, kept.ultracode)
 
     levels_cache: dict[tuple[str, str | None], tuple[float, list[str]]] = {}
 
@@ -1237,7 +1246,7 @@ def create_app(
             # The agent reads the folder's effort at start: a waiting change comes along.
             store_effort(session.profile, session.path, pending, chosen)
         elif model is not None:
-            store_model_reasoning(session, model)
+            store_model_reasoning(session, model, body.effort if body else None)
         settle_permission_mode(session.profile, session.path)
         env = start_env(session.profile, session.path, chosen)
         restarted = sessions.restart(session, env, model)
@@ -1245,13 +1254,13 @@ def create_app(
         store_activity(session_id, busy=False)
         return restarted
 
-    def apply_model(session: AgentSession, model: str) -> AgentSession:
+    def apply_model(session: AgentSession, model: str, effort: str | None) -> AgentSession:
         """Typed into a running agent that can switch in place, otherwise by resuming it."""
         pending_model.pop(session.id, None)
         live = config.agents[session.profile].model_live
         if not session.running or live is None:
-            return restart_session(session.id, RestartRequest(model=model))
-        store_model_reasoning(session, model)
+            return restart_session(session.id, RestartRequest(model=model, effort=effort))
+        store_model_reasoning(session, model, None)
 
         def switch() -> None:
             sessions.type_line(session.id, live.command.format(model=model))
@@ -1275,7 +1284,7 @@ def create_app(
             if session is None:
                 pending_model.pop(session_id, None)
             elif not session.running or not session_busy(session):
-                apply_model(session, model)
+                apply_model(session, model, None)
 
     @app.post("/api/sessions/{session_id}/model", dependencies=authenticated)
     def change_model(session_id: str, body: ModelRequest) -> dict[str, bool]:
@@ -1291,7 +1300,7 @@ def create_app(
         if live is not None and session.running and session_busy(session):
             pending_model[session_id] = body.model
             return {"applied": False}
-        apply_model(session, body.model)
+        apply_model(session, body.model, body.effort)
         return {"applied": True}
 
     @app.delete(
@@ -1324,7 +1333,7 @@ def create_app(
         if body.profile == session.profile or target.terminal != session.terminal:
             raise InvalidProfileChangeError(body.profile)
         resume = carries_conversation(session.profile, body.profile)
-        env = prepare_start(body.profile, session.path, body.model, None, False)
+        env = prepare_start(body.profile, session.path, body.model, body.effort, False)
         pending_effort.pop(session_id, None)
         pending_model.pop(session_id, None)
         switched = sessions.change_profile(session, body.profile, resume, body.model, env)

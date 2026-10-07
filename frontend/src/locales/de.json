@@ -163,6 +163,7 @@
     "NotADirectoryError": "Das ist kein Ordner.",
     "FileNotFoundError": "Nicht gefunden.",
     "UnknownProfileError": "Unbekannter Agent.",
+    "InvalidEffortError": "Diese Denkstufe bietet das Modell nicht an.",
     "SessionNotFoundError": "Diese Sitzung gibt es nicht mehr.",
     "ApprovalNotFoundError": "Diese Anfrage ist nicht mehr offen, vermutlich wurde sie schon beantwortet.",
     "TrashEntryNotFoundError": "Dieser Eintrag ist nicht mehr im Papierkorb.",
