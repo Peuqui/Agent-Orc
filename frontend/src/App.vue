@@ -89,7 +89,7 @@ watch(authenticated, (isAuthenticated) => {
     </main>
     <BottomNav />
   </div>
-  <ApprovalBanner />
+  <ApprovalBanner v-if="authenticated" />
   <ToastList />
   <UpdateBanner />
 </template>

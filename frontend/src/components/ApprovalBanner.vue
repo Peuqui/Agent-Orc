@@ -1,8 +1,12 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { api, type WorkspaceSet } from '../api'
 import { useSessions } from '../composables/useSessions'
 import { shownAgents } from '../composables/useShownAgents'
+import { useToast } from '../composables/useToast'
+import { useWorkspaceChanges } from '../composables/useWorkspaceChanges'
+import { agentRoute } from '../composables/useWorkspaceTab'
 import ApprovalRequests from './ApprovalRequests.vue'
 
 // A request of an agent asks at the top of every page, whatever workspace is open, with the
@@ -13,6 +17,13 @@ const embedded = window.self !== window.top
 const route = useRoute()
 const router = useRouter()
 const { sessions } = useSessions()
+const toast = useToast()
+
+// Where each agent lives, to go to its workspace as the card's terminal button does.
+const workspaces = ref<WorkspaceSet | null>(null)
+if (!embedded) {
+  useWorkspaceChanges(() => api.workspaces().then((everything) => (workspaces.value = everything), toast.error))
+}
 
 const agentPage = (id: string): string => `/terminal/${encodeURIComponent(id)}`
 const waiting = computed(() =>
@@ -37,7 +48,7 @@ const waiting = computed(() =>
       :session="session"
       named
       class="w-full max-w-xl rounded-lg bg-slate-900 shadow-xl"
-      @open="router.push(agentPage(session.id))"
+      @open="router.push(agentRoute(workspaces, session.id))"
     />
   </div>
 </template>

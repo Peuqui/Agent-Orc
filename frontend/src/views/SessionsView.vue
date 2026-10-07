@@ -20,7 +20,7 @@ import { moveInList, useReorder } from '../composables/useReorder'
 import { cardKey, sessionName, useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
 import { useWorkspaceChanges } from '../composables/useWorkspaceChanges'
-import { homeOf, openWorkspace, unnamedListed, useOtherTabs, workspaceRoute } from '../composables/useWorkspaceTab'
+import { agentRoute, homeOf, openWorkspace, unnamedListed, useOtherTabs } from '../composables/useWorkspaceTab'
 
 const { sessions, profiles, refresh } = useSessions()
 const toast = useToast()
@@ -142,11 +142,7 @@ function loadWorkspaces(): void {
 // Loads once the stream connects, and again whenever a workspace changed on any device.
 useWorkspaceChanges(loadWorkspaces)
 
-/** An agent opens in the workspace it lives in; one without any opens in this tab's. */
-function terminalRoute(agent: string) {
-  const home = workspaces.value ? homeOf(workspaces.value, agent) : undefined
-  return home === undefined ? { path: '/workspace', query: { open: agent } } : workspaceRoute(home, agent)
-}
+const terminalRoute = (agent: string) => agentRoute(workspaces.value, agent)
 
 /** The agent's workspace as the selection's value: "" is the unnamed one. */
 function workspaceOf(agent: string): string {

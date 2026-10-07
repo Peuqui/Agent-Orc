@@ -82,6 +82,12 @@ export function workspaceRoute(name: string | null, agent?: string) {
   return { path: '/workspace', query }
 }
 
+/** An agent opens in the workspace it lives in; one without any opens in this tab's. */
+export function agentRoute(workspaces: WorkspaceSet | null, agent: string) {
+  const home = workspaces ? homeOf(workspaces, agent) : undefined
+  return home === undefined ? { path: '/workspace', query: { open: agent } } : workspaceRoute(home, agent)
+}
+
 /** Show the workspace in this window. */
 function switchWorkspace(router: Router, name: string | null, agent?: string): void {
   void router.push(workspaceRoute(name, agent))
