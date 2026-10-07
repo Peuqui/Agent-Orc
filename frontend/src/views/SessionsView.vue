@@ -354,9 +354,8 @@ function resumeWith(session: AgentSession, model: string | null): void {
             </label>
           </div>
         </div>
-        <!-- Wraps where the effort control (never narrower than min-w-64) does not fit next to
-             the context: one row on wide cards, two on narrow ones. -->
-        <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <!-- Context left, effort right; where both do not fit in one row, the effort wraps. -->
+        <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
           <ContextMeter
             v-if="session.context_tokens != null && session.context_window != null"
             :tokens="session.context_tokens"
@@ -364,7 +363,6 @@ function resumeWith(session: AgentSession, model: string | null): void {
           />
           <ReasoningControl
             v-if="session.running && session.effort_levels.length"
-            class="min-w-64 flex-1"
             compact
             :levels="session.effort_levels"
             :ultracode-offered="ultracodeOffered.get(session.profile) ?? false"

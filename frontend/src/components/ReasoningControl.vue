@@ -10,7 +10,7 @@ const props = defineProps<{
   ultracodeOffered: boolean
   modelValue: Reasoning
   disabled?: boolean
-  /** One line, without the "faster / smarter" captions (they stay in the slider's title). */
+  /** On the card: a dropdown instead of the slider. */
   compact?: boolean
 }>()
 const emit = defineEmits<{ 'update:modelValue': [reasoning: Reasoning] }>()
@@ -40,6 +40,11 @@ function onChange(): void {
   }
 }
 
+function onSelect(event: Event): void {
+  const chosen = (event.target as HTMLSelectElement).value
+  if (chosen !== props.modelValue.effort) emit('update:modelValue', { ...props.modelValue, effort: chosen })
+}
+
 function toggleUltracode(): void {
   emit('update:modelValue', { ...props.modelValue, ultracode: !props.modelValue.ultracode })
 }
@@ -47,22 +52,29 @@ function toggleUltracode(): void {
 
 <template>
   <div class="flex" :class="compact ? 'items-center gap-x-3' : 'items-end gap-x-4'">
-    <div class="flex min-w-0 flex-1" :class="compact ? 'min-w-36 items-center gap-x-2' : 'flex-col gap-y-1'">
-      <div class="flex shrink-0 items-baseline gap-2" :class="compact ? 'text-xs' : 'text-sm'">
-        <span v-if="!compact" class="text-slate-400">{{ $t('agent.effort') }}</span>
-        <span class="font-medium text-slate-100" :class="{ 'w-14': compact }">
-          {{ effort }}
-        </span>
+    <!-- On the card: a dropdown, which a swipe over the card cannot change by accident (a slider
+         is easily caught) and which takes less room. -->
+    <select
+      v-if="compact"
+      class="h-7 rounded-lg border border-slate-600 bg-slate-800 pr-1 pl-1.5 text-xs text-slate-200 disabled:opacity-50"
+      :value="effort"
+      :disabled="disabled"
+      :aria-label="$t('agent.effort')"
+      :title="$t('agent.effort')"
+      @change="onSelect"
+    >
+      <option v-for="stop in stops" :key="stop" :value="stop">{{ stop }}</option>
+    </select>
+    <div v-else class="flex min-w-0 flex-1 flex-col gap-y-1">
+      <div class="flex shrink-0 items-baseline gap-2 text-sm">
+        <span class="text-slate-400">{{ $t('agent.effort') }}</span>
+        <span class="font-medium text-slate-100">{{ effort }}</span>
       </div>
-      <div v-if="!compact" class="flex justify-between text-xs text-slate-500">
+      <div class="flex justify-between text-xs text-slate-500">
         <span>{{ $t('agent.faster') }}</span>
         <span>{{ $t('agent.smarter') }}</span>
       </div>
-      <div
-        class="relative flex min-w-20 flex-1 items-center"
-        :class="compact ? 'h-7' : 'h-9'"
-        :title="compact ? `${$t('agent.faster')} ← → ${$t('agent.smarter')}` : undefined"
-      >
+      <div class="relative flex h-9 min-w-20 flex-1 items-center">
         <!-- The track with one dot per stop is drawn here; the native slider only adds the knob. -->
         <div
           class="pointer-events-none absolute inset-x-0 flex h-1.5 items-center justify-between rounded-full bg-slate-700 px-[7px]"
