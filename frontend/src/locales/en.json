@@ -418,6 +418,13 @@
       "done": "Context of “{name}” is being compacted."
     }
   },
+  "tokens": {
+    "thousand": "k",
+    "million": "M",
+    "billion": "B",
+    "trillion": "T",
+    "quadrillion": "Q"
+  },
   "restart": {
     "changeModelLive": "Choose the model for “{name}”. The agent switches in place, after its answer if it is working; the conversation and background tasks stay, only the prompt cache starts over for the new model.",
     "modelScheduled": "“{name}” switches to {model} after the current answer.",

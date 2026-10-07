@@ -46,15 +46,23 @@ export function formatMoment(date: Date, locale: string): string {
 }
 
 const THOUSAND = 1000
-const MILLION = 1_000_000
-const BILLION = 1_000_000_000
 
-/** Token counts in short form: 950, 675k, 1M, 1.2M. */
-export function formatTokens(tokens: number): string {
-  if (tokens >= BILLION) return `${Number((tokens / BILLION).toFixed(1))}B`
-  if (tokens >= MILLION) return `${Number((tokens / MILLION).toFixed(1))}M`
-  if (tokens >= THOUSAND) return `${Math.round(tokens / THOUSAND)}k`
-  return String(tokens)
+/**
+ * Token counts in short form, with the language's own units (`units`: thousand, million, billion,
+ * ...; German counts in steps of a thousand too, but its billion is a million millions): 950,
+ * 675k, 1.2M or 675 Tsd., 1,2 Mio. Thousands are rounded, larger units get one decimal.
+ */
+export function formatTokens(tokens: number, units: string[], locale: string): string {
+  const number = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 })
+  let value = tokens
+  let unit = -1
+  while (unit < units.length - 1 && Math.round(value) >= THOUSAND) {
+    value /= THOUSAND
+    unit += 1
+  }
+  if (unit === -1) return number.format(value)
+  const rounded = unit === 0 ? Math.round(value) : Number(value.toFixed(1))
+  return `${number.format(rounded)}${units[unit]}`
 }
 
 /** Seconds as "m:ss", e.g. 476 → "7:56". */

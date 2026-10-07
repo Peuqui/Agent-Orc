@@ -18,6 +18,11 @@ export function shownTexts(turn: Turn, all: boolean): AnswerText[] {
   })
 }
 
+/** New to the reader: written after the time seen, and not read aloud since. */
+export function isUnread(text: AnswerText, seen: string, read: ReadonlySet<string>): boolean {
+  return text.time > seen && !read.has(text.id)
+}
+
 /** The shown texts written after `seen` (an ISO time, which compares as text), in the order written. */
 export function unreadTexts(turns: Turn[], all: boolean, seen: string): AnswerText[] {
   return turns.flatMap((turn) => shownTexts(turn, all)).filter((text) => text.time > seen)

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { shownTexts, spokenAs, unreadTexts, uploadMentions } from '../src/answers.ts'
+import { isUnread, shownTexts, spokenAs, unreadTexts, uploadMentions } from '../src/answers.ts'
 
 const text = (id: string, time: string) => ({ id, time, text: id })
 const turn = (id: string, texts: ReturnType<typeof text>[]) => ({
@@ -69,4 +69,12 @@ test('a request is marked as spoken by the latest one sent before it with the sa
   assert.equal(spokenAs(turn, [earlier, later])?.id, 'b')
   // Sent after the request, or with other words: not this one.
   assert.equal(spokenAs(turn, [spoken('c', '2026-10-07T10:01:00+00:00'), spoken('d', '2026-10-07T10:00:04+00:00', 'etwas anderes')]), undefined)
+})
+
+test('a text is new until it was seen or read aloud', () => {
+  const written = text('b', '2026-10-06T10:00:05Z')
+  assert.equal(isUnread(written, '2026-10-06T10:00:01Z', new Set()), true)
+  assert.equal(isUnread(written, '2026-10-06T10:00:05Z', new Set()), false)
+  assert.equal(isUnread(written, '2026-10-06T10:00:01Z', new Set(['b'])), false)
+  assert.equal(isUnread(written, '2026-10-06T10:00:01Z', new Set(['a'])), true)
 })

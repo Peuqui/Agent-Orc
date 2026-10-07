@@ -28,8 +28,9 @@ export function useSpeech() {
   const voice = computed(() => useSpeechVoice(engineId.value))
   const available = computed(() => speechEngines.value.length > 0)
 
-  /** Reads the answers one after the other; what is read now ends. */
-  async function play(items: Speakable[]): Promise<void> {
+  /** Reads the answers one after the other; what is read now ends. `done` hears of each answer
+   * once it has been read to its end (not of one that was interrupted). */
+  async function play(items: Speakable[], done?: (item: Speakable) => void): Promise<void> {
     stop()
     if (items.length === 0) return
     const mine = ++reading
@@ -49,6 +50,7 @@ export function useSpeech() {
         playing.value = items[0]?.id ?? null
         const texts = answers.flatMap((answer) => speaker.split(answer.text))
         await speaker.speakAll(texts, options, items[0].label)
+        if (reading === mine) items.forEach((item) => done?.(item))
       } else {
         for (const { item, text } of answers) {
           playing.value = item.id
@@ -56,6 +58,8 @@ export function useSpeech() {
             if (reading !== mine) return
             await speaker.speak(chunk, options)
           }
+          if (reading !== mine) return
+          done?.(item)
         }
       }
     } catch (error) {

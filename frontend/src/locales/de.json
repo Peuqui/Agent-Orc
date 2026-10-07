@@ -418,6 +418,13 @@
       "done": "Kontext von „{name}“ wird komprimiert."
     }
   },
+  "tokens": {
+    "thousand": " Tsd.",
+    "million": " Mio.",
+    "billion": " Mrd.",
+    "trillion": " Bio.",
+    "quadrillion": " Brd."
+  },
   "restart": {
     "changeModelLive": "Modell für „{name}“ wählen. Der Agent wechselt es im laufenden Betrieb, bei laufender Antwort danach; Gespräch und Hintergrundaufgaben bleiben, nur der Prompt-Cache beginnt für das neue Modell von vorn.",
     "modelScheduled": "„{name}“ wechselt nach der aktuellen Antwort auf {model}.",

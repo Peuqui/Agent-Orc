@@ -3,7 +3,8 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { api, type ConsumptionRow } from '../api'
 import { useToast } from '../composables/useToast'
-import { baseName, formatTokens } from '../format'
+import { useTokenFormat } from '../composables/useTokenFormat'
+import { baseName } from '../format'
 
 // Claude's token consumption from all its conversations (Agent-Orc, terminal, VS Code, subagents):
 // per day as bars, per project and per model as tables. Tokens, no prices: those change, and a
@@ -14,6 +15,7 @@ const KINDS = ['input', 'cache_write', 'cache_read', 'output'] as const
 
 const toast = useToast()
 const { locale } = useI18n()
+const formatTokens = useTokenFormat()
 const rows = ref<ConsumptionRow[] | null>(null)
 const period = ref(14)
 

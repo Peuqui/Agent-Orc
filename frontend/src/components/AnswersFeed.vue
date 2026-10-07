@@ -2,7 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { api, type AnswerText, type Interjection, type SpokenRequest, type Turn } from '../api'
-import { shownTexts, spokenAs, uploadMentions } from '../answers'
+import { isUnread, shownTexts, spokenAs, uploadMentions } from '../answers'
 import { summaryOf } from '../speechText'
 import { markSeen, seenUntil } from '../composables/useAnswerSeen'
 import { useAnswersAll } from '../composables/useSettings'
@@ -35,6 +35,19 @@ let timer: number | undefined
 let seenTimer: number | undefined
 // What was looked at before this view opened: the marks stay until it is closed.
 const seenBefore = ref(seenUntil(props.sessionId))
+// What was read aloud since: no longer new, though it is newer than what was seen before.
+const readAloud = ref(new Set<string>())
+
+function markReadAloud(item: Speakable): void {
+  readAloud.value.add(item.id)
+}
+
+// Another document of this device (a column, another tab, the workspace's speaker) has seen or
+// read answers of this agent; the storage event reaches only the other documents.
+function followSeenElsewhere(): void {
+  const elsewhere = seenUntil(props.sessionId)
+  if (elsewhere > seenBefore.value) seenBefore.value = elsewhere
+}
 
 interface Shown {
   turn: Turn
@@ -57,7 +70,7 @@ const shown = computed<Shown[]>(() =>
 )
 const everyText = computed(() => shown.value.flatMap((entry) => entry.texts))
 const newest = computed(() => everyText.value.at(-1)?.time ?? '')
-const unread = computed(() => everyText.value.filter((text) => text.time > seenBefore.value))
+const unread = computed(() => everyText.value.filter((text) => isUnread(text, seenBefore.value, readAloud.value)))
 
 const agentName = computed(() => {
   const session = sessions.value.find((candidate) => candidate.id === props.sessionId)
@@ -70,11 +83,11 @@ function speakable(texts: AnswerText[]): Speakable[] {
 
 function readFrom(text: AnswerText): void {
   const all = everyText.value
-  void speech.play(speakable(all.slice(all.findIndex((candidate) => candidate.id === text.id))))
+  void speech.play(speakable(all.slice(all.findIndex((candidate) => candidate.id === text.id))), markReadAloud)
 }
 
 function readUnread(): void {
-  void speech.play(speakable(unread.value))
+  void speech.play(speakable(unread.value), markReadAloud)
 }
 
 
@@ -106,12 +119,14 @@ function scheduleSeen(): void {
 }
 
 onMounted(() => {
+  window.addEventListener('storage', followSeenElsewhere)
   void load()
   timer = window.setInterval(() => {
     if (document.visibilityState === 'visible') void load()
   }, POLL_MS)
 })
 onBeforeUnmount(() => {
+  window.removeEventListener('storage', followSeenElsewhere)
   window.clearInterval(timer)
   window.clearTimeout(seenTimer)
 })
@@ -214,7 +229,7 @@ function jog(lines: number): void {
           <article
             v-else
             class="card flex flex-col gap-2 p-3"
-            :class="item.time > seenBefore ? 'border-l-4 border-l-red-500' : ''"
+            :class="isUnread(item, seenBefore, readAloud) ? 'border-l-4 border-l-red-500' : ''"
           >
             <div class="markdown note select-text" v-html="renderMarkdown(answersAll ? item.text : summaryOf(item.text), null)" />
             <div class="flex items-center gap-2 text-xs text-slate-500">
@@ -225,7 +240,7 @@ function jog(lines: number): void {
                   class="btn-secondary btn-small ml-auto"
                   :class="speech.playing.value === item.id ? 'animate-pulse' : ''"
                   :title="$t('answers.readThis')"
-                  @click="void speech.play(speakable([item]))"
+                  @click="void speech.play(speakable([item]), markReadAloud)"
                 >
                   <AppIcon name="speaker" />{{ $t('answers.read') }}
                 </button>
