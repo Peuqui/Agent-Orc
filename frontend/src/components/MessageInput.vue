@@ -127,6 +127,11 @@ function onPaste(event: ClipboardEvent): void {
  * inside the app (a path from the file list).
  */
 const draggingFiles = ref(false)
+// While a file is over this window `dragover` keeps coming; when it stops (the file moved on to
+// another column, whose window gets the events then; `dragleave` does not tell reliably across
+// windows) the notice goes away by itself.
+const DRAG_IDLE_MILLISECONDS = 400
+let dragIdle: number | undefined
 
 function isFileDrag(event: DragEvent): boolean {
   return event.dataTransfer?.types.includes('Files') ?? false
@@ -136,6 +141,8 @@ function onDragOver(event: DragEvent): void {
   if (!isFileDrag(event)) return
   event.preventDefault()
   draggingFiles.value = true
+  window.clearTimeout(dragIdle)
+  dragIdle = window.setTimeout(() => (draggingFiles.value = false), DRAG_IDLE_MILLISECONDS)
 }
 
 // Leaving the window: the pointer goes to nothing (inside it, from one element to another, it
@@ -145,6 +152,7 @@ function onDragLeave(event: DragEvent): void {
 }
 
 function onDrop(event: DragEvent): void {
+  window.clearTimeout(dragIdle)
   draggingFiles.value = false
   if (!isFileDrag(event)) return
   event.preventDefault()
@@ -160,6 +168,7 @@ onMounted(() => {
   window.addEventListener('drop', onDrop, true)
 })
 onBeforeUnmount(() => {
+  window.clearTimeout(dragIdle)
   window.removeEventListener('paste', onPaste, true)
   window.removeEventListener('dragover', onDragOver, true)
   window.removeEventListener('dragleave', onDragLeave, true)
