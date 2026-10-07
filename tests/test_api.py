@@ -153,6 +153,8 @@ def test_everything_requires_login(anonymous: TestClient) -> None:
         ("GET", "/api/files?path=/"),
         ("GET", "/api/trash"),
         ("DELETE", "/api/trash"),
+        ("GET", "/api/conversations/all"),
+        ("POST", "/api/conversations/delete"),
     ]:
         assert anonymous.request(method, url).status_code == 401, url
 
@@ -1871,3 +1873,41 @@ def test_a_sound_can_be_played_and_sought_in_the_browser(client: TestClient, hom
     part = client.get("/api/files/raw", params={"path": str(sound)}, headers={"Range": "bytes=4-7"})
     assert part.status_code == 206 and part.content == bytes([0, 1, 2, 3])
     assert part.headers["content-range"] == "bytes 4-7/64"
+
+
+def test_conversations_are_cleaned_up_within_the_access_scope(
+    client: TestClient, home: Path, clock: FakeClock
+) -> None:
+    def write_conversation(folder: Path, conversation_id: str, age: float) -> Path:
+        directory = claude_project_dir(home, folder)
+        directory.mkdir(parents=True, exist_ok=True)
+        path = directory / f"{conversation_id}.jsonl"
+        path.write_text(
+            json.dumps({"type": "user", "cwd": str(folder), "message": {"content": "Hi"}})
+        )
+        os.utime(path, (clock.now - age, clock.now - age))
+        return path
+
+    inside = write_conversation(
+        home / "projects" / "a", "1b0c8f2e-0000-4000-8000-000000000001", 86400
+    )
+    outside = write_conversation(home / "private", "1b0c8f2e-0000-4000-8000-000000000002", 86400)
+
+    def listed() -> list[str]:
+        return [p["folder"] for p in client.get("/api/conversations/all").json()]
+
+    def delete(path: Path) -> Any:
+        ref = {"directory": path.parent.name, "id": path.stem}
+        return client.post("/api/conversations/delete", json={"conversations": [ref]})
+
+    # The base directory only, until the safety switch widens the scope.
+    assert listed() == [str(home / "projects" / "a")]
+    assert delete(outside).status_code == 403
+    client.post("/api/scope/unlock", json={"password": PASSWORD})
+    assert sorted(listed()) == sorted([str(home / "projects" / "a"), str(home / "private")])
+    # Deleted for good, and it says what that freed.
+    size = inside.stat().st_size
+    assert delete(inside).json() == {"deleted": 1, "freed_bytes": size}
+    assert not inside.exists()
+    assert delete(outside).status_code == 200 and not outside.exists()
+    assert delete(inside).status_code == 404

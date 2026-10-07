@@ -6,12 +6,14 @@ whether it ran in a terminal, in VS Code or in Agent-Orc, so all of them are lis
 
 import json
 import re
+import shutil
 from collections.abc import Callable, Iterator
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
 from agent_orc.auth import Clock
+from agent_orc.scope import OutsideScopeError
 
 CLAUDE_PROJECTS = Path(".claude") / "projects"
 CLAUDE_TITLE_ENTRY = "ai-title"
@@ -31,6 +33,11 @@ EXCERPT_CONTEXT_CHARS = 60
 
 class ConversationNotFoundError(LookupError):
     pass
+
+
+class ConversationInUseError(RuntimeError):
+    """The conversation is still being written: an agent runs in it, or another program has it
+    open."""
 
 
 @dataclass(frozen=True)
@@ -92,8 +99,10 @@ def _claude_title(path: Path) -> str:
 def list_claude_conversations(home: Path, folder: Path, clock: Clock) -> list[Conversation]:
     """Newest first."""
     directory = claude_project_dir(home, folder)
-    if not directory.is_dir():
-        return []
+    return _list_directory(directory, clock) if directory.is_dir() else []
+
+
+def _list_directory(directory: Path, clock: Clock) -> list[Conversation]:
     conversations = []
     for path in directory.glob("*.jsonl"):
         if not CONVERSATION_ID.match(path.stem):
@@ -109,6 +118,101 @@ def list_claude_conversations(home: Path, folder: Path, clock: Clock) -> list[Co
             )
         )
     return sorted(conversations, key=lambda conversation: conversation.modified, reverse=True)
+
+
+@dataclass(frozen=True)
+class CleanupConversation(Conversation):
+    # Not to be deleted now (see ConversationInUseError).
+    in_use: bool
+
+
+@dataclass(frozen=True)
+class ProjectConversations:
+    """All conversations kept for one project folder."""
+
+    # Name of the transcript directory under ~/.claude/projects, to address deletions.
+    directory: str
+    folder: Path
+    conversations: list[CleanupConversation]
+
+
+def _project_folder(directory: Path) -> Path | None:
+    """The folder the conversations in a transcript directory ran in. The directory name cannot
+    tell (every special character became '-'), the conversation's own entries do."""
+    for path in directory.glob("*.jsonl"):
+        with path.open(encoding="utf-8", errors="replace") as handle:
+            for line in handle:
+                folder = json.loads(line).get("cwd")
+                if isinstance(folder, str):
+                    return Path(folder)
+    return None
+
+
+def _conversation_bytes(directory: Path, conversation_id: str) -> int:
+    """What a conversation takes on disk: its transcript and the folder of results beside it."""
+    results = directory / conversation_id
+    return (directory / f"{conversation_id}.jsonl").stat().st_size + sum(
+        file.stat().st_size for file in results.rglob("*") if file.is_file()
+    )
+
+
+def _in_scope_project_folder(directory: Path, in_scope: Callable[[Path], bool]) -> Path | None:
+    folder = _project_folder(directory)
+    return folder if folder is not None and in_scope(folder.resolve()) else None
+
+
+def list_all_claude_conversations(
+    home: Path, clock: Clock, in_scope: Callable[[Path], bool], running: set[Path]
+) -> list[ProjectConversations]:
+    """The conversations of every project folder `in_scope` allows, projects in name order,
+    each project's conversations newest first. `running` holds the transcripts of agents that
+    are running now."""
+    projects = []
+    for directory in sorted((home / CLAUDE_PROJECTS).iterdir()):
+        folder = _in_scope_project_folder(directory, in_scope) if directory.is_dir() else None
+        if folder is None:
+            continue
+        conversations = [
+            CleanupConversation(
+                **{**asdict(conversation), "size": _conversation_bytes(directory, conversation.id)},
+                in_use=conversation.recently_active
+                or directory / f"{conversation.id}.jsonl" in running,
+            )
+            for conversation in _list_directory(directory, clock)
+        ]
+        if conversations:
+            projects.append(ProjectConversations(directory.name, folder, conversations))
+    return sorted(projects, key=lambda project: project.folder.name.lower())
+
+
+def delete_claude_conversation(
+    home: Path,
+    directory_name: str,
+    conversation_id: str,
+    clock: Clock,
+    in_scope: Callable[[Path], bool],
+    running: set[Path],
+) -> int:
+    """Delete a conversation for good (its transcript and the folder of results beside it);
+    returns the bytes freed."""
+    directory = home / CLAUDE_PROJECTS / directory_name
+    transcript = directory / f"{conversation_id}.jsonl"
+    if (
+        Path(directory_name).name != directory_name
+        or not CONVERSATION_ID.match(conversation_id)
+        or not transcript.is_file()
+    ):
+        raise ConversationNotFoundError(conversation_id)
+    if _in_scope_project_folder(directory, in_scope) is None:
+        raise OutsideScopeError(directory_name)
+    if transcript in running or clock() - transcript.stat().st_mtime < RECENTLY_ACTIVE_SECONDS:
+        raise ConversationInUseError(conversation_id)
+    results = directory / conversation_id
+    freed = _conversation_bytes(directory, conversation_id)
+    transcript.unlink()
+    if results.is_dir():
+        shutil.rmtree(results)
+    return freed
 
 
 @dataclass(frozen=True)

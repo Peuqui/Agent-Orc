@@ -89,7 +89,10 @@ from agent_orc.history import (
     CLAUDE_PROJECTS,
     CONVERSATION_SEARCHES,
     CONVERSATION_SOURCES,
+    ConversationInUseError,
     ConversationNotFoundError,
+    delete_claude_conversation,
+    list_all_claude_conversations,
 )
 from agent_orc.push import (
     add_subscription,
@@ -257,6 +260,7 @@ ERROR_STATUS: dict[type[Exception], int] = {
     UnknownProfileError: status.HTTP_404_NOT_FOUND,
     TrashEntryNotFoundError: status.HTTP_404_NOT_FOUND,
     ConversationNotFoundError: status.HTTP_404_NOT_FOUND,
+    ConversationInUseError: status.HTTP_409_CONFLICT,
     UnsupportedAudioError: status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
     GpuUnavailableError: status.HTTP_503_SERVICE_UNAVAILABLE,
     DictationServiceError: status.HTTP_502_BAD_GATEWAY,
@@ -449,6 +453,16 @@ class ExistingPathsRequest(BaseModel):
 
 class TrashEntryRequest(BaseModel):
     id: str
+
+
+class ConversationRef(BaseModel):
+    # The transcript directory name from GET /api/conversations/all, and the conversation's id.
+    directory: str
+    id: str
+
+
+class DeleteConversationsRequest(BaseModel):
+    conversations: list[ConversationRef]
 
 
 def create_app(
@@ -1146,6 +1160,26 @@ def create_app(
     @app.get("/api/conversations", dependencies=authenticated)
     def list_conversations(profile: str, path: str) -> list[dict[str, Any]]:
         return conversations_of(profile, scope.resolve(path))
+
+    def running_transcripts() -> set[Path]:
+        transcripts = (session_transcript(s) for s in sessions.list() if s.running)
+        return {transcript for transcript in transcripts if transcript is not None}
+
+    @app.get("/api/conversations/all", dependencies=authenticated)
+    def list_all_conversations() -> list[dict[str, Any]]:
+        """Every project's earlier conversations within the access scope, to clean up."""
+        projects = list_all_claude_conversations(home, clock, scope.contains, running_transcripts())
+        return [asdict(project) for project in projects]
+
+    @app.post("/api/conversations/delete", dependencies=authenticated)
+    def delete_conversations(body: DeleteConversationsRequest) -> dict[str, int]:
+        """Delete conversations for good (not into the trash); returns what was freed."""
+        running = running_transcripts()
+        freed = sum(
+            delete_claude_conversation(home, ref.directory, ref.id, clock, scope.contains, running)
+            for ref in body.conversations
+        )
+        return {"deleted": len(body.conversations), "freed_bytes": freed}
 
     @app.get("/api/conversations/search", dependencies=authenticated)
     def search_conversations(profile: str, path: str, query: str) -> list[dict[str, Any]]:

@@ -106,6 +106,19 @@
     "title": "Trash",
     "dropHint": "Dragging a file from the list here puts it in the trash."
   },
+  "cleanup": {
+    "title": "Clean up conversations",
+    "hint": "Earlier conversations of the agents in the projects, sorted by project. They are deleted for good, not into the trash. “Unlock outside” also shows the other folders in the home directory.",
+    "empty": "No conversations found.",
+    "olderThan": "Older than",
+    "days": "days",
+    "choose": "Select",
+    "deleteChosen": "Delete {count} conversation(s) · {size}",
+    "deleteTitle": "Delete conversations",
+    "confirm": "Delete {count} conversation(s) ({size}) for good? This cannot be undone.",
+    "done": "{count} conversation(s) deleted, {size} freed.",
+    "inUse": "in use"
+  },
   "terminal": {
     "back": "Back",
     "placeholder": "Message …",

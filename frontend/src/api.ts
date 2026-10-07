@@ -281,6 +281,19 @@ export interface TerminalSettings {
   submit_delay_ms: number
 }
 
+/** A project's conversations for the clean-up list. */
+export interface ProjectConversations {
+  /** The name of Claude's transcript directory, to address deletions. */
+  directory: string
+  folder: string
+  conversations: CleanupConversation[]
+}
+
+export interface CleanupConversation extends Conversation {
+  /** An agent runs in it or it was written to just now: cannot be deleted. */
+  in_use: boolean
+}
+
 export interface Conversation {
   id: string
   title: string
@@ -575,6 +588,13 @@ export const api = {
   restore: (id: string) => request<{ path: string }>('POST', 'trash/restore', { body: { id } }),
   deleteFromTrash: (id: string) => request<void>('DELETE', `trash/${encodeURIComponent(id)}`),
   emptyTrash: () => request<void>('DELETE', 'trash'),
+
+  listAllConversations: () => request<ProjectConversations[]>('GET', 'conversations/all'),
+  /** For good, not into the trash. */
+  deleteConversations: (conversations: { directory: string; id: string }[]) =>
+    request<{ deleted: number; freed_bytes: number }>('POST', 'conversations/delete', {
+      body: { conversations },
+    }),
 }
 
 /**

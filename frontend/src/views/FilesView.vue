@@ -8,6 +8,7 @@ import BaseDialog from '../components/BaseDialog.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
 import InputDialog from '../components/InputDialog.vue'
 import StartAgentDialog from '../components/StartAgentDialog.vue'
+import ConversationCleanup from '../components/ConversationCleanup.vue'
 import TrashPanel from '../components/TrashPanel.vue'
 import { DRAG_PATH_TYPE } from '../dragTypes'
 import { loadTabState } from '../composables/useWorkspaceTab'
@@ -219,6 +220,7 @@ watch(currentPath, loadEntries)
 
     <aside class="mt-4 md:mt-0">
       <TrashPanel ref="trashPanel" @trash="trashDropped" @restored="loadEntries" />
+      <ConversationCleanup />
     </aside>
 
     <BaseDialog v-if="dialog?.kind === 'actions'" :title="dialog.entry.name" @close="dialog = null">

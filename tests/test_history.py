@@ -3,13 +3,20 @@ import os
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from agent_orc.history import (
     READ_CHUNK_BYTES,
     RECENTLY_ACTIVE_SECONDS,
+    ConversationInUseError,
+    ConversationNotFoundError,
     claude_project_dir,
+    delete_claude_conversation,
+    list_all_claude_conversations,
     list_claude_conversations,
     search_claude_conversations,
 )
+from agent_orc.scope import OutsideScopeError
 from tests.conftest import FakeClock
 
 FOLDER = Path("/home/u/Projekte/demo.app")
@@ -126,3 +133,105 @@ def test_search_newest_first_and_long_texts_cut_around_the_hit(tmp_path: Path) -
     assert [hit.id for hit in hits] == [SECOND, FIRST]
     assert hits[1].excerpt.startswith("…") and hits[1].excerpt.endswith("…")
     assert len(hits[1].excerpt) < len(long_text)
+
+
+PROJECTS = Path("/home/u/Projekte")
+OTHER = Path("/home/u/other")
+THIRD = "1b0c8f2e-0000-4000-8000-000000000003"
+
+
+def in_projects(path: Path) -> bool:
+    return path.is_relative_to(PROJECTS)
+
+
+def write_in(
+    home: Path, folder: Path, conversation_id: str, mtime: float, results: bool = False
+) -> Path:
+    """A conversation that ran in `folder`; its entries name the folder as Claude Code does."""
+    directory = claude_project_dir(home, folder)
+    directory.mkdir(parents=True, exist_ok=True)
+    path = directory / f"{conversation_id}.jsonl"
+    path.write_text(json.dumps({"type": "user", "cwd": str(folder), "message": {"content": "Hi"}}))
+    os.utime(path, (mtime, mtime))
+    if results:
+        (directory / conversation_id).mkdir()
+        (directory / conversation_id / "tool-result.txt").write_text("x" * 1000)
+    return path
+
+
+def test_cleanup_lists_the_projects_in_scope_by_name_with_their_conversations(
+    tmp_path: Path, clock: FakeClock
+) -> None:
+    old = clock.now - 86400
+    write_in(tmp_path, PROJECTS / "zeta", FIRST, old)
+    write_in(tmp_path, PROJECTS / "Alpha", FIRST, old)
+    write_in(tmp_path, PROJECTS / "Alpha", SECOND, old + 60)
+    write_in(tmp_path, OTHER, FIRST, old)
+    listed = list_all_claude_conversations(tmp_path, clock, in_projects, set())
+    assert [(p.folder, [c.id for c in p.conversations]) for p in listed] == [
+        (PROJECTS / "Alpha", [SECOND, FIRST]),
+        (PROJECTS / "zeta", [FIRST]),
+    ]
+    # Widened scope (the safety switch) shows the other folder too.
+    everywhere = list_all_claude_conversations(tmp_path, clock, lambda _: True, set())
+    assert {p.folder for p in everywhere} == {PROJECTS / "Alpha", PROJECTS / "zeta", OTHER}
+
+
+def test_cleanup_marks_conversations_in_use(tmp_path: Path, clock: FakeClock) -> None:
+    old = clock.now - 86400
+    running = write_in(tmp_path, PROJECTS / "a", FIRST, old)
+    write_in(tmp_path, PROJECTS / "a", SECOND, clock.now - 5)
+    write_in(tmp_path, PROJECTS / "a", THIRD, old)
+    [project] = list_all_claude_conversations(tmp_path, clock, in_projects, {running})
+    assert {c.id: c.in_use for c in project.conversations} == {
+        FIRST: True, SECOND: True, THIRD: False,
+    }  # fmt: skip
+
+
+def test_deleting_a_conversation_removes_transcript_and_results_and_reports_the_size(
+    tmp_path: Path, clock: FakeClock
+) -> None:
+    transcript = write_in(tmp_path, PROJECTS / "a", FIRST, clock.now - 86400, results=True)
+    other = write_in(tmp_path, PROJECTS / "a", SECOND, clock.now - 86400)
+    memory = transcript.parent / "memory"
+    memory.mkdir()
+    directory = transcript.parent.name
+    size = transcript.stat().st_size
+    freed = delete_claude_conversation(tmp_path, directory, FIRST, clock, in_projects, set())
+    assert freed == size + 1000
+    assert not transcript.exists() and not (transcript.parent / FIRST).exists()
+    # The project's other conversations and its memory stay.
+    assert other.exists() and memory.is_dir()
+
+
+def test_deleting_refuses_what_is_in_use_outside_the_scope_or_not_a_conversation(
+    tmp_path: Path, clock: FakeClock
+) -> None:
+    running = write_in(tmp_path, PROJECTS / "a", FIRST, clock.now - 86400)
+    recent = write_in(tmp_path, PROJECTS / "a", SECOND, clock.now - 5)
+    outside = write_in(tmp_path, OTHER, FIRST, clock.now - 86400)
+    directory = running.parent.name
+
+    def delete(name: str, conversation_id: str, running_now: set[Path]) -> int:
+        return delete_claude_conversation(
+            tmp_path, name, conversation_id, clock, in_projects, running_now
+        )
+
+    with pytest.raises(ConversationInUseError):
+        delete(directory, FIRST, {running})
+    with pytest.raises(ConversationInUseError):
+        delete(directory, SECOND, set())
+    with pytest.raises(OutsideScopeError):
+        delete(outside.parent.name, FIRST, set())
+    for name, conversation_id in [(directory, THIRD), ("..", FIRST), (directory, "../x")]:
+        with pytest.raises(ConversationNotFoundError):
+            delete(name, conversation_id, set())
+    assert running.exists() and recent.exists() and outside.exists()
+
+
+def test_cleanup_size_counts_the_results_folder_beside_the_transcript(
+    tmp_path: Path, clock: FakeClock
+) -> None:
+    transcript = write_in(tmp_path, PROJECTS / "a", FIRST, clock.now - 86400, results=True)
+    [project] = list_all_claude_conversations(tmp_path, clock, in_projects, set())
+    assert project.conversations[0].size == transcript.stat().st_size + 1000

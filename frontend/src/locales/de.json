@@ -106,6 +106,19 @@
     "title": "Papierkorb",
     "dropHint": "Eine Datei aus der Liste hierher ziehen legt sie in den Papierkorb."
   },
+  "cleanup": {
+    "title": "Gespräche aufräumen",
+    "hint": "Frühere Gespräche der Agenten in den Projekten, nach Projekt geordnet. Gelöscht wird endgültig, nicht in den Papierkorb. Mit „Außerhalb freischalten“ erscheinen auch die übrigen Ordner im Home-Verzeichnis.",
+    "empty": "Keine Gespräche gefunden.",
+    "olderThan": "Älter als",
+    "days": "Tage",
+    "choose": "Auswählen",
+    "deleteChosen": "{count} Gespräch(e) löschen · {size}",
+    "deleteTitle": "Gespräche löschen",
+    "confirm": "{count} Gespräch(e) ({size}) endgültig löschen? Das lässt sich nicht rückgängig machen.",
+    "done": "{count} Gespräch(e) gelöscht, {size} frei.",
+    "inUse": "in Benutzung"
+  },
   "terminal": {
     "back": "Zurück",
     "placeholder": "Nachricht …",
