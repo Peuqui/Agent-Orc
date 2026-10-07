@@ -17,5 +17,7 @@ Nur was noch aussteht. Erledigtes steht in der Git-Historie.
 - **Folgeaufnahme ohne Wake-Word (Weg B2):** Der Puck hört nach der Rückfrage kurz zu, ein
   Flag `expect_reply` in der Ansage. Braucht Firmware und AIfred, nur falls „Sag Hey Orc, ja oder
   nein“ im Alltag nervt.
-- **Automatische Ansage, wenn ein Agent fertig ist:** Zweimal gefragt, nie entschieden.
-- **Anzeigename der Echo-Engine** in der Konfiguration, ebenfalls nie entschieden.
+- **Automatische Ansage auch ohne Sprach-Auftrag:** Heute meldet sich ein Agent am Echo nur, wenn
+  der Auftrag per Sprache kam (Peuqui will es ausdrücklich nur so, der Kanal bleibt derselbe).
+- **Aufnahmen alter Äußerungen:** Rotation nach Anzahl (`keep_entries`) und Löschen mit dem
+  gestoppten Agenten gibt es; eine Aufbewahrung nach Alter wäre eine Ergänzung.
