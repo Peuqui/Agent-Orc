@@ -229,6 +229,10 @@ class SessionManager:
             raise SessionError(f"tmux session {session.id} vanished right after restart")
         return respawned
 
+    def set_model(self, session_id: str, model: str) -> None:
+        """Note the model a running agent now runs with (it was switched in place)."""
+        self._tmux("set-option", "-t", exact_target(session_id), MODEL_OPTION, model)
+
     def type_line(self, session_id: str, line: str, submit_delay_ms: int) -> None:
         """Type a line into the agent and submit it, as the user would."""
         self._tmux("send-keys", "-t", exact_target(session_id), "-l", line)

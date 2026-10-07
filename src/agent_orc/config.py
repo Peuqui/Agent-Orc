@@ -172,6 +172,16 @@ class LiveEffortConfig(StrictModel):
     protected_file: str
 
 
+class LiveModelConfig(StrictModel):
+    """How a running agent switches its model in place, without a restart."""
+
+    # Typed into the agent; {model} becomes the chosen model.
+    command: str
+    # A file the agent rewrites when its model is set this way (Claude: the user's own settings,
+    # which then name the model as default for new sessions); Agent-Orc puts it back as it was.
+    protected_file: str
+
+
 class EffortConfig(StrictModel):
     """Reasoning effort the user may pick, and the one a folder has until the user picks."""
 
@@ -235,6 +245,8 @@ class AgentProfile(StrictModel):
     # Prints the models to choose from at start, one per line; the choice fills {model}. A tab
     # may follow the name, then a note shown beside it (e.g. until when the model is free).
     models: list[str] | None = None
+    # Without it, a running agent is restarted (resumed) to take another model.
+    model_live: LiveModelConfig | None = None
     # Environment of the agent; {effort} is the folder's level (left out when it has none).
     env: dict[str, str] = {}
     # Shown in the start dialog when this profile is chosen (e.g. what to stop first).

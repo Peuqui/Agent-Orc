@@ -190,6 +190,10 @@ agents:
   #   label: Claude (local)
   #   hint: Stop other users of the GPUs first, or the models push each other out.
   #   models: [lclaude, --models]
+  #   # A running agent takes another model in place (typed into it once it is idle), without a
+  #   # restart; Agent-Orc puts the protected file back as the agent rewrote it. Without this,
+  #   # changing the model restarts (resumes) the agent.
+  #   model_live: {command: "/model {model}", protected_file: ~/.claude/settings.json}
   #   start: [lclaude, "{model}", --settings, *claude_settings]
   #   resume: [lclaude, "{model}", --settings, *claude_settings, --continue]
   #   env: {LCLAUDE_EFFORT: "{effort}"}

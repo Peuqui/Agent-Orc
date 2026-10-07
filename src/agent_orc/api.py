@@ -78,6 +78,7 @@ from agent_orc.effort import (
     InvalidEffortError,
     InvalidPermissionModeError,
     Reasoning,
+    keep_file_while,
     set_reasoning_live,
 )
 from agent_orc.events import ChangeNotifier
@@ -189,6 +190,10 @@ class UnknownModelError(ValueError):
     """Not one of the models the profile offers."""
 
 
+class AgentBusyError(RuntimeError):
+    """The agent is working on an answer; what was asked waits for its end."""
+
+
 class UnknownWorkspaceError(LookupError):
     """No workspace of this name."""
 
@@ -220,6 +225,7 @@ ERROR_STATUS: dict[type[Exception], int] = {
     RestoreConflictError: status.HTTP_409_CONFLICT,
     files.FileConflictError: status.HTTP_409_CONFLICT,
     FolderBusyError: status.HTTP_409_CONFLICT,
+    AgentBusyError: status.HTTP_409_CONFLICT,
     ProfileCommandError: status.HTTP_503_SERVICE_UNAVAILABLE,
     UnknownModelError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     UnknownWorkspaceError: status.HTTP_404_NOT_FOUND,
@@ -409,6 +415,10 @@ class BroadcastRequest(BaseModel):
     submit: bool = True
 
 
+class ModelRequest(BaseModel):
+    model: str
+
+
 class RestartRequest(BaseModel):
     # The model for an agent that has none stored (started before the choice existed).
     model: str | None = None
@@ -495,6 +505,11 @@ def create_app(
             # Started without a choice: the folder's level, or else the configured one.
             effort = folder_reasoning(profile_name, path).effort
         store_effort(profile_name, path, Reasoning(effort, ultracode), model)
+
+    def store_model_reasoning(session: AgentSession, model: str) -> None:
+        """A newly chosen model: the folder's level must be one it takes."""
+        kept = folder_reasoning(session.profile, session.path)
+        store_start_reasoning(session.profile, session.path, model, None, kept.ultracode)
 
     levels_cache: dict[tuple[str, str | None], tuple[float, list[str]]] = {}
 
@@ -763,6 +778,7 @@ def create_app(
                 "ultracode": bool(p.effort and p.effort.ultracode),
                 # Switches its reasoning in place, without a restart.
                 "effort_live": bool(p.effort and p.effort.live),
+                "model_live": p.model_live is not None,
                 "permission_modes": p.permission.modes if p.permission else [],
                 "terminal": p.terminal,
                 # Offers a choice of models at start (GET /api/agents/{name}/models).
@@ -1141,15 +1157,41 @@ def create_app(
             # The agent reads the folder's effort at start: a waiting change comes along.
             store_effort(session.profile, session.path, pending, chosen)
         elif model is not None:
-            # A newly chosen model: the folder's level must be one it takes.
-            kept = folder_reasoning(session.profile, session.path)
-            store_start_reasoning(session.profile, session.path, model, None, kept.ultracode)
+            store_model_reasoning(session, model)
         settle_permission_mode(session.profile, session.path)
         env = start_env(session.profile, session.path, chosen)
         restarted = sessions.restart(session, env, model)
         # The ended agent cannot report that it stopped working.
         store_activity(session_id, busy=False)
         return restarted
+
+    @app.post("/api/sessions/{session_id}/model", dependencies=authenticated)
+    def change_model(session_id: str, body: ModelRequest) -> AgentSession:
+        """Switch the agent to another model: typed into a running agent that can switch in
+        place (its conversation, background tasks and answer stay), otherwise by resuming it."""
+        session = find_session(session_id)
+        if session is None:
+            raise SessionNotFoundError(session_id)
+        check_model(session.profile, body.model)
+        live = config.agents[session.profile].model_live
+        if not session.running or live is None:
+            return restart_session(session_id, RestartRequest(model=body.model))
+        # Typing into a busy agent would mix with its work.
+        if session_busy(session):
+            raise AgentBusyError(session_id)
+        store_model_reasoning(session, body.model)
+        submit_delay = config.terminal.submit_delay_ms
+        keep_file_while(
+            live.protected_file,
+            lambda: sessions.type_line(
+                session.id, live.command.format(model=body.model), submit_delay
+            ),
+        )
+        sessions.set_model(session.id, body.model)
+        changed = find_session(session_id)
+        if changed is None:
+            raise SessionNotFoundError(session_id)
+        return changed
 
     @app.post(
         "/api/sessions/{session_id}/handover",

@@ -101,7 +101,7 @@ def _write_settings(path: Path, settings: dict[str, Any]) -> None:
     temporary.replace(path)
 
 
-# How long after typing /effort the protected file is watched for the agent's rewrite.
+# How long after typing /effort or /model the protected file is watched for the agent's rewrite.
 PROTECT_SECONDS = 5.0
 PROTECT_POLL_SECONDS = 0.2
 
@@ -117,11 +117,21 @@ def set_reasoning_live(
     `wanted.effort` is always typed (it may differ from what the agent runs with), ultracode
     only when it changes.
     """
-    protected = Path(live.protected_file).expanduser()
+
+    def type_commands() -> None:
+        type_line(live.command.format(level=wanted.effort))
+        if wanted.ultracode != previous.ultracode:
+            type_line(live.ultracode_command.format(state="on" if wanted.ultracode else "off"))
+
+    keep_file_while(live.protected_file, type_commands)
+
+
+def keep_file_while(protected_file: str, action: Callable[[], None]) -> None:
+    """Run `action` (typing a command that makes the agent rewrite the file) and undo whatever
+    the agent writes into the file shortly after."""
+    protected = Path(protected_file).expanduser()
     before = protected.read_bytes() if protected.is_file() else None
-    type_line(live.command.format(level=wanted.effort))
-    if wanted.ultracode != previous.ultracode:
-        type_line(live.ultracode_command.format(state="on" if wanted.ultracode else "off"))
+    action()
     # The agent rewrites the file shortly after; whatever it writes within this time is undone.
     deadline = time.monotonic() + PROTECT_SECONDS
     while time.monotonic() < deadline:

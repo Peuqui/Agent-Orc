@@ -459,6 +459,12 @@ function resumeWith(session: AgentSession, model: string | null): void {
           </RouterLink>
           <TerminalButton v-if="!session.terminal" :path="session.path" :agent-id="session.id" button-class="btn-secondary btn-small-icon" />
           <ScheduleButton v-if="session.running" :session="session" button-class="btn-secondary btn-small-icon" />
+          <RestartButton
+            v-if="session.running && modelProfiles.has(session.profile)"
+            change-model
+            :session="session"
+            button-class="btn-secondary btn-small-icon"
+          />
           <RestartButton v-if="session.running" :session="session" button-class="btn-secondary btn-small-icon" />
           <button
             class="btn-secondary btn-small-icon"

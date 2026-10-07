@@ -104,6 +104,17 @@ def config(home: Path, socket_name: str) -> Config:
                 "levels_command": ["sh", "-c", "[ {model} = thinker ] && echo low high || true"],
             },
         },
+        # Like "chooser", but switches its model in place, like Claude with /model.
+        "swapper": {
+            "label": "Swapper",
+            "models": ["printf", "thinker\\nplain\\n"],
+            "start": ["sh", "-c", 'echo "started {model}"; exec cat'],
+            "resume": ["sh", "-c", 'echo "resumed {model}"; exec cat'],
+            "model_live": {
+                "command": "/model {model}",
+                "protected_file": str(home / "user-settings.json"),
+            },
+        },
         "shell": {
             "label": "Shell",
             "start": ["sh", "-c", "echo READY; exec cat"],
@@ -627,6 +638,8 @@ def test_reasoning_switches_in_place_without_restart(
     agents = {agent["name"]: agent for agent in client.get("/api/agents").json()}
     assert agents["switcher"]["effort_live"] is True
     assert agents["sleeper"]["effort_live"] is False
+    assert agents["swapper"]["model_live"] is True
+    assert agents["chooser"]["model_live"] is False
 
 
 def test_effort_change_waits_for_a_busy_agent(
@@ -1538,6 +1551,64 @@ def test_an_agent_without_a_stored_model_is_restarted_with_a_chosen_one(
     # From now on the restart keeps it.
     client.post(restart)
     assert client.get("/api/sessions").json()[0]["chosen_model"] == "thinker"
+
+
+def start_with_model(
+    client: TestClient, home: Path, profile: str, model: str, effort: str | None = None
+) -> str:
+    body = {
+        "profile": profile,
+        "path": str(home / "projects"),
+        "model": model,
+        "resume": False,
+        "effort": effort,
+        "ultracode": False,
+        "conversation": None,
+    }
+    session_id: str = client.post("/api/sessions", json=body).json()["id"]
+    return session_id
+
+
+def pane_process(socket_name: str, session_id: str) -> str:
+    target = f"={session_id}:"
+    return subprocess.run(
+        ["tmux", "-L", socket_name, "display-message", "-p", "-t", target, "#{pane_pid}"],
+        capture_output=True, text=True, check=True,
+    ).stdout.strip()  # fmt: skip
+
+
+def test_model_switches_in_place_where_the_agent_can(
+    client: TestClient, home: Path, socket_name: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("agent_orc.effort.PROTECT_SECONDS", 0.3)
+    session_id = start_with_model(client, home, "swapper", "thinker")
+    assert wait_for_text(client, session_id, "started thinker")
+    process = pane_process(socket_name, session_id)
+    url = f"/api/sessions/{session_id}/model"
+    assert client.post(url, json={"model": "other"}).status_code == 422
+    # Typing into a busy agent would mix with its work: it waits for the end of the answer.
+    store_activity(session_id, busy=True)
+    assert client.post(url, json={"model": "plain"}).status_code == 409
+    store_activity(session_id, busy=False)
+    switched = client.post(url, json={"model": "plain"})
+    assert switched.status_code == 200
+    assert switched.json()["chosen_model"] == "plain"
+    # Typed into the running agent (the terminal echoes it), which keeps running.
+    assert wait_for_text(client, session_id, "/model plain")
+    assert pane_process(socket_name, session_id) == process
+
+
+def test_model_change_restarts_an_agent_that_cannot_switch_in_place(
+    client: TestClient, home: Path, socket_name: str
+) -> None:
+    session_id = start_with_model(client, home, "chooser", "thinker", effort="high")
+    assert wait_for_text(client, session_id, "started thinker")
+    process = pane_process(socket_name, session_id)
+    switched = client.post(f"/api/sessions/{session_id}/model", json={"model": "plain"})
+    assert switched.status_code == 200
+    assert switched.json()["chosen_model"] == "plain"
+    assert wait_for_text(client, session_id, "resumed plain")
+    assert pane_process(socket_name, session_id) != process
 
 
 def test_change_notifier_wakes_listeners_from_other_threads() -> None:

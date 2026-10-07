@@ -405,6 +405,12 @@
     "removedKeptBranch": "Worktree entfernt; Branch „{branch}“ ist noch nicht zusammengeführt und bleibt erhalten."
   },
   "restart": {
+    "changeModelLive": "Modell für „{name}“ wählen. Der Agent wechselt es im laufenden Betrieb; Gespräch und Hintergrundaufgaben bleiben, nur der Prompt-Cache beginnt für das neue Modell von vorn.",
+    "modelWaits": "Der Agent arbeitet; das Modell lässt sich nach seiner Antwort wechseln.",
+    "modelChanged": "„{name}“ läuft jetzt mit {model}.",
+    "modelTitle": "Modell wechseln",
+    "changeModel": "Modell für „{name}“ wählen. Der Agent wird damit neu gestartet und das Gespräch fortgesetzt; laufende Hintergrundaufgaben enden dabei.",
+    "changeModelBusy": "„{name}“ arbeitet gerade. Ein Modellwechsel startet den Agenten neu, bricht die laufende Antwort und seine Hintergrundaufgaben ab und setzt das Gespräch danach fort.",
     "chooseModel": "„{name}“ hat noch kein gespeichertes Modell. Wähle eines; der Agent wird damit neu gestartet und das Gespräch fortgesetzt.",
     "title": "Neu starten",
     "confirm": "Agent in „{name}“ neu starten? Das Gespräch wird fortgesetzt; laufende Hintergrundaufgaben des Agenten enden dabei.",

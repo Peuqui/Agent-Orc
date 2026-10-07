@@ -10,7 +10,14 @@ import ModelDialog from './ModelDialog.vue'
 
 // Restarts the agent with its conversation resumed, e.g. when it hangs or should read changed
 // settings; asked first, as it ends a running answer and the agent's background tasks.
-const props = defineProps<{ session: AgentSession; buttonClass: string; withLabel?: boolean }>()
+// With `changeModel` it asks for another model instead: an agent that can switch in place does
+// so (only between two answers), any other is restarted with the model.
+const props = defineProps<{
+  session: AgentSession
+  buttonClass: string
+  withLabel?: boolean
+  changeModel?: boolean
+}>()
 const { t } = useI18n()
 const toast = useToast()
 const { profiles, refresh } = useSessions()
@@ -18,14 +25,32 @@ const asking = ref(false)
 
 // An agent that offers models but has none stored cannot be resumed without choosing one.
 const needsModel = computed(
-  () => props.session.chosen_model === null && profiles.value.find((p) => p.name === props.session.profile)?.models,
+  () => props.session.chosen_model === null && profile.value?.models,
 )
+
+const profile = computed(() => profiles.value.find((p) => p.name === props.session.profile))
+// Typed into a busy agent, the switch would mix with its work.
+const waitsForAnswer = computed(() => props.changeModel && profile.value?.model_live && props.session.busy)
+const askModel = computed(() => props.changeModel || needsModel.value)
+const buttonLabel = computed(() => t(props.changeModel ? 'restart.modelTitle' : 'restart.title'))
+const buttonHint = computed(() => (waitsForAnswer.value ? t('restart.modelWaits') : buttonLabel.value))
+const modelMessage = computed(() => {
+  const name = sessionName(props.session)
+  if (!props.changeModel) return t('restart.chooseModel', { name })
+  if (profile.value?.model_live) return t('restart.changeModelLive', { name })
+  return t(props.session.busy ? 'restart.changeModelBusy' : 'restart.changeModel', { name })
+})
 
 async function restart(model: string | null): Promise<void> {
   asking.value = false
   try {
-    await api.restartSession(props.session.id, model)
-    toast.info(t('restart.done', { name: sessionName(props.session) }))
+    if (props.changeModel && model !== null) {
+      await api.changeModel(props.session.id, model)
+      toast.info(t('restart.modelChanged', { name: sessionName(props.session), model }))
+    } else {
+      await api.restartSession(props.session.id, model)
+      toast.info(t('restart.done', { name: sessionName(props.session) }))
+    }
   } catch (error) {
     toast.error(error)
   }
@@ -34,15 +59,22 @@ async function restart(model: string | null): Promise<void> {
 </script>
 
 <template>
-  <button :class="buttonClass" :title="$t('restart.title')" :aria-label="$t('restart.title')" @click="asking = true">
-    <AppIcon name="restart" /><span v-if="withLabel">{{ $t('restart.title') }}</span>
+  <button
+    :class="buttonClass"
+    :title="buttonHint"
+    :aria-label="buttonHint"
+    :disabled="waitsForAnswer"
+    @click="asking = true"
+  >
+    <AppIcon :name="changeModel ? 'model' : 'restart'" /><span v-if="withLabel">{{ buttonLabel }}</span>
   </button>
   <ModelDialog
-    v-if="asking && needsModel"
-    :title="$t('restart.title')"
-    :message="$t('restart.chooseModel', { name: sessionName(session) })"
-    :confirm-label="$t('restart.title')"
+    v-if="asking && askModel"
+    :title="buttonLabel"
+    :message="modelMessage"
+    :confirm-label="buttonLabel"
     :profile="session.profile"
+    :current="session.chosen_model"
     @choose="restart"
     @close="asking = false"
   />

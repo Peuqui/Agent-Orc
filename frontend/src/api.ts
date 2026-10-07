@@ -15,6 +15,8 @@ export interface AgentProfile {
   ultracode: boolean
   /** Switches its reasoning in place, without a restart (Claude: /effort). */
   effort_live: boolean
+  /** Switches its model in place, without a restart (Claude: /model). */
+  model_live: boolean
   /** Permission modes a session may start in; empty if the agent has none. */
   permission_modes: string[]
   /** A plain terminal, no agent: it may run next to a folder's agent. */
@@ -445,6 +447,9 @@ export const api = {
   /** Resumes the agent in its own session; a running answer and background tasks end. */
   restartSession: (sessionId: string, model: string | null = null) =>
     request<AgentSession>('POST', `sessions/${encodeURIComponent(sessionId)}/restart`, { body: { model } }),
+  /** Switches the agent to the model: in place if it can, otherwise by resuming it. */
+  changeModel: (sessionId: string, model: string) =>
+    request<AgentSession>('POST', `sessions/${encodeURIComponent(sessionId)}/model`, { body: { model } }),
   /** Types the prompt into the agent at `at` (Unix seconds), once it is idle. */
   schedulePrompt: (sessionId: string, text: string, at: number) =>
     request<ScheduledPrompt>('POST', `sessions/${encodeURIComponent(sessionId)}/scheduled`, {

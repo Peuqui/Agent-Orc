@@ -405,6 +405,12 @@
     "removedKeptBranch": "Worktree removed; branch “{branch}” is not merged yet and is kept."
   },
   "restart": {
+    "changeModelLive": "Choose the model for “{name}”. The agent switches in place; the conversation and background tasks stay, only the prompt cache starts over for the new model.",
+    "modelWaits": "The agent is working; the model can be changed after its answer.",
+    "modelChanged": "“{name}” now runs with {model}.",
+    "modelTitle": "Change model",
+    "changeModel": "Choose the model for “{name}”. The agent restarts with it and the conversation is resumed; running background tasks end.",
+    "changeModelBusy": "“{name}” is working right now. Changing the model restarts the agent, ends the running answer and its background tasks, and resumes the conversation afterwards.",
     "chooseModel": "“{name}” has no model stored yet. Choose one; the agent restarts with it and the conversation is resumed.",
     "title": "Restart",
     "confirm": "Restart the agent in “{name}”? The conversation is resumed; the agent's running background tasks end.",

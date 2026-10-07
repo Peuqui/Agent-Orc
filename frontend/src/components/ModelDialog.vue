@@ -7,7 +7,7 @@ import BaseDialog from './BaseDialog.vue'
 
 // An agent cannot be started without a model: this asks for one where the agent has none stored
 // (started before the choice existed), e.g. on restart or resume.
-const props = defineProps<{ title: string; message: string; confirmLabel: string; profile: string }>()
+const props = defineProps<{ title: string; message: string; confirmLabel: string; profile: string; current?: string | null }>()
 const emit = defineEmits<{ choose: [model: string]; close: [] }>()
 const toast = useToast()
 const models = ref<ModelChoice[]>([])
@@ -16,7 +16,9 @@ const model = ref<string | null>(null)
 onMounted(async () => {
   try {
     models.value = await api.agentModels(props.profile)
-    model.value = preferredModel(props.profile, models.value.map((choice) => choice.name))
+    const offered = models.value.map((choice) => choice.name)
+    model.value =
+      props.current && offered.includes(props.current) ? props.current : preferredModel(props.profile, offered)
   } catch (error) {
     toast.error(error)
   }
