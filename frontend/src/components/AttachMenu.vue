@@ -4,12 +4,12 @@ import { useToast } from '../composables/useToast'
 import AppIcon from './AppIcon.vue'
 import DropdownMenu from './DropdownMenu.vue'
 
-// The paperclip with its menu: take a photo, choose a picture, capture the screen, choose a
-// file. The chosen file goes to the parent (`file`), which stores it where it belongs (the
-// agent's folder, a note). Its own menu entries and pop-ups go into the slots.
+// The paperclip with its menu: take a photo, choose pictures, capture the screen, choose files
+// (several at once). The chosen files go to the parent (`files`), which stores them where they
+// belong (the agent's folder, a note). Its own menu entries and pop-ups go into the slots.
 // below: the menu opens downwards, where there is no room above (the notes' bar).
 defineProps<{ open: boolean; busy: boolean; extraOpen?: boolean; below?: boolean }>()
-const emit = defineEmits<{ toggle: []; close: []; file: [file: File] }>()
+const emit = defineEmits<{ toggle: []; close: []; files: [files: File[]] }>()
 const toast = useToast()
 const photoInput = ref<HTMLInputElement>()
 const imageInput = ref<HTMLInputElement>()
@@ -27,10 +27,10 @@ function choose(input: HTMLInputElement | undefined): void {
 
 function onFileChosen(event: Event): void {
   const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
+  const files = [...(input.files ?? [])]
   // Cleared, so choosing the same file again still counts as a change.
   input.value = ''
-  if (file) emit('file', file)
+  if (files.length) emit('files', files)
 }
 
 /** The browser asks which screen, window or tab; its current picture is attached. */
@@ -54,7 +54,7 @@ async function captureScreen(): Promise<void> {
   canvas.getContext('2d')?.drawImage(video, 0, 0)
   stream.getTracks().forEach((track) => track.stop())
   const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'))
-  if (blob) emit('file', new File([blob], SCREENSHOT_NAME, { type: 'image/png' }))
+  if (blob) emit('files', [new File([blob], SCREENSHOT_NAME, { type: 'image/png' })])
 }
 </script>
 
@@ -98,8 +98,8 @@ async function captureScreen(): Promise<void> {
       <!-- capture opens the camera directly on phones; without it phones offer their gallery
            (newest screenshots first); desktops show the file dialog. -->
       <input ref="photoInput" type="file" accept="image/*" capture="environment" class="hidden" @change="onFileChosen" />
-      <input ref="imageInput" type="file" accept="image/*" class="hidden" @change="onFileChosen" />
-      <input ref="fileInput" type="file" class="hidden" @change="onFileChosen" />
+      <input ref="imageInput" type="file" accept="image/*" multiple class="hidden" @change="onFileChosen" />
+      <input ref="fileInput" type="file" multiple class="hidden" @change="onFileChosen" />
     </template>
   </DropdownMenu>
 </template>

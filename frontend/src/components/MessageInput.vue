@@ -3,10 +3,12 @@ import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } 
 import { api } from '../api'
 import { MESSAGE_FIELD_ATTRIBUTE } from '../columns'
 import { useDictation } from '../composables/useDictation'
+import { attachInOrder } from '../attachInOrder'
 import { pastedImages } from '../composables/usePastedImages'
 import { useToast } from '../composables/useToast'
 import { TOUCH_FIRST } from '../device'
 import AppIcon from './AppIcon.vue'
+import { baseName } from '../format'
 import AttachMenu from './AttachMenu.vue'
 import DictationMic from './DictationMic.vue'
 import DictationRetry from './DictationRetry.vue'
@@ -47,18 +49,29 @@ const uploading = ref(false)
 interface Attachment {
   path: string
   name: string
+  /** Where the stored picture is served, so it shows again after a reload. */
   preview: string | null
 }
 
 // The agent gets the paths ("@path") only when the message is sent; until then the user sees
-// previews, not cryptic paths.
-const attachments = ref<Attachment[]>([])
+// previews, not cryptic paths. Like the unsent text they survive a reload, e.g. when the
+// workspace shows another set of columns and this one is loaded again.
+const attachmentsKey = `agent-orc-attachments:${props.sessionId}`
+const attachments = ref<Attachment[]>(JSON.parse(sessionStorage.getItem(attachmentsKey) ?? '[]'))
+watch(
+  attachments,
+  (current) => {
+    if (current.length) sessionStorage.setItem(attachmentsKey, JSON.stringify(current))
+    else sessionStorage.removeItem(attachmentsKey)
+  },
+  { deep: true },
+)
 
 async function attachFile(file: File): Promise<void> {
   uploading.value = true
   try {
     const { path } = await api.attach(props.sessionId, file)
-    const preview = file.type.startsWith('image/') ? URL.createObjectURL(file) : null
+    const preview = file.type.startsWith('image/') ? api.uploadUrl(props.sessionId, baseName(path)) : null
     attachments.value.push({ path, name: file.name, preview })
     field.value?.focus()
   } catch (error) {
@@ -105,12 +118,53 @@ function onPaste(event: ClipboardEvent): void {
   // Before the terminal sees it, which would paste nothing useful.
   event.preventDefault()
   event.stopPropagation()
-  for (const image of images) void attachFile(image)
+  void attachInOrder(images, attachFile)
 }
 
-// Capture phase: the terminal handles pastes into itself and would stop them.
-onMounted(() => window.addEventListener('paste', onPaste, true))
-onBeforeUnmount(() => window.removeEventListener('paste', onPaste, true))
+/**
+ * Files dragged onto the page are attached, in the terminal view and the answers alike (without
+ * this the browser would open the file in a tab). Only real files count, not what is dragged
+ * inside the app (a path from the file list).
+ */
+const draggingFiles = ref(false)
+
+function isFileDrag(event: DragEvent): boolean {
+  return event.dataTransfer?.types.includes('Files') ?? false
+}
+
+function onDragOver(event: DragEvent): void {
+  if (!isFileDrag(event)) return
+  event.preventDefault()
+  draggingFiles.value = true
+}
+
+// Leaving the window: the pointer goes to nothing (inside it, from one element to another, it
+// goes to the next one).
+function onDragLeave(event: DragEvent): void {
+  if (event.relatedTarget === null) draggingFiles.value = false
+}
+
+function onDrop(event: DragEvent): void {
+  draggingFiles.value = false
+  if (!isFileDrag(event)) return
+  event.preventDefault()
+  event.stopPropagation()
+  void attachInOrder([...(event.dataTransfer?.files ?? [])], attachFile)
+}
+
+// Capture phase: the terminal handles pastes and drops into itself and would stop them.
+onMounted(() => {
+  window.addEventListener('paste', onPaste, true)
+  window.addEventListener('dragover', onDragOver, true)
+  window.addEventListener('dragleave', onDragLeave, true)
+  window.addEventListener('drop', onDrop, true)
+})
+onBeforeUnmount(() => {
+  window.removeEventListener('paste', onPaste, true)
+  window.removeEventListener('dragover', onDragOver, true)
+  window.removeEventListener('dragleave', onDragLeave, true)
+  window.removeEventListener('drop', onDrop, true)
+})
 
 // Grows with its content (up to a cap set in CSS), so a long dictation can be read before sending.
 watch(text, async () => {
@@ -121,18 +175,8 @@ watch(text, async () => {
 })
 
 function removeAttachment(index: number): void {
-  const [removed] = attachments.value.splice(index, 1)
-  if (removed?.preview) URL.revokeObjectURL(removed.preview)
+  attachments.value.splice(index, 1)
 }
-
-function clearAttachments(): void {
-  for (const attachment of attachments.value) {
-    if (attachment.preview) URL.revokeObjectURL(attachment.preview)
-  }
-  attachments.value = []
-}
-
-onBeforeUnmount(clearAttachments)
 
 const sendable = computed(() => text.value !== '' || attachments.value.length > 0)
 
@@ -140,7 +184,7 @@ function submit(): void {
   if (!sendable.value) return
   const mentions = attachments.value.map((attachment) => `@${attachment.path}`)
   emit('submit', [...mentions, text.value].filter((part) => part !== '').join(' '))
-  clearAttachments()
+  attachments.value = []
   text.value = ''
 }
 
@@ -154,6 +198,13 @@ function onKeydown(event: KeyboardEvent): void {
 </script>
 
 <template>
+  <!-- Over the whole page while files are dragged onto it. -->
+  <div
+    v-if="draggingFiles"
+    class="pointer-events-none fixed inset-0 z-50 flex items-center justify-center border-4 border-dashed border-red-400 bg-slate-900/70 p-4 text-center text-lg font-semibold"
+  >
+    {{ $t('attach.drop') }}
+  </div>
   <div class="border-t border-slate-800">
   <div v-if="attachments.length" class="flex flex-wrap gap-2 px-2 pt-2">
     <div v-for="(attachment, index) in attachments" :key="attachment.path" class="relative" :title="attachment.name">
@@ -188,7 +239,7 @@ function onKeydown(event: KeyboardEvent): void {
       :busy="uploading"
       @toggle="toggleAttachMenu"
       @close="closeMenus"
-      @file="attachFile"
+      @files="(files) => attachInOrder(files, attachFile)"
     >
       <button type="button" class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-slate-700" @click="showTemplates">
         <AppIcon name="template" />{{ $t('templates.title') }}

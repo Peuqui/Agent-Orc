@@ -241,6 +241,7 @@
     "file": "Choose a file",
     "image": "Picture or screenshot",
     "screen": "Capture the screen",
+    "drop": "Drop files here to attach them",
     "remove": "Remove attachment"
   },
   "help": {

@@ -14,6 +14,7 @@ import { useDictation } from '../composables/useDictation'
 import { useServerEvents } from '../composables/useServerEvents'
 import { useToast } from '../composables/useToast'
 import { renderMarkdown } from '../markdown'
+import { attachInOrder } from '../attachInOrder'
 import { pastedImages } from '../composables/usePastedImages'
 import { applyFormat, fileLink, FORMATS, insertBlock, pdfLinks, type FormatId, type Placeholders } from '../notesFormat'
 
@@ -298,7 +299,7 @@ function onPaste(event: ClipboardEvent): void {
   const images = pastedImages(event)
   if (images.length === 0) return
   event.preventDefault()
-  for (const image of images) void attachFile(image)
+  void attachInOrder(images, attachFile)
 }
 
 /** A picture or file in the view opens in a tab of its own, the page stays. */
@@ -467,7 +468,7 @@ function firstLine(note: Note): string {
                 :busy="uploading"
                 @toggle="attachMenuOpen = !attachMenuOpen"
                 @close="attachMenuOpen = false"
-                @file="attachFile"
+                @files="(files) => attachInOrder(files, attachFile)"
               />
               <!-- Right of the formatting keys: speech input into the text. -->
               <span class="ml-auto flex items-end gap-1">
