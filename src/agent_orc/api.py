@@ -440,7 +440,7 @@ def create_app(
     clock: Clock = time.time,
 ) -> FastAPI:
     """Build the app; static_dir holds the built PWA (None serves the API only, for tests)."""
-    sessions = SessionManager(config.tmux.socket_name, config.agents)
+    sessions = SessionManager(config.tmux.socket_name, config.agents, config.terminal)
     home = Path.home()
     scope = AccessScope(
         config.files.base_dir,
@@ -557,9 +557,8 @@ def create_app(
         store_effort(session.profile, session.path, reasoning, session.chosen_model)
         live = live_effort(session.profile)
         if session.running and live is not None:
-            submit_delay = config.terminal.submit_delay_ms
             set_reasoning_live(
-                lambda line: sessions.type_line(session.id, line, submit_delay),
+                lambda line: sessions.type_line(session.id, line),
                 live,
                 previous,
                 reasoning,
@@ -585,7 +584,7 @@ def create_app(
     advised_handover: set[str] = set()
 
     def ask_for_handover(session: AgentSession) -> None:
-        sessions.type_line(session.id, config.handover.prompt, config.terminal.submit_delay_ms)
+        sessions.type_line(session.id, config.handover.prompt)
 
     def check_handovers() -> None:
         auto = read_auto()
@@ -633,7 +632,7 @@ def create_app(
             if session is None:
                 continue
             if session.running:
-                sessions.type_line(session.id, prompt.text, config.terminal.submit_delay_ms)
+                sessions.type_line(session.id, prompt.text)
             else:
                 message = agent_message("unsent", session.id, session.path.name, prompt.text)
                 send_to_all(message, config.push)
@@ -1180,7 +1179,7 @@ def create_app(
         store_model_reasoning(session, model)
 
         def switch() -> None:
-            sessions.type_line(session.id, live.command.format(model=model), submit_delay)
+            sessions.type_line(session.id, live.command.format(model=model))
             if live.confirm is not None:
                 confirm_when_asked(
                     lambda: sessions.text(session.id, SCREEN_ONLY),
@@ -1189,7 +1188,6 @@ def create_app(
                 )
             sessions.set_model(session.id, model)
 
-        submit_delay = config.terminal.submit_delay_ms
         keep_file_while(live.protected_file, switch)
         changed = find_session(session.id)
         if changed is None:
@@ -1450,7 +1448,7 @@ def create_app(
             working = find_session(decision.agent.id)
             if working is not None and session_busy(working):
                 lines[Action.SEND] = config.voice.sent_busy_line
-            sessions.type_line(decision.agent.id, decision.text, config.terminal.submit_delay_ms)
+            sessions.type_line(decision.agent.id, decision.text)
             expect_reply(decision.agent.id, room, decision.text)
         agent = decision.agent
         asked_id, asked_action = voice_asked.pop(room, (None, None))
@@ -1534,7 +1532,7 @@ def create_app(
             # Files a note links to go into this agent's folder, so it can read them.
             text = bring_note_files(body.text, folders[session_id], notes_dir(), clock)
             if body.submit:
-                sessions.type_line(session_id, text, config.terminal.submit_delay_ms)
+                sessions.type_line(session_id, text)
             else:
                 sessions.paste_text(session_id, text)
 
@@ -1565,7 +1563,7 @@ def create_app(
             await websocket.close(WS_CLOSE_SESSION_NOT_FOUND)
             return
         await websocket.accept()
-        await bridge(websocket, config.tmux.socket_name, session_id, cols, rows)
+        await bridge(websocket, config.tmux.socket_name, config.terminal, session_id, cols, rows)
 
     @app.get("/api/files", dependencies=authenticated)
     def list_files(path: str) -> list[files.FileEntry]:

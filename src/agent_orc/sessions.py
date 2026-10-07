@@ -13,6 +13,7 @@ from agent_orc.config import (
     MODEL_PLACEHOLDER,
     NAME_PLACEHOLDER,
     AgentProfile,
+    TerminalConfig,
 )
 
 # Every agent gets its session id in this environment variable, so helpers it runs
@@ -107,10 +108,18 @@ def environment_options(env: dict[str, str]) -> list[str]:
     return [option for name, value in env.items() for option in ("-e", f"{name}={value}")]
 
 
+def text_pieces(text: str, size: int) -> list[str]:
+    """The text cut into pieces of at most `size` characters (typed one after the other)."""
+    return [text[start : start + size] for start in range(0, len(text), size)]
+
+
 class SessionManager:
-    def __init__(self, socket_name: str, agents: dict[str, AgentProfile]) -> None:
+    def __init__(
+        self, socket_name: str, agents: dict[str, AgentProfile], terminal: TerminalConfig
+    ) -> None:
         self._socket_name = socket_name
         self._agents = agents
+        self._terminal = terminal
 
     def list(self) -> list[AgentSession]:
         result = self._tmux("list-sessions", "-F", LIST_FORMAT, check=False)
@@ -233,11 +242,13 @@ class SessionManager:
         """Note the model a running agent now runs with (it was switched in place)."""
         self._tmux("set-option", "-t", exact_target(session_id), MODEL_OPTION, model)
 
-    def type_line(self, session_id: str, line: str, submit_delay_ms: int) -> None:
+    def type_line(self, session_id: str, line: str) -> None:
         """Type a line into the agent and submit it, as the user would."""
-        self._tmux("send-keys", "-t", exact_target(session_id), "-l", line)
+        for piece in text_pieces(line, self._terminal.type_chunk_chars):
+            self._tmux("send-keys", "-t", exact_target(session_id), "-l", piece)
+            time.sleep(self._terminal.type_chunk_delay_ms / MILLISECONDS_PER_SECOND)
         # Enter separately, so the agent sees typed text plus submit, not one pasted block.
-        time.sleep(submit_delay_ms / MILLISECONDS_PER_SECOND)
+        time.sleep(self._terminal.submit_delay_ms / MILLISECONDS_PER_SECOND)
         self.press_enter(session_id)
 
     def press_enter(self, session_id: str) -> None:

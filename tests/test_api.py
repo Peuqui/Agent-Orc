@@ -419,6 +419,20 @@ def test_terminal_roundtrip_resize_and_detach(
     assert client.get("/api/sessions").json()[0]["running"] is True
 
 
+def test_terminal_input_of_a_long_text_arrives_whole(client: TestClient, home: Path) -> None:
+    session_id = start_shell(client, home / "projects")
+    text = "".join(f"{number:04d}-" for number in range(120))
+    with client.websocket_connect(terminal_url(session_id), headers=ORIGIN) as term:
+        read_until(term, "READY")
+        term.send_text(json.dumps({"type": "input", "data": text + "\r"}))
+        # cat prints the line again once it is submitted: the echo and its output.
+        for _ in range(50):
+            if client.get(f"/api/sessions/{session_id}/text").json()["text"].count(text) == 2:
+                break
+            time.sleep(0.1)
+    assert client.get(f"/api/sessions/{session_id}/text").json()["text"].count(text) == 2
+
+
 def test_tmux_client_does_not_inherit_tmux(monkeypatch: pytest.MonkeyPatch) -> None:
     # Started by hand in a tmux window, the server inherits TMUX; passed on, tmux may take the
     # attach for nesting and refuse it (depends on reused PTY numbers, so checked directly).

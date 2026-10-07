@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from agent_orc.config import AgentProfile
+from agent_orc.config import AgentProfile, TerminalConfig
 from agent_orc.sessions import (
     AgentSession,
     MissingModelError,
@@ -17,6 +17,7 @@ from agent_orc.sessions import (
     build_command,
     exact_target,
     session_id_for,
+    text_pieces,
 )
 
 AGENTS = {
@@ -40,7 +41,14 @@ AGENTS = {
 
 @pytest.fixture
 def manager(socket_name: str) -> SessionManager:
-    return SessionManager(socket_name, AGENTS)
+    terminal = TerminalConfig(
+        keys=[],
+        submit_delay_ms=50,
+        text_history_lines=200,
+        type_chunk_chars=50,
+        type_chunk_delay_ms=5,
+    )
+    return SessionManager(socket_name, AGENTS, terminal)
 
 
 @pytest.fixture
@@ -238,3 +246,23 @@ def test_an_agent_can_be_pasted_into_without_submitting(
     time.sleep(0.3)
     # cat prints a line only once it is submitted: the terminal's own echo is alone on screen.
     assert manager.text(session.id, 50).count("not sent yet") == 1
+
+
+def test_text_is_cut_into_pieces() -> None:
+    assert text_pieces("abcdefg", 3) == ["abc", "def", "g"]
+    assert text_pieces("abc", 3) == ["abc"]
+    assert text_pieces("", 3) == []
+
+
+def test_a_long_line_is_typed_in_pieces_and_arrives_whole(
+    manager: SessionManager, workdir: Path
+) -> None:
+    session = manager.start("reader", workdir, resume=False)
+    line = "".join(f"{number:04d}-" for number in range(60))
+    manager.type_line(session.id, line)
+    for _ in range(50):
+        # cat prints the line again once it is submitted: the echo and its output.
+        if manager.text(session.id, 50).count(line) == 2:
+            break
+        time.sleep(0.1)
+    assert manager.text(session.id, 50).count(line) == 2

@@ -49,6 +49,11 @@ terminal:
   # Text from the input field is sent first, Enter after this pause, so agents treat it
   # as typed text plus submit rather than as one pasted block.
   submit_delay_ms: 80
+  # A long text is typed in pieces of this many characters, this many milliseconds apart (the
+  # values below are the defaults): Claude Code takes one big chunk (about 800 characters on)
+  # for a paste and wraps it as pasted content, which the agent may then refuse to follow.
+  # type_chunk_chars: 200
+  # type_chunk_delay_ms: 30
   # How much history the plain-text view (for selecting and copying) shows.
   text_history_lines: 5000
 

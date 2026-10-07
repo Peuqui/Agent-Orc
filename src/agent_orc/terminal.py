@@ -12,7 +12,8 @@ from typing import Any
 
 from fastapi import WebSocket, WebSocketDisconnect
 
-from agent_orc.sessions import exact_target
+from agent_orc.config import TerminalConfig
+from agent_orc.sessions import MILLISECONDS_PER_SECOND, exact_target, text_pieces
 
 TERM = "xterm-256color"
 READ_SIZE = 65536
@@ -45,7 +46,12 @@ def _set_window_size(fd: int, cols: int, rows: int) -> None:
 
 
 async def bridge(
-    websocket: WebSocket, socket_name: str, session_id: str, cols: int, rows: int
+    websocket: WebSocket,
+    socket_name: str,
+    terminal: TerminalConfig,
+    session_id: str,
+    cols: int,
+    rows: int,
 ) -> None:
     """Attach a tmux client in a fresh PTY and pump bytes until either side ends.
 
@@ -87,7 +93,11 @@ async def bridge(
         while True:
             message: dict[str, Any] = json.loads(await websocket.receive_text())
             if message["type"] == "input":
-                os.write(master, message["data"].encode())
+                # A long text in pieces, so the agent does not take it for a paste.
+                for piece in text_pieces(message["data"], terminal.type_chunk_chars):
+                    os.write(master, piece.encode())
+                    if len(piece) == terminal.type_chunk_chars:
+                        await asyncio.sleep(terminal.type_chunk_delay_ms / MILLISECONDS_PER_SECOND)
             elif message["type"] == "resize":
                 _set_window_size(master, int(message["cols"]), int(message["rows"]))
             else:

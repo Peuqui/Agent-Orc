@@ -66,6 +66,11 @@ class TerminalConfig(StrictModel):
     keys: list[list[TerminalKey]]
     submit_delay_ms: int
     text_history_lines: int
+    # A long text goes into the agent in pieces of this many characters, a pause apart: Claude
+    # Code takes one big chunk (about 800 characters on) for a paste and wraps it as pasted
+    # content, which the agent then may refuse to follow.
+    type_chunk_chars: int = 200
+    type_chunk_delay_ms: int = 30
 
 
 class HandoverConfig(StrictModel):
