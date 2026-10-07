@@ -21,6 +21,7 @@ import SettingsMenu from '../components/SettingsMenu.vue'
 import { markSeen, seenUntil } from '../composables/useAnswerSeen'
 import { readAnswersAll } from '../composables/useSettings'
 import { moveInList, useReorder } from '../composables/useReorder'
+import { shownAgents } from '../composables/useShownAgents'
 import { type Speakable, useSpeech } from '../composables/useSpeech'
 import { sessionName, useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
@@ -114,6 +115,15 @@ const followPhoneWidth = (event: MediaQueryListEvent): void => {
 }
 PHONE_WIDTH.addEventListener('change', followPhoneWidth)
 onBeforeUnmount(() => PHONE_WIDTH.removeEventListener('change', followPhoneWidth))
+// The columns in view show their agents' requests themselves (on a phone only the active one is
+// in view); the announcement at the top is for the agents of other workspaces.
+const agentsInView = computed(() => {
+  const { active, tabs } = workspace.value
+  if (!phone.value) return tabs
+  return active === null ? [] : [active]
+})
+watch(agentsInView, (ids) => (shownAgents.value = [...ids]), { immediate: true })
+onBeforeUnmount(() => (shownAgents.value = []))
 // The workspaces as tabs in the header: on computers and wherever one row has room for them.
 const tabsInHeader = ref(!PHONE_WIDTH.matches || TABS_WIDTH.matches)
 const followTabsWidth = (): void => {
