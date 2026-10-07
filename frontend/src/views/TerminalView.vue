@@ -551,9 +551,6 @@ onBeforeUnmount(() => {
       >
     </div>
 
-    <!-- Above the terminal and the answers, so a request shows in every view and workspace column. -->
-    <ApprovalRequests v-if="session" :session="session" class="m-1" />
-
     <div class="relative flex min-h-0 flex-1 pt-1 pl-1">
       <div ref="container" class="h-full min-w-0 flex-1" />
       <JogScroller @scroll="onJog" />
@@ -575,6 +572,9 @@ onBeforeUnmount(() => {
         <button v-if="!reconnecting" class="btn-primary" @click="connect">{{ $t('terminal.reconnect') }}</button>
       </div>
     </div>
+
+    <!-- Right above the input, where the user answers, in every view and workspace column. -->
+    <ApprovalRequests v-if="session" :session="session" class="m-1" />
 
     <MessageInput ref="messageInput" :session-id="id" @submit="submitText" />
 
