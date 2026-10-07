@@ -72,7 +72,7 @@ watch(authenticated, (isAuthenticated) => {
       <RouterView />
     </main>
   </div>
-  <div v-else-if="authenticated" class="min-h-dvh pb-20 md:pb-4">
+  <div v-else-if="authenticated" class="min-h-dvh pb-20 lg:pb-4">
     <AppHeader />
     <main class="page-width py-4">
       <RouterView />

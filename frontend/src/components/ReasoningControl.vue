@@ -47,7 +47,7 @@ function toggleUltracode(): void {
 
 <template>
   <div class="flex" :class="compact ? 'items-center gap-x-3' : 'items-end gap-x-4'">
-    <div class="flex min-w-0 flex-1" :class="compact ? 'items-center gap-x-2' : 'flex-col gap-y-1'">
+    <div class="flex min-w-0 flex-1" :class="compact ? 'min-w-36 items-center gap-x-2' : 'flex-col gap-y-1'">
       <div class="flex shrink-0 items-baseline gap-2" :class="compact ? 'text-xs' : 'text-sm'">
         <span v-if="!compact" class="text-slate-400">{{ $t('agent.effort') }}</span>
         <span class="font-medium text-slate-100" :class="{ 'w-14': compact }">

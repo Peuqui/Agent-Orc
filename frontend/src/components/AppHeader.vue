@@ -21,7 +21,7 @@ async function logout(): Promise<void> {
     <div class="page-width flex items-center justify-between gap-4 py-2">
       <AppLogo />
       <!-- Wide screens: sections as header tabs instead of the bottom bar. -->
-      <nav class="hidden flex-1 justify-center gap-1 md:flex">
+      <nav class="hidden flex-1 justify-center gap-1 lg:flex">
         <RouterLink
           v-for="item in NAV_ITEMS"
           :key="item.to"

@@ -5,7 +5,7 @@ import AppIcon from './AppIcon.vue'
 
 <template>
   <nav
-    class="fixed inset-x-0 bottom-0 z-30 grid auto-cols-fr grid-flow-col md:hidden border-t border-slate-800 bg-slate-900/95 pb-[env(safe-area-inset-bottom)] backdrop-blur"
+    class="fixed inset-x-0 bottom-0 z-30 grid auto-cols-fr grid-flow-col lg:hidden border-t border-slate-800 bg-slate-900/95 pb-[env(safe-area-inset-bottom)] backdrop-blur"
   >
     <RouterLink
       v-for="item in NAV_ITEMS"
