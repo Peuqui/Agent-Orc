@@ -382,6 +382,7 @@
   },
   "approval": {
     "asks": "Wants to run {tool}",
+    "openAgent": "Go to the agent",
     "allow": "Allow",
     "deny": "Deny"
   },

@@ -3,6 +3,7 @@ import { onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ApiError, NETWORK_ERROR, api, authenticated } from './api'
 import AppHeader from './components/AppHeader.vue'
+import ApprovalBanner from './components/ApprovalBanner.vue'
 import BottomNav from './components/BottomNav.vue'
 import AppIcon from './components/AppIcon.vue'
 import ToastList from './components/ToastList.vue'
@@ -88,6 +89,7 @@ watch(authenticated, (isAuthenticated) => {
     </main>
     <BottomNav />
   </div>
+  <ApprovalBanner />
   <ToastList />
   <UpdateBanner />
 </template>
