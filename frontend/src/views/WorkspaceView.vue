@@ -502,7 +502,19 @@ async function load(): Promise<void> {
   loaded.value = true
   remember()
   if (typeof route.query.open === 'string') openRequested()
-  else showName()
+  else {
+    showName()
+    await showActiveColumn()
+  }
+}
+
+/** A freshly loaded workspace starts at its first column; on phones, where one column fills
+ * the screen, the active one (the one left last) is brought into view instead. */
+async function showActiveColumn(): Promise<void> {
+  const id = workspace.value.active
+  if (id === null) return
+  await nextTick()
+  frameOf(id)?.scrollIntoView({ behavior: 'instant', inline: phone.value ? 'start' : 'nearest', block: 'nearest' })
 }
 
 load().catch(toast.error)

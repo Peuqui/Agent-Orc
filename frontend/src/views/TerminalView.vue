@@ -560,7 +560,7 @@ onBeforeUnmount(() => {
     <MessageInput ref="messageInput" :session-id="id" @submit="submitText" />
 
     <KeyBar
-      v-if="settings && !fullscreen && (terminalView === 'terminal' || session?.terminal)"
+      v-if="settings && !fullscreen"
       :rows="settings.keys"
       :active="modifiers"
       @send="(sequence) => sendInput(withModifiers(sequence))"
