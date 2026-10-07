@@ -14,6 +14,7 @@ import AppIcon from '../components/AppIcon.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
 import ContextMeter from '../components/ContextMeter.vue'
 import AgentActions from '../components/AgentActions.vue'
+import ApprovalRequests from '../components/ApprovalRequests.vue'
 import DropdownMenu from '../components/DropdownMenu.vue'
 import TerminalButton from '../components/TerminalButton.vue'
 import JogScroller from '../components/JogScroller.vue'
@@ -549,6 +550,9 @@ onBeforeUnmount(() => {
         >{{ plainText }}</pre
       >
     </div>
+
+    <!-- Above the terminal and the answers, so a request shows in every view and workspace column. -->
+    <ApprovalRequests v-if="session" :session="session" class="m-1" />
 
     <div class="relative flex min-h-0 flex-1 pt-1 pl-1">
       <div ref="container" class="h-full min-w-0 flex-1" />

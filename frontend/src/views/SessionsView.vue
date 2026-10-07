@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { api, type AgentSession, type Approval, type Reasoning, type WorkspaceSet } from '../api'
+import { api, type AgentSession, type Reasoning, type WorkspaceSet } from '../api'
 import AppIcon from '../components/AppIcon.vue'
 import BaseDialog from '../components/BaseDialog.vue'
 import BroadcastButton from '../components/BroadcastButton.vue'
@@ -12,6 +12,7 @@ import ContextMeter from '../components/ContextMeter.vue'
 import ReasoningControl from '../components/ReasoningControl.vue'
 import QuotaPanel from '../components/QuotaPanel.vue'
 import AgentActions from '../components/AgentActions.vue'
+import ApprovalRequests from '../components/ApprovalRequests.vue'
 import DropdownMenu from '../components/DropdownMenu.vue'
 import TerminalButton from '../components/TerminalButton.vue'
 import ScheduledList from '../components/ScheduledList.vue'
@@ -174,10 +175,6 @@ function contextPercent(session: AgentSession): number {
 
 function requestHandover(session: AgentSession): void {
   void run(() => api.requestHandover(session.id))
-}
-
-function answerApproval(session: AgentSession, approval: Approval, allow: boolean): void {
-  void run(() => api.answerApproval(session.id, approval.id, allow))
 }
 
 function changePermissionMode(session: AgentSession, mode: string): void {
@@ -385,26 +382,7 @@ function resumeWith(session: AgentSession, model: string | null): void {
             {{ $t('handover.request') }}
           </button>
         </div>
-        <!-- The agent asks for a permission; the terminal asks too, the first answer counts. -->
-        <div
-          v-for="approval in session.approvals"
-          :key="approval.id"
-          class="flex flex-col gap-2 rounded-lg border border-amber-600 bg-amber-950/40 px-3 py-2 text-sm"
-        >
-          <span class="text-amber-200">
-            {{ $t('approval.asks', { tool: approval.tool }) }}
-            <span v-if="approval.description" class="text-amber-300/70"> · {{ approval.description }}</span>
-          </span>
-          <code class="line-clamp-3 rounded bg-slate-950/60 px-2 py-1 font-mono text-xs break-all text-slate-200">{{ approval.subject }}</code>
-          <div class="flex gap-2">
-            <button class="btn-primary btn-small" @click="answerApproval(session, approval, true)">
-              {{ $t('approval.allow') }}
-            </button>
-            <button class="btn-secondary btn-small" @click="answerApproval(session, approval, false)">
-              {{ $t('approval.deny') }}
-            </button>
-          </div>
-        </div>
+        <ApprovalRequests :session="session" />
         <div
           v-if="session.effort_pending"
           class="flex flex-wrap items-center gap-2 rounded-lg border border-amber-700 bg-amber-950/40 px-3 py-2 text-sm text-amber-200"
