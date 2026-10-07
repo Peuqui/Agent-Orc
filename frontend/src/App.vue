@@ -40,6 +40,15 @@ async function checkLogin(): Promise<void> {
 
 onMounted(checkLogin)
 
+// The full-screen views (workspace, terminal, ...) fill the screen and scroll inside; the page
+// itself must not scroll. A page that did (the browser pans it to a focused field, and the
+// offset stayed after the keyboard closed) lost its header at the top.
+watch(
+  () => Boolean(route.meta.fullscreen),
+  (fullscreen) => document.documentElement.classList.toggle('app-shell', fullscreen),
+  { immediate: true },
+)
+
 watch(authenticated, (isAuthenticated) => {
   if (isAuthenticated) {
     startPolling()
