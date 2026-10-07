@@ -562,6 +562,13 @@ onBeforeUnmount(() => {
       >
         <AnswersFeed :session-id="id" />
       </div>
+      <!-- Laid over the bottom edge, right above the input where the user answers, so nothing
+           shifts when a request comes or goes; in every view and workspace column. -->
+      <ApprovalRequests
+        v-if="session"
+        :session="session"
+        class="absolute inset-x-1 bottom-1 z-20 max-h-[60%] overflow-y-auto rounded-lg bg-slate-900 shadow-xl"
+      />
       <div
         v-if="!connected"
         class="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-900/85"
@@ -572,9 +579,6 @@ onBeforeUnmount(() => {
         <button v-if="!reconnecting" class="btn-primary" @click="connect">{{ $t('terminal.reconnect') }}</button>
       </div>
     </div>
-
-    <!-- Right above the input, where the user answers, in every view and workspace column. -->
-    <ApprovalRequests v-if="session" :session="session" class="m-1" />
 
     <MessageInput ref="messageInput" :session-id="id" @submit="submitText" />
 
