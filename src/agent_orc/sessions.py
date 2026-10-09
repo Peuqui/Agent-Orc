@@ -25,6 +25,9 @@ PATH_OPTION = "@orc_path"
 MODEL_OPTION = "@orc_model"
 # Sets a further agent in a folder apart from the first (empty for the first one).
 SUFFIX_OPTION = "@orc_suffix"
+# What a suffix may hold: it becomes part of the tmux session name (no '.' or ':') and of the
+# agent's name elsewhere (e.g. its AI-Connect peer name), so it stays as typed in both.
+SUFFIX_PATTERN = re.compile(r"[A-Za-z0-9_-]+")
 # Marks a folder's terminal apart from its agent in the session name.
 TERMINAL_ID_SUFFIX = "-terminal"
 FIELD_SEPARATOR = "\t"
@@ -61,6 +64,10 @@ class SessionNotFoundError(SessionError):
     pass
 
 
+class InvalidSuffixError(SessionError):
+    pass
+
+
 class MissingModelError(SessionError):
     """The command needs a model that was not chosen, e.g. a session started before the profile
     offered a choice."""
@@ -90,6 +97,11 @@ class AgentSession:
 def agent_name(path: Path, suffix: str | None) -> str:
     """The agent's name: its folder's, with the suffix of a further agent in the folder."""
     return path.name if suffix is None else f"{path.name}-{suffix}"
+
+
+def check_suffix(suffix: str | None) -> None:
+    if suffix is not None and not SUFFIX_PATTERN.fullmatch(suffix):
+        raise InvalidSuffixError(suffix)
 
 
 def session_id_for(path: Path, terminal: bool, suffix: str | None) -> str:
@@ -177,6 +189,7 @@ class SessionManager:
         `model` fills {model} (profiles with a choice of models); `env` is set for the agent.
         """
         env = env or {}
+        check_suffix(suffix)
         command = self._command(profile_name, path, suffix, resume, conversation, model)
         terminal = self._is_terminal(profile_name)
         existing = self.find(path, terminal, suffix)

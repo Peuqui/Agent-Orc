@@ -149,6 +149,13 @@ def config(home: Path, socket_name: str) -> Config:
                 "protected_file": str(home / "user-settings.json"),
             },
         },
+        # Shows its name and the suffix it got in its environment ("none" for a folder's first).
+        "named": {
+            "label": "Named",
+            "start": ["sh", "-c", 'echo "named {name} [${ORC_SUFFIX-none}]"; exec cat'],
+            "resume": ["true"],
+            "env": {"ORC_SUFFIX": "{suffix}"},
+        },
         "shell": {
             "label": "Shell",
             "start": ["sh", "-c", "echo READY; exec cat"],
@@ -1360,6 +1367,32 @@ def test_agent_stopped_by_its_limit_resumes_after_the_reset(
         client.delete(f"/api/sessions/{session_id}")
         assert client.get("/api/sessions").json() == []
         assert read_scheduled() == []
+
+
+def test_a_further_agent_in_a_folder_needs_a_suffix_and_gets_it(
+    client: TestClient, home: Path
+) -> None:
+    folder = home / "projects" / "a"
+    folder.mkdir()
+    body = {
+        "profile": "named",
+        "path": str(folder),
+        "resume": False,
+        "effort": None,
+        "ultracode": False,
+        "conversation": None,
+    }
+    first = client.post("/api/sessions", json=body).json()
+    assert wait_for_text(client, first["id"], "named a [none]")
+    # The folder has its agent: another one needs a suffix, of allowed characters.
+    assert client.post("/api/sessions", json=body).status_code == 409
+    assert client.post("/api/sessions", json={**body, "suffix": "a.b"}).status_code == 422
+    review = client.post("/api/sessions", json={**body, "suffix": "Review"}).json()
+    assert review["id"] != first["id"]
+    assert wait_for_text(client, review["id"], "named a-Review [Review]")
+    listed = {s["id"]: s["name"] for s in client.get("/api/sessions").json()}
+    assert (listed[first["id"]], listed[review["id"]]) == ("a", "a-Review")
+    assert client.post("/api/sessions", json={**body, "suffix": "Review"}).status_code == 409
 
 
 def test_message_is_submitted_after_a_long_text(client: TestClient, home: Path) -> None:

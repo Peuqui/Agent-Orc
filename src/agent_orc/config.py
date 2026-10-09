@@ -14,6 +14,8 @@ CONVERSATION_PLACEHOLDER = "{conversation}"
 MODEL_PLACEHOLDER = "{model}"
 # The folder's reasoning effort, in a profile's environment (AgentProfile.env).
 EFFORT_PLACEHOLDER = "{effort}"
+# The suffix of a further agent in a folder, in a profile's environment (AgentProfile.env).
+SUFFIX_PLACEHOLDER = "{suffix}"
 CONFIG_FILE_NAME = "config.yaml"
 CREDENTIALS_FILE_NAME = "credentials.json"
 
@@ -260,7 +262,8 @@ class AgentProfile(StrictModel):
     clear_command: str | None = None
     # Typed into an idle agent to shrink its context to a summary (Claude: /compact).
     compact_command: str | None = None
-    # Environment of the agent; {effort} is the folder's level (left out when it has none).
+    # Environment of the agent; {effort} is the folder's level, {suffix} that of a further agent in
+    # the folder (an entry is left out when its placeholder has no value).
     env: dict[str, str] = {}
     # Shown in the start dialog when this profile is chosen (e.g. what to stop first).
     hint: str | None = None

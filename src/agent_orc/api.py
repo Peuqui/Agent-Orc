@@ -51,6 +51,7 @@ from agent_orc.changes import (
 from agent_orc.config import (
     EFFORT_PLACEHOLDER,
     MODEL_PLACEHOLDER,
+    SUFFIX_PLACEHOLDER,
     AgentProfile,
     Config,
     LiveEffortConfig,
@@ -115,11 +116,13 @@ from agent_orc.schedule import (
 from agent_orc.scope import AccessScope, OutsideScopeError
 from agent_orc.sessions import (
     AgentSession,
+    InvalidSuffixError,
     MissingModelError,
     SessionAlreadyRunningError,
     SessionManager,
     SessionNotFoundError,
     UnknownProfileError,
+    check_suffix,
 )
 from agent_orc.state import (
     UNNAMED_WORKSPACE,
@@ -263,6 +266,7 @@ ERROR_STATUS: dict[type[Exception], int] = {
     files.NotTextError: status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
     SessionNotFoundError: status.HTTP_404_NOT_FOUND,
     MissingModelError: status.HTTP_422_UNPROCESSABLE_CONTENT,
+    InvalidSuffixError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     UnknownProfileError: status.HTTP_404_NOT_FOUND,
     TrashEntryNotFoundError: status.HTTP_404_NOT_FOUND,
     ConversationNotFoundError: status.HTTP_404_NOT_FOUND,
@@ -322,6 +326,8 @@ class StartSessionRequest(BaseModel):
     worktree: str | None = None
     # The workspace the agent joins ("" the unnamed one); None: it keeps the one it is in.
     workspace: str | None = None
+    # Sets a further agent in the folder apart from the first (required once one runs there).
+    suffix: str | None = None
 
 
 class Note(BaseModel):
@@ -588,7 +594,12 @@ def create_app(
         return levels
 
     def prepare_start(
-        profile_name: str, path: Path, model: str | None, effort: str | None, ultracode: bool
+        profile_name: str,
+        path: Path,
+        suffix: str | None,
+        model: str | None,
+        effort: str | None,
+        ultracode: bool,
     ) -> dict[str, str]:
         """What an agent needs before its process starts in the folder (new, or another profile
         taking over): the folder trusted, the model checked, reasoning and permission mode
@@ -599,10 +610,13 @@ def create_app(
         check_model(profile_name, model)
         store_start_reasoning(profile_name, path, model, effort, ultracode)
         settle_permission_mode(profile_name, path)
-        return start_env(profile_name, path, model)
+        return start_env(profile_name, path, suffix, model)
 
-    def start_env(profile_name: str, folder: Path, model: str | None) -> dict[str, str]:
-        """The agent's environment; {effort} only for a model that takes levels."""
+    def start_env(
+        profile_name: str, folder: Path, suffix: str | None, model: str | None
+    ) -> dict[str, str]:
+        """The agent's environment; {effort} only for a model that takes levels, {suffix} only
+        for a further agent in the folder."""
         profile = config.agents.get(profile_name)
         if profile is None:
             return {}
@@ -611,11 +625,16 @@ def create_app(
             if effort_levels(profile_name, model)
             else None
         )
-        return {
-            name: value.replace(EFFORT_PLACEHOLDER, effort or "")
-            for name, value in profile.env.items()
-            if effort is not None or EFFORT_PLACEHOLDER not in value
-        }
+        values = {EFFORT_PLACEHOLDER: effort, SUFFIX_PLACEHOLDER: suffix}
+        unfilled = [placeholder for placeholder, filled in values.items() if filled is None]
+        env = {}
+        for name, value in profile.env.items():
+            if any(placeholder in value for placeholder in unfilled):
+                continue
+            for placeholder, filled in values.items():
+                value = value.replace(placeholder, filled or "")
+            env[name] = value
+        return env
 
     def live_effort(profile_name: str) -> LiveEffortConfig | None:
         profile = config.agents.get(profile_name)
@@ -637,7 +656,7 @@ def create_app(
             )
             return session
         settle_permission_mode(session.profile, session.path)
-        env = start_env(session.profile, session.path, session.chosen_model)
+        env = start_env(session.profile, session.path, session.suffix, session.chosen_model)
         restarted = sessions.restart(session, env)
         # The ended agent cannot report that it stopped working.
         store_activity(session.id, busy=False)
@@ -1164,6 +1183,7 @@ def create_app(
         path = scope.resolve(body.path)
         if not path.is_dir():
             raise NotADirectoryError(str(path))
+        check_suffix(body.suffix)
         if body.workspace is not None:
             check_workspace(body.workspace)
         if body.worktree is not None:
@@ -1175,9 +1195,11 @@ def create_app(
             ids = {c["id"] for c in conversations_of(body.profile, path)}
             if body.conversation not in ids:
                 raise ConversationNotFoundError(body.conversation)
-        env = prepare_start(body.profile, path, body.model, body.effort, body.ultracode)
+        env = prepare_start(
+            body.profile, path, body.suffix, body.model, body.effort, body.ultracode
+        )
         started = sessions.start(
-            body.profile, path, body.resume, body.conversation, body.model, env
+            body.profile, path, body.resume, body.conversation, body.model, env, body.suffix
         )
         if body.workspace is not None:
             assign_workspace(started.id, body.workspace)
@@ -1253,7 +1275,7 @@ def create_app(
         elif model is not None:
             store_model_reasoning(session, model, body.effort if body else None)
         settle_permission_mode(session.profile, session.path)
-        env = start_env(session.profile, session.path, chosen)
+        env = start_env(session.profile, session.path, session.suffix, chosen)
         restarted = sessions.restart(session, env, model)
         # The ended agent cannot report that it stopped working.
         store_activity(session_id, busy=False)
@@ -1338,7 +1360,9 @@ def create_app(
         if body.profile == session.profile or target.terminal != session.terminal:
             raise InvalidProfileChangeError(body.profile)
         resume = carries_conversation(session.profile, body.profile)
-        env = prepare_start(body.profile, session.path, body.model, body.effort, False)
+        env = prepare_start(
+            body.profile, session.path, session.suffix, body.model, body.effort, False
+        )
         pending_effort.pop(session_id, None)
         pending_model.pop(session_id, None)
         switched = sessions.change_profile(session, body.profile, resume, body.model, env)
