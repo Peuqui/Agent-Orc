@@ -15,12 +15,18 @@ import ToggleSwitch from './ToggleSwitch.vue'
 const props = defineProps<{ path: string; defaultWorkspace: string | null }>()
 const emit = defineEmits<{ started: [id: string]; close: [] }>()
 
-const { profiles, loadProfiles, refresh } = useSessions()
+const { sessions, profiles, loadProfiles, refresh } = useSessions()
 const toast = useToast()
 const selected = ref('')
 const NO_REASONING: Reasoning = { effort: null, ultracode: false }
 const reasoning = ref<Reasoning>(NO_REASONING)
 const busy = ref(false)
+// Once the folder's first agent runs, a further one needs a suffix of its own to its name.
+const folderAgents = computed(() => sessions.value.filter((s) => s.path === props.path && !s.terminal && s.running))
+const needsSuffix = computed(() => folderAgents.value.some((s) => s.suffix === null))
+const suffix = ref('')
+const suffixTaken = computed(() => folderAgents.value.some((s) => s.suffix === suffix.value.trim()))
+const nameReady = computed(() => !needsSuffix.value || (suffix.value.trim() !== '' && !suffixTaken.value))
 // A worktree of its own: a second working copy on a new branch, next to the project.
 const inWorktree = ref(false)
 const branch = ref(defaultBranch())
@@ -137,6 +143,7 @@ async function start(resume: boolean, conversation: string | null = null): Promi
       inWorktree.value ? branch.value.trim() : null,
       model.value,
       workspaceTarget.value === UNNAMED_TARGET ? '' : workspaceTarget.value.slice(NAMED_PREFIX.length),
+      needsSuffix.value ? suffix.value.trim() : null,
     )
     await refresh()
     emit('started', session.id)
@@ -150,6 +157,17 @@ async function start(resume: boolean, conversation: string | null = null): Promi
 
 <template>
   <BaseDialog :title="$t('agent.title', { name: baseName(path) })" @close="emit('close')">
+    <label v-if="needsSuffix" class="mb-5 flex flex-col gap-1 text-sm text-slate-400">
+      {{ $t('agent.suffix') }}
+      <span class="flex items-center gap-1">
+        <span class="font-mono text-slate-200">{{ baseName(path) }}-</span>
+        <!-- Required: the dialog cannot start the agent until the name is its own. -->
+        <input v-model="suffix" class="input min-w-0 flex-1 font-mono text-sm" :placeholder="$t('agent.suffixPlaceholder')" />
+      </span>
+      <span class="text-xs" :class="suffixTaken ? 'text-red-400' : 'text-slate-500'">
+        {{ suffixTaken ? $t('agent.suffixTaken') : $t('agent.suffixHint') }}
+      </span>
+    </label>
     <fieldset class="mb-5 flex flex-col gap-2">
       <legend class="mb-2 text-sm text-slate-400">{{ $t('agent.profile') }}</legend>
       <label
@@ -197,10 +215,11 @@ async function start(resume: boolean, conversation: string | null = null): Promi
       </template>
     </div>
     <div class="flex flex-col gap-2">
-      <button class="btn-primary" :disabled="busy || !selected || (profile?.models && !model)" @click="start(false)">
+      <button class="btn-primary" :disabled="busy || !selected || (profile?.models && !model) || !nameReady" @click="start(false)">
         {{ $t('agent.startNew') }}
       </button>
-      <button class="btn-secondary" :disabled="busy || !selected || (profile?.models && !model)" @click="start(true)">
+      <!-- The folder's last conversation may be the running agent's own: a further agent picks one below. -->
+      <button v-if="!needsSuffix" class="btn-secondary" :disabled="busy || !selected || (profile?.models && !model)" @click="start(true)">
         {{ $t('agent.resume') }}
       </button>
       <button class="btn" @click="emit('close')">{{ $t('common.cancel') }}</button>
@@ -219,7 +238,7 @@ async function start(resume: boolean, conversation: string | null = null): Promi
         <li v-for="hit in hits" :key="hit.id">
           <button
             class="flex w-full flex-col items-start gap-0.5 rounded-lg px-3 py-2 text-left hover:bg-slate-700"
-            :disabled="busy"
+            :disabled="busy || !nameReady"
             @click="start(true, hit.id)"
           >
             <span class="w-full truncate text-sm text-slate-100">{{ hit.title || $t('agent.untitled') }}</span>
@@ -237,7 +256,7 @@ async function start(resume: boolean, conversation: string | null = null): Promi
         <li v-for="conversation in conversations" :key="conversation.id">
           <button
             class="flex w-full flex-col items-start rounded-lg px-3 py-2 text-left hover:bg-slate-700"
-            :disabled="busy"
+            :disabled="busy || !nameReady"
             @click="start(true, conversation.id)"
           >
             <span class="w-full truncate text-sm text-slate-100">

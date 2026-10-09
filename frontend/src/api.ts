@@ -431,9 +431,11 @@ export const api = {
     model: string | null = null,
     /** The workspace the agent joins (null: the one it is in; "": the unnamed one). */
     workspace: string | null = null,
+    /** Sets a further agent in the folder apart from the first (required once that one runs). */
+    suffix: string | null = null,
   ) =>
     request<AgentSession>('POST', 'sessions', {
-      body: { profile, path, model, resume, ...reasoning, conversation, worktree, workspace },
+      body: { profile, path, model, resume, ...reasoning, conversation, worktree, workspace, suffix },
     }),
   /** Moves an agent to a workspace ("": the unnamed one); the server keeps it, every device shows it. */
   moveSession: (sessionId: string, workspace: string) =>

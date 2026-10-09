@@ -76,6 +76,10 @@
   "agent": {
     "workspace": "Workspace",
     "title": "Start agent in “{name}”",
+    "suffix": "Name of the further agent",
+    "suffixPlaceholder": "e.g. Review",
+    "suffixHint": "An agent runs in this folder already. The suffix makes the name unique (letters, digits, _ and -).",
+    "suffixTaken": "An agent in this folder has this name already.",
     "effort": "Effort (reasoning)",
     "profile": "Agent",
     "startNew": "Start new",

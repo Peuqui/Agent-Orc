@@ -76,6 +76,10 @@
   "agent": {
     "workspace": "Arbeitsfläche",
     "title": "Agent in „{name}“ starten",
+    "suffix": "Name des weiteren Agenten",
+    "suffixPlaceholder": "z. B. Review",
+    "suffixHint": "In diesem Ordner läuft schon ein Agent. Der Zusatz macht den Namen eindeutig (Buchstaben, Ziffern, _ und -).",
+    "suffixTaken": "Diesen Namen hat schon ein Agent in diesem Ordner.",
     "effort": "Aufwand (Reasoning)",
     "profile": "Agent",
     "startNew": "Neu starten",
