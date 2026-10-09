@@ -3,6 +3,30 @@
 Gesammelt am 8.10.2026 aus `docs/UEBERGABE-2026-10-07-abend.md`, `docs/TODO.md`, den Notizen der Sitzungen und den
 Absprachen vom 8.10. Der Code ist die Wahrheit, bei Zweifeln dort nachsehen.
 
+## Stand am 9.10., 18:25 (Sitzung mit Opus, Kontext gut 50 %)
+
+Erledigt, gepusht und installiert:
+- 1a Eingabe und Layout: Absenden über `POST /api/sessions/{id}/message` (Server tippt, dann Enter), Höhe der
+  Vollbild-Seiten aus dem festen Body (`h-full`), Eingabefeld `field-sizing: content` mit Obergrenze `40cqh`,
+  Umbruch langer Pfade in den Antworten, „App neu laden“ im ☰-Menü. **Am Handy noch nicht von Peuqui getestet.**
+- Diktat sofort senden: ⚡ links neben dem Mikrofon (pro Gerät).
+- Punkt 7 (mehrere Agenten im Ordner) ganz, inklusive eigener Startwerte je Agent (`--settings {settings}`).
+- Punkt 2 Cache-Marker und Übergabe: `cache.py`, `CacheAge.vue`, `handover.lead_minutes` (Benutzer-Konfiguration
+  umgestellt, Sicherung `config.yaml.bak-20261009-handover-lead`); Automatik bei Peuqui aus.
+- `max-num-seqs` war schon 3.
+
+In Arbeit / als Nächstes (Reihenfolge laut Peuqui):
+1. Mitlesen (und später Mitdiskutieren) als eigener Tab „Gespräche“ rechts neben „Arbeitsfläche“. Anfrage an
+   `Mini:AI-Connect` (18:21): Prozessgrenze statt Import, Befehle `observe-jsonl` und `send-json` im
+   `observer_client.cli`; Antwort steht aus. User-Name kommt in die Agent-Orc-Konfiguration, das User-Token gibt
+   Peuqui im Browser ein (pro Gerät), der Server reicht es nur durch.
+2. `WorkspaceView.vue` aufspalten (Abschnitt 3).
+3. Abschnitt 4: Schriftgröße der Antworten, Gelesen-Stand auf dem Server mit „Alle als gelesen“, Kontingent je
+   Anbieter, Autoscan-Check.
+
+Stolperfalle des Tages: Das DevTools-Werkzeug hängt fest an Port 9222; andere Agenten (AIfred) nutzen ihn auch.
+Vor dem Start eines eigenen Chrome prüfen, ob 9222 frei ist, und nur die eigene Seite anfassen.
+
 ## 0. Vor dem Start
 
 1. `peer_read`, dann `MEMORY.md` lesen.
