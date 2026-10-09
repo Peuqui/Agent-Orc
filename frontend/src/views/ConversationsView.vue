@@ -172,7 +172,7 @@ async function send(): Promise<void> {
               :aria-expanded="openConversations.has(conversation.key)"
               @click="toggleConversation(conversation.key)"
             >
-              <span class="text-sm font-medium break-words text-slate-100">{{ title(conversation) }}</span>
+              <span class="text-sm font-medium break-words text-amber-400">{{ title(conversation) }}</span>
               <span class="text-xs text-slate-500">
                 {{ $t('peers.count', { count: conversation.messages.length }) }} ·
                 {{ formatMoment(new Date(conversation.last), locale) }}
