@@ -238,7 +238,13 @@ function jog(lines: number): void {
           <div v-if="spokenAs(entry.turn, spoken)" class="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
             <AppIcon name="mic" />
             <span>{{ $t('answers.spoken', { heard: spokenAs(entry.turn, spoken)?.heard }) }}</span>
-            <audio controls preload="none" class="h-8 max-w-full" :src="api.recordingUrl(spokenAs(entry.turn, spoken)?.id ?? '')" />
+            <audio
+              v-if="spokenAs(entry.turn, spoken)?.recording"
+              controls
+              preload="none"
+              class="h-8 max-w-full"
+              :src="api.recordingUrl(spokenAs(entry.turn, spoken)?.id ?? '')"
+            />
           </div>
         </div>
         <template v-for="item in entry.items" :key="item.id">

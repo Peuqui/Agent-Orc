@@ -28,6 +28,7 @@ from agent_orc.voice import (
 )
 from agent_orc.voicelog import (
     append_entry,
+    drop_old_recordings,
     forget_agent,
     new_entry,
     read_entries,
@@ -48,6 +49,7 @@ def voice_config() -> VoiceConfig:
         window_minutes=10,
         confirm_minutes=2,
         keep_entries=3,
+        recording_days=7,
         name_similarity=0.75,
         yes_words=["ja", "richtig"],
         no_words=["nein"],
@@ -278,6 +280,7 @@ def test_what_is_said_reaches_the_agent_only_after_the_spoken_yes(
     assert (spoken["heard"], spoken["request"]) == ("starte die Tests", "starte die Tests")
     assert spoken["score"] is None
     # What was said is kept as it was recorded, for the answers to play.
+    assert spoken["recording"] is True
     audio = client.get(f"/api/voice/{spoken['id']}/audio")
     assert (audio.status_code, audio.content) == (200, RECORDING)
     assert client.get("/api/voice/not-an-id/audio").status_code == 404
@@ -460,9 +463,9 @@ def test_only_the_newest_entries_stay_with_their_recordings(home: Path) -> None:
     assert recording_file_path(entries[4].id).exists()
 
 
-def test_what_was_said_to_a_stopped_agent_goes_with_it(home: Path) -> None:
+def test_a_stopped_agents_recordings_go_but_the_lines_stay(home: Path) -> None:
     first = entry_of("a", "asked")
-    # The sentence was said for "a", then confirmed for "b": "b" still shows it.
+    # The sentence was said for "a", then confirmed for "b": "b" still shows it, with its recording.
     sent_on = entry_of("b", "sent", source=first.id)
     own = entry_of("a", "sent", source=first.id)
     other = entry_of("b", "asked")
@@ -470,8 +473,25 @@ def test_what_was_said_to_a_stopped_agent_goes_with_it(home: Path) -> None:
         store_recording(entry.id, b"wav")
         append_entry(entry, keep=10)
     forget_agent("a")
-    assert [e["id"] for e in read_entries()] == [first.id, sent_on.id, other.id]
+    # The lines stay, to measure the recognition by.
+    assert [e["id"] for e in read_entries()] == [first.id, sent_on.id, own.id, other.id]
     assert not recording_file_path(own.id).exists()
+    assert recording_file_path(first.id).exists()
+    assert recording_file_path(other.id).exists()
+
+
+def test_recordings_older_than_the_days_go(home: Path) -> None:
+    old, new = entry_of("a", "asked"), entry_of("a", "asked")
+    for entry in (old, new):
+        store_recording(entry.id, b"wav")
+        append_entry(entry, keep=10)
+    now = time.time()
+    eight_days_ago = now - 8 * 24 * 60 * 60
+    os.utime(recording_file_path(old.id), (eight_days_ago, eight_days_ago))
+    drop_old_recordings(now, days=7)
+    assert not recording_file_path(old.id).exists()
+    assert recording_file_path(new.id).exists()
+    assert [e["id"] for e in read_entries()] == [old.id, new.id]
 
 
 def recording_file_path(entry_id: str) -> Path:

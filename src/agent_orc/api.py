@@ -163,6 +163,7 @@ from agent_orc.trust import FOLDER_TRUST
 from agent_orc.voice import Action, VoiceAgent, VoiceRouter, expect_reply
 from agent_orc.voicelog import (
     append_entry,
+    drop_old_recordings,
     forget_agent,
     new_entry,
     recording_file,
@@ -1713,6 +1714,7 @@ def create_app(
         )
         append_entry(entry, config.voice.keep_entries)
         store_recording(entry.id, recording)
+        drop_old_recordings(now, config.voice.recording_days)
         # The sentence a question is about; after a no the name asked for belongs to the sentence
         # said first, a yes is about the sentence its question was.
         if decision.action is Action.WHICH_AGENT:

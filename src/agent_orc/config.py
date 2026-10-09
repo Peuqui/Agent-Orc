@@ -144,9 +144,11 @@ class VoiceConfig(StrictModel):
     window_minutes: int
     # A question nobody answers is forgotten after this.
     confirm_minutes: int
-    # Of what was said, this many of the newest requests stay (with their recordings); what was
-    # said to an agent that is stopped goes with it.
+    # Of what was said, this many of the newest requests stay (with their recordings). A stopped
+    # agent's recordings go with it; the lines stay, to measure the recognition by.
     keep_entries: int
+    # Recordings older than this many days go; the lines stay.
+    recording_days: int
     # How well a spoken name must match an agent's folder name (0 to 1).
     name_similarity: float
     yes_words: list[str]

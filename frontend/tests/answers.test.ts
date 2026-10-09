@@ -63,7 +63,7 @@ test('pictures attached in Agent-Orc are told apart from the message text', () =
 
 test('a request is marked as spoken by the latest one sent before it with the same text', () => {
   const turn = { id: 't', time: '2026-10-07T10:00:05.000Z', prompt: 'starte die Tests', images: 0, texts: [], interjections: [] }
-  const spoken = (id: string, time: string, request = 'starte die Tests') => ({ id, time, request, heard: 'x', score: null })
+  const spoken = (id: string, time: string, request = 'starte die Tests') => ({ id, time, request, heard: 'x', score: null, recording: true })
   const earlier = spoken('a', '2026-10-07T10:00:01+00:00')
   const later = spoken('b', '2026-10-07T10:00:04.500000+00:00')
   assert.equal(spokenAs(turn, [earlier, later])?.id, 'b')

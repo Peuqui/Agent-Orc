@@ -153,6 +153,8 @@ export interface SpokenRequest {
   heard: string
   /** How well the spoken name matched the agent's, 0 to 1; null when none was spoken. */
   score: number | null
+  /** The recording is still kept (it goes with a stopped agent and after some days). */
+  recording: boolean
 }
 
 /** Claude's token consumption of one day, project and model. */

@@ -12,6 +12,8 @@ from typing import Any
 
 from agent_orc.state import state_dir
 
+SECONDS_PER_DAY = 24 * 60 * 60
+
 
 @dataclass(frozen=True)
 class VoiceEntry:
@@ -40,17 +42,21 @@ def _recordings_dir() -> Path:
     return state_dir() / "voice-recordings"
 
 
+def _recording_path(entry_id: str) -> Path:
+    return _recordings_dir() / f"{entry_id}.wav"
+
+
 def store_recording(entry_id: str, recording: bytes) -> None:
     """The WAV of what was said, next to the entry (same id)."""
     _recordings_dir().mkdir(parents=True, exist_ok=True)
-    (_recordings_dir() / f"{entry_id}.wav").write_bytes(recording)
+    _recording_path(entry_id).write_bytes(recording)
 
 
 def recording_file(entry_id: str) -> Path:
     """Only an entry's id names a recording: nothing else reaches the folder's other files."""
     if re.fullmatch(r"[0-9a-f]{32}", entry_id) is None:
         raise FileNotFoundError(entry_id)
-    path = _recordings_dir() / f"{entry_id}.wav"
+    path = _recording_path(entry_id)
     if not path.is_file():
         raise FileNotFoundError(entry_id)
     return path
@@ -73,10 +79,22 @@ def append_entry(entry: VoiceEntry, keep: int) -> None:
 
 
 def forget_agent(agent_id: str) -> None:
-    """Drops what was said to an agent that is gone, with its recordings. A sentence another
-    agent was sent on from stays, since that one still shows it."""
+    """Drops the recordings of what was said to an agent that is gone. The lines stay, to measure
+    the recognition by (append_entry keeps the newest of them); a sentence another agent was sent
+    on from keeps its recording too, since that one still shows it."""
     entries = read_entries()
-    _keep_only([entry for entry in entries if entry["agent_id"] != agent_id], entries)
+    still_shown = {e["source"] for e in entries if e["agent_id"] != agent_id and e["source"]}
+    for entry in entries:
+        if entry["agent_id"] == agent_id and entry["id"] not in still_shown:
+            _recording_path(entry["id"]).unlink(missing_ok=True)
+
+
+def drop_old_recordings(now: float, days: int) -> None:
+    """Recordings older than `days` go; the lines stay."""
+    oldest = now - days * SECONDS_PER_DAY
+    for path in _recordings_dir().glob("*.wav"):
+        if path.stat().st_mtime < oldest:
+            path.unlink()
 
 
 def _keep_only(kept: list[dict[str, Any]], entries: list[dict[str, Any]]) -> None:
@@ -86,7 +104,7 @@ def _keep_only(kept: list[dict[str, Any]], entries: list[dict[str, Any]]) -> Non
     }
     for entry in entries:
         if entry["id"] not in kept_ids:
-            (_recordings_dir() / f"{entry['id']}.wav").unlink(missing_ok=True)
+            _recording_path(entry["id"]).unlink(missing_ok=True)
     lines = [json.dumps(e, ensure_ascii=False) + "\n" for e in entries if e["id"] in kept_ids]
     _log_file().write_text("".join(lines), encoding="utf-8")
 
@@ -115,6 +133,8 @@ def requests_to_agent(agent_id: str) -> list[dict[str, Any]]:
                 "request": entry["request"],
                 "heard": spoken["heard"],
                 "score": spoken["score"],
+                # Gone with its agent or its age (forget_agent, drop_old_recordings).
+                "recording": _recording_path(spoken["id"]).is_file(),
             }
         )
     return requests

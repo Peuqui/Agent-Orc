@@ -114,8 +114,11 @@ dictation:
 #   # With no agent named, the text goes to the one that answered last, if within this.
 #   window_minutes: 10
 #   confirm_minutes: 2
-#   # Of what was said, this many of the newest requests stay, with their recordings.
+#   # Of what was said, this many of the newest requests stay, with their recordings; a stopped
+#   # agent's recordings go with it, the lines stay.
 #   keep_entries: 200
+#   # Recordings older than this many days go; the lines stay.
+#   recording_days: 7
 #   # How well a spoken name must match an agent's folder name (0 to 1).
 #   name_similarity: 0.75
 #   yes_words: [ja, jawohl, richtig, genau]
