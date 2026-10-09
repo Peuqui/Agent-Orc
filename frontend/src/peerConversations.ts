@@ -59,10 +59,18 @@ export function lanesOf(messages: Iterable<PeerMessage>): string[] {
   return [...lanes]
 }
 
+// Peers are Host:Project; a name that is only a host is a machine's own connection to the bridge.
+const SEPARATOR = ':'
+
 /** A lane's name without the host (Host:Project, User:Name), so many fit side by side. */
 export function laneLabel(name: string): string {
-  const separator = name.indexOf(':')
+  const separator = name.indexOf(SEPARATOR)
   return separator === -1 ? name : name.slice(separator + 1)
+}
+
+/** A machine itself (e.g. "Mini"), no agent: nobody writes to it, so it is not offered. */
+export function isMachine(name: string): boolean {
+  return !name.includes(SEPARATOR)
 }
 
 /** Where a message's arrow runs, in lanes: from the sender to the receiver, or across all lanes

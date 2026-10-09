@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { arrowOf, firstLine, groupConversations, laneLabel, lanesOf, replyRecipients } from '../src/peerConversations.ts'
+import { arrowOf, firstLine, groupConversations, isMachine, laneLabel, lanesOf, replyRecipients } from '../src/peerConversations.ts'
 
 const message = (id: number, from: string, to: string, timestamp: string) => ({
   id,
@@ -51,4 +51,10 @@ test('every participant is a lane, in the order they first appear; a broadcast s
   assert.deepEqual(lanes.map(laneLabel), ['Ada', 'A', 'B'])
   assert.deepEqual(arrowOf(messages[2]!, lanes), { from: 2, to: 0 })
   assert.deepEqual(arrowOf(messages[0]!, lanes), { from: 1, to: null })
+})
+
+test('a name without a project is a machine, not an agent', () => {
+  assert.equal(isMachine('Mini'), true)
+  assert.equal(isMachine('Mini:AIfred'), false)
+  assert.equal(isMachine('User:Ada'), false)
 })

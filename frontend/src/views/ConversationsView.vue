@@ -7,7 +7,7 @@ import PeerMessageItem from '../components/PeerMessageItem.vue'
 import { useSettings } from '../composables/useSettings'
 import { useToast } from '../composables/useToast'
 import { formatMoment } from '../format'
-import { EVERYONE, groupConversations, laneLabel, lanesOf, replyRecipients, type Conversation } from '../peerConversations'
+import { EVERYONE, groupConversations, isMachine, laneLabel, lanesOf, replyRecipients, type Conversation } from '../peerConversations'
 
 // AI-Connect read along: the conversations between the agents, live, and a field to write to
 // them as the user. The server runs AI-Connect's program per open page and hands its lines on;
@@ -70,7 +70,9 @@ onBeforeUnmount(() => source?.close())
 
 const conversations = computed(() => groupConversations(messages.value))
 const timeline = computed(() => [...messages.value].sort((a, b) => b.timestamp.localeCompare(a.timestamp)))
-const sortedPeers = computed(() => [...peers.value].sort((a, b) => a.name.localeCompare(b.name)))
+const sortedPeers = computed(() =>
+  peers.value.filter((peer) => !isMachine(peer.name)).sort((a, b) => a.name.localeCompare(b.name)),
+)
 const peerNames = computed(() => sortedPeers.value.map((peer) => peer.name))
 const lanes = computed(() => lanesOf(messages.value))
 const laneColumns = computed(() => ({ gridTemplateColumns: `repeat(${lanes.value.length}, minmax(0, 1fr))` }))
@@ -181,7 +183,7 @@ async function send(): Promise<void> {
 
     <p v-if="configured === false" class="card p-6 text-center text-slate-400">{{ $t('peers.notConfigured') }}</p>
     <template v-else-if="configured">
-      <div v-if="peers.length" class="flex flex-wrap gap-2 text-xs">
+      <div v-if="sortedPeers.length" class="flex flex-wrap gap-2 text-xs">
         <span
           v-for="peer in sortedPeers"
           :key="peer.name"
@@ -191,7 +193,7 @@ async function send(): Promise<void> {
           <span :class="stateColor(peer)">●</span> {{ peer.name }}
         </span>
       </div>
-      <p v-if="peers.length" class="-mt-2 flex flex-wrap gap-x-3 text-xs text-slate-500">
+      <p v-if="sortedPeers.length" class="-mt-2 flex flex-wrap gap-x-3 text-xs text-slate-500">
         <span v-for="(color, state) in STATE_COLORS" :key="state"><span :class="color">●</span> {{ $t(`peers.state.${state}`) }}</span>
         <span><span :class="NO_STATE_COLOR">●</span> {{ $t('peers.state.none') }}</span>
       </p>

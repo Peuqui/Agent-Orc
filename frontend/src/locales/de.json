@@ -687,7 +687,7 @@
     "tokenEnter": "Token eingeben",
     "state": {
       "busy": "arbeitet",
-      "waiting": "wartet auf eine Freigabe",
+      "waiting": "wartet auf Freigabe",
       "idle": "bereit",
       "none": "meldet nichts"
     }

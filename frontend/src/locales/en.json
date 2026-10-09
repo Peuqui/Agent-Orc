@@ -687,7 +687,7 @@
     "tokenEnter": "Enter token",
     "state": {
       "busy": "working",
-      "waiting": "waiting for an approval",
+      "waiting": "awaits approval",
       "idle": "ready",
       "none": "reports nothing"
     }
