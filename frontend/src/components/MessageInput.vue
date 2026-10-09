@@ -174,14 +174,6 @@ onBeforeUnmount(() => {
   window.removeEventListener('drop', onDrop, true)
 })
 
-// Grows with its content (up to a cap set in CSS), so a long dictation can be read before sending.
-watch(text, async () => {
-  await nextTick()
-  if (!field.value) return
-  field.value.style.height = 'auto'
-  field.value.style.height = `${field.value.scrollHeight}px`
-})
-
 function removeAttachment(index: number): void {
   attachments.value.splice(index, 1)
 }
@@ -263,12 +255,12 @@ function onKeydown(event: KeyboardEvent): void {
       <template #popup><PromptTemplates ref="templates" @insert="insertTemplate" /></template>
     </AttachMenu>
     <DictationMic :dictation="dictation" />
+    <!-- Grows with its content up to a share of the view, so a long dictation can be read before sending. -->
     <textarea
       ref="field"
       v-model="text"
       :[MESSAGE_FIELD_ATTRIBUTE]="''"
-      rows="1"
-      class="input max-h-[40dvh] min-h-10 flex-1 resize-none py-2"
+      class="input max-h-[40cqh] min-h-10 flex-1 resize-none py-2 field-sizing-content"
       :placeholder="dictation.state === 'transcribing' ? $t('dictation.transcribing') : $t('terminal.placeholder')"
       enterkeyhint="send"
       @keydown="onKeydown"

@@ -600,7 +600,7 @@ async function rename(): Promise<void> {
 
 <template>
   <!-- Shown once the workspaces have arrived, so nothing flashes up that is replaced a moment later. -->
-  <div class="flex h-dvh flex-col bg-slate-900">
+  <div class="flex h-full flex-col bg-slate-900">
     <template v-if="loaded">
       <ConfirmDialog
         v-if="deleting"

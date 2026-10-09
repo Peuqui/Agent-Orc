@@ -391,7 +391,8 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="flex h-dvh flex-col bg-slate-900">
+  <!-- A size container, so the message field caps its height at a share of this view (cqh). -->
+  <div class="flex h-full flex-col bg-slate-900 [container-type:size]">
     <!-- Compact buttons on phones, so name and all buttons fit in one row. -->
     <header
       v-if="!fullscreen"

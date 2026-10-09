@@ -26,6 +26,13 @@
     overflow: clip;
   }
 
+  /* The fixed body is the screen, the one source of height: the full-screen views fill it (h-full)
+     instead of measuring the viewport themselves (dvh can differ from the frame, e.g. in a
+     workspace column on Android, and then the bottom of the view was cut off). */
+  html.app-shell #app {
+    height: 100%;
+  }
+
   /* Where the keyboard is: the red of the active navigation text, softer than the browser's white ring. */
   :focus-visible {
     outline: 2px solid var(--color-red-400);
