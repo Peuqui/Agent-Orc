@@ -6,86 +6,70 @@ import pytest
 
 from agent_orc.config import LiveEffortConfig
 from agent_orc.effort import (
-    CLAUDE_PROJECT_SETTINGS,
     Reasoning,
+    agent_settings_file,
+    claude_settings,
     confirm_when_asked,
-    read_claude_permission_mode,
-    read_claude_project_reasoning,
+    read_agent_permission_mode,
+    read_agent_reasoning,
     set_reasoning_live,
-    write_claude_permission_mode,
-    write_claude_project_reasoning,
+    store_agent_permission_mode,
+    store_agent_reasoning,
+    write_agent_settings,
 )
 
-DEFAULT = Reasoning(effort=None, ultracode=False)
+BASE = {"statusLine": {"type": "command", "command": "agent-orc statusline"}}
 
 
-def settings_of(folder: Path) -> Path:
-    return folder / CLAUDE_PROJECT_SETTINGS
+@pytest.fixture(autouse=True)
+def state_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
 
 
-def test_creates_settings_when_missing(tmp_path: Path) -> None:
-    assert read_claude_project_reasoning(tmp_path) == DEFAULT
-    write_claude_project_reasoning(tmp_path, Reasoning("xhigh", ultracode=True))
-    assert json.loads(settings_of(tmp_path).read_text()) == {
-        "effortLevel": "xhigh",
-        "ultracode": True,
-    }
-    assert read_claude_project_reasoning(tmp_path) == Reasoning("xhigh", ultracode=True)
+def test_each_agent_keeps_its_own_choices() -> None:
+    assert read_agent_reasoning("a-1") is None
+    assert read_agent_permission_mode("a-1") is None
+    store_agent_reasoning("a-1", Reasoning("xhigh", ultracode=True))
+    store_agent_permission_mode("a-1", "plan")
+    store_agent_reasoning("a-Review-1", Reasoning("low", ultracode=False))
+    # Storing one choice keeps the other.
+    assert read_agent_reasoning("a-1") == Reasoning("xhigh", ultracode=True)
+    assert read_agent_permission_mode("a-1") == "plan"
+    assert read_agent_reasoning("a-Review-1") == Reasoning("low", ultracode=False)
+    assert read_agent_permission_mode("a-Review-1") is None
 
 
-def test_keeps_other_settings_and_file_mode(tmp_path: Path) -> None:
-    path = settings_of(tmp_path)
-    path.parent.mkdir()
-    path.write_text(json.dumps({"permissions": {"allow": ["Bash(git *)"]}}))
-    path.chmod(0o600)
-    write_claude_project_reasoning(tmp_path, Reasoning("high", ultracode=False))
-    assert json.loads(path.read_text()) == {
-        "permissions": {"allow": ["Bash(git *)"]},
+def test_settings_carry_the_profiles_and_the_agents_own_values() -> None:
+    settings = claude_settings(BASE, Reasoning("high", ultracode=False), "acceptEdits")
+    assert settings == {
+        **BASE,
         "effortLevel": "high",
+        # Stated as false, so an older true in the folder's own settings does not show through.
+        "ultracode": False,
+        "permissions": {"defaultMode": "acceptEdits"},
     }
-    assert stat.S_IMODE(path.stat().st_mode) == 0o600
-    assert not list(path.parent.glob("*.agent-orc-tmp"))
+    assert BASE == {"statusLine": {"type": "command", "command": "agent-orc statusline"}}
 
 
-def test_default_removes_only_its_own_keys(tmp_path: Path) -> None:
-    write_claude_project_reasoning(tmp_path, Reasoning("low", ultracode=True))
-    path = settings_of(tmp_path)
-    data = json.loads(path.read_text())
-    path.write_text(json.dumps({**data, "model": "opus"}))
-    write_claude_project_reasoning(tmp_path, DEFAULT)
-    assert json.loads(path.read_text()) == {"model": "opus"}
+def test_settings_keep_the_profiles_permissions() -> None:
+    base = {"permissions": {"allow": ["Bash(git *)"]}}
+    assert claude_settings(base, None, "plan") == {
+        "permissions": {"allow": ["Bash(git *)"], "defaultMode": "plan"}
+    }
+    assert base == {"permissions": {"allow": ["Bash(git *)"]}}
 
 
-def test_ultracode_alone(tmp_path: Path) -> None:
-    write_claude_project_reasoning(tmp_path, Reasoning(None, ultracode=True))
-    assert json.loads(settings_of(tmp_path).read_text()) == {"ultracode": True}
-
-
-def test_nothing_to_change_does_not_touch_anything(tmp_path: Path) -> None:
-    write_claude_project_reasoning(tmp_path, DEFAULT)
-    assert not settings_of(tmp_path).parent.exists()
-    write_claude_project_reasoning(tmp_path, Reasoning("low", ultracode=True))
-    before = settings_of(tmp_path).stat().st_mtime_ns
-    write_claude_project_reasoning(tmp_path, Reasoning("low", ultracode=True))
-    assert settings_of(tmp_path).stat().st_mtime_ns == before
-
-
-def test_permission_mode_keeps_the_folders_other_permissions(tmp_path: Path) -> None:
-    path = settings_of(tmp_path)
-    path.parent.mkdir()
-    path.write_text(json.dumps({"permissions": {"allow": ["Bash(git *)"]}, "effortLevel": "high"}))
-    assert read_claude_permission_mode(tmp_path) is None
-    write_claude_permission_mode(tmp_path, "acceptEdits")
-    assert read_claude_permission_mode(tmp_path) == "acceptEdits"
-    assert json.loads(path.read_text()) == {
-        "permissions": {"allow": ["Bash(git *)"], "defaultMode": "acceptEdits"},
-        "effortLevel": "high",
+def test_a_model_without_levels_gets_no_effort() -> None:
+    assert claude_settings(BASE, Reasoning(None, ultracode=False), None) == {
+        **BASE,
+        "ultracode": False,
     }
 
 
-def test_permission_mode_in_a_folder_without_settings(tmp_path: Path) -> None:
-    write_claude_permission_mode(tmp_path, "plan")
-    assert json.loads(settings_of(tmp_path).read_text()) == {"permissions": {"defaultMode": "plan"}}
+def test_settings_file_is_the_agents_own() -> None:
+    path = write_agent_settings("a-1", {"effortLevel": "low"})
+    assert path == agent_settings_file("a-1") != agent_settings_file("a-Review-1")
+    assert json.loads(path.read_text()) == {"effortLevel": "low"}
 
 
 LIVE = LiveEffortConfig(

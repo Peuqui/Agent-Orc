@@ -180,14 +180,26 @@ def test_session_id_is_tmux_safe_and_unique() -> None:
     assert session_id_for(Path("/a/my.project"), terminal=True, suffix=None) not in (first, second)
 
 
+SETTINGS = Path("/state/agents/demo-1.settings.json")
+
+
 def test_build_command_replaces_placeholders() -> None:
-    assert build_command(["x", "--name", "{name}"], "demo", None) == ["x", "--name", "demo"]
-    assert build_command(["x", "{model}"], "demo", "qwen") == ["x", "qwen"]
+    assert build_command(["x", "--name", "{name}"], "demo", None, SETTINGS) == [
+        "x",
+        "--name",
+        "demo",
+    ]
+    assert build_command(["x", "{model}"], "demo", "qwen", SETTINGS) == ["x", "qwen"]
+    assert build_command(["x", "--settings", "{settings}"], "demo", None, SETTINGS) == [
+        "x",
+        "--settings",
+        "/state/agents/demo-1.settings.json",
+    ]
 
 
 def test_build_command_refuses_a_missing_model() -> None:
     with pytest.raises(MissingModelError):
-        build_command(["x", "--model", "{model}"], "demo", None)
+        build_command(["x", "--model", "{model}"], "demo", None, SETTINGS)
 
 
 def test_server_passes_mouse_clipboard_and_focus_on(

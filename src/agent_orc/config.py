@@ -3,7 +3,7 @@
 import os
 from importlib.resources import files
 from pathlib import Path
-from typing import Literal, Self
+from typing import Any, Literal, Self
 
 import yaml
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
@@ -16,6 +16,8 @@ MODEL_PLACEHOLDER = "{model}"
 EFFORT_PLACEHOLDER = "{effort}"
 # The suffix of a further agent in a folder, in a profile's environment (AgentProfile.env).
 SUFFIX_PLACEHOLDER = "{suffix}"
+# The agent's own settings file (AgentProfile.settings), in its command.
+SETTINGS_PLACEHOLDER = "{settings}"
 CONFIG_FILE_NAME = "config.yaml"
 CREDENTIALS_FILE_NAME = "credentials.json"
 
@@ -194,13 +196,11 @@ class LiveModelConfig(StrictModel):
 
 
 class EffortConfig(StrictModel):
-    """Reasoning effort the user may pick, and the one a folder has until the user picks."""
+    """Reasoning effort the user may pick, and the one an agent has until the user picks."""
 
     levels: list[str]
-    # The level of a folder without one of its own.
+    # The level of an agent without one of its own.
     default: str
-    # Where the choice is kept (see effort.py); "claude_project": the folder's Claude settings.
-    store: Literal["claude_project"]
     # The agent also offers ultracode (workflow orchestration), switched on next to the effort.
     ultracode: bool = False
     # Without it, a running agent is restarted (resumed) to take a new reasoning.
@@ -221,8 +221,6 @@ class PermissionConfig(StrictModel):
 
     modes: list[str]
     default: str
-    # Where the choice is kept (see effort.py); "claude_project": the folder's Claude settings.
-    store: Literal["claude_project"]
 
     @model_validator(mode="after")
     def default_is_offered(self) -> "PermissionConfig":
@@ -262,11 +260,20 @@ class AgentProfile(StrictModel):
     clear_command: str | None = None
     # Typed into an idle agent to shrink its context to a summary (Claude: /compact).
     compact_command: str | None = None
-    # Environment of the agent; {effort} is the folder's level, {suffix} that of a further agent in
-    # the folder (an entry is left out when its placeholder has no value).
+    # Environment of the agent; {effort} is its level, {suffix} that of a further agent in the
+    # folder (an entry is left out when its placeholder has no value).
     env: dict[str, str] = {}
+    # Claude's settings (status line, hooks) for the agent's own settings file, which also carries
+    # its effort, ultracode and permission mode (see effort.py); its path fills {settings}.
+    settings: dict[str, Any] | None = None
     # Shown in the start dialog when this profile is chosen (e.g. what to stop first).
     hint: str | None = None
+
+    @model_validator(mode="after")
+    def choices_reach_the_agent(self) -> Self:
+        if (self.effort is not None or self.permission is not None) and self.settings is None:
+            raise ValueError("effort and permission reach the agent only through its settings")
+        return self
 
 
 class Config(StrictModel):

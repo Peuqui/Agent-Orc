@@ -75,14 +75,18 @@ from agent_orc.dictation import (
     transcribe,
 )
 from agent_orc.effort import (
-    EFFORT_STORES,
-    PERMISSION_STORES,
     InvalidEffortError,
     InvalidPermissionModeError,
     Reasoning,
+    claude_settings,
     confirm_when_asked,
     keep_file_while,
+    read_agent_permission_mode,
+    read_agent_reasoning,
     set_reasoning_live,
+    store_agent_permission_mode,
+    store_agent_reasoning,
+    write_agent_settings,
 )
 from agent_orc.events import ChangeNotifier
 from agent_orc.handover import advise, read_auto, write_auto
@@ -123,6 +127,7 @@ from agent_orc.sessions import (
     SessionNotFoundError,
     UnknownProfileError,
     check_suffix,
+    session_id_for,
 )
 from agent_orc.state import (
     UNNAMED_WORKSPACE,
@@ -561,19 +566,19 @@ def create_app(
             raise UnknownModelError(model)
 
     def store_start_reasoning(
-        profile_name: str, path: Path, model: str | None, effort: str | None, ultracode: bool
+        profile_name: str, session_id: str, model: str | None, effort: str | None, ultracode: bool
     ) -> None:
-        """Fixes the folder's reasoning for the model an agent starts with."""
+        """Fixes the agent's reasoning for the model it starts with."""
         if effort is None and effort_levels(profile_name, model):
-            # Started without a choice: the folder's level, or else the configured one.
-            effort = folder_reasoning(profile_name, path).effort
-        store_effort(profile_name, path, Reasoning(effort, ultracode), model)
+            # Started without a choice: the agent's level, or else the configured one.
+            effort = agent_reasoning(profile_name, session_id).effort
+        store_effort(profile_name, session_id, Reasoning(effort, ultracode), model)
 
     def store_model_reasoning(session: AgentSession, model: str, effort: str | None) -> None:
         """A newly chosen model: it runs with the chosen level, or, without one, with the
-        folder's, which must then be one the model takes."""
-        kept = folder_reasoning(session.profile, session.path)
-        store_start_reasoning(session.profile, session.path, model, effort, kept.ultracode)
+        agent's, which must then be one the model takes."""
+        kept = agent_reasoning(session.profile, session.id)
+        store_start_reasoning(session.profile, session.id, model, effort, kept.ultracode)
 
     levels_cache: dict[tuple[str, str | None], tuple[float, list[str]]] = {}
 
@@ -602,29 +607,34 @@ def create_app(
         ultracode: bool,
     ) -> dict[str, str]:
         """What an agent needs before its process starts in the folder (new, or another profile
-        taking over): the folder trusted, the model checked, reasoning and permission mode
-        stored; returns its environment."""
+        taking over): the folder trusted, the model checked, its reasoning stored; returns its
+        environment (see launch_env)."""
         profile = config.agents.get(profile_name)
         if profile and profile.trust:
             FOLDER_TRUST[profile.trust](home, path)
         check_model(profile_name, model)
-        store_start_reasoning(profile_name, path, model, effort, ultracode)
-        settle_permission_mode(profile_name, path)
-        return start_env(profile_name, path, suffix, model)
+        session_id = session_id_for(path, profile is not None and profile.terminal, suffix)
+        store_start_reasoning(profile_name, session_id, model, effort, ultracode)
+        return launch_env(profile_name, session_id, suffix, model)
 
-    def start_env(
-        profile_name: str, folder: Path, suffix: str | None, model: str | None
+    def launch_env(
+        profile_name: str, session_id: str, suffix: str | None, model: str | None
     ) -> dict[str, str]:
-        """The agent's environment; {effort} only for a model that takes levels, {suffix} only
-        for a further agent in the folder."""
+        """Before every start of the agent's process: its settings file written with its own
+        reasoning and permission mode; returns its environment, {effort} only for a model that
+        takes levels, {suffix} only for a further agent in the folder."""
         profile = config.agents.get(profile_name)
         if profile is None:
             return {}
-        effort = (
-            folder_reasoning(profile_name, folder).effort
+        reasoning = (
+            agent_reasoning(profile_name, session_id)
             if effort_levels(profile_name, model)
             else None
         )
+        if profile.settings is not None:
+            mode = agent_permission_mode(profile_name, session_id)
+            write_agent_settings(session_id, claude_settings(profile.settings, reasoning, mode))
+        effort = reasoning.effort if reasoning else None
         values = {EFFORT_PLACEHOLDER: effort, SUFFIX_PLACEHOLDER: suffix}
         unfilled = [placeholder for placeholder, filled in values.items() if filled is None]
         env = {}
@@ -641,11 +651,11 @@ def create_app(
         return profile.effort.live if profile and profile.effort else None
 
     def apply_effort(session: AgentSession, reasoning: Reasoning) -> AgentSession:
-        """Store the folder's reasoning (read at every start) and hand it to the agent: typed
-        into a running agent that can switch in place, otherwise by resuming it."""
+        """Store the agent's reasoning (handed over at every start) and hand it to the agent:
+        typed into a running agent that can switch in place, otherwise by resuming it."""
         pending_effort.pop(session.id, None)
-        previous = folder_reasoning(session.profile, session.path)
-        store_effort(session.profile, session.path, reasoning, session.chosen_model)
+        previous = agent_reasoning(session.profile, session.id)
+        store_effort(session.profile, session.id, reasoning, session.chosen_model)
         live = live_effort(session.profile)
         if session.running and live is not None:
             set_reasoning_live(
@@ -655,8 +665,7 @@ def create_app(
                 reasoning,
             )
             return session
-        settle_permission_mode(session.profile, session.path)
-        env = start_env(session.profile, session.path, session.suffix, session.chosen_model)
+        env = launch_env(session.profile, session.id, session.suffix, session.chosen_model)
         restarted = sessions.restart(session, env, own_conversation(session))
         # The ended agent cannot report that it stopped working.
         store_activity(session.id, busy=False)
@@ -802,19 +811,21 @@ def create_app(
             raise InvalidEffortError("ultracode")
 
     def store_effort(
-        profile_name: str, folder: Path, reasoning: Reasoning, model: str | None
+        profile_name: str, session_id: str, reasoning: Reasoning, model: str | None
     ) -> None:
         validate_effort(profile_name, reasoning, model)
         profile = config.agents.get(profile_name)
         if profile and profile.effort:
-            EFFORT_STORES[profile.effort.store].write(folder, reasoning)
+            store_agent_reasoning(session_id, reasoning)
 
-    def folder_reasoning(profile_name: str, folder: Path) -> Reasoning:
+    def agent_reasoning(profile_name: str, session_id: str) -> Reasoning:
         profile = config.agents.get(profile_name)
         if profile is None or profile.effort is None:
             return Reasoning(effort=None, ultracode=False)
-        stored = EFFORT_STORES[profile.effort.store].read(folder)
-        # A folder without a level of its own has the configured one; starting there writes it.
+        stored = read_agent_reasoning(session_id)
+        if stored is None:
+            return Reasoning(effort=profile.effort.default, ultracode=False)
+        # An agent without a level of its own (a model that takes none) has the configured one.
         effort = stored.effort if stored.effort is not None else profile.effort.default
         return Reasoning(effort=effort, ultracode=stored.ultracode)
 
@@ -1153,18 +1164,18 @@ def create_app(
         empty = {"model": None, "context_tokens": None, "context_window": None}
         pending = pending_effort.get(session.id)
         status = session_status(session)
-        folder = folder_reasoning(session.profile, session.path)
+        own = agent_reasoning(session.profile, session.id)
         return {
             **asdict(session),
             "name": session.name,
             **empty,
             **status,
-            # As the agent reports it; before its first report, the folder's level it started with.
-            "effort": status.get("effort") or folder.effort,
+            # As the agent reports it; before its first report, the level it started with.
+            "effort": status.get("effort") or own.effort,
             "busy": session_busy(session),
-            # As stored for the folder; the agent reads it at start.
-            "ultracode": folder.ultracode,
-            "permission_mode": folder_permission_mode(session.profile, session.path),
+            # As stored for the agent; it gets them at start.
+            "ultracode": own.ultracode,
+            "permission_mode": agent_permission_mode(session.profile, session.id),
             "worktree": is_worktree(session.path),
             "handover": asdict(advise(session, config.handover)),
             # Waiting for the user's answer; normally at most one, as Claude asks one at a time.
@@ -1270,12 +1281,11 @@ def create_app(
         chosen = session.chosen_model if model is None else model
         pending = pending_effort.pop(session_id, None)
         if pending is not None:
-            # The agent reads the folder's effort at start: a waiting change comes along.
-            store_effort(session.profile, session.path, pending, chosen)
+            # The agent gets its effort at start: a waiting change comes along.
+            store_effort(session.profile, session.id, pending, chosen)
         elif model is not None:
             store_model_reasoning(session, model, body.effort if body else None)
-        settle_permission_mode(session.profile, session.path)
-        env = start_env(session.profile, session.path, session.suffix, chosen)
+        env = launch_env(session.profile, session.id, session.suffix, chosen)
         restarted = sessions.restart(session, env, own_conversation(session), model)
         # The ended agent cannot report that it stopped working.
         store_activity(session_id, busy=False)
@@ -1435,24 +1445,15 @@ def create_app(
     def change_diff(session_id: str, path: str) -> dict[str, Any]:
         return asdict(file_diff(session_folder(session_id), path))
 
-    def folder_permission_mode(profile_name: str, folder: Path) -> str | None:
-        """The mode the folder's agent starts in: its own, or else the configured one, which
-        every start (and restart) writes into a folder without one."""
+    def agent_permission_mode(profile_name: str, session_id: str) -> str | None:
+        """The mode the agent starts in: its own, or else the configured one. Its settings file
+        always states it, so it runs in the mode its card shows, whatever the user's own
+        setting says."""
         profile = config.agents.get(profile_name)
         if profile is None or profile.permission is None:
             return None
-        stored = PERMISSION_STORES[profile.permission.store].read(folder)
+        stored = read_agent_permission_mode(session_id)
         return profile.permission.default if stored is None else stored
-
-    def settle_permission_mode(profile_name: str, folder: Path) -> None:
-        """Before a start: a folder without a mode of its own gets the configured one, so the
-        agent runs in the mode its card shows, whatever the user's own setting says."""
-        profile = config.agents.get(profile_name)
-        if profile is None or profile.permission is None:
-            return
-        store = PERMISSION_STORES[profile.permission.store]
-        if store.read(folder) is None:
-            store.write(folder, profile.permission.default)
 
     @app.put(
         "/api/sessions/{session_id}/permission-mode",
@@ -1468,7 +1469,7 @@ def create_app(
         permission = profile.permission if profile else None
         if permission is None or body.mode not in permission.modes:
             raise InvalidPermissionModeError(body.mode)
-        PERMISSION_STORES[permission.store].write(session.path, body.mode)
+        store_agent_permission_mode(session.id, body.mode)
 
     @app.post("/api/sessions/{session_id}/effort", dependencies=authenticated)
     def change_effort(session_id: str, body: EffortRequest) -> dict[str, bool]:
@@ -1496,8 +1497,10 @@ def create_app(
         pending_effort.pop(session_id, None)
 
     @app.get("/api/effort", dependencies=authenticated)
-    def folder_effort(profile: str, path: str) -> Reasoning:
-        return folder_reasoning(profile, scope.resolve(path))
+    def stored_effort(profile: str, path: str, suffix: str | None = None) -> Reasoning:
+        """The reasoning an agent of this profile, folder and suffix last had (to preselect)."""
+        terminal = profile in config.agents and config.agents[profile].terminal
+        return agent_reasoning(profile, session_id_for(scope.resolve(path), terminal, suffix))
 
     @app.post("/api/sessions/{session_id}/attachments", dependencies=authenticated)
     async def attach(session_id: str, name: str, request: Request) -> dict[str, str]:

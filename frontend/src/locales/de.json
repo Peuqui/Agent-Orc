@@ -38,7 +38,7 @@
     "terminal": "Terminal",
     "context": "{used} von {total} · {percent} %",
     "startNew": "Neuen Agenten starten",
-    "confirmEffort": "Aufwand für „{name}“ auf „{effort}“ setzen? Er gilt für das Projekt; der Agent startet dafür kurz neu und setzt das Gespräch fort.",
+    "confirmEffort": "Aufwand für „{name}“ auf „{effort}“ setzen? Er gilt für diesen Agenten; er startet dafür kurz neu und setzt das Gespräch fort.",
     "changeEffort": "Ändern und fortsetzen",
     "confirmStop": "Agent in „{name}“ beenden? Das Gespräch bleibt gespeichert und lässt sich fortsetzen.",
     "confirmEffortBusy": "„{name}“ arbeitet gerade an einer Antwort. Der Aufwand „{effort}“ kann übernommen werden, sobald sie fertig ist – oder sofort, dann wird die laufende Antwort abgebrochen.",
@@ -284,7 +284,7 @@
           "Prompt planen (Menü ⋮ der Karte und der Agentenseite): einen Prompt für später planen, etwa „Tests laufen lassen und berichten“ um 7 Uhr. Er wird zur Zeit eingetippt, sobald der Agent fertig ist; geplante Prompts stehen auf der Karte und lassen sich mit × entfernen.",
           "Läuft ein Claude-Agent ins Nutzungslimit, plant Agent-Orc das Weitermachen zur nächsten Rücksetzung des Kontingents (gelber Eintrag auf der Karte). Ist er dann noch gesperrt, kommt der nächste Termin.",
           "„An mehrere“ (neben den Arbeitsflächen, ab zwei laufenden Agenten): denselben Prompt an mehrere Agenten schicken, etwa „committe und pushe“. „Abschicken“ aus: der Text landet nur im Eingabefeld der Agenten, du sendest ihn dort selbst.",
-          "„>_“ (Karte und Terminalleiste) öffnet ein normales Terminal im Projektordner, auch neben dem laufenden Agenten; läuft schon eins, öffnet es dieses. Darin bitte keinen zweiten Agenten im selben Ordner starten.",
+          "„>_“ (Karte und Terminalleiste) öffnet ein normales Terminal im Projektordner, auch neben dem laufenden Agenten; läuft schon eins, öffnet es dieses. Einen weiteren Agenten im Ordner startest du über „Agent hier starten“ (mit eigenem Namenszusatz), nicht von Hand im Terminal, sonst kennt Agent-Orc ihn nicht.",
           "Das Menü ⋮ auf der Karte (rechts unten) und auf der Agentenseite sammelt, was man seltener braucht oder was Folgen hat: Prompt planen, Modell wechseln, Kontext komprimieren, Kontext leeren, Neu starten und, abgesetzt und rot, Beenden. Häufiges bleibt sichtbar: „Terminal“ (öffnet die Agentenseite), Änderungen und „>_“.",
           "Modell wechseln (Menü ⋮, nur bei Agenten mit Modellauswahl): Der Agent wechselt das Modell im laufenden Betrieb, wo seine Profil-Einstellung das erlaubt (Claude: /model); Gespräch, laufende Antwort und Hintergrundaufgaben bleiben, nur der Prompt-Cache beginnt für das neue Modell von vorn. Arbeitet er gerade, wird der Wechsel vorgemerkt (gelbe Zeile mit „Verwerfen“) und nach der Antwort eingetippt. Kann ein Agent das nicht, startet Agent-Orc ihn mit dem Modell neu und setzt das Gespräch fort.",
           "Kontext komprimieren und Kontext leeren (Menü ⋮, wo das Profil sie kennt; Claude: /compact und /clear): wirken in den laufenden Agenten, ohne Neustart. Komprimieren fasst das Gespräch zusammen, Leeren vergisst es; beides nur zwischen zwei Antworten, bei laufender Antwort ist der Punkt gesperrt. Beides fragt vorher nach.",
@@ -323,7 +323,7 @@
         "title": "Dateien",
         "items": [
           "Die Dateiansicht zeigt den Projektordner-Bereich des Servers. Ein Ordner öffnet sich mit einem Tipp, eine Datei im Editor; „Eine Ebene höher“ führt zurück.",
-          "„Agent hier starten“ startet einen Agenten im gezeigten Ordner (derselbe Dialog wie bei „Neuen Agenten starten“ auf der Agentenseite, die dich zur Ordnerwahl hierher führt). Läuft dort schon einer, steht „Agent läuft“.",
+          "„Agent hier starten“ startet einen Agenten im gezeigten Ordner (derselbe Dialog wie bei „Neuen Agenten starten“ auf der Agentenseite, die dich zur Ordnerwahl hierher führt). Läuft dort schon einer, steht „Agent läuft“; ein weiterer braucht dann einen Namenszusatz (z. B. „Review“) und bekommt eigene Einstellungen und einen eigenen AI-Connect-Namen.",
           "„Neuer Ordner“ legt einen Ordner im gezeigten Ordner an. Das Aktionen-Menü an jeder Zeile bietet: Agent hier starten, Umbenennen und In den Papierkorb.",
           "Der Papierkorb (unten, am Rechner rechts neben der Liste) sammelt Gelöschtes: „Wiederherstellen“ holt es zurück, „Endgültig löschen“ und „Papierkorb leeren“ lassen sich nicht rückgängig machen. Eine Datei aus der Liste auf den Papierkorb ziehen legt sie hinein.",
           "Außerhalb des Bereichs bleibt alles gesperrt. „Außerhalb freischalten“ öffnet nach Passwortabfrage für wenige Minuten das ganze Home-Verzeichnis; „Sperren“ beendet das früher."

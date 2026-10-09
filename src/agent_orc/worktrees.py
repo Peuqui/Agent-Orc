@@ -15,9 +15,9 @@ from agent_orc.changes import GIT_ENVIRONMENT, NotAGitRepositoryError
 WORKTREES_SUFFIX = ".worktrees"
 # Where the repository keeps a linked worktree's administrative files (.git/worktrees/<name>).
 WORKTREES_DIR = "/worktrees"
-# Files Agent-Orc itself puts into an agent's folder (its Claude project settings, attachments);
-# they are no work of the agent, so they do not keep a worktree from being removed. Git counts
-# them as untracked even when they are ignored.
+# Files that land in an agent's folder without being its work (Claude's own project settings,
+# Agent-Orc's attachments), so they do not keep a worktree from being removed. Git counts them as
+# untracked even when they are ignored.
 OWN_FILES = (".claude/", ".claude/settings.local.json", ".agent-orc/")
 
 

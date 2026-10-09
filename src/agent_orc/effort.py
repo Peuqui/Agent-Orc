@@ -1,20 +1,19 @@
-"""Reasoning (effort and ultracode) as a setting of the project folder.
+"""Reasoning (effort and ultracode) and permission mode of each agent.
 
-Claude Code reads `effortLevel` from <folder>/.claude/settings.local.json; it takes precedence
-over the user's global settings (verified, including the global per-model settings) and
-affects nobody else. The same file holds `ultracode` (workflow orchestration, independent of
-the effort level; documented settings key, verified in the installed Claude Code). A running
-session does not pick up a change, so changing the reasoning of a running agent means
-resuming it. Setting it here, rather than with /effort inside the session, matters: /effort
-silently saves the level as the user's global default.
+Agent-Orc keeps them per agent: by its session id, which its folder and suffix make, so they
+outlast a stop and preselect the next start under the same name. At every start the agent gets
+them in a settings file of its own (Claude: --settings <file>). Settings given at start take
+precedence over the project folder's (.claude/settings.local.json), and of several --settings
+only the last counts (both verified with Claude Code 2.1.295): the file also carries the
+profile's own settings (status line, hooks), and states every value explicitly, so an older
+value in the folder's file does not show through. Setting them here, rather than with /effort
+inside the session, matters: /effort silently saves the level as the user's global default.
 
 A running Claude Code session can take a new reasoning in place: typing `/effort <level>` (and
 `/effort ultracode on|off`) switches it at once, without a restart, so its background tasks
 keep running (verified with Claude Code 2.1.289). /effort also rewrites the user's own
-settings file; set_reasoning_live puts that file back as it was.
-
-The same file also holds the permission mode a session starts in (`permissions.defaultMode`,
-values as listed by the installed Claude Code); inside a session Shift+Tab switches it.
+settings file; set_reasoning_live puts that file back as it was. The permission mode switches
+inside a session with Shift+Tab.
 """
 
 import json
@@ -26,13 +25,16 @@ from pathlib import Path
 from typing import Any
 
 from agent_orc.config import LiveEffortConfig
+from agent_orc.state import state_dir, write_atomically
 
-CLAUDE_PROJECT_SETTINGS = Path(".claude") / "settings.local.json"
 CLAUDE_EFFORT_KEY = "effortLevel"
 CLAUDE_ULTRACODE_KEY = "ultracode"
 CLAUDE_PERMISSIONS_KEY = "permissions"
 CLAUDE_DEFAULT_MODE_KEY = "defaultMode"
-NEW_SETTINGS_MODE = 0o644
+# Keys of an agent's stored choices.
+EFFORT_KEY = "effort"
+ULTRACODE_KEY = "ultracode"
+PERMISSION_MODE_KEY = "permission_mode"
 
 
 class InvalidEffortError(ValueError):
@@ -43,13 +45,6 @@ class InvalidPermissionModeError(ValueError):
     pass
 
 
-def _read_settings(path: Path) -> dict[str, Any]:
-    if not path.is_file():
-        return {}
-    settings: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
-    return settings
-
-
 @dataclass(frozen=True)
 class Reasoning:
     # None: the agent's own default.
@@ -57,48 +52,73 @@ class Reasoning:
     ultracode: bool
 
 
-def read_claude_project_reasoning(folder: Path) -> Reasoning:
-    settings = _read_settings(folder / CLAUDE_PROJECT_SETTINGS)
-    effort = settings.get(CLAUDE_EFFORT_KEY)
-    return Reasoning(
-        effort=effort if isinstance(effort, str) else None,
-        ultracode=settings.get(CLAUDE_ULTRACODE_KEY) is True,
-    )
+def agents_dir() -> Path:
+    return state_dir() / "agents"
 
 
-def write_claude_project_reasoning(folder: Path, reasoning: Reasoning) -> None:
-    """Set the project's reasoning; all other settings stay as they are.
-
-    An effort of None and ultracode off remove their keys: the user's own settings apply then.
-    """
-    path = folder / CLAUDE_PROJECT_SETTINGS
-    settings = _read_settings(path)
-    wanted = {
-        CLAUDE_EFFORT_KEY: reasoning.effort,
-        CLAUDE_ULTRACODE_KEY: True if reasoning.ultracode else None,
-    }
-    # Also covers "nothing set, nothing wanted": get() then returns None == value.
-    if all(settings.get(key) == value for key, value in wanted.items()):
-        return
-    for key, value in wanted.items():
-        if value is None:
-            settings.pop(key, None)
-        else:
-            settings[key] = value
-    _write_settings(path, settings)
+def _choices_file(session_id: str) -> Path:
+    return agents_dir() / f"{session_id}.json"
 
 
-def _write_settings(path: Path, settings: dict[str, Any]) -> None:
-    """Replace the settings file at once, keeping its file mode."""
-    path.parent.mkdir(exist_ok=True)
-    mode = path.stat().st_mode & 0o777 if path.exists() else NEW_SETTINGS_MODE
-    temporary = path.with_name(f"{path.name}.agent-orc-tmp")
-    descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, mode)
-    with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
-        json.dump(settings, handle, indent=2)
-        handle.write("\n")
-    os.chmod(temporary, mode)
-    temporary.replace(path)
+def agent_settings_file(session_id: str) -> Path:
+    """The settings file the agent gets at start ({settings} in its command)."""
+    return agents_dir() / f"{session_id}.settings.json"
+
+
+def _read_choices(session_id: str) -> dict[str, Any]:
+    path = _choices_file(session_id)
+    if not path.is_file():
+        return {}
+    choices: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
+    return choices
+
+
+def _store_choices(session_id: str, changes: dict[str, Any]) -> None:
+    choices = {**_read_choices(session_id), **changes}
+    write_atomically(_choices_file(session_id), json.dumps(choices))
+
+
+def read_agent_reasoning(session_id: str) -> Reasoning | None:
+    """The agent's reasoning; None until one was stored for it."""
+    choices = _read_choices(session_id)
+    if EFFORT_KEY not in choices:
+        return None
+    return Reasoning(effort=choices[EFFORT_KEY], ultracode=choices[ULTRACODE_KEY])
+
+
+def store_agent_reasoning(session_id: str, reasoning: Reasoning) -> None:
+    _store_choices(session_id, {EFFORT_KEY: reasoning.effort, ULTRACODE_KEY: reasoning.ultracode})
+
+
+def read_agent_permission_mode(session_id: str) -> str | None:
+    """The mode the agent starts in; None until one was stored for it."""
+    mode = _read_choices(session_id).get(PERMISSION_MODE_KEY)
+    return mode if isinstance(mode, str) else None
+
+
+def store_agent_permission_mode(session_id: str, mode: str) -> None:
+    _store_choices(session_id, {PERMISSION_MODE_KEY: mode})
+
+
+def claude_settings(
+    base: dict[str, Any], reasoning: Reasoning | None, permission_mode: str | None
+) -> dict[str, Any]:
+    """The profile's settings with the agent's own values in Claude's keys. Ultracode is always
+    stated (off as false), so an older value in the folder's settings does not show through."""
+    settings = dict(base)
+    if reasoning is not None:
+        if reasoning.effort is not None:
+            settings[CLAUDE_EFFORT_KEY] = reasoning.effort
+        settings[CLAUDE_ULTRACODE_KEY] = reasoning.ultracode
+    if permission_mode is not None:
+        permissions = dict(settings.get(CLAUDE_PERMISSIONS_KEY, {}))
+        permissions[CLAUDE_DEFAULT_MODE_KEY] = permission_mode
+        settings[CLAUDE_PERMISSIONS_KEY] = permissions
+    return settings
+
+
+def write_agent_settings(session_id: str, settings: dict[str, Any]) -> Path:
+    return write_atomically(agent_settings_file(session_id), json.dumps(settings, indent=2))
 
 
 # How long after typing /effort or /model the protected file is watched for the agent's rewrite.
@@ -167,44 +187,3 @@ def _write_bytes_keeping_mode(path: Path, content: bytes) -> None:
     temporary.write_bytes(content)
     os.chmod(temporary, path.stat().st_mode & 0o777)
     temporary.replace(path)
-
-
-def read_claude_permission_mode(folder: Path) -> str | None:
-    """The mode the folder's sessions start in; None: the user's own setting."""
-    permissions = _read_settings(folder / CLAUDE_PROJECT_SETTINGS).get(CLAUDE_PERMISSIONS_KEY)
-    mode = permissions.get(CLAUDE_DEFAULT_MODE_KEY) if isinstance(permissions, dict) else None
-    return mode if isinstance(mode, str) else None
-
-
-def write_claude_permission_mode(folder: Path, mode: str) -> None:
-    """Set the start mode; the folder's other permissions (allow lists, ...) stay as they are."""
-    if read_claude_permission_mode(folder) == mode:
-        return
-    path = folder / CLAUDE_PROJECT_SETTINGS
-    settings = _read_settings(path)
-    settings.setdefault(CLAUDE_PERMISSIONS_KEY, {})[CLAUDE_DEFAULT_MODE_KEY] = mode
-    _write_settings(path, settings)
-
-
-@dataclass(frozen=True)
-class EffortStore:
-    read: Callable[[Path], Reasoning]
-    write: Callable[[Path, Reasoning], None]
-
-
-# Per agent profile setting "effort.store".
-EFFORT_STORES: dict[str, EffortStore] = {
-    "claude_project": EffortStore(read_claude_project_reasoning, write_claude_project_reasoning),
-}
-
-
-@dataclass(frozen=True)
-class PermissionStore:
-    read: Callable[[Path], str | None]
-    write: Callable[[Path, str], None]
-
-
-# Per agent profile setting "permission.store".
-PERMISSION_STORES: dict[str, PermissionStore] = {
-    "claude_project": PermissionStore(read_claude_permission_mode, write_claude_permission_mode),
-}

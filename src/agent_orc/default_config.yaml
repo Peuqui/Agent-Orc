@@ -145,24 +145,80 @@ tmux:
 agents:
   claude:
     label: Claude Code
-    start: [claude, --settings, &claude_settings '{"statusLine": {"type": "command", "command": "agent-orc statusline"}, "hooks": {"UserPromptSubmit": [{"hooks": [{"type": "command", "command": "agent-orc agent-busy"}]}], "Stop": [{"hooks": [{"type": "command", "command": "agent-orc agent-idle"}]}], "PreCompact": [{"hooks": [{"type": "command", "command": "agent-orc agent-compacting"}]}], "PostCompact": [{"hooks": [{"type": "command", "command": "agent-orc agent-compacted"}]}], "Notification": [{"matcher": "permission_prompt|elicitation_dialog", "hooks": [{"type": "command", "command": "agent-orc agent-waiting"}]}], "PermissionRequest": [{"matcher": "", "hooks": [{"type": "command", "command": "agent-orc agent-permission", "timeout": 86400}]}], "StopFailure": [{"matcher": "rate_limit", "hooks": [{"type": "command", "command": "agent-orc agent-limited"}]}], "PostToolUse": [{"matcher": "", "hooks": [{"type": "command", "command": "agent-orc agent-tool-done", "async": true}]}], "PostToolUseFailure": [{"matcher": "", "hooks": [{"type": "command", "command": "agent-orc agent-tool-done", "async": true}]}], "PermissionDenied": [{"matcher": "", "hooks": [{"type": "command", "command": "agent-orc agent-tool-done", "async": true}]}]}}', --remote-control, "{name}"]
-    resume: [claude, --settings, *claude_settings, --continue, --remote-control, "{name}"]
+    start: [claude, --settings, "{settings}", --remote-control, "{name}"]
+    resume: [claude, --settings, "{settings}", --continue, --remote-control, "{name}"]
     # Every earlier conversation in the folder (also from VS Code or a terminal) can be resumed.
     conversations:
       source: claude
-      resume: [claude, --settings, *claude_settings, --resume, "{conversation}", --remote-control, "{name}"]
+      resume: [claude, --settings, "{settings}", --resume, "{conversation}", --remote-control, "{name}"]
+    # Claude's own settings for the agent's settings file ({settings}), which also carries its
+    # effort, ultracode and permission mode (only the last --settings counts).
+    settings: &claude_settings
+      statusLine:
+        type: command
+        command: agent-orc statusline
+      hooks:
+        UserPromptSubmit:
+        - hooks:
+          - type: command
+            command: agent-orc agent-busy
+        Stop:
+        - hooks:
+          - type: command
+            command: agent-orc agent-idle
+        PreCompact:
+        - hooks:
+          - type: command
+            command: agent-orc agent-compacting
+        PostCompact:
+        - hooks:
+          - type: command
+            command: agent-orc agent-compacted
+        Notification:
+        - matcher: permission_prompt|elicitation_dialog
+          hooks:
+          - type: command
+            command: agent-orc agent-waiting
+        PermissionRequest:
+        - matcher: ''
+          hooks:
+          - type: command
+            command: agent-orc agent-permission
+            timeout: 86400
+        StopFailure:
+        - matcher: rate_limit
+          hooks:
+          - type: command
+            command: agent-orc agent-limited
+        PostToolUse:
+        - matcher: ''
+          hooks:
+          - type: command
+            command: agent-orc agent-tool-done
+            async: true
+        PostToolUseFailure:
+        - matcher: ''
+          hooks:
+          - type: command
+            command: agent-orc agent-tool-done
+            async: true
+        PermissionDenied:
+        - matcher: ''
+          hooks:
+          - type: command
+            command: agent-orc agent-tool-done
+            async: true
     # Starting an agent in a folder means trusting it: skip Claude's trust prompt.
     trust: claude
     # A further agent in the folder gets an AI-Connect name of its own (Host:Project-Suffix).
     env: {AI_CONNECT_PEER_SUFFIX: "{suffix}"}
     # Usage limits (five hours, week) as Claude reports them in its status line.
     quota: claude
-    # Reasoning effort per project folder (<folder>/.claude/settings.local.json).
+    # Reasoning effort of each agent, handed over in its settings file at start.
     effort:
       levels: [low, medium, high, xhigh, max]
-      # A folder without a level of its own gets this one when an agent starts there.
+      # An agent without a level of its own starts with this one.
       default: medium
-      store: claude_project
       # Ultracode: Claude plans multi-agent workflows for larger tasks by itself.
       ultracode: true
       # A running agent takes a new reasoning in place, without a restart (its background tasks
@@ -172,14 +228,13 @@ agents:
         command: /effort {level}
         ultracode_command: /effort ultracode {state}
         protected_file: ~/.claude/settings.json
-    # Permission mode a session of the folder starts in (<folder>/.claude/settings.local.json):
-    # default asks before changes and commands, acceptEdits takes file edits without asking,
-    # auto lets Claude decide what is safe, plan only plans. A folder without a mode of its own
-    # gets `default` below when an agent starts there; inside a session Shift+Tab switches.
+    # Permission mode each agent starts in (in its settings file): default asks before changes
+    # and commands, acceptEdits takes file edits without asking, auto lets Claude decide what is
+    # safe, plan only plans. An agent without a mode of its own starts in `default` below; inside
+    # a session Shift+Tab switches.
     permission:
       modes: [default, acceptEdits, auto, plan]
       default: auto
-      store: claude_project
   codex:
     label: Codex CLI
     start: [codex]
@@ -205,13 +260,13 @@ agents:
   #   clear_command: /clear
   #   compact_command: /compact
   #   model_live: {command: "/model {model}", confirm: "Switch model?", protected_file: ~/.claude/settings.json}
-  #   start: [lclaude, "{model}", --settings, *claude_settings]
-  #   resume: [lclaude, "{model}", --settings, *claude_settings, --continue]
+  #   start: [lclaude, "{model}", --settings, "{settings}"]
+  #   resume: [lclaude, "{model}", --settings, "{settings}", --continue]
+  #   settings: *claude_settings
   #   env: {LCLAUDE_EFFORT: "{effort}", AI_CONNECT_PEER_SUFFIX: "{suffix}"}
   #   effort:
   #     levels: [low, medium, high, xhigh, max]
   #     default: high
-  #     store: claude_project
   #     levels_command: [lclaude, --levels, "{model}"]
   #   trust: claude
   shell:

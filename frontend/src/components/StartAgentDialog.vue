@@ -27,6 +27,9 @@ const needsSuffix = computed(() => folderAgents.value.some((s) => s.suffix === n
 const suffix = ref('')
 const suffixTaken = computed(() => folderAgents.value.some((s) => s.suffix === suffix.value.trim()))
 const nameReady = computed(() => !needsSuffix.value || (suffix.value.trim() !== '' && !suffixTaken.value))
+function chosenSuffix(): string | null {
+  return needsSuffix.value ? suffix.value.trim() : null
+}
 // A worktree of its own: a second working copy on a new branch, next to the project.
 const inWorktree = ref(false)
 const branch = ref(defaultBranch())
@@ -82,18 +85,18 @@ const modelLevels = ref<string[]>([])
 const effortLevels = computed(() =>
   profile.value?.models ? modelLevels.value : (profile.value?.effort_levels ?? []),
 )
-// The folder's stored reasoning, preselected where the agent (or its model) takes it.
-const folderReasoning = ref<Reasoning>(NO_REASONING)
+// The reasoning this agent (folder and name) last had, preselected where it (or its model) takes it.
+const storedReasoning = ref<Reasoning>(NO_REASONING)
 
-/** The folder's level where the model takes it, otherwise the nearest one it takes. */
+/** The stored level where the model takes it, otherwise the nearest one it takes. */
 function preselectReasoning(): void {
-  const stored = folderReasoning.value
+  const stored = storedReasoning.value
   const effort = nearestLevel(stored.effort, effortLevels.value, profile.value?.effort_levels ?? [])
   reasoning.value = { effort, ultracode: stored.ultracode }
 }
 
-// For the chosen agent: preselect the folder's stored reasoning, list earlier conversations,
-// and offer its models.
+// For the chosen agent: preselect its stored reasoning, list earlier conversations, and offer
+// its models.
 watch(selected, async (name) => {
   reasoning.value = NO_REASONING
   conversations.value = []
@@ -101,7 +104,7 @@ watch(selected, async (name) => {
   model.value = null
   if (!name) return
   try {
-    folderReasoning.value = await api.folderReasoning(name, props.path)
+    storedReasoning.value = await api.storedReasoning(name, props.path, chosenSuffix())
     conversations.value = await api.conversations(name, props.path)
     if (profile.value?.models) {
       models.value = await api.agentModels(name)
@@ -109,6 +112,17 @@ watch(selected, async (name) => {
     } else {
       preselectReasoning()
     }
+  } catch (error) {
+    toast.error(error)
+  }
+})
+
+// Another name is another agent, with the reasoning it last had.
+watch(suffix, async () => {
+  if (!selected.value || !nameReady.value) return
+  try {
+    storedReasoning.value = await api.storedReasoning(selected.value, props.path, chosenSuffix())
+    preselectReasoning()
   } catch (error) {
     toast.error(error)
   }
@@ -143,7 +157,7 @@ async function start(resume: boolean, conversation: string | null = null): Promi
       inWorktree.value ? branch.value.trim() : null,
       model.value,
       workspaceTarget.value === UNNAMED_TARGET ? '' : workspaceTarget.value.slice(NAMED_PREFIX.length),
-      needsSuffix.value ? suffix.value.trim() : null,
+      chosenSuffix(),
     )
     await refresh()
     emit('started', session.id)

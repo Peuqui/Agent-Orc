@@ -20,6 +20,7 @@ from agent_orc.approvals import open_request, wait_for_decision
 from agent_orc.auth import new_credentials
 from agent_orc.config import Config, DictationConfig, default_config_text
 from agent_orc.context import store_activity, store_status
+from agent_orc.effort import agent_settings_file
 from agent_orc.events import ChangeNotifier
 from agent_orc.history import claude_project_dir
 from agent_orc.schedule import mark_limited, read_scheduled
@@ -37,6 +38,7 @@ def home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     (home / "private").mkdir()
     monkeypatch.setenv("HOME", str(home))
     monkeypatch.delenv("XDG_DATA_HOME", raising=False)
+    monkeypatch.delenv("XDG_STATE_HOME", raising=False)
     return home
 
 
@@ -58,16 +60,15 @@ def config(home: Path, socket_name: str) -> Config:
             "label": "Sleeper",
             "start": ["sleep", "60"],
             "resume": ["sleep", "61"],
+            "settings": {},
             "effort": {
                 "levels": ["low", "high"],
                 "default": "low",
-                "store": "claude_project",
                 "ultracode": True,
             },
             "permission": {
                 "modes": ["default", "plan"],
                 "default": "default",
-                "store": "claude_project",
             },
         },
         # Switches its reasoning in place, like Claude with /effort.
@@ -75,10 +76,10 @@ def config(home: Path, socket_name: str) -> Config:
             "label": "Switcher",
             "start": ["sleep", "60"],
             "resume": ["sleep", "61"],
+            "settings": {},
             "effort": {
                 "levels": ["low", "high"],
                 "default": "low",
-                "store": "claude_project",
                 "ultracode": True,
                 "live": {
                     "command": "/effort {level}",
@@ -102,10 +103,10 @@ def config(home: Path, socket_name: str) -> Config:
             "models": ["printf", "wide\\nnarrow\\n"],
             "start": ["sh", "-c", "echo started {model}; exec cat"],
             "resume": ["sh", "-c", "echo resumed {model}; exec cat"],
+            "settings": {},
             "effort": {
                 "levels": ["low", "medium", "high", "max"],
                 "default": "high",
-                "store": "claude_project",
                 "levels_command": [
                     "sh",
                     "-c",
@@ -128,10 +129,10 @@ def config(home: Path, socket_name: str) -> Config:
             "start": ["sh", "-c", 'echo "started {model} [$ORC_EFFORT]"; exec cat'],
             "resume": ["sh", "-c", 'echo "resumed {model} [$ORC_EFFORT]"; exec cat'],
             "env": {"ORC_EFFORT": "{effort}"},
+            "settings": {},
             "effort": {
                 "levels": ["low", "medium", "high"],
                 "default": "medium",
-                "store": "claude_project",
                 "levels_command": ["sh", "-c", "[ {model} = thinker ] && echo low high || true"],
             },
         },
@@ -573,13 +574,13 @@ def test_invalid_effort_is_rejected(client: TestClient, home: Path) -> None:
     assert response.json()["error"] == "InvalidEffortError"
 
 
-def test_effort_is_stored_in_the_project(client: TestClient, home: Path) -> None:
+def test_effort_is_stored_for_each_agent(client: TestClient, home: Path) -> None:
     folder = home / "projects"
-    settings = folder / ".claude" / "settings.local.json"
-    settings.parent.mkdir()
-    settings.write_text(json.dumps({"permissions": {"allow": ["Bash(ls:*)"]}}))
+    folder_settings = folder / ".claude" / "settings.local.json"
+    folder_settings.parent.mkdir()
+    folder_settings.write_text(json.dumps({"effortLevel": "max", "ultracode": True}))
     query = {"profile": "sleeper", "path": str(folder)}
-    # A folder without a level of its own shows the configured one.
+    # An agent without a level of its own shows the configured one.
     assert client.get("/api/effort", params=query).json() == {"effort": "low", "ultracode": False}
 
     start = {
@@ -590,12 +591,23 @@ def test_effort_is_stored_in_the_project(client: TestClient, home: Path) -> None
         "ultracode": False,
         "conversation": None,
     }
-    assert client.post("/api/sessions", json=start).status_code == 200
-    assert json.loads(settings.read_text()) == {
-        "permissions": {"allow": ["Bash(ls:*)"], "defaultMode": "default"},
+    first = client.post("/api/sessions", json=start).json()["id"]
+    review = client.post("/api/sessions", json={**start, "effort": None, "suffix": "Review"}).json()
+    # Each agent gets its own values, stated in full over the folder's older ones.
+    assert agent_settings(first) == {
         "effortLevel": "high",
+        "ultracode": False,
+        "permissions": {"defaultMode": "default"},
     }
+    assert agent_settings(review["id"])["effortLevel"] == "low"
+    # Agent-Orc leaves the folder's own settings alone.
+    assert json.loads(folder_settings.read_text()) == {"effortLevel": "max", "ultracode": True}
     assert client.get("/api/effort", params=query).json() == {"effort": "high", "ultracode": False}
+    reviewer = {**query, "suffix": "Review"}
+    assert client.get("/api/effort", params=reviewer).json() == {
+        "effort": "low",
+        "ultracode": False,
+    }
 
 
 def test_changing_effort_resumes_the_agent(
@@ -626,8 +638,7 @@ def test_changing_effort_resumes_the_agent(
         capture_output=True, text=True, check=True,
     ).stdout.strip()  # fmt: skip
     assert command == "sleep 61"
-    settings = json.loads((folder / ".claude" / "settings.local.json").read_text())
-    assert settings == {
+    assert agent_settings(session_id) == {
         "effortLevel": "low",
         "ultracode": True,
         "permissions": {"defaultMode": "default"},
@@ -722,9 +733,8 @@ def test_effort_change_waits_for_a_busy_agent(
     listed = client.get("/api/sessions").json()[0]
     assert listed["busy"] is True
     assert (listed["effort_pending"], listed["pending_effort"]) == (True, "high")
-    # Not applied yet: the folder keeps the level it started with.
-    stored = json.loads((folder / ".claude" / "settings.local.json").read_text())
-    assert stored["effortLevel"] == "low"
+    # Not applied yet: the agent keeps the level it started with.
+    assert agent_settings(session_id)["effortLevel"] == "low"
 
     # A wrong level is refused right away, not only when the change would be applied.
     wrong = client.post(url, json={"effort": "ultra", "ultracode": False, "immediately": False})
@@ -737,9 +747,10 @@ def test_effort_change_waits_for_a_busy_agent(
     assert client.post(
         url, json={"effort": "high", "ultracode": False, "immediately": True}
     ).json() == {"applied": True}
-    assert json.loads((folder / ".claude" / "settings.local.json").read_text()) == {
-        "permissions": {"defaultMode": "default"},
+    assert agent_settings(session_id) == {
         "effortLevel": "high",
+        "ultracode": False,
+        "permissions": {"defaultMode": "default"},
     }
 
 
@@ -775,8 +786,7 @@ def test_restart_resumes_a_busy_agent_with_its_waiting_effort(
     assert command == "sleep 61"
     listed = client.get("/api/sessions").json()[0]
     assert (listed["busy"], listed["effort_pending"]) == (False, False)
-    stored = json.loads((folder / ".claude" / "settings.local.json").read_text())
-    assert stored["effortLevel"] == "high"
+    assert agent_settings(session_id)["effortLevel"] == "high"
 
     assert client.post("/api/sessions/unknown/restart").status_code == 404
 
@@ -839,8 +849,7 @@ def test_pending_effort_applies_when_the_agent_is_done(
                 break
             time.sleep(0.1)
         assert client.get("/api/sessions").json()[0]["effort_pending"] is False
-        settings = json.loads((folder / ".claude" / "settings.local.json").read_text())
-        assert settings == {"permissions": {"defaultMode": "default"}, "effortLevel": "low"}
+        assert agent_settings(session_id)["effortLevel"] == "low"
 
 
 def test_resume_a_chosen_earlier_conversation(
@@ -965,7 +974,7 @@ def test_ultracode_only_for_agents_offering_it(client: TestClient, home: Path) -
     assert refused.json()["error"] == "InvalidEffortError"
 
 
-def test_permission_mode_is_stored_for_the_folder(client: TestClient, home: Path) -> None:
+def test_permission_mode_is_stored_for_the_agent(client: TestClient, home: Path) -> None:
     body = {
         "profile": "sleeper",
         "path": str(home / "projects"),
@@ -977,13 +986,15 @@ def test_permission_mode_is_stored_for_the_folder(client: TestClient, home: Path
     session_id = client.post("/api/sessions", json=body).json()["id"]
     agents = {agent["name"]: agent for agent in client.get("/api/agents").json()}
     assert agents["sleeper"]["permission_modes"] == ["default", "plan"]
-    # A folder without a mode of its own starts in the configured default.
+    # An agent without a mode of its own starts in the configured default.
     assert client.get("/api/sessions").json()[0]["permission_mode"] == "default"
+    assert agent_settings(session_id)["permissions"] == {"defaultMode": "default"}
     url = f"/api/sessions/{session_id}/permission-mode"
     assert client.put(url, json={"mode": "plan"}).status_code == 204
     assert client.get("/api/sessions").json()[0]["permission_mode"] == "plan"
-    settings = json.loads((home / "projects/.claude/settings.local.json").read_text())
-    assert settings["permissions"] == {"defaultMode": "plan"}
+    # It takes effect at the next start.
+    client.post(f"/api/sessions/{session_id}/restart")
+    assert agent_settings(session_id)["permissions"] == {"defaultMode": "plan"}
     refused = client.put(url, json={"mode": "bypassPermissions"})
     assert refused.status_code == 422
     assert refused.json()["error"] == "InvalidPermissionModeError"
@@ -1304,6 +1315,12 @@ def test_attachment_lands_in_the_agents_folder(client: TestClient, home: Path) -
     assert missing.status_code == 404
 
 
+def agent_settings(session_id: str) -> dict[str, Any]:
+    """The settings file the agent got at its last start."""
+    settings: dict[str, Any] = json.loads(agent_settings_file(session_id).read_text())
+    return settings
+
+
 def wait_for_text(client: TestClient, session_id: str, text: str, count: int = 1) -> bool:
     for _ in range(50):
         if client.get(f"/api/sessions/{session_id}/text").json()["text"].count(text) >= count:
@@ -1503,43 +1520,6 @@ def test_existing_paths_of_an_agents_output(client: TestClient, home: Path) -> N
         "src": {"path": str(project / "src"), "kind": "folder"},
         str(project / "src" / "main.py"): main,
     }
-
-
-def test_agent_from_before_the_mode_choice_shows_and_gets_the_configured_one(
-    config: Config, clock: FakeClock, home: Path
-) -> None:
-    sleeper = config.agents["sleeper"]
-    assert sleeper.permission is not None
-    planning = sleeper.model_copy(
-        update={"permission": sleeper.permission.model_copy(update={"default": "plan"})}
-    )
-    app = create_app(
-        config.model_copy(update={"agents": {**config.agents, "sleeper": planning}}),
-        new_credentials(PASSWORD),
-        static_dir=None,
-        clock=clock,
-    )
-    client = TestClient(app)
-    client.post("/api/login", json={"password": PASSWORD})
-    folder = home / "projects"
-    body = {
-        "profile": "sleeper",
-        "path": str(folder),
-        "resume": False,
-        "effort": None,
-        "ultracode": False,
-        "conversation": None,
-    }
-    session_id = client.post("/api/sessions", json=body).json()["id"]
-    # Started before Agent-Orc stored a mode in the folder.
-    settings_file = folder / ".claude" / "settings.local.json"
-    settings = json.loads(settings_file.read_text())
-    del settings["permissions"]
-    settings_file.write_text(json.dumps(settings))
-    # The card shows what the next start brings, and a restart brings it.
-    assert client.get("/api/sessions").json()[0]["permission_mode"] == "plan"
-    client.post(f"/api/sessions/{session_id}/restart")
-    assert json.loads(settings_file.read_text())["permissions"] == {"defaultMode": "plan"}
 
 
 def test_a_terminal_opens_next_to_the_folders_agent(client: TestClient, home: Path) -> None:

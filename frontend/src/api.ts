@@ -455,8 +455,9 @@ export const api = {
     request<Conversation[]>('GET', 'conversations', { query: { profile, path } }),
   searchConversations: (profile: string, path: string, query: string) =>
     request<ConversationHit[]>('GET', 'conversations/search', { query: { profile, path, query } }),
-  folderReasoning: (profile: string, path: string) =>
-    request<Reasoning>('GET', 'effort', { query: { profile, path } }),
+  /** The reasoning the agent of this profile, folder and suffix last had (to preselect). */
+  storedReasoning: (profile: string, path: string, suffix: string | null) =>
+    request<Reasoning>('GET', 'effort', { query: suffix === null ? { profile, path } : { profile, path, suffix } }),
   /**
    * Stores the folder's reasoning and resumes the agent (it reads it only at start).
    * Without `immediately` a busy agent first finishes its answer; then applied is false.

@@ -12,9 +12,11 @@ from agent_orc.config import (
     CONVERSATION_PLACEHOLDER,
     MODEL_PLACEHOLDER,
     NAME_PLACEHOLDER,
+    SETTINGS_PLACEHOLDER,
     AgentProfile,
     TerminalConfig,
 )
+from agent_orc.effort import agent_settings_file
 
 # Every agent gets its session id in this environment variable, so helpers it runs
 # (e.g. the status line command) know which session they belong to.
@@ -120,8 +122,11 @@ def exact_target(session_id: str) -> str:
     return f"={session_id}:"
 
 
-def build_command(arguments: list[str], name: str, model: str | None) -> list[str]:
-    command = [argument.replace(NAME_PLACEHOLDER, name) for argument in arguments]
+def build_command(arguments: list[str], name: str, model: str | None, settings: Path) -> list[str]:
+    command = [
+        argument.replace(NAME_PLACEHOLDER, name).replace(SETTINGS_PLACEHOLDER, str(settings))
+        for argument in arguments
+    ]
     if model is None:
         if any(MODEL_PLACEHOLDER in argument for argument in command):
             raise MissingModelError(name)
@@ -279,7 +284,8 @@ class SessionManager:
             # The folder's last conversation belongs to its first agent: a further one only goes
             # on with its own (by id, above), so it starts anew without one.
             arguments = profile.resume if resume and suffix is None else profile.start
-        return build_command(arguments, agent_name(path, suffix), model)
+        settings = agent_settings_file(session_id_for(path, profile.terminal, suffix))
+        return build_command(arguments, agent_name(path, suffix), model, settings)
 
     def _respawn(
         self,
