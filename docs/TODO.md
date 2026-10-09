@@ -17,9 +17,9 @@ Nur was noch aussteht. Erledigtes steht in der Git-Historie.
 
 ## AI-Connect
 
-- **Tab „Gespräche“ mit echtem User-Token testen:** Mitlesen, Senden mit falschem Token (403) und die Ansicht in
-  Handybreite sind gegen die echte Bridge geprüft. Offen: eine echte Nachricht als User:Peuqui senden (Token eingeben)
-  und sehen, dass sie live im Baum erscheint; Neuverbinden nach einem Neustart der Bridge.
+- **Tab „Gespräche“ nach einem Neustart der Bridge:** Mitlesen, Senden als User:Peuqui (Enter) und die Ansicht sind
+  im echten Betrieb geprüft (9.10. abends). Offen: ob sich eine offene Seite nach einem Neustart der Bridge von selbst
+  neu verbindet und den Verlauf wieder zeigt.
 
 ## Sprache am Echo Dot
 
