@@ -153,6 +153,8 @@ agents:
       resume: [claude, --settings, *claude_settings, --resume, "{conversation}", --remote-control, "{name}"]
     # Starting an agent in a folder means trusting it: skip Claude's trust prompt.
     trust: claude
+    # A further agent in the folder gets an AI-Connect name of its own (Host:Project-Suffix).
+    env: {AI_CONNECT_PEER_SUFFIX: "{suffix}"}
     # Usage limits (five hours, week) as Claude reports them in its status line.
     quota: claude
     # Reasoning effort per project folder (<folder>/.claude/settings.local.json).
@@ -205,7 +207,7 @@ agents:
   #   model_live: {command: "/model {model}", confirm: "Switch model?", protected_file: ~/.claude/settings.json}
   #   start: [lclaude, "{model}", --settings, *claude_settings]
   #   resume: [lclaude, "{model}", --settings, *claude_settings, --continue]
-  #   env: {LCLAUDE_EFFORT: "{effort}"}
+  #   env: {LCLAUDE_EFFORT: "{effort}", AI_CONNECT_PEER_SUFFIX: "{suffix}"}
   #   effort:
   #     levels: [low, medium, high, xhigh, max]
   #     default: high
