@@ -8,7 +8,8 @@ export interface Toast {
   kind: 'error' | 'info'
 }
 
-const TOAST_MILLISECONDS = 5000
+/** How long a message stays; also for messages a page shows in place of a toast. */
+export const TOAST_MILLISECONDS = 5000
 const SECONDS_PER_MINUTE = 60
 
 const toasts = ref<Toast[]>([])
@@ -25,7 +26,7 @@ function dismiss(id: number): void {
 }
 
 /** Translate an API error by its code; unknown codes show the server's detail text. */
-function errorText(error: unknown): string {
+export function errorText(error: unknown): string {
   if (!(error instanceof ApiError)) return String(error)
   const key = `errors.${error.code}`
   if (!i18n.global.te(key)) return error.message

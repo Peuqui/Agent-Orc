@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { api, type Peer, type PeerEvent, type PeerMessage } from '../api'
 import PeerLanes from '../components/PeerLanes.vue'
 import PeerMessageItem from '../components/PeerMessageItem.vue'
-import { useToast } from '../composables/useToast'
+import { errorText, TOAST_MILLISECONDS, useToast } from '../composables/useToast'
 import { formatMoment } from '../format'
 import { isSendKey } from '../sendKey'
 import { EVERYONE, groupConversations, isMachine, laneLabel, lanesOf, replyRecipients, type Conversation } from '../peerConversations'
@@ -31,6 +31,9 @@ const openConversations = ref(new Set<string>())
 const recipients = ref<string[]>([])
 const text = ref('')
 const sending = ref(false)
+// What came of sending, shown just above the field where the eye is, instead of a toast far below.
+const notice = ref<{ text: string; error: boolean } | null>(null)
+let noticeTimer: ReturnType<typeof setTimeout> | undefined
 
 let source: EventSource | null = null
 
@@ -137,12 +140,18 @@ async function send(): Promise<void> {
     const result = await api.peerMessage(recipients.value, text.value.trim())
     const offline = result.sent.filter((sent) => !sent.online).map((sent) => sent.to)
     text.value = ''
-    toast.info(offline.length ? t('peers.sentOffline', { names: offline.join(', ') }) : t('peers.sent'))
+    showNotice(offline.length ? t('peers.sentOffline', { names: offline.join(', ') }) : t('peers.sent'), false)
   } catch (error) {
-    toast.error(error)
+    showNotice(errorText(error), true)
   } finally {
     sending.value = false
   }
+}
+
+function showNotice(text: string, error: boolean): void {
+  clearTimeout(noticeTimer)
+  notice.value = { text, error }
+  noticeTimer = setTimeout(() => (notice.value = null), TOAST_MILLISECONDS)
 }
 </script>
 
@@ -238,6 +247,9 @@ async function send(): Promise<void> {
         class="sticky bottom-(--bottom-nav-height) z-20 -mx-4 -mb-4 flex flex-col gap-2 border-t border-slate-800 bg-slate-900 px-4 py-2"
         @submit.prevent="send"
       >
+          <p v-if="notice" class="text-sm" :class="notice.error ? 'text-red-300' : 'text-emerald-300'" role="status">
+            {{ notice.text }}
+          </p>
           <div class="flex items-center gap-1.5 overflow-x-auto text-xs whitespace-nowrap [scrollbar-width:none]">
             <span class="text-slate-500">{{ $t('peers.to') }}</span>
             <button
