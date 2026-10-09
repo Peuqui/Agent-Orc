@@ -32,6 +32,8 @@ test('an answer goes to everyone in the conversation but the user', () => {
   assert.deepEqual(replyRecipients(withUser!), ['Mini:A'])
   const [broadcast] = groupConversations([message(2, 'Mini:A', '*', '2026-10-09T20:00:00.000Z')])
   assert.deepEqual(replyRecipients(broadcast!), ['*'])
+  const [notice] = groupConversations([message(3, 'Bridge', 'Mini:A', '2026-10-09T20:00:00.000Z')])
+  assert.deepEqual(replyRecipients(notice!), [])
 })
 
 test('the first line is cut, and marked when more follows', () => {

@@ -671,6 +671,7 @@
     "to": "To:",
     "offline": "Not online right now, gets the message later.",
     "asUser": "Write as User:{name} …",
+    "asUserTo": "As User:{name} to {names} …",
     "send": "Send",
     "sent": "Sent.",
     "sentOffline": "Sent. Not online, gets it later: {names}",

@@ -68,6 +68,12 @@
   @apply mx-auto max-w-[96rem] px-4;
 }
 
+/* A wide row that opens something: a press darkens it instead of sinking in, which on a wide row
+   would slide its text towards the middle and back. */
+@utility press-row {
+  @apply rounded-md hover:bg-slate-700/40 active:transform-none active:bg-slate-700/70;
+}
+
 @utility btn {
   @apply inline-flex min-h-9 items-center justify-center gap-2 rounded-lg px-3 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50;
 }

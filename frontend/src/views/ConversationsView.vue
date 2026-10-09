@@ -2,20 +2,23 @@
 import { computed, onBeforeUnmount, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { api, type Peer, type PeerEvent, type PeerMessage } from '../api'
+import PeerComposer from '../components/PeerComposer.vue'
 import PeerLanes from '../components/PeerLanes.vue'
 import PeerMessageItem from '../components/PeerMessageItem.vue'
-import { errorText, TOAST_MILLISECONDS, useToast } from '../composables/useToast'
+import { useHeightVariable } from '../composables/useHeightVariable'
+import { useToast } from '../composables/useToast'
 import { formatMoment } from '../format'
-import { isSendKey } from '../sendKey'
 import { EVERYONE, groupConversations, isMachine, laneLabel, lanesOf, replyRecipients, type Conversation } from '../peerConversations'
 
-// AI-Connect read along: the conversations between the agents, live, and a field to write to
-// them as the user. The server runs AI-Connect's program per open page and hands its lines on;
+// AI-Connect read along: the conversations between the agents, live, and fields to write to
+// them as the user: below each open conversation to those in it, at the foot to whom one picks. The server runs AI-Connect's program per open page and hands its lines on;
 // when it ends (the bridge restarted, or cannot be reached) the stream ends and the browser
 // connects again by itself, getting the history anew. A refused token ends it for good.
 const FINAL_ERRORS = new Set(['token_refused', 'token_missing'])
 
 const toast = useToast()
+// So a field opened in a conversation stays clear of the foot when it gets the cursor.
+useHeightVariable('--peers-foot-height', 'foot')
 const { locale, t } = useI18n()
 
 const configured = ref<boolean | null>(null)
@@ -27,13 +30,11 @@ const historyLoaded = ref(false)
 const streamError = ref<string | null>(null)
 const view = ref<'tree' | 'timeline' | 'lanes'>('tree')
 const openConversations = ref(new Set<string>())
+// The conversation opened by its "Answer" button, whose field gets the cursor.
+const answering = ref<string | null>(null)
 
+// Whom the field at the foot writes to: for a conversation there is none yet, or a broadcast.
 const recipients = ref<string[]>([])
-const text = ref('')
-const sending = ref(false)
-// What came of sending, shown just above the field where the eye is, instead of a toast far below.
-const notice = ref<{ text: string; error: boolean } | null>(null)
-let noticeTimer: ReturnType<typeof setTimeout> | undefined
 
 let source: EventSource | null = null
 
@@ -97,7 +98,7 @@ function peerTitle(peer: Peer): string {
   const state = peer.state && peer.state in STATE_COLORS ? t(`peers.state.${peer.state}`) : peer.state
   return [peer.name, state, peer.state_detail, peer.status].filter(Boolean).join(' · ')
 }
-// Chosen, but not online now (from an answered conversation): they get it when they come back.
+// Chosen, but gone offline since: still shown, so they can be taken off; they get it when they come back.
 const offlineRecipients = computed(() =>
   recipients.value.filter((recipient) => recipient !== EVERYONE && !peerNames.value.includes(recipient)),
 )
@@ -108,6 +109,7 @@ function title(conversation: Conversation): string {
 }
 
 function toggleConversation(key: string): void {
+  answering.value = null
   const open = new Set(openConversations.value)
   if (!open.delete(key)) open.add(key)
   openConversations.value = open
@@ -123,35 +125,14 @@ function toggleRecipient(name: string): void {
 }
 
 function answer(conversation: Conversation): void {
-  recipients.value = replyRecipients(conversation)
+  openConversations.value = new Set(openConversations.value).add(conversation.key)
+  answering.value = conversation.key
 }
 
-const canSend = computed(() => recipients.value.length > 0 && text.value.trim() !== '' && !sending.value)
-
-function onKeydown(event: KeyboardEvent): void {
-  if (!isSendKey(event)) return
-  event.preventDefault()
-  if (canSend.value) void send()
-}
-
-async function send(): Promise<void> {
-  sending.value = true
-  try {
-    const result = await api.peerMessage(recipients.value, text.value.trim())
-    const offline = result.sent.filter((sent) => !sent.online).map((sent) => sent.to)
-    text.value = ''
-    showNotice(offline.length ? t('peers.sentOffline', { names: offline.join(', ') }) : t('peers.sent'), false)
-  } catch (error) {
-    showNotice(errorText(error), true)
-  } finally {
-    sending.value = false
-  }
-}
-
-function showNotice(text: string, error: boolean): void {
-  clearTimeout(noticeTimer)
-  notice.value = { text, error }
-  noticeTimer = setTimeout(() => (notice.value = null), TOAST_MILLISECONDS)
+/** "As User:Peuqui to Agent-Orc, AI-Connect …" */
+function replyPlaceholder(recipients: string[]): string {
+  const names = recipients.map((name) => (name === EVERYONE ? t('peers.everyone') : laneLabel(name)))
+  return t('peers.asUserTo', { name: userName.value, names: names.join(', ') })
 }
 </script>
 
@@ -213,10 +194,10 @@ function showNotice(text: string, error: boolean): void {
 
       <div v-else-if="view === 'tree'" class="flex flex-col gap-2">
         <div v-for="conversation in conversations" :key="conversation.key" class="card">
-          <div class="flex items-center gap-2 p-3">
+          <div class="flex items-center gap-2 p-1.5">
             <button
               type="button"
-              class="flex min-w-0 flex-1 flex-col text-left"
+              class="press-row flex min-w-0 flex-1 flex-col p-1.5 text-left"
               :aria-expanded="openConversations.has(conversation.key)"
               @click="toggleConversation(conversation.key)"
             >
@@ -226,12 +207,24 @@ function showNotice(text: string, error: boolean): void {
                 {{ formatMoment(new Date(conversation.last), locale) }}
               </span>
             </button>
-            <button type="button" class="btn-secondary btn-small" @click="answer(conversation)">
+            <button
+              v-if="replyRecipients(conversation).length && !openConversations.has(conversation.key)"
+              type="button"
+              class="btn-secondary btn-small mr-1.5"
+              @click="answer(conversation)"
+            >
               {{ $t('peers.answer') }}
             </button>
           </div>
-          <div v-if="openConversations.has(conversation.key)" class="border-t border-slate-700 px-3 pb-1">
+          <div v-if="openConversations.has(conversation.key)" class="border-t border-slate-700 px-3 pb-3">
             <PeerMessageItem v-for="message in conversation.messages" :key="message.id" :message="message" />
+            <PeerComposer
+              v-if="replyRecipients(conversation).length"
+              :recipients="replyRecipients(conversation)"
+              :placeholder="replyPlaceholder(replyRecipients(conversation))"
+              :focused="answering === conversation.key"
+              class="mt-1 [&_textarea]:scroll-mb-[calc(var(--bottom-nav-height)+var(--peers-foot-height))]"
+            />
           </div>
         </div>
       </div>
@@ -243,13 +236,8 @@ function showNotice(text: string, error: boolean): void {
       <PeerLanes v-else :messages="timeline" :lanes="lanes" :columns="laneColumns" class="-mt-4 rounded-t-none border-t-0" />
 
       <!-- Flush with the bottom (above the phone's bottom bar), so nothing scrolls by below it. -->
-      <form
-        class="sticky bottom-(--bottom-nav-height) z-20 -mx-4 -mb-4 flex flex-col gap-2 border-t border-slate-800 bg-slate-900 px-4 py-2"
-        @submit.prevent="send"
-      >
-          <p v-if="notice" class="text-sm" :class="notice.error ? 'text-red-300' : 'text-emerald-300'" role="status">
-            {{ notice.text }}
-          </p>
+      <div ref="foot" class="sticky bottom-(--bottom-nav-height) z-20 -mx-4 -mb-4 border-t border-slate-800 bg-slate-900 px-4 py-2">
+        <PeerComposer :recipients="recipients" :placeholder="$t('peers.asUser', { name: userName })">
           <div class="flex items-center gap-1.5 overflow-x-auto text-xs whitespace-nowrap [scrollbar-width:none]">
             <span class="text-slate-500">{{ $t('peers.to') }}</span>
             <button
@@ -283,18 +271,8 @@ function showNotice(text: string, error: boolean): void {
               {{ laneLabel(name) }} ✕
             </button>
           </div>
-          <div class="flex items-end gap-2">
-            <textarea
-              v-model="text"
-              rows="1"
-              enterkeyhint="send"
-              class="input max-h-40 min-w-0 flex-1 resize-none [field-sizing:content]"
-              @keydown="onKeydown"
-              :placeholder="$t('peers.asUser', { name: userName })"
-            />
-            <button type="submit" class="btn-primary btn-small" :disabled="!canSend">{{ $t('peers.send') }}</button>
-          </div>
-      </form>
+        </PeerComposer>
+      </div>
     </template>
   </section>
 </template>

@@ -19,7 +19,7 @@ function recipient(to: string): string {
 
 <template>
   <article class="border-t border-slate-700/60 py-2 first:border-t-0">
-    <button type="button" class="w-full text-left" :aria-expanded="open" @click="open = !open">
+    <button type="button" class="press-row -mx-1 block w-[calc(100%+0.5rem)] px-1 text-left" :aria-expanded="open" @click="open = !open">
       <div class="flex flex-wrap items-baseline gap-x-2 text-xs text-slate-500">
         <span>{{ formatMoment(new Date(message.timestamp), locale) }}</span>
         <!-- Short names (without the host); the whole name on hover. -->

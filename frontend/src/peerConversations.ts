@@ -34,9 +34,11 @@ export function groupConversations(messages: Iterable<PeerMessage>): Conversatio
   return [...conversations.values()].sort((a, b) => b.last.localeCompare(a.last))
 }
 
-/** Who to answer in a conversation: everyone in it but the user, or everyone for a broadcast. */
+/** Who to answer in a conversation: everyone in it but the user, or everyone for a broadcast;
+ * nobody where a machine takes part (the bridge's notices), as nothing reaches it. */
 export function replyRecipients(conversation: Conversation): string[] {
   if (conversation.members[1] === EVERYONE) return [EVERYONE]
+  if (conversation.members.some(isMachine)) return []
   return conversation.members.filter((member) => !member.startsWith(USER_PREFIX))
 }
 
