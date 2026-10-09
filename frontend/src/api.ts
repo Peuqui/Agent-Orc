@@ -288,7 +288,6 @@ export interface TerminalSettings {
   keys: TerminalKey[][]
   /** The user arranged the keys (for every device); otherwise the config's hold. */
   keys_arranged: boolean
-  submit_delay_ms: number
 }
 
 /** A project's conversations for the clean-up list. */
@@ -493,6 +492,9 @@ export const api = {
     }),
   cancelScheduled: (promptId: string) =>
     request<void>('DELETE', `scheduled/${encodeURIComponent(promptId)}`),
+  /** Types the message into the agent and submits it (the server types, then presses Enter). */
+  sendMessage: (sessionId: string, text: string) =>
+    request<void>('POST', `sessions/${encodeURIComponent(sessionId)}/message`, { body: { text } }),
   /** Types the same prompt into each of the (running) agents; without submit it only lands in
    * their input and the user sends it there. */
   broadcast: (sessionIds: string[], text: string, submit = true) =>

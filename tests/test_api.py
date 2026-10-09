@@ -1271,9 +1271,9 @@ def test_attachment_lands_in_the_agents_folder(client: TestClient, home: Path) -
     assert missing.status_code == 404
 
 
-def wait_for_text(client: TestClient, session_id: str, text: str) -> bool:
+def wait_for_text(client: TestClient, session_id: str, text: str, count: int = 1) -> bool:
     for _ in range(50):
-        if text in client.get(f"/api/sessions/{session_id}/text").json()["text"]:
+        if client.get(f"/api/sessions/{session_id}/text").json()["text"].count(text) >= count:
             return True
         time.sleep(0.1)
     return False
@@ -1360,6 +1360,18 @@ def test_agent_stopped_by_its_limit_resumes_after_the_reset(
         client.delete(f"/api/sessions/{session_id}")
         assert client.get("/api/sessions").json() == []
         assert read_scheduled() == []
+
+
+def test_message_is_submitted_after_a_long_text(client: TestClient, home: Path) -> None:
+    session = start_shell(client, home / "projects" / "a")
+    assert wait_for_text(client, session, "READY")
+    # Longer than several typed pieces: the Enter must still come after the whole text.
+    text = "word " * 200 + "END"
+    response = client.post(f"/api/sessions/{session}/message", json={"text": text})
+    assert response.status_code == 204
+    # cat prints a line only once it is submitted: the echo plus cat's own copy.
+    assert wait_for_text(client, session, "END", count=2)
+    assert client.post("/api/sessions/gone/message", json={"text": "x"}).status_code == 404
 
 
 def test_broadcast_types_into_every_chosen_agent(client: TestClient, home: Path) -> None:

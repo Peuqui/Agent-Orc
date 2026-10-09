@@ -291,11 +291,9 @@ function toggleModifier(modifier: Modifier): void {
   modifiers.value = next
 }
 
+/** A text key: typed and submitted by the server, as a message from the input field. */
 function submitText(text: string): void {
-  if (!settings.value) return
-  sendInput(text)
-  // Enter separately, so the agent sees typed text plus submit, not one pasted block.
-  window.setTimeout(() => sendInput('\r'), settings.value.submit_delay_ms)
+  api.sendMessage(props.id, text).catch(toast.error)
 }
 
 
@@ -584,7 +582,7 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <MessageInput ref="messageInput" :session-id="id" @submit="submitText" />
+    <MessageInput ref="messageInput" :session-id="id" />
 
     <KeyBar
       v-if="settings && !fullscreen"

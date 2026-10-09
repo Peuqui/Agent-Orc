@@ -427,6 +427,10 @@ class AnnounceRequest(BaseModel):
     speaker: str
 
 
+class MessageRequest(BaseModel):
+    text: str
+
+
 class BroadcastRequest(BaseModel):
     sessions: list[str]
     text: str
@@ -1644,6 +1648,18 @@ def create_app(
         if find_session(session_id) is None:
             raise SessionNotFoundError(session_id)
         return add_scheduled(session_id, body.text, body.at, Reason.USER)
+
+    @app.post(
+        "/api/sessions/{session_id}/message",
+        dependencies=authenticated,
+        status_code=status.HTTP_204_NO_CONTENT,
+    )
+    def send_message(session_id: str, body: MessageRequest) -> None:
+        """Type the message into the agent and submit it. The server types it, so the Enter
+        follows the last piece of text after the pause, however long the text is."""
+        if find_session(session_id) is None:
+            raise SessionNotFoundError(session_id)
+        sessions.type_line(session_id, body.text)
 
     @app.delete(
         "/api/scheduled/{prompt_id}",

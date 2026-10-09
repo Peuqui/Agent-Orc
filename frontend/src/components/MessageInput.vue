@@ -15,7 +15,6 @@ import DictationRetry from './DictationRetry.vue'
 import PromptTemplates from './PromptTemplates.vue'
 
 const props = defineProps<{ sessionId: string }>()
-const emit = defineEmits<{ submit: [text: string] }>()
 
 const toast = useToast()
 // The unsent text survives a reload (e.g. when a new version is installed), per agent and tab.
@@ -189,19 +188,27 @@ function removeAttachment(index: number): void {
 
 const sendable = computed(() => text.value !== '' || attachments.value.length > 0)
 
-function submit(): void {
+async function submit(): Promise<void> {
   if (!sendable.value) return
-  const mentions = attachments.value.map((attachment) => `@${attachment.path}`)
-  emit('submit', [...mentions, text.value].filter((part) => part !== '').join(' '))
+  const sent = { text: text.value, attachments: attachments.value }
+  const mentions = sent.attachments.map((attachment) => `@${attachment.path}`)
   attachments.value = []
   text.value = ''
+  try {
+    await api.sendMessage(props.sessionId, [...mentions, sent.text].filter((part) => part !== '').join(' '))
+  } catch (error) {
+    // Not lost: back into the field, before what was typed meanwhile.
+    text.value = [sent.text, text.value].filter((part) => part !== '').join(' ')
+    attachments.value = [...sent.attachments, ...attachments.value]
+    toast.error(error)
+  }
 }
 
 function onKeydown(event: KeyboardEvent): void {
   // Enter sends (also the phone keyboard's send key); Shift+Enter starts a new line.
   if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
     event.preventDefault()
-    submit()
+    void submit()
   }
 }
 </script>
