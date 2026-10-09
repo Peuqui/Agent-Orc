@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { api, authenticated } from '../api'
 import { LOCALES, setLocale, type Locale } from '../i18n'
+import { useHeightVariable } from '../composables/useHeightVariable'
 import { NAV_ITEMS } from '../navigation'
 import AppIcon from './AppIcon.vue'
 import HelpButton from './HelpButton.vue'
@@ -11,14 +11,7 @@ import AppLogo from './AppLogo.vue'
 
 const { locale } = useI18n()
 
-// Its height, for what sticks to the top of a page below it (var(--app-header-height)); it
-// changes with the width (tabs here or a bottom bar).
-const header = ref<HTMLElement>()
-const resizes = new ResizeObserver(([entry]) => {
-  document.documentElement.style.setProperty('--app-header-height', `${entry!.borderBoxSize[0]!.blockSize}px`)
-})
-onMounted(() => header.value && resizes.observe(header.value))
-onBeforeUnmount(() => resizes.disconnect())
+useHeightVariable('--app-header-height', 'header')
 
 async function logout(): Promise<void> {
   await api.logout()

@@ -1,10 +1,14 @@
 <script setup lang="ts">
+import { useHeightVariable } from '../composables/useHeightVariable'
 import { NAV_ITEMS } from '../navigation'
 import AppIcon from './AppIcon.vue'
+
+useHeightVariable('--bottom-nav-height', 'bar')
 </script>
 
 <template>
   <nav
+    ref="bar"
     class="fixed inset-x-0 bottom-0 z-30 grid auto-cols-fr grid-flow-col lg:hidden border-t border-slate-800 bg-slate-900/95 pb-[env(safe-area-inset-bottom)] backdrop-blur"
   >
     <RouterLink

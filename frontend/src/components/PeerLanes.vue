@@ -1,15 +1,14 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { PeerMessage } from '../api'
-import { arrowOf, laneLabel, lanesOf } from '../peerConversations'
+import { arrowOf } from '../peerConversations'
 import PeerMessageItem from './PeerMessageItem.vue'
 
 // The messages as a sequence diagram: a lane for everyone taking part, each message an arrow from
-// its sender's lane to its receiver's (a broadcast reaches across all lanes), its text below.
-const props = defineProps<{ messages: PeerMessage[] }>()
-
-const lanes = computed(() => lanesOf(props.messages))
-const columns = computed(() => ({ gridTemplateColumns: `repeat(${lanes.value.length}, minmax(0, 1fr))` }))
+// its sender's lane to its receiver's (a broadcast reaches across all lanes), its text below. The
+// page shows the lanes' names in its header, which stays in view; `columns` lays out both alike.
+const props = defineProps<{ messages: PeerMessage[]; lanes: string[]; columns: Record<string, string> }>()
+const lanes = computed(() => props.lanes)
 
 /** The middle of a lane, in percent of the width. */
 function middle(lane: number): number {
@@ -32,11 +31,6 @@ function arrow(message: PeerMessage) {
 
 <template>
   <div class="card px-3 pb-2">
-    <div class="sticky top-(--app-header-height) z-10 grid gap-1 border-b border-slate-700 bg-slate-800 py-2" :style="columns">
-      <span v-for="lane in lanes" :key="lane" class="truncate text-center text-xs font-medium text-amber-400" :title="lane">
-        {{ laneLabel(lane) }}
-      </span>
-    </div>
     <div class="relative">
       <div class="pointer-events-none absolute inset-0 grid" :style="columns" aria-hidden="true">
         <div v-for="lane in lanes" :key="lane" class="mx-auto w-px bg-slate-600/60" />

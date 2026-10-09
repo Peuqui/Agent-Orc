@@ -7,7 +7,7 @@ import PeerMessageItem from '../components/PeerMessageItem.vue'
 import { useSettings } from '../composables/useSettings'
 import { useToast } from '../composables/useToast'
 import { formatMoment } from '../format'
-import { EVERYONE, groupConversations, replyRecipients, type Conversation } from '../peerConversations'
+import { EVERYONE, groupConversations, laneLabel, lanesOf, replyRecipients, type Conversation } from '../peerConversations'
 
 // AI-Connect read along: the conversations between the agents, live, and a field to write to
 // them as the user. The server runs AI-Connect's program per open page and hands its lines on;
@@ -70,7 +70,28 @@ onBeforeUnmount(() => source?.close())
 
 const conversations = computed(() => groupConversations(messages.value))
 const timeline = computed(() => [...messages.value].sort((a, b) => b.timestamp.localeCompare(a.timestamp)))
-const peerNames = computed(() => peers.value.map((peer) => peer.name).sort())
+const sortedPeers = computed(() => [...peers.value].sort((a, b) => a.name.localeCompare(b.name)))
+const peerNames = computed(() => sortedPeers.value.map((peer) => peer.name))
+const lanes = computed(() => lanesOf(messages.value))
+const laneColumns = computed(() => ({ gridTemplateColumns: `repeat(${lanes.value.length}, minmax(0, 1fr))` }))
+const chosenClass = 'border-sky-500 bg-sky-900/40 text-sky-200'
+
+// What a peer does, as AI-Connect's hooks in its session report it.
+const STATE_COLORS: Record<string, string> = {
+  busy: 'text-amber-400',
+  waiting: 'text-red-400',
+  idle: 'text-emerald-400',
+}
+
+function stateColor(peer: Peer): string {
+  return STATE_COLORS[peer.state ?? ''] ?? 'text-slate-500'
+}
+
+/** The peer's name, what it does in words, and the line it set on what it works on. */
+function peerTitle(peer: Peer): string {
+  const state = peer.state && peer.state in STATE_COLORS ? t(`peers.state.${peer.state}`) : peer.state
+  return [peer.name, state, peer.state_detail, peer.status].filter(Boolean).join(' · ')
+}
 // Chosen, but not online now (from an answered conversation): they get it when they come back.
 const offlineRecipients = computed(() =>
   recipients.value.filter((recipient) => recipient !== EVERYONE && !peerNames.value.includes(recipient)),
@@ -127,37 +148,50 @@ async function send(): Promise<void> {
 
 <template>
   <section class="flex flex-col gap-4">
-    <div class="flex flex-wrap items-center gap-2">
-      <h1 class="flex-1 text-lg font-semibold">{{ $t('peers.title') }}</h1>
-      <div v-if="configured" class="flex overflow-hidden rounded-md border border-slate-600 text-sm">
-        <button
-          v-for="mode in ['tree', 'timeline', 'lanes'] as const"
-          :key="mode"
-          class="px-3 py-1"
-          :class="view === mode ? 'bg-slate-600 text-slate-100' : 'text-slate-400 hover:bg-slate-700'"
-          @click="view = mode"
-        >
-          {{ $t(`peers.view.${mode}`) }}
-        </button>
+    <!-- Stays below the app's header while the conversations scroll; in the lanes view it carries
+         the lanes' names, so they stay readable over every arrow. -->
+    <div class="sticky top-(--app-header-height) z-20 -mx-4 -mt-4 bg-slate-900 px-4 pt-4 pb-1">
+      <div class="flex flex-wrap items-center gap-2">
+        <h1 class="flex-1 text-lg font-semibold">{{ $t('peers.title') }}</h1>
+        <div v-if="configured" class="flex overflow-hidden rounded-md border border-slate-600 text-sm">
+          <button
+            v-for="mode in ['tree', 'timeline', 'lanes'] as const"
+            :key="mode"
+            class="px-3 py-1"
+            :class="view === mode ? 'bg-slate-600 text-slate-100' : 'text-slate-400 hover:bg-slate-700'"
+            @click="view = mode"
+          >
+            {{ $t(`peers.view.${mode}`) }}
+          </button>
+        </div>
+      </div>
+      <div
+        v-if="view === 'lanes' && lanes.length"
+        class="mt-3 -mb-1 grid gap-1 rounded-t-xl border-x border-t border-slate-700 bg-slate-800 px-3 py-2"
+        :style="laneColumns"
+      >
+        <span v-for="lane in lanes" :key="lane" class="truncate text-center text-xs font-medium text-amber-400" :title="lane">
+          {{ laneLabel(lane) }}
+        </span>
       </div>
     </div>
 
     <p v-if="configured === false" class="card p-6 text-center text-slate-400">{{ $t('peers.notConfigured') }}</p>
     <template v-else-if="configured">
+      <div v-if="peers.length" class="flex flex-wrap gap-2 text-xs">
+        <span
+          v-for="peer in sortedPeers"
+          :key="peer.name"
+          class="rounded-full border border-slate-600 px-2 py-0.5 text-slate-300"
+          :title="peerTitle(peer)"
+        >
+          <span :class="stateColor(peer)">●</span> {{ peer.name }}
+        </span>
+      </div>
+
       <p v-if="streamError" class="card border-amber-700 p-3 text-sm text-amber-300">
         {{ $t(`peers.streamError.${streamError}`) }}
       </p>
-
-      <div v-if="peers.length" class="flex flex-wrap gap-2 text-xs">
-        <span
-          v-for="peer in peers"
-          :key="peer.name"
-          class="rounded-full border border-slate-600 px-2 py-0.5 text-slate-300"
-          :title="[peer.state, peer.status].filter(Boolean).join(' · ')"
-        >
-          <span :class="peer.state === 'busy' ? 'text-amber-400' : 'text-emerald-400'">●</span> {{ peer.name }}
-        </span>
-      </div>
 
       <p v-if="!historyLoaded && !streamError" class="card p-6 text-center text-slate-400">{{ $t('peers.loading') }}</p>
       <p v-else-if="historyLoaded && !messages.length" class="card p-6 text-center text-slate-400">
@@ -193,10 +227,14 @@ async function send(): Promise<void> {
         <PeerMessageItem v-for="message in timeline" :key="message.id" :message="message" />
       </div>
 
-      <PeerLanes v-else :messages="timeline" />
+      <PeerLanes v-else :messages="timeline" :lanes="lanes" :columns="laneColumns" class="-mt-4 rounded-t-none border-t-0" />
 
-      <form class="card sticky bottom-2 flex flex-col gap-2 p-3" @submit.prevent="send">
-        <div v-if="peerUserToken === '' || changingToken" class="flex flex-wrap items-center gap-2">
+      <!-- Flush with the bottom (above the phone's bottom bar), so nothing scrolls by below it. -->
+      <form
+        class="sticky bottom-(--bottom-nav-height) z-20 -mx-4 -mb-4 flex flex-col gap-2 border-t border-slate-800 bg-slate-900 px-4 py-2"
+        @submit.prevent="send"
+      >
+        <div v-if="changingToken" class="flex flex-wrap items-center gap-2">
           <input
             v-model="tokenDraft"
             type="password"
@@ -207,20 +245,39 @@ async function send(): Promise<void> {
           <button type="button" class="btn-secondary btn-small" :disabled="!tokenDraft.trim()" @click="saveToken">
             {{ $t('peers.tokenSave') }}
           </button>
+          <button type="button" class="btn-secondary btn-small" @click="changingToken = false">
+            {{ $t('common.cancel') }}
+          </button>
           <span class="w-full text-xs text-slate-500">{{ $t('peers.tokenHint') }}</span>
         </div>
+        <div v-else-if="peerUserToken === ''" class="flex items-center gap-2 text-sm text-slate-400">
+          <span class="flex-1">{{ $t('peers.tokenNeeded') }}</span>
+          <button type="button" class="btn-secondary btn-small" @click="changingToken = true">
+            {{ $t('peers.tokenEnter') }}
+          </button>
+        </div>
         <template v-else>
-          <div class="flex flex-wrap items-center gap-1.5 text-xs">
+          <div class="flex items-center gap-1.5 overflow-x-auto text-xs whitespace-nowrap [scrollbar-width:none]">
             <span class="text-slate-500">{{ $t('peers.to') }}</span>
             <button
-              v-for="name in [EVERYONE, ...peerNames]"
-              :key="name"
               type="button"
               class="rounded-full border px-2 py-0.5"
-              :class="recipients.includes(name) ? 'border-sky-500 bg-sky-900/40 text-sky-200' : 'border-slate-600 text-slate-400'"
-              @click="toggleRecipient(name)"
+              :class="recipients.includes(EVERYONE) ? chosenClass : 'border-slate-600 text-slate-400'"
+              @click="toggleRecipient(EVERYONE)"
             >
-              {{ name === EVERYONE ? $t('peers.everyone') : name }}
+              {{ $t('peers.everyone') }}
+            </button>
+            <button
+              v-for="peer in sortedPeers"
+              :key="peer.name"
+              type="button"
+              class="rounded-full border px-2 py-0.5"
+              :class="recipients.includes(peer.name) ? chosenClass : 'border-slate-600 text-slate-400'"
+              :title="peerTitle(peer)"
+              @click="toggleRecipient(peer.name)"
+            >
+              <span :class="stateColor(peer)">●</span>
+              {{ laneLabel(peer.name) }}
             </button>
             <button
               v-for="name in offlineRecipients"
@@ -230,15 +287,20 @@ async function send(): Promise<void> {
               :title="$t('peers.offline')"
               @click="toggleRecipient(name)"
             >
-              {{ name }} ✕
+              {{ laneLabel(name) }} ✕
             </button>
-          </div>
-          <textarea v-model="text" rows="3" class="input resize-y" :placeholder="$t('peers.asUser', { name: userName })" />
-          <div class="flex items-center gap-2">
-            <button type="button" class="text-xs text-slate-500 underline" @click="changingToken = true">
+            <button type="button" class="ml-auto pl-2 text-slate-500 underline" @click="changingToken = true">
               {{ $t('peers.tokenChange') }}
             </button>
-            <button type="submit" class="btn-primary btn-small ml-auto" :disabled="!canSend">{{ $t('peers.send') }}</button>
+          </div>
+          <div class="flex items-end gap-2">
+            <textarea
+              v-model="text"
+              rows="1"
+              class="input max-h-40 min-w-0 flex-1 resize-none [field-sizing:content]"
+              :placeholder="$t('peers.asUser', { name: userName })"
+            />
+            <button type="submit" class="btn-primary btn-small" :disabled="!canSend">{{ $t('peers.send') }}</button>
           </div>
         </template>
       </form>

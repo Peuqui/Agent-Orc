@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { PeerMessage } from '../api'
 import { formatMoment } from '../format'
-import { EVERYONE, firstLine } from '../peerConversations'
+import { EVERYONE, firstLine, laneLabel } from '../peerConversations'
 
 // One message of AI-Connect: its first line, the whole text (and what came with it) on a tap.
 const FIRST_LINE_CHARS = 140
@@ -13,7 +13,7 @@ const { locale, t } = useI18n()
 const open = ref(false)
 
 function recipient(to: string): string {
-  return to === EVERYONE ? t('peers.everyone') : to
+  return to === EVERYONE ? t('peers.everyone') : laneLabel(to)
 }
 </script>
 
@@ -22,8 +22,9 @@ function recipient(to: string): string {
     <button type="button" class="w-full text-left" :aria-expanded="open" @click="open = !open">
       <div class="flex flex-wrap items-baseline gap-x-2 text-xs text-slate-500">
         <span>{{ formatMoment(new Date(message.timestamp), locale) }}</span>
-        <span class="text-amber-400">{{ message.from }}</span>
-        <span>→ <span class="text-amber-400/80">{{ recipient(message.to) }}</span></span>
+        <!-- Short names (without the host); the whole name on hover. -->
+        <span class="text-amber-400" :title="message.from">{{ laneLabel(message.from) }}</span>
+        <span>→ <span class="text-amber-400/80" :title="message.to">{{ recipient(message.to) }}</span></span>
         <span v-if="message.context">📎</span>
       </div>
       <p v-if="!open" class="mt-0.5 text-sm break-words text-slate-200">{{ firstLine(message.content, FIRST_LINE_CHARS) }}</p>

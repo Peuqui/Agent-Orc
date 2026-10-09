@@ -682,6 +682,13 @@
       "token_missing": "AI-Connect's observer token is missing on the server.",
       "unreachable": "The bridge cannot be reached. Trying again …",
       "closed": "The bridge closed the connection. Reconnecting …"
+    },
+    "tokenNeeded": "Writing needs the AI-Connect user token.",
+    "tokenEnter": "Enter token",
+    "state": {
+      "busy": "working",
+      "waiting": "waiting for an approval",
+      "idle": "ready"
     }
   }
 }

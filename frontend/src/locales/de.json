@@ -682,6 +682,13 @@
       "token_missing": "Das Beobachter-Token von AI-Connect fehlt auf dem Server.",
       "unreachable": "Die Bridge ist nicht erreichbar. Neuer Versuch läuft …",
       "closed": "Die Bridge hat die Verbindung beendet. Verbinde neu …"
+    },
+    "tokenNeeded": "Zum Schreiben brauchst du das User-Token von AI-Connect.",
+    "tokenEnter": "Token eingeben",
+    "state": {
+      "busy": "arbeitet",
+      "waiting": "wartet auf eine Freigabe",
+      "idle": "bereit"
     }
   }
 }
