@@ -208,6 +208,12 @@ Vorgehen:
    4. „Letztes Gespräch fortsetzen“ je Agent (ausdrückliche Gesprächs-ID statt „neuestes im Ordner“).
    5. Anzeige: voller Name auf Karte, Spaltenkopf und in der Fernsteuerung.
 
+   *Stand 9.10., 17:35:* Bausteine 1, 2, 4 und 5 erledigt und installiert (Zusatz, Startdialog mit Pflichtfeld, Neustart
+   mit eigenem Gespräch, Namen auf Karten). `AI_CONNECT_PEER_SUFFIX: "{suffix}"` steht in den drei Claude-Profilen der
+   Benutzer-Konfiguration; echt getestet mit zwei Haiku-Agenten: `Mini:peertest` und `Mini:peertest-Test` gleichzeitig
+   online. Offen ist Baustein 3: Die Denkstufe liegt weiter je Ordner in `.claude/settings.local.json`, zwei Agenten im
+   selben Ordner teilen sie also.
+
    *Verworfen.* Sperre mit vorgemerkter Umschaltung und Eingabe-Tor (unnötig ohne Ausschluss), feste Rollen-
    Konfiguration, Worktree je Agent, Unteragent als einziger Weg.
 
