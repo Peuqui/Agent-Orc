@@ -567,10 +567,8 @@ export const api = {
     `api/sessions/${encodeURIComponent(sessionId)}/images/${encodeURIComponent(entryId)}/${index}`,
   /** Whether answers can be read on the Echo, what the settings call it, the rooms connected now, the longest text. */
   peers: () => request<{ configured: boolean; user_name: string }>('GET', 'peers'),
-  peerMessage: (token: string, to: string[], content: string) =>
-    request<{ sent: { to: string; id: number; online: boolean }[] }>('POST', 'peers/message', {
-      body: { token, to, content },
-    }),
+  peerMessage: (to: string[], content: string) =>
+    request<{ sent: { to: string; id: number; online: boolean }[] }>('POST', 'peers/message', { body: { to, content } }),
 
   announce: () =>
     request<{ configured: boolean; rooms: string[]; max_chars: number; label: string }>('GET', 'announce'),

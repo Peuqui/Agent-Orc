@@ -290,6 +290,7 @@ ERROR_STATUS: dict[type[Exception], int] = {
     announcing.AnnounceError: status.HTTP_502_BAD_GATEWAY,
     # Not 401: that would send the page to the login.
     peers.UserTokenRefusedError: status.HTTP_403_FORBIDDEN,
+    peers.UserTokenMissingError: status.HTTP_503_SERVICE_UNAVAILABLE,
     peers.PeerSendError: status.HTTP_502_BAD_GATEWAY,
 }
 
@@ -439,8 +440,6 @@ class ScheduledPromptRequest(BaseModel):
 
 
 class PeerMessageRequest(BaseModel):
-    # The user token of AI-Connect; handed on, never stored.
-    token: str
     # Peers ("Host:Project"), or "*" for every peer online.
     to: list[str]
     content: str
@@ -1625,7 +1624,7 @@ def create_app(
         """Writes to agents as the user; per recipient the message id and whether it was online."""
         if config.peers is None:
             raise NotConfiguredError("peers")
-        return {"sent": peers.send(config.peers, body.token, body.to, body.content)}
+        return {"sent": peers.send(config.peers, body.to, body.content)}
 
     @app.get("/api/announce", dependencies=authenticated)
     def announce_state() -> dict[str, Any]:

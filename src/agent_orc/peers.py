@@ -2,8 +2,8 @@
 
 AI-Connect is no package of Agent-Orc and brings its own dependencies, so it runs as a program of
 its own that speaks JSON lines (the "peers" section of the config names it): one process per open
-page reads along, one process per message sends it. The user token is handed on from the browser
-and never stored; it reaches the program on stdin, not in its arguments, where ps would show it.
+page reads along, one process per message sends it. Both tokens are AI-Connect's own (files in its
+config, readable by the user only); Agent-Orc never sees them.
 """
 
 import asyncio
@@ -23,7 +23,11 @@ class PeerSendError(RuntimeError):
 
 
 class UserTokenRefusedError(PeerSendError):
-    """The bridge does not know the user token."""
+    """The bridge does not know the user token (a new one replaced it)."""
+
+
+class UserTokenMissingError(PeerSendError):
+    """AI-Connect has no user token yet (installer.py user-token creates it)."""
 
 
 async def observe(config: PeersConfig, quiet_seconds: float) -> AsyncIterator[str | None]:
@@ -55,10 +59,10 @@ async def observe(config: PeersConfig, quiet_seconds: float) -> AsyncIterator[st
         await process.wait()
 
 
-def send(config: PeersConfig, token: str, recipients: list[str], content: str) -> list[Any]:
+def send(config: PeersConfig, recipients: list[str], content: str) -> list[Any]:
     """Sends `content` as User:<user_name> to each recipient ("*" for every peer online); per
     recipient the message id and whether it was online."""
-    request = {"token": token, "as": config.user_name, "to": recipients, "content": content}
+    request = {"as": config.user_name, "to": recipients, "content": content}
     result = subprocess.run(
         [*config.command, "send"],
         cwd=config.directory,
@@ -71,4 +75,6 @@ def send(config: PeersConfig, token: str, recipients: list[str], content: str) -
         return list(reply["sent"])
     if reply["error"] == "token_refused":
         raise UserTokenRefusedError("user token refused")
+    if reply["error"] == "token_missing":
+        raise UserTokenMissingError(reply["message"])
     raise PeerSendError(reply.get("message") or reply["error"])

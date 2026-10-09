@@ -4,7 +4,6 @@ import { useI18n } from 'vue-i18n'
 import { api, type Peer, type PeerEvent, type PeerMessage } from '../api'
 import PeerLanes from '../components/PeerLanes.vue'
 import PeerMessageItem from '../components/PeerMessageItem.vue'
-import { useSettings } from '../composables/useSettings'
 import { useToast } from '../composables/useToast'
 import { formatMoment } from '../format'
 import { EVERYONE, groupConversations, isMachine, laneLabel, lanesOf, replyRecipients, type Conversation } from '../peerConversations'
@@ -17,7 +16,6 @@ const FINAL_ERRORS = new Set(['token_refused', 'token_missing'])
 
 const toast = useToast()
 const { locale, t } = useI18n()
-const { peerUserToken } = useSettings()
 
 const configured = ref<boolean | null>(null)
 const userName = ref('')
@@ -32,8 +30,6 @@ const openConversations = ref(new Set<string>())
 const recipients = ref<string[]>([])
 const text = ref('')
 const sending = ref(false)
-const tokenDraft = ref('')
-const changingToken = ref(false)
 
 let source: EventSource | null = null
 
@@ -126,20 +122,12 @@ function answer(conversation: Conversation): void {
   recipients.value = replyRecipients(conversation)
 }
 
-function saveToken(): void {
-  peerUserToken.value = tokenDraft.value.trim()
-  tokenDraft.value = ''
-  changingToken.value = false
-}
-
-const canSend = computed(
-  () => peerUserToken.value !== '' && recipients.value.length > 0 && text.value.trim() !== '' && !sending.value,
-)
+const canSend = computed(() => recipients.value.length > 0 && text.value.trim() !== '' && !sending.value)
 
 async function send(): Promise<void> {
   sending.value = true
   try {
-    const result = await api.peerMessage(peerUserToken.value, recipients.value, text.value.trim())
+    const result = await api.peerMessage(recipients.value, text.value.trim())
     const offline = result.sent.filter((sent) => !sent.online).map((sent) => sent.to)
     text.value = ''
     toast.info(offline.length ? t('peers.sentOffline', { names: offline.join(', ') }) : t('peers.sent'))
@@ -243,29 +231,6 @@ async function send(): Promise<void> {
         class="sticky bottom-(--bottom-nav-height) z-20 -mx-4 -mb-4 flex flex-col gap-2 border-t border-slate-800 bg-slate-900 px-4 py-2"
         @submit.prevent="send"
       >
-        <div v-if="changingToken" class="flex flex-wrap items-center gap-2">
-          <input
-            v-model="tokenDraft"
-            type="password"
-            autocomplete="off"
-            class="input min-w-0 flex-1"
-            :placeholder="$t('peers.tokenPlaceholder')"
-          />
-          <button type="button" class="btn-secondary btn-small" :disabled="!tokenDraft.trim()" @click="saveToken">
-            {{ $t('peers.tokenSave') }}
-          </button>
-          <button type="button" class="btn-secondary btn-small" @click="changingToken = false">
-            {{ $t('common.cancel') }}
-          </button>
-          <span class="w-full text-xs text-slate-500">{{ $t('peers.tokenHint') }}</span>
-        </div>
-        <div v-else-if="peerUserToken === ''" class="flex items-center gap-2 text-sm text-slate-400">
-          <span class="flex-1">{{ $t('peers.tokenNeeded') }}</span>
-          <button type="button" class="btn-secondary btn-small" @click="changingToken = true">
-            {{ $t('peers.tokenEnter') }}
-          </button>
-        </div>
-        <template v-else>
           <div class="flex items-center gap-1.5 overflow-x-auto text-xs whitespace-nowrap [scrollbar-width:none]">
             <span class="text-slate-500">{{ $t('peers.to') }}</span>
             <button
@@ -298,9 +263,6 @@ async function send(): Promise<void> {
             >
               {{ laneLabel(name) }} ✕
             </button>
-            <button type="button" class="ml-auto pl-2 text-slate-500 underline" @click="changingToken = true">
-              {{ $t('peers.tokenChange') }}
-            </button>
           </div>
           <div class="flex items-end gap-2">
             <textarea
@@ -311,7 +273,6 @@ async function send(): Promise<void> {
             />
             <button type="submit" class="btn-primary btn-small" :disabled="!canSend">{{ $t('peers.send') }}</button>
           </div>
-        </template>
       </form>
     </template>
   </section>

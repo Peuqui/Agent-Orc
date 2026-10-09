@@ -81,9 +81,6 @@ const terminalFont = setting<TerminalFont>(
 /** A dictation goes to the agent as soon as it is transcribed, without pressing send. */
 const dictationSendsAtOnce = setting('agent-orc-dictation-sends-at-once', false, (stored) => stored === 'true')
 
-/** AI-Connect's user token on this device: the server hands it on and stores it nowhere. */
-const peerUserToken = setting('agent-orc-peer-user-token', '', String)
-
 /** What a terminal shows: the terminal itself, or the agent's answers in short (AnswersFeed). */
 export type TerminalView = 'terminal' | 'answers'
 /** What this agent's terminal shows; each agent has its own. The answers are what it shows first, the terminal itself is one tap away. */
@@ -150,7 +147,6 @@ export function useSettings() {
     stepAnswersScale,
     terminalFont,
     dictationSendsAtOnce,
-    peerUserToken,
     extraKeysUnfolded,
     extraKeysVersion,
     speechEngine,

@@ -17,11 +17,11 @@ from agent_orc.config import Config, PeersConfig, default_config_text
 from tests.conftest import FakeClock
 
 PASSWORD = "richtig-langes-passwort"
-USER_TOKEN = "user-token-123"
 
 # Behaves like AI-Connect's program for JSON lines: "observe" prints the peers, one past message
 # and the end of the history, then ends as when the bridge closes; "send" keeps what came on stdin
-# (and its arguments) next to it and answers like the bridge.
+# (and its arguments) next to it and answers like the bridge; a file "no-token" or "refused" next to
+# it stands for AI-Connect's user token missing or refused.
 FAKE_PROGRAM = """
 import json, sys, time
 from pathlib import Path
@@ -40,14 +40,17 @@ if sys.argv[1] == "observe":
     sys.exit(1)
 request = json.loads(sys.stdin.read())
 (here / "sent.json").write_text(json.dumps({"request": request, "arguments": sys.argv[1:]}))
-if request["token"] != "USER_TOKEN":
+if (here / "no-token").exists():
+    emit({"error": "token_missing", "message": "User token not found"})
+    sys.exit(1)
+if (here / "refused").exists():
     emit({"error": "token_refused"})
     sys.exit(1)
 if "Mini:offline" in request["to"]:
     emit({"error": "bridge", "message": "unknown peer"})
     sys.exit(1)
 emit({"sent": [{"to": to, "id": 7, "online": True} for to in request["to"]]})
-""".replace("USER_TOKEN", USER_TOKEN)
+"""
 
 
 def peers_config(tmp_path: Path) -> PeersConfig:
@@ -85,7 +88,7 @@ def test_without_a_section_in_the_config_there_is_no_ai_connect(
     client = make_client(clock, tmp_path, monkeypatch, configured=False)
     assert client.get("/api/peers").json() == {"configured": False, "user_name": ""}
     assert client.get("/api/peers/events").status_code == 404
-    message = {"token": USER_TOKEN, "to": ["Mini:A"], "content": "Hallo"}
+    message = {"to": ["Mini:A"], "content": "Hallo"}
     assert client.post("/api/peers/message", json=message).status_code == 404
 
 
@@ -125,11 +128,11 @@ def test_a_quiet_program_gives_room_for_a_keep_alive(tmp_path: Path) -> None:
     assert lines[-1] is not None and json.loads(lines[-1])["event"] == "peers"
 
 
-def test_a_message_goes_out_as_the_user_with_the_token_on_stdin(
+def test_a_message_goes_out_as_the_user(
     clock: FakeClock, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     client = make_client(clock, tmp_path, monkeypatch, configured=True)
-    message = {"token": USER_TOKEN, "to": ["Mini:A", "Mini:B"], "content": "Wie weit?"}
+    message = {"to": ["Mini:A", "Mini:B"], "content": "Wie weit?"}
     sent = client.post("/api/peers/message", json=message)
     assert sent.json() == {
         "sent": [
@@ -138,20 +141,24 @@ def test_a_message_goes_out_as_the_user_with_the_token_on_stdin(
         ]
     }
     received = json.loads((tmp_path / "program" / "sent.json").read_text(encoding="utf-8"))
+    # No token: AI-Connect reads its own.
     assert received == {
-        "request": {"token": USER_TOKEN, "as": "Ada", "to": ["Mini:A", "Mini:B"],
-                    "content": "Wie weit?"},
+        "request": {"as": "Ada", "to": ["Mini:A", "Mini:B"], "content": "Wie weit?"},
         "arguments": ["send"],
-    }  # fmt: skip
+    }
 
 
 def test_the_bridges_refusals_reach_the_page(
     clock: FakeClock, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     client = make_client(clock, tmp_path, monkeypatch, configured=True)
-    wrong = {"token": "falsch", "to": ["Mini:A"], "content": "x"}
-    # 403, not 401: the page stays logged in, only the token is wrong.
-    assert client.post("/api/peers/message", json=wrong).status_code == 403
-    offline = {"token": USER_TOKEN, "to": ["Mini:offline"], "content": "x"}
+    offline = {"to": ["Mini:offline"], "content": "x"}
     refused = client.post("/api/peers/message", json=offline)
     assert (refused.status_code, refused.json()["detail"]) == (502, "unknown peer")
+    message = {"to": ["Mini:A"], "content": "x"}
+    (tmp_path / "program" / "refused").touch()
+    # 403, not 401: the page stays logged in, only AI-Connect's token is wrong.
+    assert client.post("/api/peers/message", json=message).status_code == 403
+    (tmp_path / "program" / "no-token").touch()
+    missing = client.post("/api/peers/message", json=message)
+    assert (missing.status_code, missing.json()["error"]) == (503, "UserTokenMissingError")

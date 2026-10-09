@@ -177,8 +177,9 @@
     "GpuUnavailableError": "No GPU has room for Whisper right now. Switch to CPU.",
     "DictationServiceError": "Whisper is not responding.",
     "UnsupportedAudioError": "Whisper cannot process this audio format.",
-    "UserTokenRefusedError": "The bridge does not know this user token. Enter it again.",
-    "PeerSendError": "AI-Connect did not take the message."
+    "UserTokenRefusedError": "The bridge does not know AI-Connect's user token. Create a new one (installer.py user-token) and restart the bridge.",
+    "PeerSendError": "AI-Connect did not take the message.",
+    "UserTokenMissingError": "AI-Connect has no user token yet. Create it in a terminal with installer.py user-token and restart the bridge."
   },
   "dictation": {
     "sendsAtOnceOn": "Send directly on: the recording goes to the agent as soon as it is recognised, without pressing send; a draft in the field goes with it. For this device.",
@@ -673,18 +674,12 @@
     "send": "Send",
     "sent": "Sent.",
     "sentOffline": "Sent. Not online, gets it later: {names}",
-    "tokenPlaceholder": "AI-Connect user token",
-    "tokenSave": "Save",
-    "tokenHint": "The token stays in this browser only. The server hands it on to AI-Connect and does not store it.",
-    "tokenChange": "Change token",
     "streamError": {
       "token_refused": "The bridge refuses the observer token. Reading along needs a new token.",
       "token_missing": "AI-Connect's observer token is missing on the server.",
       "unreachable": "The bridge cannot be reached. Trying again …",
       "closed": "The bridge closed the connection. Reconnecting …"
     },
-    "tokenNeeded": "Writing needs the AI-Connect user token.",
-    "tokenEnter": "Enter token",
     "state": {
       "busy": "working",
       "waiting": "awaits approval",
