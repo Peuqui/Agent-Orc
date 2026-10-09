@@ -14,14 +14,11 @@ Nur was noch aussteht. Erledigtes steht in der Git-Historie.
 
 ## AI-Connect
 
-- **Mitlesen und Mitdiskutieren (Tab „Gespräche“ rechts neben „Arbeitsfläche“):** Bridge-Seite ist fertig
-  (`observer_client/` mit `ObserverConnection`, `UserConnection`, `TokenRefused`; Bridge am 9.10. neu gestartet,
-  Beobachter-Token angenommen). Agent-Orc soll den Client über eine Prozessgrenze nutzen (Befehl in der Konfiguration,
-  JSON-Zeilen), nicht per Import: Anfrage an `Mini:AI-Connect` am 9.10., 18:21, nach `observe-jsonl` und `send-json`
-  im `observer_client.cli`; Antwort steht aus. User-Name in die Agent-Orc-Konfiguration, User-Token gibt Peuqui im
-  Browser ein (pro Gerät), der Server reicht es nur durch.
-- **Kontingent je Anbieter:** heute nur Claude (`QUOTA_SOURCES` in `context.py`). Für Codex, DashScope usw. erst
-  klären, woher sie ihre Grenzen melden; lokale Modelle zeigen nichts.
+- **Mitlesen und Mitdiskutieren (Tab „Gespräche“ rechts neben „Arbeitsfläche“):** Die Schnittstelle von AI-Connect
+  ist fertig (`observer_client.jsonl observe` und `send`, Details in `docs/UEBERGABE-2026-10-09.md`). Agent-Orc ruft
+  sie über eine Prozessgrenze auf, nicht per Import. User-Name in die Agent-Orc-Konfiguration, User-Token gibt Peuqui
+  im Browser ein (pro Gerät), der Server reicht es nur durch. Vorher erzeugt Peuqui das Token
+  (`installer.py user-token` im AI-Connect-Ordner, im eigenen Terminal), danach Neustart von `ai-connect.service`.
 
 ## Sprache am Echo Dot
 
