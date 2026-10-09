@@ -5,7 +5,6 @@ import { ApiError, api, type FileChange } from '../api'
 import AppIcon from '../components/AppIcon.vue'
 import { useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
-import { baseName } from '../format'
 
 // What an agent changed in its project: the changed files, each one's diff on a tap. Read only;
 // the agent stages and commits itself.
@@ -23,7 +22,7 @@ const diffs = ref(new Map<string, { text: string; truncated: boolean }>())
 
 const folder = computed(() => {
   const session = sessions.value.find((candidate) => candidate.id === props.id)
-  return session ? baseName(session.path) : props.id
+  return session ? session.name : props.id
 })
 
 async function load(): Promise<void> {

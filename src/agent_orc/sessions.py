@@ -23,6 +23,8 @@ PROFILE_OPTION = "@orc_profile"
 PATH_OPTION = "@orc_path"
 # The model chosen at start (profiles with a choice); a restart takes the same.
 MODEL_OPTION = "@orc_model"
+# Sets a further agent in a folder apart from the first (empty for the first one).
+SUFFIX_OPTION = "@orc_suffix"
 # Marks a folder's terminal apart from its agent in the session name.
 TERMINAL_ID_SUFFIX = "-terminal"
 FIELD_SEPARATOR = "\t"
@@ -32,6 +34,7 @@ LIST_FORMAT = FIELD_SEPARATOR.join(
         "#{" + PROFILE_OPTION + "}",
         "#{" + PATH_OPTION + "}",
         "#{" + MODEL_OPTION + "}",
+        "#{" + SUFFIX_OPTION + "}",
         "#{pane_dead}",
         "#{pane_dead_status}",
         "#{session_created}",
@@ -76,15 +79,26 @@ class AgentSession:
     terminal: bool
     # The model chosen at start, for profiles that offer a choice; None otherwise.
     chosen_model: str | None
+    # Sets a further agent in the folder apart from the first; None for the first.
+    suffix: str | None
+
+    @property
+    def name(self) -> str:
+        return agent_name(self.path, self.suffix)
 
 
-def session_id_for(path: Path, terminal: bool) -> str:
+def agent_name(path: Path, suffix: str | None) -> str:
+    """The agent's name: its folder's, with the suffix of a further agent in the folder."""
+    return path.name if suffix is None else f"{path.name}-{suffix}"
+
+
+def session_id_for(path: Path, terminal: bool, suffix: str | None) -> str:
     """Readable, unique tmux session name for a folder's agent or its terminal.
 
     tmux forbids '.' and ':' in session names, and folder names alone are not
     unique across nested directories, hence the sanitized name plus a path hash.
     """
-    readable = re.sub(r"[^A-Za-z0-9_-]", "_", path.name)
+    readable = re.sub(r"[^A-Za-z0-9_-]", "_", agent_name(path, suffix))
     digest = hashlib.sha1(str(path).encode()).hexdigest()[:6]
     return f"{readable}-{digest}{TERMINAL_ID_SUFFIX if terminal else ''}"
 
@@ -129,9 +143,16 @@ class SessionManager:
             raise SessionError(result.stderr.strip())
         return [self._parse_line(line) for line in result.stdout.splitlines()]
 
-    def find_by_path(self, path: Path, terminal: bool) -> AgentSession | None:
-        """The folder's agent, or its terminal: at most one of each per folder."""
-        return next((s for s in self.list() if s.path == path and s.terminal == terminal), None)
+    def find(self, path: Path, terminal: bool, suffix: str | None) -> AgentSession | None:
+        """The folder's agent with this suffix (None: the first one), or the folder's terminal."""
+        return next(
+            (
+                s
+                for s in self.list()
+                if s.path == path and s.terminal == terminal and s.suffix == suffix
+            ),
+            None,
+        )
 
     def _is_terminal(self, profile_name: str) -> bool:
         profile = self._agents.get(profile_name)
@@ -145,9 +166,10 @@ class SessionManager:
         conversation: str | None = None,
         model: str | None = None,
         env: dict[str, str] | None = None,
+        suffix: str | None = None,
     ) -> AgentSession:
-        """Start an agent in `path`; at most one agent session exists per folder, and one
-        terminal next to it.
+        """Start an agent in `path`: the folder's first one, or a further one set apart by
+        `suffix`; one terminal runs next to them.
 
         A session whose agent has already exited is started again in place, so it keeps its
         id (open terminals and workspace columns stay valid). `conversation` resumes that
@@ -155,15 +177,15 @@ class SessionManager:
         `model` fills {model} (profiles with a choice of models); `env` is set for the agent.
         """
         env = env or {}
-        command = self._command(profile_name, path, resume, conversation, model)
+        command = self._command(profile_name, path, suffix, resume, conversation, model)
         terminal = self._is_terminal(profile_name)
-        existing = self.find_by_path(path, terminal)
+        existing = self.find(path, terminal, suffix)
         if existing is not None:
             if existing.running:
                 raise SessionAlreadyRunningError(existing.id)
             return self._respawn(existing, profile_name, command, model, env)
 
-        session_id = session_id_for(path, terminal)
+        session_id = session_id_for(path, terminal, suffix)
         # One tmux invocation, so remain-on-exit is active before the agent can exit
         # and its exit status stays visible. The status bar would only repeat what the
         # app shows and costs a terminal line on small screens. Mouse mode turns wheel
@@ -181,9 +203,10 @@ class SessionManager:
             "-e", f"{SESSION_ENV}={session_id}", *environment_options(env), *command, ";",
             "set-option", "-t", exact_target(session_id), PROFILE_OPTION, profile_name, ";",
             "set-option", "-t", exact_target(session_id), PATH_OPTION, str(path), ";",
-            "set-option", "-t", exact_target(session_id), MODEL_OPTION, model or "",
+            "set-option", "-t", exact_target(session_id), MODEL_OPTION, model or "", ";",
+            "set-option", "-t", exact_target(session_id), SUFFIX_OPTION, suffix or "",
         )  # fmt: skip
-        session = self.find_by_path(path, terminal)
+        session = self.find(path, terminal, suffix)
         if session is None:
             raise SessionError(f"tmux session {session_id} vanished right after start")
         return session
@@ -194,7 +217,7 @@ class SessionManager:
         """Resume a running agent in its own session (it reads some settings only at start),
         with the model it was started with, or `model` if it has none stored."""
         chosen = session.chosen_model if model is None else model
-        command = self._command(session.profile, session.path, True, None, chosen)
+        command = self._command(session.profile, session.path, session.suffix, True, None, chosen)
         return self._respawn(session, session.profile, command, chosen, env)
 
     def change_profile(
@@ -208,13 +231,14 @@ class SessionManager:
         """Replace the agent by another profile's in the same session (ending a running one;
         open terminals and workspace columns stay valid). `resume` continues the folder's last
         conversation, which only a profile with the same conversations can do."""
-        command = self._command(profile_name, session.path, resume, None, model)
+        command = self._command(profile_name, session.path, session.suffix, resume, None, model)
         return self._respawn(session, profile_name, command, model, env)
 
     def _command(
         self,
         profile_name: str,
         path: Path,
+        suffix: str | None,
         resume: bool,
         conversation: str | None,
         model: str | None,
@@ -230,7 +254,7 @@ class SessionManager:
             ]
         else:
             arguments = profile.resume if resume else profile.start
-        return build_command(arguments, path.name, model)
+        return build_command(arguments, agent_name(path, suffix), model)
 
     def _respawn(
         self,
@@ -247,7 +271,7 @@ class SessionManager:
             "set-option", "-t", exact_target(session.id), MODEL_OPTION, model or "", ";",
             "set-option", "-t", exact_target(session.id), PROFILE_OPTION, profile_name,
         )  # fmt: skip
-        respawned = self.find_by_path(session.path, self._is_terminal(profile_name))
+        respawned = self.find(session.path, self._is_terminal(profile_name), session.suffix)
         if respawned is None:
             raise SessionError(f"tmux session {session.id} vanished right after restart")
         return respawned
@@ -292,7 +316,7 @@ class SessionManager:
             raise SessionNotFoundError(session_id)
 
     def _parse_line(self, line: str) -> AgentSession:
-        session_id, profile, path, model, pane_dead, dead_status, created = line.split(
+        session_id, profile, path, model, suffix, pane_dead, dead_status, created = line.split(
             FIELD_SEPARATOR
         )
         running = pane_dead != "1"
@@ -306,6 +330,7 @@ class SessionManager:
             created=float(created),
             terminal=self._is_terminal(profile),
             chosen_model=model or None,
+            suffix=suffix or None,
         )
 
     def _tmux(self, *arguments: str, check: bool = True) -> subprocess.CompletedProcess[str]:

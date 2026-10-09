@@ -41,7 +41,9 @@ def state_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 def session(session_id: str = "demo-abc123") -> AgentSession:
-    return AgentSession(session_id, "claude", Path("/w"), True, None, SESSION_START, False, None)
+    return AgentSession(
+        session_id, "claude", Path("/w"), True, None, SESSION_START, False, None, None
+    )
 
 
 def touch(path: Path, mtime: float) -> None:
@@ -103,7 +105,7 @@ def test_compaction_marks_a_resting_agent_as_working_until_it_is_done(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
-    session = AgentSession("c-1", "claude", tmp_path, True, None, 0.0, False, None)
+    session = AgentSession("c-1", "claude", tmp_path, True, None, 0.0, False, None, None)
     store_activity("c-1", busy=False)
     assert not session_busy(session)
     begin_compaction("c-1")
@@ -116,7 +118,7 @@ def test_compaction_in_the_middle_of_an_answer_leaves_the_agent_working(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
-    session = AgentSession("c-2", "claude", tmp_path, True, None, 0.0, False, None)
+    session = AgentSession("c-2", "claude", tmp_path, True, None, 0.0, False, None, None)
     store_activity("c-2", busy=True)
     begin_compaction("c-2")
     end_compaction("c-2")
@@ -128,7 +130,7 @@ def test_compaction_of_an_agent_that_never_reported_counts_as_resting_before(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
-    session = AgentSession("c-3", "claude", tmp_path, True, None, 0.0, False, None)
+    session = AgentSession("c-3", "claude", tmp_path, True, None, 0.0, False, None, None)
     begin_compaction("c-3")
     assert session_busy(session)
     end_compaction("c-3")

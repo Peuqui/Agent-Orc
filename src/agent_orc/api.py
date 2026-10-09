@@ -672,7 +672,7 @@ def create_app(
             if auto and not idle:
                 continue
             advised_handover.add(session.id)
-            message = agent_message("handover", session.id, session.path.name, "")
+            message = agent_message("handover", session.id, session.name, "")
             send_to_all(message, config.push)
             if auto:
                 ask_for_handover(session)
@@ -706,7 +706,7 @@ def create_app(
             if session.running:
                 sessions.type_line(session.id, prompt.text)
             else:
-                message = agent_message("unsent", session.id, session.path.name, prompt.text)
+                message = agent_message("unsent", session.id, session.name, prompt.text)
                 send_to_all(message, config.push)
 
     async def watch_agents() -> None:
@@ -1137,6 +1137,7 @@ def create_app(
         folder = folder_reasoning(session.profile, session.path)
         return {
             **asdict(session),
+            "name": session.name,
             **empty,
             **status,
             # As the agent reports it; before its first report, the folder's level it started with.
@@ -1557,7 +1558,7 @@ def create_app(
             ):
                 texts = [t for turn in read_turns(transcript, 1) for t in turn.texts]
                 last_spoke = datetime.fromisoformat(texts[-1].time).timestamp() if texts else None
-            agents.append(VoiceAgent(session.id, session.path.name, last_spoke))
+            agents.append(VoiceAgent(session.id, session.name, last_spoke))
         return agents
 
     @app.post("/api/voice", dependencies=[Depends(require_voice_token)])

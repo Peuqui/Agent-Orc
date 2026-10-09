@@ -177,6 +177,10 @@ export interface AgentSession {
   terminal: boolean
   /** The model chosen at start (profiles with a choice of models). */
   chosen_model: string | null
+  /** Sets a further agent in the folder apart from the first; null for the first. */
+  suffix: string | null
+  /** The folder's name, with the suffix of a further agent. */
+  name: string
   /** The levels its slider offers: the profile's, or those of the chosen model. */
   effort_levels: string[]
   /** Reported by the agent itself (Claude: via `agent-orc statusline`); null until it reports. */

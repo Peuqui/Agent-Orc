@@ -66,7 +66,7 @@ def tmux_query(socket_name: str, *arguments: str) -> str:
 
 def wait_until_exited(manager: SessionManager, path: Path) -> AgentSession:
     for _ in range(50):
-        session = manager.find_by_path(path, terminal=False)
+        session = manager.find(path, terminal=False, suffix=None)
         assert session is not None
         if not session.running:
             return session
@@ -166,12 +166,12 @@ def test_stop_unknown_session(manager: SessionManager) -> None:
 
 
 def test_session_id_is_tmux_safe_and_unique() -> None:
-    first = session_id_for(Path("/a/my.project"), terminal=False)
-    second = session_id_for(Path("/b/my.project"), terminal=False)
+    first = session_id_for(Path("/a/my.project"), terminal=False, suffix=None)
+    second = session_id_for(Path("/b/my.project"), terminal=False, suffix=None)
     assert first != second
     assert "." not in first and ":" not in first
     # The folder's terminal is a session of its own next to the agent.
-    assert session_id_for(Path("/a/my.project"), terminal=True) not in (first, second)
+    assert session_id_for(Path("/a/my.project"), terminal=True, suffix=None) not in (first, second)
 
 
 def test_build_command_replaces_placeholders() -> None:
@@ -205,8 +205,23 @@ def test_a_terminal_runs_next_to_the_folders_agent(manager: SessionManager, work
         manager.start("echo", workdir, resume=False)
     with pytest.raises(SessionAlreadyRunningError):
         manager.start("terminal", workdir, resume=False)
-    assert manager.find_by_path(workdir, terminal=True) == terminal
-    assert manager.find_by_path(workdir, terminal=False) == agent
+    assert manager.find(workdir, terminal=True, suffix=None) == terminal
+    assert manager.find(workdir, terminal=False, suffix=None) == agent
+
+
+def test_further_agents_in_a_folder_are_set_apart_by_their_suffix(
+    manager: SessionManager, workdir: Path, socket_name: str
+) -> None:
+    first = manager.start("sleeper", workdir, resume=False)
+    review = manager.start("sleeper", workdir, resume=False, suffix="Review")
+    assert len({first.id, review.id}) == 2
+    assert (first.name, review.name) == ("my.project", "my.project-Review")
+    assert manager.find(workdir, terminal=False, suffix="Review") == review
+    with pytest.raises(SessionAlreadyRunningError):
+        manager.start("sleeper", workdir, resume=False, suffix="Review")
+    # A restart keeps the agent apart: same id, same suffix.
+    assert manager.restart(review, env={}) == manager.find(workdir, terminal=False, suffix="Review")
+    assert manager.restart(review, env={}).suffix == "Review"
 
 
 def test_chosen_model_and_environment_stay_with_the_session(
