@@ -12,31 +12,16 @@ Nur was noch aussteht. Erledigtes steht in der Git-Historie.
 - **Wackelnder Test:** `test_restart_resumes_a_busy_agent_with_its_waiting_effort` schlug am 9.10. in einem von neun
   vollen Läufen fehl (einzeln 25-mal grün). Fehlermeldung beim nächsten Auftreten festhalten.
 
-- **Arbeitsfläche: verschobene Spalte bleibt im Blick (Peuqui, 8.10.):** Hat die Arbeitsfläche mehr Spalten als
-  auf den Bildschirm passen (zum Beispiel drei Terminals, zwei sichtbar) und man zieht eine Spalte per Tab an eine
-  andere Position (etwa von ganz rechts nach ganz links), verschwindet sie aus dem Sichtfeld, weil die Leiste
-  horizontal nicht mitscrollt. Man muss von Hand zurückscrollen und sucht sie erst. Gewollt: Die verschobene
-  (aktive) Spalte zieht das horizontale Scrollen mit, sodass sie sichtbar bleibt. Gehört zum Aufspalten von
-  `WorkspaceView.vue` (Sortieren und Ziehen, Spaltenraster), dort mit bauen statt vorher flicken.
-
-- **Gelesen-Stand der Antworten auf dem Server (Peuqui, 8.10.):** Heute liegt er pro Gerät im `localStorage`
-  (`composables/useAnswerSeen.ts`, pro Agent die Zeit der neuesten gesehenen Antwort). Wer zwischen Desktop, Handy
-  und Tablet wechselt, sieht überall alles wieder als ungelesen. Lösung im vorhandenen Muster (wie
-  `card-order.json`, `prompt-templates.json` in `state.py`): Server speichert pro Agent „gesehen bis“, zwei
-  Endpunkte, der Wert steigt nur (Maximum). Kein Rückfall auf `localStorage`, keine Übernahme alter Werte (einmalig
-  alles ungelesen). Betrifft `AnswersFeed.vue`, `WorkspaceView.vue`. Peuqui hat den Satz nicht zu Ende gesprochen
-  („Auch könnte man ja …“): nachfragen, was noch gemeint war.
-  Dazu (Peuqui, 8.10.): Knopf „Alle als gelesen“ mit Häkchen neben „Neue vorlesen (n)“ in `AnswersFeed.vue`, nur
-  sichtbar bei n > 0, setzt „gesehen bis“ des Agenten dieser Spalte auf die Zeit der neuesten Antwort (`markSeen`).
-  Der Hilfetext (`locales/de.json`, „ein Knopf zum Markieren ist nicht nötig“) muss dann angepasst werden.
-
 ## AI-Connect
 
-- **Mitlesen für den User (Peuqui, 8.10., ab Freitag):** Datenverkehr der Bridge live und rückwirkend ansehen, sortiert
-  nach „wer redet mit wem“ (Baumdarstellung oder Ähnliches), als eigenes Programm im Terminal und per Knopf in
-  Agent-Orc als eigene Ansicht. Die Bridge hat dafür noch keine Funktion (Wächter und Verlauf nur pro Name):
-  nur lesende Nachrichtenart „observe“ und Verlauf über alle Paare in der Bridge, ein gemeinsamer Client für beide
-  Oberflächen. Anfrage an `Mini:AI-Connect` am 8.10. Details im Plan für Freitag, Abschnitt 4, Punkt 3.
+- **Mitlesen und Mitdiskutieren (Tab „Gespräche“ rechts neben „Arbeitsfläche“):** Bridge-Seite ist fertig
+  (`observer_client/` mit `ObserverConnection`, `UserConnection`, `TokenRefused`; Bridge am 9.10. neu gestartet,
+  Beobachter-Token angenommen). Agent-Orc soll den Client über eine Prozessgrenze nutzen (Befehl in der Konfiguration,
+  JSON-Zeilen), nicht per Import: Anfrage an `Mini:AI-Connect` am 9.10., 18:21, nach `observe-jsonl` und `send-json`
+  im `observer_client.cli`; Antwort steht aus. User-Name in die Agent-Orc-Konfiguration, User-Token gibt Peuqui im
+  Browser ein (pro Gerät), der Server reicht es nur durch.
+- **Kontingent je Anbieter:** heute nur Claude (`QUOTA_SOURCES` in `context.py`). Für Codex, DashScope usw. erst
+  klären, woher sie ihre Grenzen melden; lokale Modelle zeigen nichts.
 
 ## Sprache am Echo Dot
 
