@@ -225,12 +225,19 @@ class SessionManager:
         return session
 
     def restart(
-        self, session: AgentSession, env: dict[str, str], model: str | None = None
+        self,
+        session: AgentSession,
+        env: dict[str, str],
+        conversation: str | None,
+        model: str | None = None,
     ) -> AgentSession:
         """Resume a running agent in its own session (it reads some settings only at start),
-        with the model it was started with, or `model` if it has none stored."""
+        with its own `conversation` if known, and the model it was started with, or `model` if
+        it has none stored."""
         chosen = session.chosen_model if model is None else model
-        command = self._command(session.profile, session.path, session.suffix, True, None, chosen)
+        command = self._command(
+            session.profile, session.path, session.suffix, True, conversation, chosen
+        )
         return self._respawn(session, session.profile, command, chosen, env)
 
     def change_profile(
@@ -240,11 +247,14 @@ class SessionManager:
         resume: bool,
         model: str | None,
         env: dict[str, str],
+        conversation: str | None,
     ) -> AgentSession:
         """Replace the agent by another profile's in the same session (ending a running one;
-        open terminals and workspace columns stay valid). `resume` continues the folder's last
-        conversation, which only a profile with the same conversations can do."""
-        command = self._command(profile_name, session.path, session.suffix, resume, None, model)
+        open terminals and workspace columns stay valid). `resume` continues its `conversation`
+        (or the folder's last), which only a profile with the same conversations can do."""
+        command = self._command(
+            profile_name, session.path, session.suffix, resume, conversation, model
+        )
         return self._respawn(session, profile_name, command, model, env)
 
     def _command(
@@ -266,7 +276,9 @@ class SessionManager:
                 for argument in profile.conversations.resume
             ]
         else:
-            arguments = profile.resume if resume else profile.start
+            # The folder's last conversation belongs to its first agent: a further one only goes
+            # on with its own (by id, above), so it starts anew without one.
+            arguments = profile.resume if resume and suffix is None else profile.start
         return build_command(arguments, agent_name(path, suffix), model)
 
     def _respawn(

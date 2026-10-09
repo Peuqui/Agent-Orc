@@ -64,6 +64,12 @@ def tmux_query(socket_name: str, *arguments: str) -> str:
     ).stdout.strip()
 
 
+def pane_command(socket_name: str, session_id: str) -> str:
+    return tmux_query(
+        socket_name, "display-message", "-p", "-t", f"={session_id}:", "#{pane_start_command}"
+    )
+
+
 def wait_until_exited(manager: SessionManager, path: Path) -> AgentSession:
     for _ in range(50):
         session = manager.find(path, terminal=False, suffix=None)
@@ -140,7 +146,7 @@ def test_restart_resumes_a_running_agent_in_its_session(
     manager: SessionManager, workdir: Path, socket_name: str
 ) -> None:
     session = manager.start("sleeper", workdir, resume=False)
-    restarted = manager.restart(session, {})
+    restarted = manager.restart(session, {}, None)
     assert (restarted.id, restarted.running) == (session.id, True)
     target = f"={session.id}:"
     command = tmux_query(
@@ -219,9 +225,12 @@ def test_further_agents_in_a_folder_are_set_apart_by_their_suffix(
     assert manager.find(workdir, terminal=False, suffix="Review") == review
     with pytest.raises(SessionAlreadyRunningError):
         manager.start("sleeper", workdir, resume=False, suffix="Review")
-    # A restart keeps the agent apart: same id, same suffix.
-    assert manager.restart(review, env={}) == manager.find(workdir, terminal=False, suffix="Review")
-    assert manager.restart(review, env={}).suffix == "Review"
+    # A restart keeps the agent apart: same id, same suffix. Without a conversation of its own
+    # it starts anew ("sleep 60"), as the folder's last one ("sleep 61") belongs to the first.
+    restarted = manager.restart(review, {}, None)
+    assert (restarted.id, restarted.suffix) == (review.id, "Review")
+    assert pane_command(socket_name, review.id) == "sleep 60"
+    assert pane_command(socket_name, manager.restart(first, {}, None).id) == "sleep 61"
 
 
 def test_chosen_model_and_environment_stay_with_the_session(
@@ -240,7 +249,7 @@ def test_chosen_model_and_environment_stay_with_the_session(
 
     assert "started qwen medium" in screen()
     # A restart takes the same model, and the environment it is given now.
-    restarted = manager.restart(session, {"ORC_EFFORT": "xhigh"})
+    restarted = manager.restart(session, {"ORC_EFFORT": "xhigh"}, None)
     assert restarted.chosen_model == "qwen"
     for _ in range(50):
         if "resumed qwen xhigh" in manager.text(session.id, 50):

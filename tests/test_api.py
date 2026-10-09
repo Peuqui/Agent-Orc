@@ -781,6 +781,32 @@ def test_restart_resumes_a_busy_agent_with_its_waiting_effort(
     assert client.post("/api/sessions/unknown/restart").status_code == 404
 
 
+def test_restart_goes_on_with_the_agents_own_conversation(
+    client: TestClient, home: Path, socket_name: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
+    start = {
+        "profile": "talker_too",
+        "path": str(home / "projects"),
+        "resume": False,
+        "effort": None,
+        "ultracode": False,
+        "conversation": None,
+    }
+    session_id = client.post("/api/sessions", json=start).json()["id"]
+    transcript = home / "conversation-0001.jsonl"
+    transcript.write_text("{}\n")
+    store_status(session_id, {"model": {"display_name": "M"}, "transcript_path": str(transcript)})
+    client.post(f"/api/sessions/{session_id}/restart")
+    command = subprocess.run(
+        ["tmux", "-L", socket_name, "display-message", "-p", "-t", f"={session_id}:",
+         "#{pane_start_command}"],
+        capture_output=True, text=True, check=True,
+    ).stdout.strip()  # fmt: skip
+    # Its own conversation by id (the profile's conversations.resume), not the folder's last.
+    assert command == "sleep 64"
+
+
 def test_pending_effort_applies_when_the_agent_is_done(
     config: Config, clock: FakeClock, home: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

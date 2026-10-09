@@ -657,7 +657,7 @@ def create_app(
             return session
         settle_permission_mode(session.profile, session.path)
         env = start_env(session.profile, session.path, session.suffix, session.chosen_model)
-        restarted = sessions.restart(session, env)
+        restarted = sessions.restart(session, env, own_conversation(session))
         # The ended agent cannot report that it stopped working.
         store_activity(session.id, busy=False)
         return restarted
@@ -1276,7 +1276,7 @@ def create_app(
             store_model_reasoning(session, model, body.effort if body else None)
         settle_permission_mode(session.profile, session.path)
         env = start_env(session.profile, session.path, session.suffix, chosen)
-        restarted = sessions.restart(session, env, model)
+        restarted = sessions.restart(session, env, own_conversation(session), model)
         # The ended agent cannot report that it stopped working.
         store_activity(session_id, busy=False)
         return restarted
@@ -1338,6 +1338,12 @@ def create_app(
     def cancel_model_change(session_id: str) -> None:
         pending_model.pop(session_id, None)
 
+    def own_conversation(session: AgentSession) -> str | None:
+        """The id of the conversation the agent is in (its transcript's name); None until it
+        has one."""
+        transcript = session_transcript(session)
+        return None if transcript is None else transcript.stem
+
     def carries_conversation(from_profile: str, to_profile: str) -> bool:
         """Whether the folder's conversation goes on with the other profile: both keep it in
         the same place (Claude Code with the Anthropic models or a local one)."""
@@ -1365,7 +1371,10 @@ def create_app(
         )
         pending_effort.pop(session_id, None)
         pending_model.pop(session_id, None)
-        switched = sessions.change_profile(session, body.profile, resume, body.model, env)
+        conversation = own_conversation(session) if resume else None
+        switched = sessions.change_profile(
+            session, body.profile, resume, body.model, env, conversation
+        )
         # The ended agent cannot report that it stopped working.
         store_activity(session_id, busy=False)
         return switched
