@@ -234,7 +234,9 @@
     "dictationService": "Dictation service",
     "dictationServiceLine": "{engine} · GPU {gpu} · CPU {cpu}",
     "dictationServiceHint": "The Whisper service sets its speech recognition itself (engine, quality, model). Here you only see what it uses. Per recording you choose only GPU or CPU.",
-    "keys": "Arrange extra keys …"
+    "keys": "Arrange extra keys …",
+    "reload": "Reload the app",
+    "reloadHint": "Fetches the newest version if it did not come by itself (the full-screen pages cannot be pulled down)."
   },
   "attach": {
     "title": "Attach a photo, screenshot or file",

@@ -19,6 +19,7 @@ import HandoverSettings from './HandoverSettings.vue'
 import KeysEditor from './KeysEditor.vue'
 import PushSettings from './PushSettings.vue'
 import SpeechSettings from './SpeechSettings.vue'
+import { reloadToNewVersion } from '../update'
 
 // Settings of this device; more entries join here as they become adjustable.
 const { scrollLines, lineHeight, fontSize, stepFontSize, terminalFont } = useSettings()
@@ -117,6 +118,10 @@ function changeScrollLines(delta: number): void {
       <SpeechSettings />
       <PushSettings />
       <HandoverSettings />
+      <button class="btn-secondary btn-small mt-3 w-full justify-center" @click="reloadToNewVersion">
+        {{ $t('settings.reload') }}
+      </button>
+      <p class="mt-1 text-xs text-slate-500">{{ $t('settings.reloadHint') }}</p>
     </div>
     <template #extra><KeysEditor v-if="editingKeys" @close="editingKeys = false" /></template>
   </DropdownMenu>
