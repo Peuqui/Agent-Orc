@@ -413,13 +413,23 @@
       "new": "neu"
     }
   },
+  "cache": {
+    "active": "aktiv",
+    "expiresIn": "Zwischenspeicher (Cache) läuft in {time} ab",
+    "coldFor": "Zwischenspeicher seit {time} kalt: die nächste Nachricht liest den ganzen Kontext neu ein",
+    "handover": {
+      "asked": "Übergabe angefordert",
+      "working": "Übergabe läuft",
+      "done": "Übergabe liegt vor",
+      "advised": "Übergabe empfohlen"
+    }
+  },
   "handover": {
     "advice": "Kontext bei {percent} % – Übergabe an eine frische Sitzung empfohlen",
-    "cold": "Zwischenspeicher kalt, die nächste Nachricht liest alles neu ein",
     "request": "Übergabe schreiben lassen",
     "requestHint": "Tippt dem Agenten die Bitte um ein Übergabe-Dokument ein",
     "auto": "Übergabe automatisch anstoßen",
-    "autoHint": "Ist der Kontext eines untätigen Agenten groß, bittet Agent-Orc ihn selbst um ein Übergabe-Dokument – auch wenn kein Gerät offen ist."
+    "autoHint": "Ist der Kontext eines ruhenden Agenten groß, bittet Agent-Orc ihn kurz bevor sein Zwischenspeicher abläuft selbst um ein Übergabe-Dokument, einmal je Ruhepause und auch wenn kein Gerät offen ist. Ausgeschaltet kommt dann nur eine Benachrichtigung."
   },
   "consumption": {
     "title": "Verbrauch",

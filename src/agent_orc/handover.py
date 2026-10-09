@@ -1,31 +1,42 @@
 """Handover advice: an agent whose context is filling up should hand over to a fresh session.
 
 A large context costs on every message, the more so once the prompt cache has gone cold (after
-a pause the whole context is read in again at full price). From a threshold on, Agent-Orc
-advises a handover: on the agent's card, once as a push message, and, if the user switched it
-on, by typing the handover request into the idle agent itself.
+a pause the whole context is read in again at full price). An agent whose context is beyond
+the threshold is advised to hand over shortly before its cache expires while it rests: once
+as a push message, or, if the user switched it on, by typing the handover request into the
+agent itself, which writes it while the cache is still warm.
+
+Writing the handover warms the cache again; it would be due again an hour later. So a
+handover runs its course (asked, working, done) and stays done until the user's next input;
+the agent is left to go cold after that.
 """
 
 import json
-import time
 from dataclasses import dataclass
 from typing import Any
 
+from agent_orc.cache import CacheState
 from agent_orc.config import HandoverConfig
-from agent_orc.context import activity_file, session_busy, session_status
+from agent_orc.context import session_busy, session_status
 from agent_orc.sessions import AgentSession
 from agent_orc.state import state_dir, write_atomically
 
 SETTINGS_FILE = "handover.json"
 SECONDS_PER_MINUTE = 60
 PERCENT = 100
+# Where a handover stands: typed into the agent, being written, written; or only advised to
+# the user (automatic handovers switched off).
+ASKED = "asked"
+WORKING = "working"
+DONE = "done"
+ADVISED = "advised"
 
 
 @dataclass(frozen=True)
 class HandoverAdvice:
     recommended: bool
-    # Idle long enough for the prompt cache to have expired.
-    cache_cold: bool
+    # Resting, and its prompt cache expires within the lead time (or has expired).
+    due: bool
 
 
 def context_percent(session: AgentSession) -> float | None:
@@ -37,20 +48,28 @@ def context_percent(session: AgentSession) -> float | None:
     return percent
 
 
-def idle_seconds(session: AgentSession) -> float | None:
-    """How long the agent has been idle; None while it works or before it ever reported."""
-    path = activity_file(session.id)
-    if not path.is_file() or path.stat().st_mtime < session.created or session_busy(session):
-        return None
-    return time.time() - path.stat().st_mtime
-
-
-def advise(session: AgentSession, config: HandoverConfig) -> HandoverAdvice:
+def advise(
+    session: AgentSession, config: HandoverConfig, cache: CacheState | None, now: float
+) -> HandoverAdvice:
     percent = context_percent(session)
-    idle = idle_seconds(session)
     recommended = session.running and percent is not None and percent >= config.threshold_percent
-    cold = idle is not None and idle >= config.cold_after_minutes * SECONDS_PER_MINUTE
-    return HandoverAdvice(recommended=recommended, cache_cold=recommended and cold)
+    if not recommended or cache is None or session_busy(session):
+        return HandoverAdvice(recommended=recommended, due=False)
+    remaining = cache.last_request + cache.window_seconds - now
+    return HandoverAdvice(
+        recommended=True, due=remaining < config.lead_minutes * SECONDS_PER_MINUTE
+    )
+
+
+def follow_progress(progress: str, busy: bool) -> str | None:
+    """Where a handover stands as the agent works or rests; None once the user's next input
+    has ended it."""
+    if progress == ASKED:
+        return WORKING if busy else ASKED
+    if progress == WORKING:
+        return WORKING if busy else DONE
+    # Done or only advised: whatever the agent works on next, the user gave it.
+    return None if busy else progress
 
 
 def read_auto() -> bool:

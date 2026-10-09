@@ -65,6 +65,17 @@ export function formatTokens(tokens: number, units: string[], locale: string): s
   return `${number.format(rounded)}${units[unit]}`
 }
 
+const MINUTES_PER_HOUR = 60
+
+/** A span in whole minutes: "42 min", from an hour on "1 h 5 min" ("0 min" under a minute). */
+export function formatMinutes(seconds: number): string {
+  const minutes = Math.floor(Math.max(0, seconds) / SECONDS_PER_MINUTE)
+  if (minutes < MINUTES_PER_HOUR) return `${minutes} min`
+  const hours = Math.floor(minutes / MINUTES_PER_HOUR)
+  const rest = minutes % MINUTES_PER_HOUR
+  return rest === 0 ? `${hours} h` : `${hours} h ${rest} min`
+}
+
 /** Seconds as "m:ss", e.g. 476 → "7:56". */
 export function formatCountdown(seconds: number): string {
   const whole = Math.max(0, Math.floor(seconds))

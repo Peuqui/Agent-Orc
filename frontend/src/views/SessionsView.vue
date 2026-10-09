@@ -8,6 +8,7 @@ import BaseDialog from '../components/BaseDialog.vue'
 import BroadcastButton from '../components/BroadcastButton.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
 import ModelDialog from '../components/ModelDialog.vue'
+import CacheAge from '../components/CacheAge.vue'
 import ContextMeter from '../components/ContextMeter.vue'
 import ReasoningControl from '../components/ReasoningControl.vue'
 import QuotaPanel from '../components/QuotaPanel.vue'
@@ -282,6 +283,7 @@ function resumeWith(session: AgentSession, model: string | null, effort: string 
         <div class="flex items-center gap-3">
           <div class="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-3">
             <h2 class="font-semibold">{{ sessionName(session) }}</h2>
+            <CacheAge v-if="session.running" :session="session" />
             <span class="min-w-0 truncate text-xs text-slate-500">{{ session.path }}</span>
             <span class="text-sm text-slate-400">
               {{ labels.get(session.profile) ?? session.profile }}
@@ -362,10 +364,7 @@ function resumeWith(session: AgentSession, model: string | null, effort: string 
           v-if="session.handover.recommended && !session.busy"
           class="flex flex-wrap items-center gap-2 rounded-lg border border-amber-700 bg-amber-950/40 px-3 py-2 text-sm text-amber-200"
         >
-          <span class="flex-1">
-            {{ $t('handover.advice', { percent: contextPercent(session) }) }}
-            <span v-if="session.handover.cache_cold" class="text-amber-300/80"> · {{ $t('handover.cold') }}</span>
-          </span>
+          <span class="flex-1">{{ $t('handover.advice', { percent: contextPercent(session) }) }}</span>
           <button class="btn-secondary btn-small" :title="$t('handover.requestHint')" @click="requestHandover(session)">
             {{ $t('handover.request') }}
           </button>

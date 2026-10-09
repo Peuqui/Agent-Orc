@@ -413,13 +413,23 @@
       "new": "new"
     }
   },
+  "cache": {
+    "active": "active",
+    "expiresIn": "Prompt cache expires in {time}",
+    "coldFor": "Prompt cache cold for {time}: the next message reads the whole context in again",
+    "handover": {
+      "asked": "handover asked",
+      "working": "handover in progress",
+      "done": "handover written",
+      "advised": "handover advised"
+    }
+  },
   "handover": {
     "advice": "Context at {percent} % – a handover to a fresh session is advised",
-    "cold": "cache cold, the next message reads it all in again",
     "request": "Ask for a handover",
     "requestHint": "Types the request for a handover document into the agent",
     "auto": "Ask for handovers automatically",
-    "autoHint": "When an idle agent's context is large, Agent-Orc asks it for a handover document itself – also when no device is open."
+    "autoHint": "When a resting agent's context is large, Agent-Orc asks it for a handover document itself shortly before its prompt cache expires, once per rest and also when no device is open. Switched off, only a notification comes."
   },
   "consumption": {
     "title": "Consumption",

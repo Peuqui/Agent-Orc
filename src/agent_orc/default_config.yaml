@@ -58,12 +58,13 @@ terminal:
   text_history_lines: 5000
 
 # Handover advice: from this share of its context window on, an agent's card advises a handover
-# to a fresh session, a push message says so once, and, if switched on in the settings menu,
-# the prompt below is typed into the idle agent by itself.
+# to a fresh session. Shortly before a resting agent's prompt cache expires, a push message says
+# so once, or, if switched on in the settings menu, the prompt below is typed into the agent by
+# itself; it is told when the handover is written.
 handover:
   threshold_percent: 50
-  # Idle this long, the prompt cache has expired and the next message reads it all in again.
-  cold_after_minutes: 60
+  # Minutes before the cache expires (after one hour of rest, as a rule) the handover is due.
+  lead_minutes: 10
   prompt: "Your context is getting large. Write a handover document for the next session: goal, current state, decisions made, open tasks and next steps, with the files that matter. Save it in the project and tell me its path."
 
 # An agent stopped by its usage limit (Claude's StopFailure hook, see the claude profile) gets

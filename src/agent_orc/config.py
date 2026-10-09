@@ -81,8 +81,9 @@ class HandoverConfig(StrictModel):
     """When an agent's context is large enough to advise a handover to a fresh session."""
 
     threshold_percent: int
-    # Idle this long, the prompt cache has expired: the next message reads it all in again.
-    cold_after_minutes: int
+    # This long before a resting agent's prompt cache expires, the handover is due (written
+    # while the cache is warm; after that the next message reads it all in again).
+    lead_minutes: int
     # Typed into the agent to ask for its handover.
     prompt: str
 

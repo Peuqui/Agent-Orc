@@ -6,6 +6,7 @@ import os
 import signal
 import subprocess
 import time
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -22,6 +23,7 @@ from agent_orc.config import Config, DictationConfig, default_config_text
 from agent_orc.context import store_activity, store_status
 from agent_orc.effort import agent_settings_file
 from agent_orc.events import ChangeNotifier
+from agent_orc.handover import write_auto
 from agent_orc.history import claude_project_dir
 from agent_orc.schedule import mark_limited, read_scheduled
 from agent_orc.sessions import SESSION_ENV
@@ -1035,39 +1037,59 @@ def test_changes_of_an_agents_project(client: TestClient, home: Path) -> None:
     assert other.status_code == 404
 
 
-def report_context(session_id: str, tokens: int) -> None:
-    store_status(
-        session_id,
-        {
-            "model": {"display_name": "Opus"},
-            "context_window": {
-                "context_window_size": 1000,
-                "current_usage": {"input_tokens": tokens},
-            },
+def report_context(session_id: str, tokens: int, transcript: Path | None = None) -> None:
+    status: dict[str, Any] = {
+        "model": {"display_name": "Opus"},
+        "context_window": {
+            "context_window_size": 1000,
+            "current_usage": {"input_tokens": tokens},
         },
-    )
+    }
+    if transcript is not None:
+        status["transcript_path"] = str(transcript)
+    store_status(session_id, status)
 
 
-def test_handover_is_advised_from_the_threshold_on(
-    client: TestClient, home: Path, socket_name: str, monkeypatch: pytest.MonkeyPatch
+def answered_at(transcript: Path, at: float) -> Path:
+    """A transcript whose last answer came at `at` and wrote to the cache for an hour."""
+    stamp = datetime.fromtimestamp(at, UTC).isoformat().replace("+00:00", "Z")
+    usage = {"cache_creation": {"ephemeral_1h_input_tokens": 500, "ephemeral_5m_input_tokens": 0}}
+    entry = {"type": "assistant", "timestamp": stamp, "message": {"usage": usage}}
+    transcript.write_text(json.dumps(entry) + "\n")
+    return transcript
+
+
+def test_handover_is_due_shortly_before_the_cache_expires(
+    client: TestClient,
+    clock: FakeClock,
+    home: Path,
+    socket_name: str,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
     session_id = start_shell(client, home / "projects")
-    report_context(session_id, 400)
-    assert client.get("/api/sessions").json()[0]["handover"] == {
-        "recommended": False,
-        "cache_cold": False,
-    }
-    report_context(session_id, 600)
+    transcript = answered_at(home / "conversation.jsonl", clock())
+    report_context(session_id, 400, transcript)
     store_activity(session_id, busy=False)
-    assert client.get("/api/sessions").json()[0]["handover"] == {
-        "recommended": True,
-        "cache_cold": False,
+    listed = client.get("/api/sessions").json()[0]
+    assert listed["handover"] == {"recommended": False, "due": False, "progress": None}
+    lead = 10 * 60
+    assert listed["cache"] == {
+        "last_request": clock(),
+        "window_seconds": 3600,
+        "lead_seconds": lead,
     }
-    # Two hours later, idle for longer than the cache lasts.
-    later = time.time() + 2 * 3600
-    monkeypatch.setattr("agent_orc.handover.time.time", lambda: later)
-    assert client.get("/api/sessions").json()[0]["handover"]["cache_cold"] is True
+
+    report_context(session_id, 600, transcript)
+    assert client.get("/api/sessions").json()[0]["handover"]["recommended"] is True
+    clock.advance(49 * 60)
+    assert client.get("/api/sessions").json()[0]["handover"]["due"] is False
+    # Within the last ten minutes of the hour.
+    clock.advance(2 * 60)
+    assert client.get("/api/sessions").json()[0]["handover"]["due"] is True
+    # Not into a working agent.
+    store_activity(session_id, busy=True)
+    assert client.get("/api/sessions").json()[0]["handover"]["due"] is False
 
     assert client.post(f"/api/sessions/{session_id}/handover").status_code == 204
     screen = subprocess.run(
@@ -1075,6 +1097,44 @@ def test_handover_is_advised_from_the_threshold_on(
         capture_output=True, text=True, check=True,
     ).stdout  # fmt: skip
     assert "handover document" in screen
+    assert client.get("/api/sessions").json()[0]["handover"]["progress"] == "asked"
+
+
+def test_automatic_handover_runs_once_per_rest(
+    config: Config, clock: FakeClock, home: Path, socket_name: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
+    monkeypatch.setattr("agent_orc.api.AGENT_CHECK_SECONDS", 0.1)
+    write_auto(True)
+    with TestClient(
+        create_app(config, new_credentials(PASSWORD), static_dir=None, clock=clock)
+    ) as client:
+        client.post("/api/login", json={"password": PASSWORD})
+        session_id = start_shell(client, home / "projects")
+        # Resting for 55 minutes with a large context: due.
+        report_context(session_id, 600, answered_at(home / "conversation.jsonl", clock() - 55 * 60))
+        store_activity(session_id, busy=False)
+
+        def progress_becomes(wanted: str | None) -> bool:
+            for _ in range(30):
+                if client.get("/api/sessions").json()[0]["handover"]["progress"] == wanted:
+                    return True
+                time.sleep(0.1)
+            return False
+
+        assert progress_becomes("asked")
+        assert wait_for_text(client, session_id, "handover document")
+        store_activity(session_id, busy=True)
+        assert progress_becomes("working")
+        # Written: the agent warmed its cache doing so, but it is not asked again.
+        report_context(session_id, 600, answered_at(home / "conversation.jsonl", clock() - 55 * 60))
+        store_activity(session_id, busy=False)
+        assert progress_becomes("done")
+        time.sleep(0.5)
+        assert client.get("/api/sessions").json()[0]["handover"]["progress"] == "done"
+        # The user's next input ends it.
+        store_activity(session_id, busy=True)
+        assert progress_becomes(None)
 
 
 def test_automatic_handover_setting_is_kept(

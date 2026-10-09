@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { moveInList } from '../src/composables/useReorder.ts'
-import { baseName, formatSize, formatTokens, joinPath, parentPath } from '../src/format.ts'
+import { baseName, formatMinutes, formatSize, formatTokens, joinPath, parentPath } from '../src/format.ts'
 
 test('paths are split and joined like the file view expects', () => {
   assert.equal(baseName('/home/mp/Projekte/'), 'Projekte')
@@ -47,4 +47,12 @@ test('token counts are short, with the units of the language', () => {
 test('a count that rounds up to the next unit is written in it', () => {
   assert.equal(formatTokens(999_999, EN_UNITS, 'en'), '1M')
   assert.equal(formatTokens(999_999, DE_UNITS, 'de'), '1 Mio.')
+})
+
+test('spans read in minutes, from an hour on with hours', () => {
+  assert.equal(formatMinutes(59), '0 min')
+  assert.equal(formatMinutes(42 * 60 + 30), '42 min')
+  assert.equal(formatMinutes(3600), '1 h')
+  assert.equal(formatMinutes(3600 + 5 * 60), '1 h 5 min')
+  assert.equal(formatMinutes(-10), '0 min')
 })

@@ -42,6 +42,7 @@ from agent_orc.attachments import (
     uploaded_image,
 )
 from agent_orc.auth import Clock, Credentials, LoginGuard, TokenSigner, verify_password
+from agent_orc.cache import CacheState, cache_state
 from agent_orc.changes import (
     ChangeNotFoundError,
     NotAGitRepositoryError,
@@ -89,7 +90,10 @@ from agent_orc.effort import (
     write_agent_settings,
 )
 from agent_orc.events import ChangeNotifier
-from agent_orc.handover import advise, read_auto, write_auto
+from agent_orc.handover import ADVISED as HANDOVER_ADVISED
+from agent_orc.handover import ASKED as HANDOVER_ASKED
+from agent_orc.handover import DONE as HANDOVER_DONE
+from agent_orc.handover import advise, follow_progress, read_auto, write_auto
 from agent_orc.history import (
     CLAUDE_PROJECTS,
     CONVERSATION_SEARCHES,
@@ -679,31 +683,52 @@ def create_app(
             elif not session.running or not session_busy(session):
                 apply_effort(session, reasoning)
 
-    # Agents already advised to hand over, so the push message comes once; an agent leaves
-    # the set when its context is small again (a fresh conversation, /compact).
-    advised_handover: set[str] = set()
+    # Where each agent's handover stands (see handover.py), so it comes once per rest.
+    handover_progress: dict[str, str] = {}
 
     def ask_for_handover(session: AgentSession) -> None:
         sessions.type_line(session.id, config.handover.prompt)
+        handover_progress[session.id] = HANDOVER_ASKED
+
+    def cache_entry(cache: CacheState | None) -> dict[str, float] | None:
+        """When the cache expires (the page counts down itself) and how long before that the
+        handover is due."""
+        if cache is None:
+            return None
+        lead = config.handover.lead_minutes * SECONDS_PER_MINUTE
+        return {**asdict(cache), "lead_seconds": lead}
+
+    def agent_cache(session: AgentSession) -> CacheState | None:
+        transcript = session_transcript(session)
+        return None if transcript is None else cache_state(transcript)
 
     def check_handovers() -> None:
         auto = read_auto()
-        for session in sessions.list():
-            advice = advise(session, config.handover)
-            if not advice.recommended:
-                advised_handover.discard(session.id)
+        listed = sessions.list()
+        for session_id in handover_progress.keys() - {s.id for s in listed}:
+            del handover_progress[session_id]
+        for session in listed:
+            progress = handover_progress.get(session.id)
+            if progress is not None:
+                follow_handover(session, progress)
                 continue
-            if session.id in advised_handover:
+            if not advise(session, config.handover, agent_cache(session), clock()).due:
                 continue
-            idle = not session_busy(session)
-            # Automatic only into an idle agent, so the request does not mix with its work.
-            if auto and not idle:
-                continue
-            advised_handover.add(session.id)
-            message = agent_message("handover", session.id, session.name, "")
-            send_to_all(message, config.push)
             if auto:
                 ask_for_handover(session)
+            else:
+                handover_progress[session.id] = HANDOVER_ADVISED
+                send_to_all(agent_message("handover", session.id, session.name, ""), config.push)
+
+    def follow_handover(session: AgentSession, progress: str) -> None:
+        followed = follow_progress(progress, session_busy(session))
+        if followed is None:
+            del handover_progress[session.id]
+            return
+        handover_progress[session.id] = followed
+        if followed == HANDOVER_DONE and progress != HANDOVER_DONE:
+            message = agent_message("handover_done", session.id, session.name, "")
+            send_to_all(message, config.push)
 
     def plan_limit_resumes() -> None:
         """Resume agents stopped by their usage limit once it is reset, as far as their quota
@@ -1164,6 +1189,7 @@ def create_app(
         empty = {"model": None, "context_tokens": None, "context_window": None}
         pending = pending_effort.get(session.id)
         status = session_status(session)
+        cache = agent_cache(session)
         own = agent_reasoning(session.profile, session.id)
         return {
             **asdict(session),
@@ -1177,7 +1203,11 @@ def create_app(
             "ultracode": own.ultracode,
             "permission_mode": agent_permission_mode(session.profile, session.id),
             "worktree": is_worktree(session.path),
-            "handover": asdict(advise(session, config.handover)),
+            "handover": {
+                **asdict(advise(session, config.handover, cache, clock())),
+                "progress": handover_progress.get(session.id),
+            },
+            "cache": cache_entry(cache),
             # Waiting for the user's answer; normally at most one, as Claude asks one at a time.
             "approvals": [asdict(r) for r in requests if r.session == session.id],
             # The slider's levels: the profile's, or those of the chosen model.

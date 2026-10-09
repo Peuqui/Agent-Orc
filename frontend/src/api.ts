@@ -166,6 +166,8 @@ export interface ExistingPath {
   kind: 'file' | 'folder'
 }
 
+export type HandoverProgress = 'asked' | 'working' | 'done' | 'advised'
+
 export interface AgentSession {
   id: string
   profile: string
@@ -198,8 +200,12 @@ export interface AgentSession {
   scheduled: ScheduledPrompt[]
   /** Runs in a git worktree of its own (removable once ended). */
   worktree: boolean
-  /** From the configured share of the context on: hand over to a fresh session. */
-  handover: { recommended: boolean; cache_cold: boolean }
+  /** From the configured share of the context on: hand over to a fresh session; due shortly
+   * before the cache of the resting agent expires; where a handover stands (handover.py). */
+  handover: { recommended: boolean; due: boolean; progress: HandoverProgress | null }
+  /** When the prompt cache expires: the last request (Unix seconds) plus its window; the
+   * handover is due lead_seconds before. Null until the agent has answered. */
+  cache: { last_request: number; window_seconds: number; lead_seconds: number } | null
   /** A reasoning change waits until the current answer is finished. */
   effort_pending: boolean
   pending_effort: string | null
