@@ -104,8 +104,10 @@
 
 /* A Markdown file shown as a page (EditorView, markdown.ts). */
 @layer components {
+  /* Long paths, addresses and inline code break at the edge instead of widening the page (in a
+     narrow answers column a single one made the whole list scroll sideways). */
   .markdown {
-    @apply leading-relaxed text-slate-200;
+    @apply leading-relaxed text-slate-200 wrap-anywhere;
   }
   .markdown > * + * {
     @apply mt-3;
