@@ -211,8 +211,10 @@ Vorgehen:
    *Stand 9.10., 17:35:* Bausteine 1, 2, 4 und 5 erledigt und installiert (Zusatz, Startdialog mit Pflichtfeld, Neustart
    mit eigenem Gespräch, Namen auf Karten). `AI_CONNECT_PEER_SUFFIX: "{suffix}"` steht in den drei Claude-Profilen der
    Benutzer-Konfiguration; echt getestet mit zwei Haiku-Agenten: `Mini:peertest` und `Mini:peertest-Test` gleichzeitig
-   online. Offen ist Baustein 3: Die Denkstufe liegt weiter je Ordner in `.claude/settings.local.json`, zwei Agenten im
-   selben Ordner teilen sie also.
+   online. Baustein 3 erledigt am Abend (`19a37aa`): eigene Einstellungsdatei je Agent
+   (`--settings {settings}`), Profil-Eintrag `settings`, `store` entfallen; echt getestet mit zwei Haiku-Agenten im
+   selben Ordner (gemeldet `high` und `low`). Benutzer-Konfiguration migriert, Sicherung
+   `config.yaml.bak-20261009-agent-settings`.
 
    *Verworfen.* Sperre mit vorgemerkter Umschaltung und Eingabe-Tor (unnötig ohne Ausschluss), feste Rollen-
    Konfiguration, Worktree je Agent, Unteragent als einziger Weg.
