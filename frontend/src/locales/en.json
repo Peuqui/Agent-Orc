@@ -12,6 +12,7 @@
     "files": "Files",
     "workspace": "Workspace",
     "notes": "Notes",
+    "peers": "Conversations",
     "consumption": "Consumption",
     "menu": "Pages"
   },
@@ -175,7 +176,9 @@
     "http429": "Too many failed attempts. Please wait {minutes} minutes.",
     "GpuUnavailableError": "No GPU has room for Whisper right now. Switch to CPU.",
     "DictationServiceError": "Whisper is not responding.",
-    "UnsupportedAudioError": "Whisper cannot process this audio format."
+    "UnsupportedAudioError": "Whisper cannot process this audio format.",
+    "UserTokenRefusedError": "The bridge does not know this user token. Enter it again.",
+    "PeerSendError": "AI-Connect did not take the message."
   },
   "dictation": {
     "sendsAtOnceOn": "Send directly on: the recording goes to the agent as soon as it is recognised, without pressing send; a draft in the field goes with it. For this device.",
@@ -650,5 +653,34 @@
     "modeAll": "Everything",
     "summariesHint": "For each message of yours only the agent's paragraph for listening (after the speaker mark), without code and paths",
     "pictures": "{count} picture | {count} pictures"
+  },
+  "peers": {
+    "title": "Conversations",
+    "view": {
+      "tree": "By conversation",
+      "timeline": "Timeline"
+    },
+    "notConfigured": "AI-Connect is not set up (section \"peers\" in the config).",
+    "loading": "Loading the conversations …",
+    "empty": "There were no messages in this period.",
+    "everyone": "everyone",
+    "count": "one message | {count} messages",
+    "answer": "Answer",
+    "to": "To:",
+    "offline": "Not online right now, gets the message later.",
+    "asUser": "Write as User:{name} …",
+    "send": "Send",
+    "sent": "Sent.",
+    "sentOffline": "Sent. Not online, gets it later: {names}",
+    "tokenPlaceholder": "AI-Connect user token",
+    "tokenSave": "Save",
+    "tokenHint": "The token stays in this browser only. The server hands it on to AI-Connect and does not store it.",
+    "tokenChange": "Change token",
+    "streamError": {
+      "token_refused": "The bridge refuses the observer token. Reading along needs a new token.",
+      "token_missing": "AI-Connect's observer token is missing on the server.",
+      "unreachable": "The bridge cannot be reached. Trying again …",
+      "closed": "The bridge closed the connection. Reconnecting …"
+    }
   }
 }

@@ -12,6 +12,7 @@
     "files": "Dateien",
     "workspace": "Arbeitsfläche",
     "notes": "Notizen",
+    "peers": "Gespräche",
     "consumption": "Verbrauch",
     "menu": "Seiten"
   },
@@ -175,7 +176,9 @@
     "http429": "Zu viele Fehlversuche. Bitte warte {minutes} Minuten.",
     "GpuUnavailableError": "Auf keiner GPU ist gerade Platz für Whisper. Schalte auf CPU um.",
     "DictationServiceError": "Whisper antwortet nicht.",
-    "UnsupportedAudioError": "Dieses Audioformat kann Whisper nicht verarbeiten."
+    "UnsupportedAudioError": "Dieses Audioformat kann Whisper nicht verarbeiten.",
+    "UserTokenRefusedError": "Die Bridge kennt dieses User-Token nicht. Gib es neu ein.",
+    "PeerSendError": "AI-Connect hat die Nachricht nicht angenommen."
   },
   "dictation": {
     "sendsAtOnceOn": "Direkt senden an: Die Aufnahme geht nach dem Erkennen gleich an den Agenten, ohne Druck auf Senden; ein Entwurf im Feld geht mit. Gilt für dieses Gerät.",
@@ -650,5 +653,34 @@
     "modeAll": "Alles",
     "summariesHint": "Zu jeder Eingabe von dir nur der Hörabsatz des Agenten (nach dem Lautsprecher-Zeichen), ohne Code und Pfade",
     "pictures": "{count} Bild | {count} Bilder"
+  },
+  "peers": {
+    "title": "Gespräche",
+    "view": {
+      "tree": "Nach Gespräch",
+      "timeline": "Verlauf"
+    },
+    "notConfigured": "AI-Connect ist nicht eingerichtet (Abschnitt „peers“ in der Konfiguration).",
+    "loading": "Lade die Gespräche …",
+    "empty": "In diesem Zeitraum gab es keine Nachrichten.",
+    "everyone": "alle",
+    "count": "eine Nachricht | {count} Nachrichten",
+    "answer": "Antworten",
+    "to": "An:",
+    "offline": "Gerade nicht online, bekommt die Nachricht später.",
+    "asUser": "Als User:{name} schreiben …",
+    "send": "Senden",
+    "sent": "Gesendet.",
+    "sentOffline": "Gesendet. Nicht online, bekommt es später: {names}",
+    "tokenPlaceholder": "User-Token von AI-Connect",
+    "tokenSave": "Speichern",
+    "tokenHint": "Das Token bleibt nur in diesem Browser. Der Server reicht es an AI-Connect weiter und speichert es nicht.",
+    "tokenChange": "Token ändern",
+    "streamError": {
+      "token_refused": "Die Bridge lehnt das Beobachter-Token ab. Mitlesen ist erst nach einem neuen Token möglich.",
+      "token_missing": "Das Beobachter-Token von AI-Connect fehlt auf dem Server.",
+      "unreachable": "Die Bridge ist nicht erreichbar. Neuer Versuch läuft …",
+      "closed": "Die Bridge hat die Verbindung beendet. Verbinde neu …"
+    }
   }
 }

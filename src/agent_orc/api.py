@@ -31,7 +31,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from agent_orc import announce as announcing
-from agent_orc import files
+from agent_orc import files, peers
 from agent_orc.answers import read_image, read_turns
 from agent_orc.approvals import ApprovalNotFoundError, ApprovalRequest, decide, open_requests
 from agent_orc.attachments import (
@@ -89,7 +89,7 @@ from agent_orc.effort import (
     store_agent_reasoning,
     write_agent_settings,
 )
-from agent_orc.events import ChangeNotifier
+from agent_orc.events import KEEP_ALIVE_SECONDS, ChangeNotifier
 from agent_orc.handover import ADVISED as HANDOVER_ADVISED
 from agent_orc.handover import ASKED as HANDOVER_ASKED
 from agent_orc.handover import DONE as HANDOVER_DONE
@@ -228,8 +228,8 @@ class UnknownWorkspaceError(LookupError):
     """No workspace of this name."""
 
 
-class AnnounceNotConfiguredError(LookupError):
-    """The config has no section for the Echo Dot."""
+class NotConfiguredError(LookupError):
+    """The config has no section for this (e.g. the Echo Dot, AI-Connect)."""
 
 
 class UnknownNotebookError(LookupError):
@@ -261,7 +261,7 @@ ERROR_STATUS: dict[type[Exception], int] = {
     UnknownModelError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     UnknownWorkspaceError: status.HTTP_404_NOT_FOUND,
     UnknownNotebookError: status.HTTP_404_NOT_FOUND,
-    AnnounceNotConfiguredError: status.HTTP_404_NOT_FOUND,
+    NotConfiguredError: status.HTTP_404_NOT_FOUND,
     NotebookExistsError: status.HTTP_409_CONFLICT,
     SessionAlreadyRunningError: status.HTTP_409_CONFLICT,
     files.InvalidNameError: status.HTTP_422_UNPROCESSABLE_CONTENT,
@@ -288,6 +288,9 @@ ERROR_STATUS: dict[type[Exception], int] = {
     announcing.UnknownRoomError: status.HTTP_404_NOT_FOUND,
     announcing.TextTooLongError: status.HTTP_413_CONTENT_TOO_LARGE,
     announcing.AnnounceError: status.HTTP_502_BAD_GATEWAY,
+    # Not 401: that would send the page to the login.
+    peers.UserTokenRefusedError: status.HTTP_403_FORBIDDEN,
+    peers.PeerSendError: status.HTTP_502_BAD_GATEWAY,
 }
 
 
@@ -433,6 +436,14 @@ class ScheduledPromptRequest(BaseModel):
     text: str
     # When to type it, in seconds since the epoch.
     at: float
+
+
+class PeerMessageRequest(BaseModel):
+    # The user token of AI-Connect; handed on, never stored.
+    token: str
+    # Peers ("Host:Project"), or "*" for every peer online.
+    to: list[str]
+    content: str
 
 
 class AnnounceRequest(BaseModel):
@@ -983,11 +994,7 @@ def create_app(
     @app.get("/api/workspaces/events", dependencies=authenticated)
     async def workspace_events() -> StreamingResponse:
         """A message whenever a workspace changed, on any device."""
-        return StreamingResponse(
-            workspace_changes.stream(),
-            media_type="text/event-stream",
-            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
-        )
+        return event_stream(workspace_changes.stream())
 
     @app.get("/api/workspaces", dependencies=authenticated)
     def workspaces() -> WorkspaceSet:
@@ -1050,11 +1057,7 @@ def create_app(
     @app.get("/api/notebooks/events", dependencies=authenticated)
     async def notebook_events() -> StreamingResponse:
         """A message whenever a notebook changed, on any device."""
-        return StreamingResponse(
-            notebook_changes.stream(),
-            media_type="text/event-stream",
-            headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"},
-        )
+        return event_stream(notebook_changes.stream())
 
     @app.get("/api/notebooks", dependencies=authenticated)
     def notebooks() -> dict[str, Notebook]:
@@ -1595,6 +1598,35 @@ def create_app(
             raise SessionNotFoundError(session_id)
         return served_file(uploaded_image(session.path, name), download=False)
 
+    @app.get("/api/peers", dependencies=authenticated)
+    def peers_state() -> dict[str, Any]:
+        """Whether AI-Connect is set up, and as whom the user writes to its agents."""
+        settings = config.peers
+        if settings is None:
+            return {"configured": False, "user_name": ""}
+        return {"configured": True, "user_name": settings.user_name}
+
+    @app.get("/api/peers/events", dependencies=authenticated)
+    async def peer_events() -> StreamingResponse:
+        """AI-Connect's lines as they come: the peers, the past messages, then live events. The
+        stream ends with the program (its last line says why); the page then connects again."""
+        settings = config.peers
+        if settings is None:
+            raise NotConfiguredError("peers")
+
+        async def events() -> AsyncIterator[str]:
+            async for line in peers.observe(settings, KEEP_ALIVE_SECONDS):
+                yield ": keep-alive\n\n" if line is None else f"data: {line}\n\n"
+
+        return event_stream(events())
+
+    @app.post("/api/peers/message", dependencies=authenticated)
+    def peer_message(body: PeerMessageRequest) -> dict[str, Any]:
+        """Writes to agents as the user; per recipient the message id and whether it was online."""
+        if config.peers is None:
+            raise NotConfiguredError("peers")
+        return {"sent": peers.send(config.peers, body.token, body.to, body.content)}
+
     @app.get("/api/announce", dependencies=authenticated)
     def announce_state() -> dict[str, Any]:
         """Whether answers can be read on the Echo, what it is called, which rooms are connected now
@@ -1614,12 +1646,12 @@ def create_app(
     def announce_text(body: AnnounceRequest) -> None:
         """Hands the text to AIfred, which says it on the Echo Dot of the room."""
         if config.announce is None:
-            raise AnnounceNotConfiguredError("announce")
+            raise NotConfiguredError("announce")
         announcing.announce(config.announce, config_dir(), body.room, body.texts, body.speaker)
 
     def require_voice_token(authorization: str | None = Header(default=None)) -> None:
         if config.voice is None:
-            raise AnnounceNotConfiguredError("voice")
+            raise NotConfiguredError("voice")
         token = (config_dir() / config.voice.token_file).read_text(encoding="utf-8").strip()
         if not hmac.compare_digest(authorization or "", f"Bearer {token}"):
             raise HTTPException(status.HTTP_401_UNAUTHORIZED)
@@ -1924,6 +1956,15 @@ def create_app(
         app.mount("/", StaticFiles(directory=static_dir, html=True), name="pwa")
 
     return app
+
+
+def event_stream(events: AsyncIterator[str]) -> StreamingResponse:
+    """Server-sent events, neither cached nor held back by a proxy."""
+    return StreamingResponse(
+        events,
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"},
+    )
 
 
 def _error_handler(status_code: int) -> Any:

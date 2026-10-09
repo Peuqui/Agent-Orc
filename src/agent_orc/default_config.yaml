@@ -130,6 +130,19 @@ dictation:
 #   no_agent_line: "Ich weiß nicht, an welchen Agenten. Nenne den Namen zuerst."
 #   no_summary_line: "{agent} ist fertig."
 
+# Reading along in AI-Connect (the bridge between agent sessions) and writing to its agents as
+# the user, through AI-Connect's program for JSON lines. The user token is typed into the browser
+# on each device; the server only hands it on. Remove the leading "#" to switch it on.
+# peers:
+#   command: [venv/bin/python, -m, observer_client.jsonl]
+#   # AI-Connect's folder, where the command runs.
+#   directory: ~/Projekte/AI-Connect
+#   # Messages of this many past hours are shown when the page opens, at most "limit" of them.
+#   hours: 24
+#   limit: 300
+#   # The agents see what you write as coming from User:<user_name>.
+#   user_name: Ada
+
 tmux:
   # Dedicated tmux server socket, so Agent-Orc never touches your own tmux sessions.
   socket_name: agent-orc

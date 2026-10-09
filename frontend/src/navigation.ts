@@ -6,5 +6,6 @@ export const NAV_ITEMS: { to: string; icon: IconName; label: string }[] = [
   { to: '/workspace', icon: 'workspace', label: 'nav.workspace' },
   { to: '/notes', icon: 'notes', label: 'nav.notes' },
   { to: '/files', icon: 'folder', label: 'nav.files' },
+  { to: '/peers', icon: 'peers', label: 'nav.peers' },
   { to: '/consumption', icon: 'chart', label: 'nav.consumption' },
 ]

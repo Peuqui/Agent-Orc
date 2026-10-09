@@ -166,6 +166,26 @@ class VoiceConfig(StrictModel):
     no_summary_line: str
 
 
+class PeersConfig(StrictModel):
+    """Reading along in AI-Connect and writing to its agents as the user, through its program for
+    JSON lines (see peers.py)."""
+
+    # Starts that program; "observe" or "send" and their arguments follow.
+    command: list[str]
+    # Where the command runs (AI-Connect's folder).
+    directory: Path
+    # Messages of this many past hours are shown when the page opens, at most `limit` of them.
+    hours: float
+    limit: int
+    # The agents see what is written here as coming from User:<user_name>.
+    user_name: str
+
+    @field_validator("directory")
+    @classmethod
+    def expand_home(cls, value: Path) -> Path:
+        return value.expanduser()
+
+
 class TmuxConfig(StrictModel):
     socket_name: str
 
@@ -290,6 +310,8 @@ class Config(StrictModel):
     announce: AnnounceConfig | None = None
     # Without it nobody can speak to an agent through the Echo; needs "announce" for its answers.
     voice: VoiceConfig | None = None
+    # Without it there is no AI-Connect to read along in.
+    peers: PeersConfig | None = None
     tmux: TmuxConfig
     agents: dict[str, AgentProfile]
 

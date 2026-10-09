@@ -45,6 +45,7 @@ export const ICONS = {
   template: 'M5 4h14v16H5z M8 8h8 M8 12h8 M8 16h5',
   notes: 'M6 3h12v18H6z M9 7h6 M9 11h6 M9 15h3',
   answers: 'M4 5h16v11H10l-5 4v-4H4z M8 9h8 M8 12h5',
+  peers: 'M3 4h12v8H8l-3 3v-3H3z M18 8h3v9h-2v3l-3-3h-6v-2',
   pause: 'M8 5v14 M16 5v14',
   speaker: 'M4 10v4h3l5 4V6l-5 4z M16 9a4 4 0 0 1 0 6',
   menu: 'M4 6h16 M4 12h16 M4 18h16',
