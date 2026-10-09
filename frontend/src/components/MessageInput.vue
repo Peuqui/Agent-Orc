@@ -8,6 +8,7 @@ import { attachInOrder } from '../attachInOrder'
 import { pastedImages } from '../composables/usePastedImages'
 import { useToast } from '../composables/useToast'
 import { TOUCH_FIRST } from '../device'
+import { isSendKey } from '../sendKey'
 import AppIcon from './AppIcon.vue'
 import { baseName } from '../format'
 import AttachMenu from './AttachMenu.vue'
@@ -203,8 +204,7 @@ async function submit(): Promise<void> {
 }
 
 function onKeydown(event: KeyboardEvent): void {
-  // Enter sends (also the phone keyboard's send key); Shift+Enter starts a new line.
-  if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
+  if (isSendKey(event)) {
     event.preventDefault()
     void submit()
   }

@@ -6,6 +6,7 @@ import PeerLanes from '../components/PeerLanes.vue'
 import PeerMessageItem from '../components/PeerMessageItem.vue'
 import { useToast } from '../composables/useToast'
 import { formatMoment } from '../format'
+import { isSendKey } from '../sendKey'
 import { EVERYONE, groupConversations, isMachine, laneLabel, lanesOf, replyRecipients, type Conversation } from '../peerConversations'
 
 // AI-Connect read along: the conversations between the agents, live, and a field to write to
@@ -123,6 +124,12 @@ function answer(conversation: Conversation): void {
 }
 
 const canSend = computed(() => recipients.value.length > 0 && text.value.trim() !== '' && !sending.value)
+
+function onKeydown(event: KeyboardEvent): void {
+  if (!isSendKey(event)) return
+  event.preventDefault()
+  if (canSend.value) void send()
+}
 
 async function send(): Promise<void> {
   sending.value = true
@@ -268,7 +275,9 @@ async function send(): Promise<void> {
             <textarea
               v-model="text"
               rows="1"
+              enterkeyhint="send"
               class="input max-h-40 min-w-0 flex-1 resize-none [field-sizing:content]"
+              @keydown="onKeydown"
               :placeholder="$t('peers.asUser', { name: userName })"
             />
             <button type="submit" class="btn-primary btn-small" :disabled="!canSend">{{ $t('peers.send') }}</button>
