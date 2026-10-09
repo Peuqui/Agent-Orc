@@ -9,6 +9,9 @@ const TAB_STATE_KEY = 'agent-orc-workspace-tab'
 // tab to the front instead of a second one.
 const WINDOW_NAME_PREFIX = 'agent-orc-workspace:'
 export const MIN_VISIBLE = 1
+// A column's tab dropped on another workspace's tab moves the agent there: the drop target is this
+// prefix and the workspace's name (empty for the unnamed one).
+export const WORKSPACE_DROP = 'workspace:'
 // The tabs of this browser tell each other which named workspace they show.
 const CHANNEL_NAME = 'agent-orc-workspaces'
 
