@@ -5,7 +5,7 @@ import { api, type AnswerText, type Interjection, type SpokenRequest, type Turn 
 import { isUnread, shownTexts, spokenAs, uploadMentions } from '../answers'
 import { summaryOf } from '../speechText'
 import { markSeen, seenUntil } from '../composables/useAnswerSeen'
-import { useAnswersAll } from '../composables/useSettings'
+import { useAnswersAll, useSettings } from '../composables/useSettings'
 import { useSeenOnScreen } from '../composables/useSeenOnScreen'
 import { sessionName, useSessions } from '../composables/useSessions'
 import { type Speakable, useSpeech } from '../composables/useSpeech'
@@ -26,6 +26,8 @@ const SEEN_AFTER_MS = 2000
 const toast = useToast()
 const { locale } = useI18n()
 const answersAll = useAnswersAll(props.sessionId)
+const { answersScale } = useSettings()
+const PERCENT = 100
 const { sessions } = useSessions()
 const speech = useSpeech()
 const turns = ref<Turn[]>([])
@@ -201,7 +203,9 @@ function jog(lines: number): void {
       </template>
     </div>
     <div class="flex min-h-0 flex-1">
-    <div ref="box" class="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-y-auto p-3 [scrollbar-width:none]">
+    <div ref="box" class="min-h-0 min-w-0 flex-1 overflow-y-auto p-3 [scrollbar-width:none]">
+    <!-- Scaled as a whole (the device's answers size), so all sizes keep their proportions. -->
+    <div class="flex flex-col gap-4" :style="{ zoom: answersScale / PERCENT }">
       <p v-if="loaded && !turns.length" class="text-slate-400">{{ $t('answers.empty') }}</p>
       <section v-for="entry in shown" :key="entry.turn.id" class="flex flex-col gap-2">
         <!-- What the user asked: a few lines, more on a click. -->
@@ -260,6 +264,7 @@ function jog(lines: number): void {
           {{ $t('answers.working') }}
         </p>
       </section>
+    </div>
     </div>
     <JogScroller @scroll="jog" />
     </div>

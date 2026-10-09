@@ -237,6 +237,8 @@
     "font": "Terminal font",
     "fontSize": "Font size",
     "fontSizeHint": "For all terminals on this device.",
+    "answersScale": "Size of the answers",
+    "answersScaleHint": "Scales the answers view as a whole, its texts keep their proportions. For this device.",
     "dictationService": "Dictation service",
     "dictationServiceLine": "{engine} · GPU {gpu} · CPU {cpu}",
     "dictationServiceHint": "The Whisper service sets its speech recognition itself (engine, quality, model). Here you only see what it uses. Per recording you choose only GPU or CPU.",

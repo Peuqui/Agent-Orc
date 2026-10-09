@@ -22,7 +22,7 @@ import SpeechSettings from './SpeechSettings.vue'
 import { reloadToNewVersion } from '../update'
 
 // Settings of this device; more entries join here as they become adjustable.
-const { scrollLines, lineHeight, fontSize, stepFontSize, terminalFont } = useSettings()
+const { scrollLines, lineHeight, fontSize, stepFontSize, answersScale, stepAnswersScale, terminalFont } = useSettings()
 const toast = useToast()
 const open = ref(false)
 // The extra-keys editor stays open after the menu has closed.
@@ -84,6 +84,15 @@ function changeScrollLines(delta: number): void {
         </div>
       </div>
       <p class="mt-1 mb-3 text-xs text-slate-500">{{ $t('settings.fontSizeHint') }}</p>
+      <div class="flex items-center justify-between gap-2 text-sm text-slate-300">
+        <span>{{ $t('settings.answersScale') }}</span>
+        <div class="flex items-center gap-1">
+          <button class="btn-icon size-7" :aria-label="$t('settings.less')" @click="stepAnswersScale(-1)">−</button>
+          <span class="w-11 text-center tabular-nums">{{ answersScale }} %</span>
+          <button class="btn-icon size-7" :aria-label="$t('settings.more')" @click="stepAnswersScale(1)">+</button>
+        </div>
+      </div>
+      <p class="mt-1 mb-3 text-xs text-slate-500">{{ $t('settings.answersScaleHint') }}</p>
       <div class="flex items-center justify-between gap-2 text-sm text-slate-300">
         <span>{{ $t('settings.scrollLines') }}</span>
         <div class="flex items-center gap-1">

@@ -13,6 +13,11 @@ export const MIN_LINE_HEIGHT = 1
 export const MAX_LINE_HEIGHT = 1.6
 export const LINE_HEIGHT_STEP = 0.05
 export const DEFAULT_FONT_SIZE = 14
+// Size of the answers view, in percent, as a whole (its texts keep their proportions).
+export const DEFAULT_ANSWERS_SCALE = 100
+export const MIN_ANSWERS_SCALE = 70
+export const MAX_ANSWERS_SCALE = 200
+export const ANSWERS_SCALE_STEP = 10
 export const MIN_FONT_SIZE = 8
 export const MAX_FONT_SIZE = 28
 
@@ -65,6 +70,8 @@ const scrollLines = setting('agent-orc-scroll-lines', DEFAULT_SCROLL_LINES, Numb
 const lineHeight = setting('agent-orc-line-height', DEFAULT_LINE_HEIGHT, Number)
 /** Font size of every terminal of this device. */
 const fontSize = setting('agent-orc-font-size', DEFAULT_FONT_SIZE, Number)
+/** Size of every answers view of this device, in percent. */
+const answersScale = setting('agent-orc-answers-scale', DEFAULT_ANSWERS_SCALE, Number)
 const terminalFont = setting<TerminalFont>(
   'agent-orc-terminal-font',
   'jetbrains',
@@ -124,12 +131,20 @@ function stepFontSize(delta: number): void {
   fontSize.value = Math.min(MAX_FONT_SIZE, Math.max(MIN_FONT_SIZE, fontSize.value + delta))
 }
 
+/** One step larger (1) or smaller (-1), within the bounds. */
+function stepAnswersScale(delta: number): void {
+  const scale = answersScale.value + delta * ANSWERS_SCALE_STEP
+  answersScale.value = Math.min(MAX_ANSWERS_SCALE, Math.max(MIN_ANSWERS_SCALE, scale))
+}
+
 export function useSettings() {
   return {
     scrollLines,
     lineHeight,
     fontSize,
     stepFontSize,
+    answersScale,
+    stepAnswersScale,
     terminalFont,
     dictationSendsAtOnce,
     extraKeysUnfolded,
