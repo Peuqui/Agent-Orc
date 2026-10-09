@@ -178,6 +178,8 @@
     "UnsupportedAudioError": "Whisper cannot process this audio format."
   },
   "dictation": {
+    "sendsAtOnceOn": "Send directly on: the recording goes to the agent as soon as it is recognised, without pressing send; a draft in the field goes with it. For this device.",
+    "sendsAtOnceOff": "Send directly off: the recording lands in the field and goes with send. Tap to switch (for this device).",
     "start": "Start dictation",
     "stop": "Stop dictation",
     "device": "Whisper on GPU (instant) or CPU (slower, always available)",
@@ -235,8 +237,6 @@
     "font": "Terminal font",
     "fontSize": "Font size",
     "fontSizeHint": "For all terminals on this device.",
-    "dictationSendsAtOnce": "Send dictation at once",
-    "dictationSendsAtOnceHint": "The recording goes to the agent as soon as it is recognised, without pressing send; a draft in the field goes with it. For this device.",
     "dictationService": "Dictation service",
     "dictationServiceLine": "{engine} · GPU {gpu} · CPU {cpu}",
     "dictationServiceHint": "The Whisper service sets its speech recognition itself (engine, quality, model). Here you only see what it uses. Per recording you choose only GPU or CPU.",

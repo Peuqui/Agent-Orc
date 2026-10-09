@@ -19,11 +19,10 @@ import HandoverSettings from './HandoverSettings.vue'
 import KeysEditor from './KeysEditor.vue'
 import PushSettings from './PushSettings.vue'
 import SpeechSettings from './SpeechSettings.vue'
-import ToggleSwitch from './ToggleSwitch.vue'
 import { reloadToNewVersion } from '../update'
 
 // Settings of this device; more entries join here as they become adjustable.
-const { scrollLines, lineHeight, fontSize, stepFontSize, terminalFont, dictationSendsAtOnce } = useSettings()
+const { scrollLines, lineHeight, fontSize, stepFontSize, terminalFont } = useSettings()
 const toast = useToast()
 const open = ref(false)
 // The extra-keys editor stays open after the menu has closed.
@@ -103,18 +102,12 @@ function changeScrollLines(delta: number): void {
         </div>
       </div>
       <p class="mt-1 text-xs text-slate-500">{{ $t('settings.lineHeightHint') }}</p>
-      <div class="mt-3 border-t border-slate-700 pt-3 text-sm text-slate-300">
-        <ToggleSwitch class="h-7" :checked="dictationSendsAtOnce" @click="dictationSendsAtOnce = !dictationSendsAtOnce">
-          {{ $t('settings.dictationSendsAtOnce') }}
-        </ToggleSwitch>
-        <p class="mt-1 text-xs text-slate-500">{{ $t('settings.dictationSendsAtOnceHint') }}</p>
-        <template v-if="service">
-          <span class="mt-3 block">{{ $t('settings.dictationService') }}</span>
-          <p class="mt-1 text-xs text-slate-400 capitalize">
-            {{ $t('settings.dictationServiceLine', service) }}
-          </p>
-          <p class="mt-1 text-xs text-slate-500">{{ $t('settings.dictationServiceHint') }}</p>
-        </template>
+      <div v-if="service" class="mt-3 border-t border-slate-700 pt-3 text-sm text-slate-300">
+        <span>{{ $t('settings.dictationService') }}</span>
+        <p class="mt-1 text-xs text-slate-400 capitalize">
+          {{ $t('settings.dictationServiceLine', service) }}
+        </p>
+        <p class="mt-1 text-xs text-slate-500">{{ $t('settings.dictationServiceHint') }}</p>
       </div>
       <button
         class="btn-secondary btn-small mt-3 w-full justify-center"

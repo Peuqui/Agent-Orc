@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { Dictation } from '../composables/useDictation'
+import { useSettings } from '../composables/useSettings'
 import AppIcon from './AppIcon.vue'
 
 // The microphone with the device switch (GPU or CPU) in front of it: the one used most is the
-// easiest to hit. Without Whisper the microphone itself listens through the browser.
+// easiest to hit. Without Whisper the microphone itself listens through the browser. Behind it
+// the switch whether a dictation goes to the agent at once (where one decides it, while dictating).
 const props = defineProps<{ dictation: Dictation }>()
+const { dictationSendsAtOnce } = useSettings()
 const active = computed(
   () =>
     props.dictation.state === 'recording' ||
@@ -40,6 +43,18 @@ const busy = computed(
       @click="dictation.toggleMicrophone"
     >
       <AppIcon name="mic" class="size-6" />
+    </button>
+    <button
+      type="button"
+      role="switch"
+      class="-ml-1 mb-2 h-6 rounded px-0.5 text-sm"
+      :class="dictationSendsAtOnce ? '' : 'opacity-50 grayscale'"
+      :aria-checked="dictationSendsAtOnce"
+      :aria-label="$t(dictationSendsAtOnce ? 'dictation.sendsAtOnceOn' : 'dictation.sendsAtOnceOff')"
+      :title="$t(dictationSendsAtOnce ? 'dictation.sendsAtOnceOn' : 'dictation.sendsAtOnceOff')"
+      @click="dictationSendsAtOnce = !dictationSendsAtOnce"
+    >
+      ⚡
     </button>
   </template>
 </template>
