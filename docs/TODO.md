@@ -4,22 +4,13 @@ Nur was noch aussteht. Erledigtes steht in der Git-Historie.
 
 ## Eingabefeld und Oberfläche
 
-- **Feld unten abgeschnitten (Handy, Arbeitsfläche):** Mit langem Text (nach dem Wiederherstellen des Entwurfs oder
-  beim Diktieren) ragt das Eingabefeld über den unteren Bildschirmrand, der Überstand wird abgeschnitten (Screenshot
-  vom 8.10., 08:35). Der Body der Vollbild-Seiten ist fest und clippt (`9e5d071`), deshalb ist nichts scrollbar.
-  Welches Element zu hoch ist (Iframe der Spalte, Terminalbereich oder Feld mit `max-h-[40dvh]`), ist nicht
-  gemessen: in einer Testinstanz mit Handygröße Höhen auslesen.
-- **Langer Text wird eingetippt, aber nicht abgeschickt (Verdacht, aus dem Code gelesen, nicht reproduziert):**
-  `submitText` in `TerminalView.vue` schickt den Text und danach nach `submit_delay_ms` (80 ms, im Browser) ein
-  `\r`. Der Server tippt den Text in Stücken zu 200 Zeichen mit 30 ms Pause (`terminal.py`, `pump_input`) und
-  verarbeitet die Nachrichten nacheinander. Bei langem Text dauert das Tippen länger als die 80 ms, das `\r`
-  kommt dann ohne Pause direkt hinter dem letzten Stück an, und Claude Code nimmt es als Teil der Eingabe (neue
-  Zeile statt Absenden). Auf dem Screenshot vom 8.10., 09:05, steht der Text unabgeschickt im Eingabefeld von
-  Claude Code, der Cursor in einer neuen Zeile. Lösungsrichtung: eine Nachrichtenart „submit“ im Terminal-Kanal,
-  bei der der Server den Text tippt, `submit_delay_ms` wartet und dann das `\r` schickt (wie `type_line` in
-  `sessions.py`, gemeinsame Tipp-Funktion statt zweiter Kopie).
-- **Neu laden in der App:** Seit `9e5d071` geht das Herunterziehen auf Vollbild-Seiten nicht mehr. Ein Eintrag
-  „Neu laden“ im ☰-Menü, der `reloadToNewVersion()` aus `update.ts` aufruft.
+- **Am Handy prüfen (Umbau vom 9.10.):** Höhe der Vollbild-Seiten aus dem festen Body statt `h-dvh`, Eingabefeld mit
+  `field-sizing: content` und Obergrenze 40 % der Ansicht (`cqh`), Absenden über `POST /api/sessions/{id}/message`,
+  Umbruch langer Pfade in den Antworten, „App neu laden“ und „Diktat sofort senden“ im ☰-Menü. In der Emulation
+  gemessen, auf dem echten Android nicht: langes Diktat in einer Arbeitsflächen-Spalte (Tastenleiste bleibt sichtbar),
+  Arbeitsfläche wechseln und zurück (Feld behält die Höhe), langer Text wird abgeschickt.
+- **Wackelnder Test:** `test_restart_resumes_a_busy_agent_with_its_waiting_effort` schlug am 9.10. in einem von neun
+  vollen Läufen fehl (einzeln 25-mal grün). Fehlermeldung beim nächsten Auftreten festhalten.
 
 - **Arbeitsfläche: verschobene Spalte bleibt im Blick (Peuqui, 8.10.):** Hat die Arbeitsfläche mehr Spalten als
   auf den Bildschirm passen (zum Beispiel drei Terminals, zwei sichtbar) und man zieht eine Spalte per Tab an eine
@@ -46,19 +37,6 @@ Nur was noch aussteht. Erledigtes steht in der Git-Historie.
   Agent-Orc als eigene Ansicht. Die Bridge hat dafür noch keine Funktion (Wächter und Verlauf nur pro Name):
   nur lesende Nachrichtenart „observe“ und Verlauf über alle Paare in der Bridge, ein gemeinsamer Client für beide
   Oberflächen. Anfrage an `Mini:AI-Connect` am 8.10. Details im Plan für Freitag, Abschnitt 4, Punkt 3.
-
-- **Diktat sofort senden (Peuqui, 9.10.):** Schalter pro Gerät, die Aufnahme geht nach der Transkription direkt an den Agenten
-  (wie „Direkt senden“ in AIfred). Details im Plan für Freitag, Abschnitt 4, Punkt 8. Erst nach der Reparatur des Absendens.
-
-- **Antworten-Ansicht am Handy scrollt seitlich (Peuqui, 9.10., Screenshot 13:20):** In der einspaltigen Handy-Arbeitsfläche lassen
-  sich die Sprechblasen innerhalb der Spalte horizontal hin- und herschieben und rutschen am linken Rand heraus (Texte
-  beginnen mitten im Wort, rechts bleibt Platz bis zum Griff). Kopfzeile und Umschalter bleiben stehen, es verschiebt sich
-  nur der Inhalt der Liste. Vermutete Ursache (aus dem Code, nicht gemessen): Der Container in `AnswersFeed.vue`
-  (Zeile 204, `ref="box"`) hat nur `overflow-y-auto`; dann wird `overflow-x` automatisch ebenfalls `auto`, und jedes
-  zu breite Element in irgendeiner Blase macht die ganze Liste seitlich scrollbar. Zu klären: welches Element zu
-  breit ist (lange Pfade oder Adressen im Text, Tabelle, Code), und ob es mit dem seitlichen Wischen zwischen den
-  Spalten zusammenhängt. Lösungsrichtung: `overflow-x-hidden` auf dem Container und das zu breite Element umbrechen oder
-  in seiner Blase scrollen lassen. Gehört zum Schritt zurück beim Vollbild-Layout (Plan Punkt 1a).
 
 ## Sprache am Echo Dot
 
