@@ -14,11 +14,9 @@ Nur was noch aussteht. Erledigtes steht in der Git-Historie.
 
 ## AI-Connect
 
-- **Mitlesen und Mitdiskutieren (Tab „Gespräche“ rechts neben „Arbeitsfläche“):** Die Schnittstelle von AI-Connect
-  ist fertig (`observer_client.jsonl observe` und `send`, Details in `docs/UEBERGABE-2026-10-09.md`). Agent-Orc ruft
-  sie über eine Prozessgrenze auf, nicht per Import. User-Name in die Agent-Orc-Konfiguration, User-Token gibt Peuqui
-  im Browser ein (pro Gerät), der Server reicht es nur durch. Vorher erzeugt Peuqui das Token
-  (`installer.py user-token` im AI-Connect-Ordner, im eigenen Terminal), danach Neustart von `ai-connect.service`.
+- **Tab „Gespräche“ mit echtem User-Token testen:** Mitlesen, Senden mit falschem Token (403) und die Ansicht in
+  Handybreite sind gegen die echte Bridge geprüft. Offen: eine echte Nachricht als User:Peuqui senden (Token eingeben)
+  und sehen, dass sie live im Baum erscheint; Neuverbinden nach einem Neustart der Bridge.
 
 ## Sprache am Echo Dot
 
