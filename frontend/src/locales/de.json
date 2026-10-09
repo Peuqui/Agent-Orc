@@ -231,6 +231,8 @@
     "font": "Schrift im Terminal",
     "fontSize": "Schriftgröße",
     "fontSizeHint": "Gilt für alle Terminals auf diesem Gerät.",
+    "dictationSendsAtOnce": "Diktat sofort senden",
+    "dictationSendsAtOnceHint": "Die Aufnahme geht nach dem Erkennen gleich an den Agenten, ohne Druck auf Senden; ein Entwurf im Feld geht mit. Gilt für dieses Gerät.",
     "dictationService": "Diktat-Dienst",
     "dictationServiceLine": "{engine} · GPU {gpu} · CPU {cpu}",
     "dictationServiceHint": "Die Spracherkennung stellt der Whisper-Dienst selbst ein (Engine, Qualität, Modell). Hier siehst du nur, was er verwendet. Gewählt wird pro Aufnahme nur GPU oder CPU.",

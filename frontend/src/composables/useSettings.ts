@@ -71,7 +71,8 @@ const terminalFont = setting<TerminalFont>(
   (stored) => stored as TerminalFont,
 )
 
-/** Speech recognition engine of the Whisper service for dictation; empty: the service's default. */
+/** A dictation goes to the agent as soon as it is transcribed, without pressing send. */
+const dictationSendsAtOnce = setting('agent-orc-dictation-sends-at-once', false, (stored) => stored === 'true')
 
 /** What a terminal shows: the terminal itself, or the agent's answers in short (AnswersFeed). */
 export type TerminalView = 'terminal' | 'answers'
@@ -106,9 +107,9 @@ export function useSpeechVoice(engineId: string): Ref<string> {
   return voice
 }
 const speechRate = setting('agent-orc-speech-rate', DEFAULT_SPEECH_RATE, Number)
-/** Without a paragraph for listening, an answer is read up to this many characters. */
 /** The agent's name is spoken before its answer, so one hears who is speaking. */
 const speechAnnounceName = setting('agent-orc-speech-announce-name', true, (stored) => stored === 'true')
+/** Without a paragraph for listening, an answer is read up to this many characters. */
 const speechMaxChars = setting('agent-orc-speech-max-chars', DEFAULT_MAX_SPOKEN_CHARS, Number)
 
 /** Bumped when the extra keys were arranged anew: every open terminal fetches them again (the
@@ -130,6 +131,7 @@ export function useSettings() {
     fontSize,
     stepFontSize,
     terminalFont,
+    dictationSendsAtOnce,
     extraKeysUnfolded,
     extraKeysVersion,
     speechEngine,

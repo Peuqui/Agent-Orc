@@ -3,6 +3,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } 
 import { api } from '../api'
 import { MESSAGE_FIELD_ATTRIBUTE } from '../columns'
 import { useDictation } from '../composables/useDictation'
+import { useSettings } from '../composables/useSettings'
 import { attachInOrder } from '../attachInOrder'
 import { pastedImages } from '../composables/usePastedImages'
 import { useToast } from '../composables/useToast'
@@ -26,8 +27,13 @@ watch(text, (current) => {
 })
 const field = ref<HTMLTextAreaElement>()
 
+const { dictationSendsAtOnce } = useSettings()
 const dictation = reactive(useDictation(props.sessionId, async (dictated) => {
   text.value = text.value ? `${text.value} ${dictated}` : dictated
+  if (dictationSendsAtOnce.value) {
+    await submit()
+    return
+  }
   // Ready to send with Enter (or to correct), without clicking into the field first. Not on
   // touch screens: the focus would open the on-screen keyboard; there the send button is ready.
   if (TOUCH_FIRST.matches) return

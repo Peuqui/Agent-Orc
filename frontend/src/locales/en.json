@@ -231,6 +231,8 @@
     "font": "Terminal font",
     "fontSize": "Font size",
     "fontSizeHint": "For all terminals on this device.",
+    "dictationSendsAtOnce": "Send dictation at once",
+    "dictationSendsAtOnceHint": "The recording goes to the agent as soon as it is recognised, without pressing send; a draft in the field goes with it. For this device.",
     "dictationService": "Dictation service",
     "dictationServiceLine": "{engine} · GPU {gpu} · CPU {cpu}",
     "dictationServiceHint": "The Whisper service sets its speech recognition itself (engine, quality, model). Here you only see what it uses. Per recording you choose only GPU or CPU.",
