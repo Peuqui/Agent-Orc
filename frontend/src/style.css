@@ -13,6 +13,12 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  /* The scrollbar's lane stays reserved, so a page growing past the screen does not push its
+     content to the left when the bar appears. (Not in the app shell, which never scrolls.) */
+  html:not(.app-shell) {
+    scrollbar-gutter: stable;
+  }
+
   /* The body is fixed to the screen, so the page has nothing to scroll (overflow: hidden on the
      page would still let the browser scroll it by script or to a focused field). */
   html.app-shell {
