@@ -100,8 +100,10 @@ def read_turns(transcript: Path, limit: int) -> list[Turn]:
     prompts = 0
     for line in lines_from_end(transcript, SCAN_BYTES):
         entry: dict[str, Any] = json.loads(line)
-        # What subagents write is not the agent's own answer.
-        if entry.get("isSidechain") or entry.get("type") not in KEPT_TYPES:
+        # What subagents write is not the agent's own answer; the summary of a compaction is
+        # written as a user entry, but neither asked nor answered anything.
+        skipped = entry.get("isSidechain") or entry.get("isCompactSummary")
+        if skipped or entry.get("type") not in KEPT_TYPES:
             continue
         entries.append(entry)
         if _is_human_message(entry):

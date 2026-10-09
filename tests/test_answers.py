@@ -59,6 +59,14 @@ def test_a_request_still_being_answered_shows_what_is_written_so_far(tmp_path: P
     assert read_turns(write(tmp_path / "e.jsonl", TRANSCRIPT[:1]), limit=5)[0].texts == []
 
 
+def test_the_summary_of_a_compaction_is_no_request(tmp_path: Path) -> None:
+    summary = "This session is being continued from a previous conversation ..."
+    compacted = [*TRANSCRIPT, entry("user", "u12", summary, isCompactSummary=True)]
+    turns = read_turns(write(tmp_path / "t.jsonl", compacted), limit=10)
+    assert [turn.prompt for turn in turns] == ["Erste Frage", "Zweite Frage"]
+    assert [t.text for t in turns[1].texts] == ["Antwort zur zweiten Frage."]
+
+
 def queue(operation: str, uuid: str, content: str | None = None) -> dict[str, Any]:
     record: dict[str, Any] = {
         "type": "queue-operation",
