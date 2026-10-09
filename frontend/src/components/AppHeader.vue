@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { api, authenticated } from '../api'
 import { LOCALES, setLocale, type Locale } from '../i18n'
@@ -10,6 +11,15 @@ import AppLogo from './AppLogo.vue'
 
 const { locale } = useI18n()
 
+// Its height, for what sticks to the top of a page below it (var(--app-header-height)); it
+// changes with the width (tabs here or a bottom bar).
+const header = ref<HTMLElement>()
+const resizes = new ResizeObserver(([entry]) => {
+  document.documentElement.style.setProperty('--app-header-height', `${entry!.borderBoxSize[0]!.blockSize}px`)
+})
+onMounted(() => header.value && resizes.observe(header.value))
+onBeforeUnmount(() => resizes.disconnect())
+
 async function logout(): Promise<void> {
   await api.logout()
   authenticated.value = false
@@ -17,7 +27,7 @@ async function logout(): Promise<void> {
 </script>
 
 <template>
-  <header class="sticky top-0 z-30 border-b border-slate-800 bg-slate-900/95 backdrop-blur">
+  <header ref="header" class="sticky top-0 z-30 border-b border-slate-800 bg-slate-900/95 backdrop-blur">
     <div class="page-width flex items-center justify-between gap-4 py-2">
       <AppLogo />
       <!-- Wide screens: sections as header tabs instead of the bottom bar. -->

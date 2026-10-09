@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { firstLine, groupConversations, replyRecipients } from '../src/peerConversations.ts'
+import { arrowOf, firstLine, groupConversations, laneLabel, lanesOf, replyRecipients } from '../src/peerConversations.ts'
 
 const message = (id: number, from: string, to: string, timestamp: string) => ({
   id,
@@ -38,4 +38,17 @@ test('the first line is cut, and marked when more follows', () => {
   assert.equal(firstLine('  Kurz  ', 20), 'Kurz')
   assert.equal(firstLine('Erste Zeile\nZweite', 20), 'Erste Zeile…')
   assert.equal(firstLine('Eine sehr lange Zeile', 9), 'Eine sehr…')
+})
+
+test('every participant is a lane, in the order they first appear; a broadcast spans them all', () => {
+  const messages = [
+    message(2, 'Mini:A', '*', '2026-10-09T20:01:00.000Z'),
+    message(1, 'User:Ada', 'Mini:A', '2026-10-09T20:00:00.000Z'),
+    message(3, 'Mini:B', 'User:Ada', '2026-10-09T20:02:00.000Z'),
+  ]
+  const lanes = lanesOf(messages)
+  assert.deepEqual(lanes, ['User:Ada', 'Mini:A', 'Mini:B'])
+  assert.deepEqual(lanes.map(laneLabel), ['Ada', 'A', 'B'])
+  assert.deepEqual(arrowOf(messages[2]!, lanes), { from: 2, to: 0 })
+  assert.deepEqual(arrowOf(messages[0]!, lanes), { from: 1, to: null })
 })

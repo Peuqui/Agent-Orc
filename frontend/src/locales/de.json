@@ -14,7 +14,7 @@
     "notes": "Notizen",
     "peers": "Gespräche",
     "consumption": "Verbrauch",
-    "menu": "Seiten"
+    "home": "Zur Agentenseite"
   },
   "common": {
     "cancel": "Abbrechen",
@@ -658,7 +658,8 @@
     "title": "Gespräche",
     "view": {
       "tree": "Nach Gespräch",
-      "timeline": "Verlauf"
+      "timeline": "Verlauf",
+      "lanes": "Spuren"
     },
     "notConfigured": "AI-Connect ist nicht eingerichtet (Abschnitt „peers“ in der Konfiguration).",
     "loading": "Lade die Gespräche …",

@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { api, type Peer, type PeerEvent, type PeerMessage } from '../api'
+import PeerLanes from '../components/PeerLanes.vue'
 import PeerMessageItem from '../components/PeerMessageItem.vue'
 import { useSettings } from '../composables/useSettings'
 import { useToast } from '../composables/useToast'
@@ -25,7 +26,7 @@ const messages = ref<PeerMessage[]>([])
 const known = new Set<number>()
 const historyLoaded = ref(false)
 const streamError = ref<string | null>(null)
-const view = ref<'tree' | 'timeline'>('tree')
+const view = ref<'tree' | 'timeline' | 'lanes'>('tree')
 const openConversations = ref(new Set<string>())
 
 const recipients = ref<string[]>([])
@@ -130,7 +131,7 @@ async function send(): Promise<void> {
       <h1 class="flex-1 text-lg font-semibold">{{ $t('peers.title') }}</h1>
       <div v-if="configured" class="flex overflow-hidden rounded-md border border-slate-600 text-sm">
         <button
-          v-for="mode in ['tree', 'timeline'] as const"
+          v-for="mode in ['tree', 'timeline', 'lanes'] as const"
           :key="mode"
           class="px-3 py-1"
           :class="view === mode ? 'bg-slate-600 text-slate-100' : 'text-slate-400 hover:bg-slate-700'"
@@ -188,9 +189,11 @@ async function send(): Promise<void> {
         </div>
       </div>
 
-      <div v-else class="card px-3 py-1">
+      <div v-else-if="view === 'timeline'" class="card px-3 py-1">
         <PeerMessageItem v-for="message in timeline" :key="message.id" :message="message" />
       </div>
+
+      <PeerLanes v-else :messages="timeline" />
 
       <form class="card sticky bottom-2 flex flex-col gap-2 p-3" @submit.prevent="send">
         <div v-if="peerUserToken === '' || changingToken" class="flex flex-wrap items-center gap-2">

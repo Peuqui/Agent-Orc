@@ -47,3 +47,27 @@ export function firstLine(text: string, maxChars: number): string {
   if (line.length > maxChars) return `${line.slice(0, maxChars).trimEnd()}…`
   return line.length < trimmed.length ? `${line}…` : line
 }
+
+/** Everyone who wrote or was written to, a lane each, in the order they first appear. */
+export function lanesOf(messages: Iterable<PeerMessage>): string[] {
+  const lanes = new Set<string>()
+  const chronological = [...messages].sort((a, b) => a.timestamp.localeCompare(b.timestamp))
+  for (const message of chronological) {
+    lanes.add(message.from)
+    if (message.to !== EVERYONE) lanes.add(message.to)
+  }
+  return [...lanes]
+}
+
+/** A lane's name without the host (Host:Project, User:Name), so many fit side by side. */
+export function laneLabel(name: string): string {
+  const separator = name.indexOf(':')
+  return separator === -1 ? name : name.slice(separator + 1)
+}
+
+/** Where a message's arrow runs, in lanes: from the sender to the receiver, or across all lanes
+ * for a broadcast (`to` null). */
+export function arrowOf(message: PeerMessage, lanes: string[]): { from: number; to: number | null } {
+  const from = lanes.indexOf(message.from)
+  return { from, to: message.to === EVERYONE ? null : lanes.indexOf(message.to) }
+}

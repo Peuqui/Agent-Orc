@@ -21,7 +21,6 @@ import AppIcon from '../components/AppIcon.vue'
 import ColumnCountControl from '../components/ColumnCountControl.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
 import HelpButton from '../components/HelpButton.vue'
-import NavMenu from '../components/NavMenu.vue'
 import QuotaPanel from '../components/QuotaPanel.vue'
 import SettingsMenu from '../components/SettingsMenu.vue'
 import WorkspaceSwitcher from '../components/WorkspaceSwitcher.vue'
@@ -360,7 +359,10 @@ function deleteThis(): void {
         v-if="!fullscreen"
         class="flex flex-wrap items-center gap-1 border-b border-slate-800 px-1 py-1 max-md:[&_.btn-icon]:size-8"
       >
-        <NavMenu />
+        <!-- No bottom bar in full screen: home is the agents page, the other pages are one tap on. -->
+        <RouterLink to="/sessions" class="btn-icon" :aria-label="$t('nav.home')" :title="$t('nav.home')">
+          <AppIcon name="home" />
+        </RouterLink>
         <WorkspaceSwitcher
           v-model="nameInput"
           :name="name"

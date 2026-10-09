@@ -22,8 +22,8 @@ function recipient(to: string): string {
     <button type="button" class="w-full text-left" :aria-expanded="open" @click="open = !open">
       <div class="flex flex-wrap items-baseline gap-x-2 text-xs text-slate-500">
         <span>{{ formatMoment(new Date(message.timestamp), locale) }}</span>
-        <span class="text-slate-300">{{ message.from }}</span>
-        <span>→ {{ recipient(message.to) }}</span>
+        <span class="text-amber-400">{{ message.from }}</span>
+        <span>→ <span class="text-amber-400/80">{{ recipient(message.to) }}</span></span>
         <span v-if="message.context">📎</span>
       </div>
       <p v-if="!open" class="mt-0.5 text-sm break-words text-slate-200">{{ firstLine(message.content, FIRST_LINE_CHARS) }}</p>

@@ -14,7 +14,7 @@
     "notes": "Notes",
     "peers": "Conversations",
     "consumption": "Consumption",
-    "menu": "Pages"
+    "home": "To the agents page"
   },
   "common": {
     "cancel": "Cancel",
@@ -658,7 +658,8 @@
     "title": "Conversations",
     "view": {
       "tree": "By conversation",
-      "timeline": "Timeline"
+      "timeline": "Timeline",
+      "lanes": "Lanes"
     },
     "notConfigured": "AI-Connect is not set up (section \"peers\" in the config).",
     "loading": "Loading the conversations …",
