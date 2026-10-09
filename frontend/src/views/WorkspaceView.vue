@@ -1,3 +1,9 @@
+<script lang="ts">
+// Per browser tab (the page's module lives as long as the tab): where each workspace's row was
+// scrolled to, by workspace name (null: the unnamed one).
+const scrollPositions = new Map<string | null, number>()
+</script>
+
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -298,13 +304,25 @@ function openRequested(): void {
 
 watch(() => route.query.open, () => ready.value && openRequested())
 
-/** After loading: the column asked for in the address, or the active one. */
+/** After loading: the column asked for in the address, else where this workspace was left in
+ * this browser tab, else the active column. */
 async function showRequested(): Promise<void> {
   if (typeof route.query.open === 'string') openRequested()
   else {
     store.showName()
-    await showActiveColumn()
+    const left = scrollPositions.get(store.name.value)
+    if (left === undefined) await showActiveColumn()
+    else {
+      await nextTick()
+      row.value?.scrollTo({ left, behavior: 'instant' })
+    }
   }
+}
+
+/** Where the row of each workspace was scrolled to; only while it is shown (switching empties
+ * the row first, which scrolls it back to the start). */
+function rememberScroll(): void {
+  if (store.ready.value && row.value) scrollPositions.set(store.name.value, row.value.scrollLeft)
 }
 
 /** A freshly loaded workspace starts at its first column; on phones, where one column fills
@@ -399,6 +417,7 @@ function deleteThis(): void {
       <div
         ref="row"
         class="min-h-0 flex-1 overflow-x-auto"
+        @scroll.passive="rememberScroll"
         :class="{ 'snap-x snap-mandatory': widths.resize.value === null, '[scrollbar-width:none]': phone }"
         style="container-type: inline-size"
       >
