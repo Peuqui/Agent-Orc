@@ -180,65 +180,36 @@ Vorgehen:
    zwischen Desktop, Handy und Tablet nicht alles wieder rot macht.
 6. ~~llama-swap: `--max-num-seqs` von 4 auf 3~~ erledigt (geprüft 9.10.: 27B und alle Flash-Next-Einträge stehen auf 3).
 
-7. **Rollen im selben Projektordner: zweiter Agent mit gegenseitigem Ausschluss (Peuqui, 9.10., Umsetzung heute ab 16 Uhr)**
+7. **Mehrere Agenten im selben Projektordner (Peuqui, 9.10., neu gefasst am Nachmittag)**
 
-   *Ziel.* Der Autor reviewt seinen Code nicht selbst. Auf der Agentenkarte und im ⋮-Menü der Arbeitsflächen-Ansicht lässt
-   sich für **dasselbe Projektverzeichnis** ein weiterer Agent starten (zum Beispiel ein Reviewer), mit eigener ID, damit
-   sich nichts in die Quere kommt und Agent-Orc beide wiederfindet. Alles einstellbar: Profil, **Modell (gern ein anderes
-   als beim Autor)**, Berechtigungsmodus (der Reviewer darf auch **Schreibrechte** bekommen), Startprompt.
+   *Ziel.* Im selben Ordner laufen mehrere Agenten gleichzeitig, zum Beispiel einer zum Reviewen oder für eine andere
+   Aufgabe; sie können sich über AI-Connect absprechen. **Keine Sperre, kein Umschalten:** Die eigene Sitzungs-ID trennt
+   alles in Agent-Orc; gleichzeitiges Schreiben in dieselbe Datei erkennt Claude Code selbst (geändert seit dem Lesen),
+   beim Committen gilt „gezielt `git add`“.
 
-   *Beschlossen.*
-   - Beide Agenten **laufen** (der Coder wird nicht beendet, sein Cache bleibt warm), aber es ist **immer genau einer pro
-     Ordner aktiv**. Der andere ist in Agent-Orc nicht anwählbar und nimmt keine Eingabe an. Will man ihn aktivieren,
-     während der aktive noch arbeitet, wird die Umschaltung vorgemerkt und ausgeführt, sobald der aktive im Leerlauf ist;
-     dann schaltet Agent-Orc den aktiven Tab um. Das schließt zwei gleichzeitige Schreiber im Arbeitsbaum aus.
-   - Die Sitzungs-ID wird aus **Pfad plus Rolle** gebildet. Der bisherige Agent ist die Rolle ohne Zusatz (kein zweiter
-     Mechanismus daneben, kein Altbestand).
-   - Jede Rolle bekommt **beim Start ihre eigene Einstellungsdatei** (Claude: `--settings <Datei>`, dazu
-     `--permission-mode`, `--effort`, `--model`; laut `claude --help`, noch nicht ausprobiert), im Zustandsordner des Orc
-     je Sitzungs-ID, **nicht** im Projekt. Auch der bisherige Agent bekommt seine Einstellungen so: `effort.py` schreibt
-     nicht mehr in `<Ordner>/.claude/settings.local.json`, die Voreinstellung „zuletzt im Ordner gewählt“ wandert in den
-     Zustand des Orc (je Ordner und Rolle).
-   - Eine **Rollen-Konfiguration** als einzige Wahrheit, nichts hartkodiert: Anzeigename, Profil, Modell,
-     Berechtigungsmodus, Startprompt (zum Beispiel der Review-Auftrag mit „nur Diff und Spezifikation, nicht die
-     Begründung des Autors“).
+   *Name.* Der erste Agent heißt wie der Ordner (wie heute). Jeder weitere braucht einen **Pflicht-Zusatz**: Der Start-
+   dialog zeigt den Ordnernamen fest vorne und ein Feld für den Zusatz („Agent-Orc-“ + „Review“); Starten geht erst,
+   wenn der Zusatz nicht leer, erlaubt (Buchstaben, Ziffern, `.`, `_`, `-`) und im Ordner frei ist. Der Server prüft
+   dasselbe (409). Keine Rollen-Konfiguration: Der Zusatz ist die Rolle; Profil, Modell und Denkstufe wählt der
+   Startdialog wie heute.
 
-   *Befund aus dem Code (gelesen).* Gespräch und Zustand hängen schon an der Sitzungs-ID, nicht am Ordner
-   (`session_transcript` in `context.py` liest den Transkriptpfad aus der Statusdatei der Sitzung; Claude Code legt je
-   Sitzung eine eigene Gesprächsdatei an). Ordnerweit sind: `session_id_for` und `find_by_path` (`sessions.py`),
-   `SessionAlreadyRunningError` (HTTP 409, `api.py`), die Einstellungsdatei im Ordner (`effort.py`), die
-   Gesprächsliste je Ordner und „letztes Gespräch fortsetzen“ (`history.py`).
+   *AI-Connect.* Eigener Peer-Name je Agent über eine optionale Variable `AI_CONNECT_PEER_SUFFIX` (Anfrage an
+   `Mini:AI-Connect` am 9.10., 17:15): AI-Connect hängt den Zusatz mit Bindestrich an seinen selbst gebildeten Namen
+   (`Mini:Agent-Orc-Review`), die Regel „Host:Projekt“ bleibt dort. Agent-Orc setzt die Variable nur bei einem Zusatz;
+   ihr Name steht in der Profil-Konfiguration, nicht im Code.
 
-   *Bausteine, jeder für sich, in dieser Reihenfolge, mit Tests:*
-   1. Sitzungs-ID aus Pfad plus Rolle (`sessions.py`, `find_by_path`, 409-Prüfung je Rolle); Zustandsdateien je ID
-      (`context.py`, `approvals.py`, `handover.py`) tragen die neue ID.
-   2. Rollen-Konfiguration (`config.py`, `default_config.yaml`; neue Schlüssel erst eintragen, wenn die Version
-      installiert ist, die sie kennt).
-   3. Einstellungen je Sitzung beim Start (`--settings` und Optionen); `effort.py` darauf umstellen.
-   4. Modul für den Ausschluss je Ordner: wer ist aktiv, welche Umschaltung ist vorgemerkt; Übergänge aus dem
-      Leerlauf-Zustand (`session_busy` in `context.py`; „wartet auf Freigabe“ zählt als beschäftigt).
-   5. **Ein einziges Tor für Eingaben** in den Eingabefunktionen des `SessionManager` (`type_line`, `paste_text`,
-      `press_enter`) und im Eingabekanal von `terminal.py`, nicht an den etwa acht Aufrufern von `type_line` in `api.py`
-      (Senden, Rundnachricht, Zeitplan, Handover, Vorlagen, Live-Denkaufwand, Sprache). Ausnahme zu klären: eigene
-      Eingaben des Orc an den ruhenden Agenten (zum Beispiel der Handover-Wunsch).
-   6. Start über Karte und ⋮-Menü (Wahl der Rolle), Anzeige: Rollen-Marke an Karte und Spaltenkopf, der inaktive grau
-      mit „gesperrt, X arbeitet“, Knopf „Aktivieren“ mit Vormerkung.
+   *Bausteine, jeder für sich, mit Tests:*
+   1. Sitzungs-ID aus Pfad plus Zusatz (`sessions.py`: `session_id_for`, `find_by_path`, 409 je Name); Zustandsdateien
+      je ID tragen die neue ID.
+   2. Start mit Zusatz (API und Startdialog, Pflichtfeld wenn der Ordner schon einen Agenten hat), Zusatz als
+      Umgebungsvariable an den Agenten.
+   3. Einstellungen je Sitzung beim Start (`--settings` und Optionen) statt `<Ordner>/.claude/settings.local.json`;
+      `effort.py` darauf umstellen. Vorher klein mit Haiku testen, ob Startangaben die Ordner-Datei übersteuern.
+   4. „Letztes Gespräch fortsetzen“ je Agent (ausdrückliche Gesprächs-ID statt „neuestes im Ordner“).
+   5. Anzeige: voller Name auf Karte, Spaltenkopf und in der Fernsteuerung.
 
-   *Vor dem Bauen testen (kleiner Test mit Haiku):* dass Angaben beim Start (`--settings`, `--effort`,
-   `--permission-mode`) die Datei `<Ordner>/.claude/settings.local.json` übersteuern; ob `ultracode` über `--settings`
-   geht; wie sich das Live-Umschalten per `/effort` je Sitzung verhält.
-
-   *Risiken.* (a) „Bleibt warm“ gilt nur eine Stunde ohne Anfrage, danach ist der Cache des ruhenden Agenten kalt (siehe
-   Cache-Marker, Punkt 2). (b) Der ruhende Agent kennt die Dateien nur vom letzten Lesen: beim Aktivieren automatisch
-   den Hinweis „Dateien haben sich geändert, lies neu“ senden (eventuell mit Diff-Überblick). (c) Der Ausschluss gilt
-   nur über Agent-Orc, nicht bei direktem Tippen per tmux. (d) Der Verlauf von Claude Code liegt für beide Rollen im
-   selben Ordner; „letztes Gespräch fortsetzen“ muss je Rolle das eigene Gespräch wählen (ausdrückliche ID).
-
-   *Noch zu entscheiden.* Ein Tab je Ordner mit Rollenwechsel oder zwei Karten, davon eine gesperrt; ob eigene Eingaben
-   des Orc an den ruhenden Agenten das Tor passieren dürfen.
-
-   *Verworfen.* Worktree je Reviewer (nur Committetes, Branches bleiben liegen), Unteragent als einziger Weg (keine
-   eigene Karte, kein anderes Modell), Beenden des Coders beim Start des Reviewers (kalter Cache beim Fortsetzen).
+   *Verworfen.* Sperre mit vorgemerkter Umschaltung und Eingabe-Tor (unnötig ohne Ausschluss), feste Rollen-
+   Konfiguration, Worktree je Agent, Unteragent als einziger Weg.
 
 8. **Diktat sofort an den Agenten senden (Peuqui, 9.10., heute ab 16 Uhr):** Ein Schalter, damit eine Aufnahme nach der
    Transkription **direkt** an den Agenten geht, ohne Druck auf „Senden“. So ist es in AIfred umgesetzt (Text
