@@ -181,6 +181,8 @@ export interface AgentSession {
   chosen_model: string | null
   /** Sets a further agent in the folder apart from the first; null for the first. */
   suffix: string | null
+  /** The time of the newest answer looked at, on any device ("" none yet). */
+  answers_seen: string
   /** The folder's name, with the suffix of a further agent. */
   name: string
   /** The levels its slider offers: the profile's, or those of the chosen model. */
@@ -505,6 +507,9 @@ export const api = {
     }),
   cancelScheduled: (promptId: string) =>
     request<void>('DELETE', `scheduled/${encodeURIComponent(promptId)}`),
+  /** The agent's answers up to this time were looked at (the server only goes forward). */
+  markAnswersSeen: (sessionId: string, time: string) =>
+    request<void>('PUT', `sessions/${encodeURIComponent(sessionId)}/answers-seen`, { body: { time } }),
   /** Types the message into the agent and submits it (the server types, then presses Enter). */
   sendMessage: (sessionId: string, text: string) =>
     request<void>('POST', `sessions/${encodeURIComponent(sessionId)}/message`, { body: { text } }),

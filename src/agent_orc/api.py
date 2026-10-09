@@ -139,8 +139,10 @@ from agent_orc.state import (
     assign_agent,
     empty_workspace,
     keep_living_agents,
+    mark_answers_seen,
     notes_dir,
     place_workspace,
+    read_answers_seen,
     read_card_order,
     read_extra_keys,
     read_notebooks,
@@ -444,6 +446,11 @@ class AnnounceRequest(BaseModel):
 
 class MessageRequest(BaseModel):
     text: str
+
+
+class AnswersSeenRequest(BaseModel):
+    # ISO time of the newest answer looked at.
+    time: str
 
 
 class BroadcastRequest(BaseModel):
@@ -1181,10 +1188,14 @@ def create_app(
     def list_sessions() -> list[dict[str, Any]]:
         requests = open_requests()
         scheduled = read_scheduled()
-        return [session_entry(s, requests, scheduled) for s in sessions.list()]
+        seen = read_answers_seen()
+        return [session_entry(s, requests, scheduled, seen) for s in sessions.list()]
 
     def session_entry(
-        session: AgentSession, requests: list[ApprovalRequest], scheduled: list[ScheduledPrompt]
+        session: AgentSession,
+        requests: list[ApprovalRequest],
+        scheduled: list[ScheduledPrompt],
+        seen: dict[str, str],
     ) -> dict[str, Any]:
         empty = {"model": None, "context_tokens": None, "context_window": None}
         pending = pending_effort.get(session.id)
@@ -1208,6 +1219,8 @@ def create_app(
                 "progress": handover_progress.get(session.id),
             },
             "cache": cache_entry(cache),
+            # The newest answer looked at, on any device ("" none yet).
+            "answers_seen": seen.get(session.id, ""),
             # Waiting for the user's answer; normally at most one, as Claude asks one at a time.
             "approvals": [asdict(r) for r in requests if r.session == session.id],
             # The slider's levels: the profile's, or those of the chosen model.
@@ -1715,6 +1728,21 @@ def create_app(
         if find_session(session_id) is None:
             raise SessionNotFoundError(session_id)
         return add_scheduled(session_id, body.text, body.at, Reason.USER)
+
+    @app.put(
+        "/api/sessions/{session_id}/answers-seen",
+        dependencies=authenticated,
+        status_code=status.HTTP_204_NO_CONTENT,
+    )
+    async def answers_seen(session_id: str, body: AnswersSeenRequest) -> None:
+        """The answers up to this time were looked at; earlier times change nothing.
+
+        Async on purpose: run on the event loop, read and write of one mark cannot interleave
+        with another's (a page marks several answers at once), so a later time is never
+        overwritten by an earlier one."""
+        if find_session(session_id) is None:
+            raise SessionNotFoundError(session_id)
+        mark_answers_seen(session_id, body.time)
 
     @app.post(
         "/api/sessions/{session_id}/message",

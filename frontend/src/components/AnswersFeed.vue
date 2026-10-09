@@ -40,10 +40,15 @@ let timer: number | undefined
 const seenBefore = ref(seenUntil(props.sessionId))
 const seenIds = ref(new Set<string>())
 
+// The newest time this view marked itself: only what goes beyond it was seen elsewhere.
+let markedHere = ''
+
 function markSeenHere(id: string): void {
   seenIds.value.add(id)
   const text = everyText.value.find((candidate) => candidate.id === id)
-  if (text) markSeen(props.sessionId, text.time)
+  if (!text) return
+  if (text.time > markedHere) markedHere = text.time
+  markSeen(props.sessionId, text.time)
 }
 
 function markReadAloud(item: Speakable): void {
@@ -52,11 +57,19 @@ function markReadAloud(item: Speakable): void {
 
 const { observe } = useSeenOnScreen(markSeenHere, SEEN_AFTER_MS)
 
-// Another document of this device (a column, another tab, the workspace's speaker) has seen or
-// read answers of this agent; the storage event reaches only the other documents.
-function followSeenElsewhere(): void {
-  const elsewhere = seenUntil(props.sessionId)
-  if (elsewhere > seenBefore.value) seenBefore.value = elsewhere
+// Another view or device (a column, another tab, the workspace's speaker, the phone) has seen or
+// read answers of this agent. What this view marked itself does not count here: looking at the
+// newest answer must not make the older ones above it read.
+watch(
+  () => seenUntil(props.sessionId),
+  (elsewhere) => {
+    if (elsewhere > seenBefore.value && elsewhere > markedHere) seenBefore.value = elsewhere
+  },
+)
+
+/** Everything there is counts as looked at, without reading it aloud or scrolling through it. */
+function markAllSeen(): void {
+  for (const text of unread.value) markSeenHere(text.id)
 }
 
 interface Shown {
@@ -125,14 +138,12 @@ async function load(): Promise<void> {
 }
 
 onMounted(() => {
-  window.addEventListener('storage', followSeenElsewhere)
   void load()
   timer = window.setInterval(() => {
     if (document.visibilityState === 'visible') void load()
   }, POLL_MS)
 })
 onBeforeUnmount(() => {
-  window.removeEventListener('storage', followSeenElsewhere)
   window.clearInterval(timer)
 })
 
@@ -182,6 +193,17 @@ function jog(lines: number): void {
           {{ $t('answers.modeAll') }}
         </button>
       </div>
+      <!-- Everything as read at once, without reading it aloud or scrolling through it. -->
+      <button
+        v-if="unread.length"
+        type="button"
+        class="btn-secondary btn-small-icon"
+        :title="$t('answers.markAllSeen')"
+        :aria-label="$t('answers.markAllSeen')"
+        @click="markAllSeen"
+      >
+        <AppIcon name="check" />
+      </button>
       <template v-if="speech.available.value">
         <button
           type="button"

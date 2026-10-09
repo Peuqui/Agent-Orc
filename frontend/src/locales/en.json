@@ -351,7 +351,7 @@
         "title": "Answers",
         "items": [
           "Instead of the terminal, the switch at the top (terminal / speech bubble icon, in the head of every terminal and column) shows only what the agent answered – without thoughts, file edits and diffs. The choice holds for all terminals of this device; the input field stays below.",
-          "For each request your question stands in a grey line (tap to see it whole) and below it the agent’s last answer, the summary. The switch “Summaries | Everything” (what applies is highlighted, per agent) chooses: for each message of yours only the paragraph for listening from the agent’s last text (the whole last text if it has none), or every text with the comments in between and the details. New answers have a red stripe. It goes away by itself once the answer was mostly on screen for two seconds (an answer higher up stays red until you scroll to it), once it was read aloud, or once it was seen in another window of this device; no button for marking is needed. \"Read new (n)\" counts the answers with a red stripe.",
+          "For each request your question stands in a grey line (tap to see it whole) and below it the agent’s last answer, the summary. The switch “Summaries | Everything” (what applies is highlighted, per agent) chooses: for each message of yours only the paragraph for listening from the agent’s last text (the whole last text if it has none), or every text with the comments in between and the details. New answers have a red stripe. It goes away by itself once the answer was mostly on screen for two seconds (an answer higher up stays red until you scroll to it), once it was read aloud, or once it was seen in another window or on another device. The check mark marks all of them as read at once. \"Read new (n)\" counts the answers with a red stripe.",
           "Reading aloud: “Read aloud” reads one answer, “From here” this and all following, “Read new” those not seen yet. Code blocks and tables are left out (“a code block follows”), addresses and formatting are not spoken. Pause and stop are at the top. Voice, speed, saying the agent’s name before each answer and the maximum length are in the ☰ menu (for the whole device); these are the voices of the device, and a Bluetooth headset plays the sound there. With the screen locked, reading often stops on a phone. If the answer ends with a paragraph starting with 🔊 (the “answer for listening” of your global CLAUDE.md), only that is spoken; otherwise the answer up to the number of characters set in the cog. The speaker in the head of the workspace reads the new answers of all columns of that workspace one after the other; a second press stops. With the Echo (☰ menu, “Speech output”, once Agent-Orc knows it) AIfred says the paragraph for listening in the chosen room, with a signal tone before and after; from here such an announcement cannot be stopped."
         ]
       },
@@ -619,6 +619,7 @@
     "allHint": "Every text of the agent, the comments in between too",
     "readNew": "Read new ({count})",
     "readNewHint": "Read the answers not seen yet",
+    "markAllSeen": "Mark all as read",
     "read": "Read aloud",
     "readThis": "Read this answer aloud",
     "readFromHere": "From here",

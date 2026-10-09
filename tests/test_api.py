@@ -6,6 +6,7 @@ import os
 import signal
 import subprocess
 import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -1496,6 +1497,32 @@ def test_a_further_agent_in_a_folder_needs_a_suffix_and_gets_it(
     listed = {s["id"]: s["name"] for s in client.get("/api/sessions").json()}
     assert (listed[first["id"]], listed[review["id"]]) == ("a", "a-Review")
     assert client.post("/api/sessions", json={**body, "suffix": "Review"}).status_code == 409
+
+
+def test_answers_seen_only_go_forward_and_show_on_every_device(
+    config: Config, clock: FakeClock, home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
+    # As a context manager the client keeps one event loop, as the server has (uvicorn).
+    with TestClient(
+        create_app(config, new_credentials(PASSWORD), static_dir=None, clock=clock)
+    ) as client:
+        client.post("/api/login", json={"password": PASSWORD})
+        session_id = start_shell(client, home / "projects")
+        assert client.get("/api/sessions").json()[0]["answers_seen"] == ""
+        url = f"/api/sessions/{session_id}/answers-seen"
+        assert client.put(url, json={"time": "2026-10-09T18:00:00.000Z"}).status_code == 204
+        # A device that saw less (an older answer) changes nothing.
+        assert client.put(url, json={"time": "2026-10-09T17:00:00.000Z"}).status_code == 204
+        seen = client.get("/api/sessions").json()[0]["answers_seen"]
+        assert seen == "2026-10-09T18:00:00.000Z"
+        # Several marks at once (a page marks every answer it shows): the latest time stays.
+        times = [f"2026-10-09T19:{minute:02d}:00.000Z" for minute in range(30)]
+        with ThreadPoolExecutor() as pool:
+            list(pool.map(lambda time: client.put(url, json={"time": time}), times))
+        assert client.get("/api/sessions").json()[0]["answers_seen"] == times[-1]
+        unknown = {"time": "2026-10-09T18:00:00.000Z"}
+        assert client.put("/api/sessions/gone/answers-seen", json=unknown).status_code == 404
 
 
 def test_message_is_submitted_after_a_long_text(client: TestClient, home: Path) -> None:

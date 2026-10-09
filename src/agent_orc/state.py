@@ -10,6 +10,7 @@ WORKSPACES_FILE = "workspaces.json"
 PROMPT_TEMPLATES_FILE = "prompt-templates.json"
 EXTRA_KEYS_FILE = "extra-keys.json"
 NOTEBOOKS_FILE = "notebooks.json"
+ANSWERS_SEEN_FILE = "answers-seen.json"
 # Key of the unnamed workspace in the workspaces file; a name the user gives is never empty.
 UNNAMED_WORKSPACE = ""
 
@@ -163,3 +164,20 @@ def write_notebooks(notebooks: dict[str, Any]) -> None:
 def rename_notebook(notebooks: dict[str, Any], old: str, new: str) -> dict[str, Any]:
     """The notebooks with `old` renamed to `new`, at the same position."""
     return {(new if name == old else name): notebook for name, notebook in notebooks.items()}
+
+
+def read_answers_seen() -> dict[str, str]:
+    """Per agent the time of the newest answer looked at (ISO), on any device."""
+    path = state_dir() / ANSWERS_SEEN_FILE
+    if not path.is_file():
+        return {}
+    seen: dict[str, str] = json.loads(path.read_text(encoding="utf-8"))
+    return seen
+
+
+def mark_answers_seen(session_id: str, time: str) -> None:
+    """Only ever forward: a device that saw less (ISO times compare as text) changes nothing."""
+    seen = read_answers_seen()
+    if time <= seen.get(session_id, ""):
+        return
+    write_atomically(state_dir() / ANSWERS_SEEN_FILE, json.dumps({**seen, session_id: time}))
