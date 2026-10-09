@@ -83,8 +83,11 @@ const STATE_COLORS: Record<string, string> = {
   idle: 'text-emerald-400',
 }
 
+// A peer whose session reports nothing (no AI-Connect hooks).
+const NO_STATE_COLOR = 'text-slate-500'
+
 function stateColor(peer: Peer): string {
-  return STATE_COLORS[peer.state ?? ''] ?? 'text-slate-500'
+  return STATE_COLORS[peer.state ?? ''] ?? NO_STATE_COLOR
 }
 
 /** The peer's name, what it does in words, and the line it set on what it works on. */
@@ -188,6 +191,10 @@ async function send(): Promise<void> {
           <span :class="stateColor(peer)">●</span> {{ peer.name }}
         </span>
       </div>
+      <p v-if="peers.length" class="-mt-2 flex flex-wrap gap-x-3 text-xs text-slate-500">
+        <span v-for="(color, state) in STATE_COLORS" :key="state"><span :class="color">●</span> {{ $t(`peers.state.${state}`) }}</span>
+        <span><span :class="NO_STATE_COLOR">●</span> {{ $t('peers.state.none') }}</span>
+      </p>
 
       <p v-if="streamError" class="card border-amber-700 p-3 text-sm text-amber-300">
         {{ $t(`peers.streamError.${streamError}`) }}

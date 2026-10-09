@@ -688,7 +688,8 @@
     "state": {
       "busy": "arbeitet",
       "waiting": "wartet auf eine Freigabe",
-      "idle": "bereit"
+      "idle": "bereit",
+      "none": "meldet nichts"
     }
   }
 }

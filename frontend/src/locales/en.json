@@ -688,7 +688,8 @@
     "state": {
       "busy": "working",
       "waiting": "waiting for an approval",
-      "idle": "ready"
+      "idle": "ready",
+      "none": "reports nothing"
     }
   }
 }
