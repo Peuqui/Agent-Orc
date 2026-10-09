@@ -9,8 +9,11 @@ Nur was noch aussteht. Erledigtes steht in der Git-Historie.
   Umbruch langer Pfade in den Antworten, „App neu laden“ und „Diktat sofort senden“ im ☰-Menü. In der Emulation
   gemessen, auf dem echten Android nicht: langes Diktat in einer Arbeitsflächen-Spalte (Tastenleiste bleibt sichtbar),
   Arbeitsfläche wechseln und zurück (Feld behält die Höhe), langer Text wird abgeschickt.
-- **Wackelnder Test:** `test_restart_resumes_a_busy_agent_with_its_waiting_effort` schlug am 9.10. in einem von neun
-  vollen Läufen fehl (einzeln 25-mal grün). Fehlermeldung beim nächsten Auftreten festhalten.
+- **Wackelnder Test:** `test_restart_resumes_a_busy_agent_with_its_waiting_effort` schlägt etwa in jedem zehnten vollen
+  Lauf fehl (am 9.10. abends in Lauf 2 gefangen). Meldung: `concurrent.futures.CancelledError` beim Verlassen von
+  `client.websocket_connect(...)` (`tests/test_api.py:779`, Starlette `TestClient.__exit__`), also beim Aufräumen der
+  Test-Websocket nach dem Neustart, nicht in Agent-Orc selbst. Niedrige Priorität; eine Lösung wäre, die Websocket vor
+  dem Neustart zu schließen oder den Neustart-Fall ohne Test-Websocket zu prüfen.
 
 ## AI-Connect
 
