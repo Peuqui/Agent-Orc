@@ -2,24 +2,48 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { api, type ConsumptionRow } from '../api'
+import { useHosts } from '../composables/useHosts'
 import { useToast } from '../composables/useToast'
 import { useTokenFormat } from '../composables/useTokenFormat'
 import { baseName } from '../format'
 
-// Claude's token consumption from all its conversations (Agent-Orc, terminal, VS Code, subagents):
-// per day as bars, per project and per model as tables. Tokens, no prices: those change, and a
-// subscription does not bill them.
+// Claude's token consumption from all its conversations (Agent-Orc, terminal, VS Code, subagents),
+// of all machines added up or of one: per day as bars, per project, model and machine as tables.
+// Tokens, no prices: those change, and a subscription does not bill them.
 const PERIODS = [7, 14, 30]
 const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000
 const KINDS = ['input', 'cache_write', 'cache_read', 'output'] as const
 
+type MachineRow = ConsumptionRow & { machine: string }
+const ALL = ''
+
 const toast = useToast()
 const { locale } = useI18n()
 const formatTokens = useTokenFormat()
-const rows = ref<ConsumptionRow[] | null>(null)
+const { state: hosts, loadHosts } = useHosts()
+const loaded = ref<MachineRow[] | null>(null)
 const period = ref(14)
+// One machine's name, or ALL for every machine added up.
+const shown = ref(ALL)
 
-api.consumption().then((loaded) => (rows.value = loaded), toast.error)
+// This machine's consumption and that of each machine that answers.
+async function load(): Promise<void> {
+  await loadHosts()
+  const state = hosts.value!
+  const machines = [{ name: state.self, host: undefined }, ...state.hosts.filter((host) => host.online).map((host) => ({ name: host.name, host: host.name }))]
+  const perMachine = await Promise.all(
+    machines.map(async ({ name, host }) => (await api.consumption(host)).map((row) => ({ ...row, machine: name }))),
+  )
+  loaded.value = perMachine.flat()
+}
+
+load().catch(toast.error)
+
+const machines = computed(() => [...new Set((loaded.value ?? []).map((row) => row.machine))])
+const unreachable = computed(() => (hosts.value?.hosts ?? []).filter((host) => !host.online).map((host) => host.name))
+const rows = computed(() => (loaded.value ?? []).filter((row) => shown.value === ALL || row.machine === shown.value))
+// Several machines in the sums: the project and machine tables tell them apart.
+const several = computed(() => shown.value === ALL && machines.value.length > 1)
 
 function localDay(date: Date): string {
   const shifted = new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
@@ -31,7 +55,7 @@ const days = computed(() =>
     localDay(new Date(Date.now() - (period.value - 1 - index) * MILLISECONDS_PER_DAY)),
   ),
 )
-const inPeriod = computed(() => (rows.value ?? []).filter((row) => row.day >= days.value[0]!))
+const inPeriod = computed(() => rows.value.filter((row) => row.day >= days.value[0]!))
 
 function total(row: Pick<ConsumptionRow, (typeof KINDS)[number]>): number {
   return KINDS.reduce((sum, kind) => sum + row[kind], 0)
@@ -39,7 +63,7 @@ function total(row: Pick<ConsumptionRow, (typeof KINDS)[number]>): number {
 
 type Sums = Record<(typeof KINDS)[number] | 'messages', number>
 
-function sumBy(key: (row: ConsumptionRow) => string): [string, Sums][] {
+function sumBy(key: (row: MachineRow) => string): [string, Sums][] {
   const sums = new Map<string, Sums>()
   for (const row of inPeriod.value) {
     const name = key(row)
@@ -51,7 +75,13 @@ function sumBy(key: (row: ConsumptionRow) => string): [string, Sums][] {
 }
 
 const perDay = computed(() => new Map(sumBy((row) => row.day)))
-const perProject = computed(() => sumBy((row) => baseName(row.project) || row.project))
+const perProject = computed(() =>
+  sumBy((row) => {
+    const name = baseName(row.project) || row.project
+    return several.value ? `${name} · ${row.machine}` : name
+  }),
+)
+const perMachine = computed(() => sumBy((row) => row.machine))
 const perModel = computed(() => sumBy((row) => row.model))
 const highest = computed(() => Math.max(1, ...[...perDay.value.values()].map(total)))
 const overall = computed(() => sumBy(() => 'all')[0]?.[1])
@@ -78,7 +108,19 @@ function dayLabel(day: string): string {
       </div>
     </div>
     <p class="text-xs text-slate-500">{{ $t('consumption.hint') }}</p>
-    <p v-if="!rows" class="card p-6 text-center text-slate-400">{{ $t('consumption.loading') }}</p>
+    <div v-if="machines.length > 1 || unreachable.length" class="flex flex-wrap items-center gap-2 text-sm">
+      <button
+        v-for="choice in [ALL, ...machines]"
+        :key="choice"
+        class="rounded-full border px-3 py-0.5"
+        :class="shown === choice ? 'border-amber-500 bg-amber-900/30 text-amber-300' : 'border-slate-600 text-slate-400 hover:bg-slate-800'"
+        @click="shown = choice"
+      >
+        {{ choice === ALL ? $t('consumption.allMachines') : choice }}
+      </button>
+      <span v-for="name in unreachable" :key="name" class="text-xs text-slate-500">{{ $t('consumption.unreachable', { name }) }}</span>
+    </div>
+    <p v-if="!loaded" class="card p-6 text-center text-slate-400">{{ $t('consumption.loading') }}</p>
     <template v-else>
       <div v-if="overall" class="card grid grid-cols-2 gap-3 p-4 text-sm sm:grid-cols-5">
         <div v-for="kind in [...KINDS, 'messages'] as const" :key="kind">
@@ -102,7 +144,11 @@ function dayLabel(day: string): string {
         </div>
       </div>
 
-      <div v-for="table in [{ key: 'perProject', rows: perProject }, { key: 'perModel', rows: perModel }]" :key="table.key" class="card overflow-x-auto p-4">
+      <div
+        v-for="table in [{ key: 'perProject', rows: perProject }, { key: 'perModel', rows: perModel }, ...(several ? [{ key: 'perMachine', rows: perMachine }] : [])]"
+        :key="table.key"
+        class="card overflow-x-auto p-4"
+      >
         <h2 class="mb-2 text-sm font-semibold text-slate-300">{{ $t(`consumption.${table.key}`) }}</h2>
         <table class="w-full text-sm">
           <thead>

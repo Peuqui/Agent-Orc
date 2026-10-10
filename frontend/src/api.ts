@@ -554,7 +554,9 @@ export const api = {
   promptTemplates: () => request<PromptTemplate[]>('GET', 'prompt-templates'),
   storePromptTemplates: (templates: PromptTemplate[]) =>
     request<void>('PUT', 'prompt-templates', { body: templates }),
-  consumption: () => request<ConsumptionRow[]>('GET', 'consumption'),
+  /** The consumption on this machine, or on another (`host`). A page of another machine's app asks
+   * this machine's own, too: it sums them all. */
+  consumption: (host?: string) => request<ConsumptionRow[]>('GET', 'consumption', { host, fromRoot: true }),
   /** Resumes the agent in its own session; a running answer and background tasks end. */
   restartSession: (sessionId: string, model: string | null = null, effort: string | null = null) =>
     request<AgentSession>('POST', `sessions/${encodeURIComponent(sessionId)}/restart`, { body: { model, effort } }),

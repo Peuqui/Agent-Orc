@@ -441,13 +441,17 @@
   "consumption": {
     "title": "Consumption",
     "days": "{count} days",
-    "hint": "Tokens from all Claude conversations on this machine – from Agent-Orc, the terminal and VS Code, subagents included. The figures come from Claude's own transcripts (as the API reports them); this is not a bill.",
+    "hint": "Tokens from all Claude conversations on all machines – from Agent-Orc, the terminal and VS Code, subagents included. The figures come from Claude's own transcripts (as the API reports them); this is not a bill.",
     "loading": "Counting …",
     "perDay": "Per day (all tokens)",
     "perProject": "By project",
     "perProjectColumn": "Project",
     "perModel": "By model",
     "perModelColumn": "Model",
+    "allMachines": "All machines",
+    "unreachable": "{name}: unreachable, not counted",
+    "perMachine": "By machine",
+    "perMachineColumn": "Machine",
     "kind": {
       "input": "Input",
       "cache_write": "Cache written",

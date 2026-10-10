@@ -441,13 +441,17 @@
   "consumption": {
     "title": "Verbrauch",
     "days": "{count} Tage",
-    "hint": "Tokens aus allen Claude-Gesprächen auf diesem Rechner – aus Agent-Orc, dem Terminal und VS Code, mit Hilfsagenten. Die Werte stammen aus Claudes eigenen Gesprächsdateien (so, wie die API sie meldet); das ist keine Abrechnung.",
+    "hint": "Tokens aus allen Claude-Gesprächen auf allen Rechnern – aus Agent-Orc, dem Terminal und VS Code, mit Hilfsagenten. Die Werte stammen aus Claudes eigenen Gesprächsdateien (so, wie die API sie meldet); das ist keine Abrechnung.",
     "loading": "Wird ausgewertet …",
     "perDay": "Pro Tag (alle Tokens)",
     "perProject": "Nach Projekt",
     "perProjectColumn": "Projekt",
     "perModel": "Nach Modell",
     "perModelColumn": "Modell",
+    "allMachines": "Alle Rechner",
+    "unreachable": "{name}: nicht erreichbar, nicht mitgezählt",
+    "perMachine": "Nach Rechner",
+    "perMachineColumn": "Rechner",
     "kind": {
       "input": "Eingabe",
       "cache_write": "Cache geschrieben",
