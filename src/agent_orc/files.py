@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import BinaryIO
 
 UNSAFE_NAME_CHARACTERS = re.compile(r"[^A-Za-z0-9._-]+")
+CONTROL_CHARACTERS = re.compile(r"[\x00-\x1f\x7f]")
 UNNAMED = "attachment"
 
 
@@ -58,18 +59,34 @@ def validate_name(name: str, pattern: str) -> None:
 
 
 def safe_file_name(name: str) -> str:
-    """The name of a file as it is kept here: its last part, with every run of characters other
-    than letters, digits, ".", "_" and "-" made one "-" (the file may come from anywhere)."""
+    """The name of a file as an agent is to be told it (an attachment): its last part, with every
+    run of characters other than letters, digits, ".", "_" and "-" made one "-", so that it needs
+    no quoting in a command or a prompt."""
     return UNSAFE_NAME_CHARACTERS.sub("-", Path(name).name).strip("-.") or UNNAMED
 
 
-def create_upload(folder: Path, name: str) -> tuple[Path, BinaryIO]:
-    """Opens a new file in the folder for an upload under that name (see safe_file_name). A name
-    that is taken gets a number before its suffix; nothing is ever overwritten."""
-    safe_name = safe_file_name(name)
-    stem, suffix = os.path.splitext(safe_name)
+def upload_file_name(name: str) -> str:
+    """The name of an uploaded file: its last part, as it is (spaces, umlauts and a leading "."
+    as in ".gitignore" stay). Only what no name can hold goes: the path and control characters."""
+    last = CONTROL_CHARACTERS.sub("", name.rsplit("/", 1)[-1])
+    return UNNAMED if last in ("", ".", "..") else last
+
+
+def upload_directory(folder: Path, subfolder: str) -> Path:
+    """Where an uploaded file goes: a path of plain names below the folder ("" is the folder
+    itself), as a dropped folder keeps its structure. "." and ".." are refused."""
+    parts = [CONTROL_CHARACTERS.sub("", part) for part in subfolder.split("/") if part]
+    if any(part in (".", "..") for part in parts):
+        raise InvalidNameError(subfolder)
+    return folder.joinpath(*parts)
+
+
+def create_new_file(folder: Path, name: str) -> tuple[Path, BinaryIO]:
+    """Opens a new file in the folder under that name. A name that is taken gets a number before
+    its suffix: nothing is ever overwritten."""
+    stem, suffix = os.path.splitext(name)
     for number in itertools.count(1):
-        target = folder / (safe_name if number == 1 else f"{stem}-{number}{suffix}")
+        target = folder / (name if number == 1 else f"{stem}-{number}{suffix}")
         try:
             return target, target.open("xb")
         except FileExistsError:

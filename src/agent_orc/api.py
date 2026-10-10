@@ -12,7 +12,7 @@ from contextlib import asynccontextmanager
 from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, BinaryIO, Literal
 from urllib.parse import urlsplit
 
 from fastapi import (
@@ -39,7 +39,7 @@ from agent_orc.attachments import (
     NOTE_FILES_URL,
     UPLOADS_DIR,
     bring_note_files,
-    store_attachment,
+    open_attachment,
     uploaded_image,
 )
 from agent_orc.auth import Clock, Credentials, LoginGuard, TokenSigner, verify_password
@@ -540,6 +540,18 @@ class ConversationRef(BaseModel):
 
 class DeleteConversationsRequest(BaseModel):
     conversations: list[ConversationRef]
+
+
+async def write_body(request: Request, target: Path, handle: BinaryIO) -> None:
+    """Writes the request body into the open file as it arrives, so that a large one does not fill
+    the memory. A body that breaks off leaves no half file behind."""
+    try:
+        with handle:
+            async for chunk in request.stream():
+                handle.write(chunk)
+    except BaseException:
+        target.unlink(missing_ok=True)
+        raise
 
 
 def create_app(
@@ -1622,8 +1634,9 @@ def create_app(
         session = find_session(session_id)
         if session is None:
             raise SessionNotFoundError(session_id)
-        content = await request.body()
-        return {"path": str(store_attachment(session.path, name, content, clock))}
+        target, handle = open_attachment(session.path, name, clock)
+        await write_body(request, target, handle)
+        return {"path": str(target.relative_to(session.path))}
 
     @app.get("/api/sessions/{session_id}/answers", dependencies=authenticated)
     def session_answers(session_id: str, turns: int = 20) -> list[dict[str, Any]]:
@@ -1977,22 +1990,21 @@ def create_app(
         return {"path": str(files.rename(path, body.new_name, name_pattern))}
 
     @app.post("/api/files/upload", dependencies=authenticated)
-    async def upload_file(folder: str, name: str, request: Request) -> dict[str, str]:
-        """Store the file in the request body in the folder; returns its path. The name is made
-        safe, and one that is taken gets a number: nothing is overwritten. The body is written as
-        it arrives, so a large file does not fill the memory."""
+    async def upload_file(
+        folder: str, name: str, request: Request, subfolder: str = ""
+    ) -> dict[str, str]:
+        """Store the file in the request body in the folder, or in `subfolder` below it (made if
+        it is not there: a dropped folder keeps its structure); returns its path. The name stays
+        as it is (see upload_file_name), and one that is taken gets a number: nothing is
+        overwritten."""
         target_folder = scope.resolve(folder)
         if not target_folder.is_dir():
             raise NotADirectoryError(str(target_folder))
-        target, handle = files.create_upload(target_folder, name)
-        try:
-            with handle:
-                async for chunk in request.stream():
-                    handle.write(chunk)
-        except BaseException:
-            # An upload that broke off leaves no half file behind.
-            target.unlink(missing_ok=True)
-            raise
+        # Resolved again with the subfolder: a link in it must not lead out of the scope.
+        destination = scope.resolve(str(files.upload_directory(target_folder, subfolder)))
+        destination.mkdir(parents=True, exist_ok=True)
+        target, handle = files.create_new_file(destination, files.upload_file_name(name))
+        await write_body(request, target, handle)
         return {"path": str(target)}
 
     @app.get("/api/files/content", dependencies=authenticated)
@@ -2015,8 +2027,9 @@ def create_app(
     @app.post(f"/api/{NOTE_FILES_URL.removeprefix('api/')}", dependencies=authenticated)
     async def attach_to_note(name: str, request: Request) -> dict[str, str]:
         """Store a file for a note; returns where the note links to it."""
-        stored = store_attachment(notes_dir(), name, await request.body(), clock)
-        return {"url": f"{NOTE_FILES_URL}/{stored.name}"}
+        target, handle = open_attachment(notes_dir(), name, clock)
+        await write_body(request, target, handle)
+        return {"url": f"{NOTE_FILES_URL}/{target.name}"}
 
     @app.get(f"/api/{NOTE_FILES_URL.removeprefix('api/')}/{{name}}", dependencies=authenticated)
     def note_file(name: str) -> FileResponse:

@@ -91,19 +91,30 @@ def test_write_rejects_too_large_content(tmp_path: Path) -> None:
         files.write_text(tmp_path / "x.txt", "x" * (MAX_BYTES + 1), None, MAX_BYTES)
 
 
-def test_a_file_name_is_made_safe() -> None:
+def test_an_attachment_name_is_made_safe() -> None:
     assert files.safe_file_name("Stimme Codine (1).mp3") == "Stimme-Codine-1-.mp3"
     assert files.safe_file_name("../../etc/passwd") == "passwd"
     assert files.safe_file_name("...") == files.UNNAMED
 
 
-def test_an_upload_never_takes_a_name_that_is_taken(tmp_path: Path) -> None:
+def test_an_upload_name_stays_as_it_is_but_for_the_path_and_control_characters() -> None:
+    assert files.upload_file_name("Stimme Codine (1).mp3") == "Stimme Codine (1).mp3"
+    assert files.upload_file_name("Prüfung äöü.txt") == "Prüfung äöü.txt"
+    # A project's own files keep their names, the dot files too.
+    assert files.upload_file_name(".gitignore") == ".gitignore"
+    assert files.upload_file_name("../../etc/passwd") == "passwd"
+    assert files.upload_file_name("a\x00b\nc.txt") == "abc.txt"
+    for unusable in ("", ".", "..", "x/..", "x/"):
+        assert files.upload_file_name(unusable) == files.UNNAMED
+
+
+def test_a_new_file_never_takes_a_name_that_is_taken(tmp_path: Path) -> None:
     for expected in ("a.wav", "a-2.wav", "a-3.wav"):
-        target, handle = files.create_upload(tmp_path, "a.wav")
+        target, handle = files.create_new_file(tmp_path, "a.wav")
         handle.close()
         assert target == tmp_path / expected
-    target, handle = files.create_upload(tmp_path, "ohne")
+    target, handle = files.create_new_file(tmp_path, "ohne")
     handle.close()
-    other, other_handle = files.create_upload(tmp_path, "ohne")
+    other, other_handle = files.create_new_file(tmp_path, "ohne")
     other_handle.close()
     assert (target.name, other.name) == ("ohne", "ohne-2")

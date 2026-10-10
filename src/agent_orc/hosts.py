@@ -53,7 +53,7 @@ HOP_BY_HOP = {
     "upgrade",
 }
 # Not handed on to the other machine: where the request was addressed, the login here (nothing
-# there is asked for), and the length (the body is sent whole, aiohttp counts it).
+# there is asked for), and the length (forward sets it again when the request has one).
 NOT_FORWARDED = HOP_BY_HOP | {"host", "cookie", "content-length"}
 
 
@@ -225,19 +225,33 @@ async def _chunks(upstream: aiohttp.ClientResponse) -> AsyncIterator[bytes]:
         upstream.close()
 
 
+def _has_body(request: Request) -> bool:
+    headers = request.headers
+    return headers.get("content-length", "0") != "0" or "transfer-encoding" in headers
+
+
+async def _body_of(request: Request) -> AsyncIterator[bytes]:
+    async for chunk in request.stream():
+        yield chunk
+
+
 async def forward(request: Request, link: HostLink, path: str) -> Response:
     """The request for /hosts/<name>/<path> as the other machine's Agent-Orc answers it; its
     answer is streamed back, so live streams (server-sent events) arrive as they are sent."""
     headers = [
         (name, value) for name, value in request.headers.items() if name not in NOT_FORWARDED
     ]
-    body = await request.body()
+    # The body goes on as it arrives, so a large upload does not fill this machine's memory. A
+    # length that is known goes along (without one the body is sent in chunks).
+    length = request.headers.get("content-length")
+    if length is not None:
+        headers.append(("content-length", length))
     try:
         upstream = await link.session().request(
             request.method,
             _upstream_url(path, request.url.query),
             headers=headers,
-            data=body or None,
+            data=_body_of(request) if _has_body(request) else None,
             allow_redirects=False,
         )
     except (aiohttp.ClientError, OSError, TimeoutError) as error:

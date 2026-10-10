@@ -395,11 +395,11 @@ def test_a_file_is_uploaded_and_a_taken_name_gets_a_number(client: TestClient, h
     first = client.post("/api/files/upload", params=params, content=b"eins")
     second = client.post("/api/files/upload", params=params, content=b"zwei")
     assert first.status_code == second.status_code == 200
-    # The name is made safe; the second one does not overwrite the first.
-    assert Path(first.json()["path"]) == folder / "Aufnahme-1.wav"
-    assert Path(second.json()["path"]) == folder / "Aufnahme-1-2.wav"
-    assert (folder / "Aufnahme-1.wav").read_bytes() == b"eins"
-    assert (folder / "Aufnahme-1-2.wav").read_bytes() == b"zwei"
+    # The name stays as it is; the second one does not overwrite the first.
+    assert Path(first.json()["path"]) == folder / "Aufnahme 1.wav"
+    assert Path(second.json()["path"]) == folder / "Aufnahme 1-2.wav"
+    assert (folder / "Aufnahme 1.wav").read_bytes() == b"eins"
+    assert (folder / "Aufnahme 1-2.wav").read_bytes() == b"zwei"
     # A path in the name does not leave the folder.
     sneaky = client.post(
         "/api/files/upload", params={"folder": str(folder), "name": "../../x.txt"}, content=b"x"
@@ -408,6 +408,55 @@ def test_a_file_is_uploaded_and_a_taken_name_gets_a_number(client: TestClient, h
     # Without the login it is refused (a client of its own: this one's cookie is the login).
     stranger = TestClient(client.app)
     assert stranger.post("/api/files/upload", params=params, content=b"x").status_code == 401
+
+
+def test_an_upload_goes_through_the_other_machines_app_without_being_held(
+    mini: TestClient, home: Path
+) -> None:
+    folder = home / "projects"
+
+    def chunks() -> Iterator[bytes]:
+        # No length is known: the body is handed on in chunks.
+        for number in range(8):
+            yield bytes([number]) * 100_000
+
+    params = {"folder": str(folder), "name": ".env local"}
+    unknown_length = mini.post("/hosts/Aragon/api/files/upload", params=params, content=chunks())
+    known_length = mini.post("/hosts/Aragon/api/files/upload", params=params, content=b"x" * 5)
+    assert unknown_length.status_code == known_length.status_code == 200
+    assert Path(unknown_length.json()["path"]) == folder / ".env local"
+    assert (folder / ".env local").stat().st_size == 800_000
+    assert (folder / ".env local-2").read_bytes() == b"x" * 5
+
+
+def test_a_dropped_folder_keeps_its_structure(
+    client: TestClient, home: Path, tmp_path: Path
+) -> None:
+    folder = home / "projects"
+    params = {"folder": str(folder), "name": "main.py", "subfolder": "proj/src/app"}
+    stored = client.post("/api/files/upload", params=params, content=b"print()")
+    assert Path(stored.json()["path"]) == folder / "proj" / "src" / "app" / "main.py"
+    assert (folder / "proj" / "src" / "app" / "main.py").read_bytes() == b"print()"
+    # Into the same folder again: the file gets a number, the folder is not replaced.
+    again = client.post("/api/files/upload", params=params, content=b"neu")
+    assert Path(again.json()["path"]).name == "main-2.py"
+    # Neither ".." nor a link that leads out of the scope.
+    up = {"folder": str(folder), "name": "x", "subfolder": "proj/../.."}
+    assert client.post("/api/files/upload", params=up, content=b"x").status_code == 422
+    (folder / "link").symlink_to(tmp_path)
+    out = {"folder": str(folder), "name": "x", "subfolder": "link"}
+    assert client.post("/api/files/upload", params=out, content=b"x").status_code == 403
+    assert not (tmp_path / "x").exists()
+
+
+def test_umlauts_and_spaces_in_an_uploaded_name_stay(client: TestClient, home: Path) -> None:
+    folder = home / "projects"
+    for name in ("Erzählerin.mp3", "Ärger Übung ß.mp3"):
+        stored = client.post(
+            "/api/files/upload", params={"folder": str(folder), "name": name}, content=b"x"
+        )
+        assert Path(stored.json()["path"]).name == name
+        assert (folder / name).read_bytes() == b"x"
 
 
 def test_an_upload_needs_a_folder_in_scope(client: TestClient, home: Path) -> None:
@@ -2042,7 +2091,7 @@ def test_sending_a_note_brings_its_files_into_the_agents_folder(
     )
     assert response.status_code == 204
     assert wait_for_text(client, session, "Schau dir das an: @.agent-orc/uploads/")
-    copies = list((home / "projects" / "a" / ".agent-orc" / "uploads").glob("*foto.png"))
+    copies = list((home / "projects" / "a" / ".agent-orc" / "uploads").glob("*foto*.png"))
     # One copy per link, each with the file's content.
     assert len(copies) == 2 and all(copy.read_bytes() == b"png" for copy in copies)
 
