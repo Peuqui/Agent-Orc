@@ -27,6 +27,7 @@ import { onLongPress } from '../composables/useLongPress'
 import { registerFileLinks } from '../composables/useFileLinks'
 import { sessionName, useSessions } from '../composables/useSessions'
 import { JOG_TRACK_WIDTH_PX, PHONE_WIDTH, TOUCH_FIRST } from '../device'
+import { useCopyText } from '../composables/useCopyText'
 import { useToast } from '../composables/useToast'
 import {
   FONT_SAMPLE,
@@ -84,14 +85,10 @@ async function showPlainText(): Promise<void> {
   }
 }
 
-async function copyPlainText(): Promise<void> {
-  if (plainText.value === null) return
-  try {
-    await navigator.clipboard.writeText(plainText.value)
-    toast.info(t('terminal.copied'))
-  } catch (error) {
-    toast.error(error)
-  }
+const copyText = useCopyText()
+
+function copyPlainText(): Promise<void> {
+  return plainText.value === null ? Promise.resolve() : copyText(plainText.value, t('terminal.copied'))
 }
 
 const session = computed(() => sessions.value.find((candidate) => candidate.id === props.id))

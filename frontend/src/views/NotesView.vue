@@ -12,6 +12,7 @@ import InputDialog from '../components/InputDialog.vue'
 import PdfPreview from '../components/PdfPreview.vue'
 import { useDictation } from '../composables/useDictation'
 import { useServerEvents } from '../composables/useServerEvents'
+import { useCopyText } from '../composables/useCopyText'
 import { useToast } from '../composables/useToast'
 import { renderMarkdown } from '../markdown'
 import { attachInOrder } from '../attachInOrder'
@@ -251,14 +252,10 @@ function onFolderChosen(field: HTMLSelectElement): void {
   moveNote(field.value === '' ? null : Number(field.value))
 }
 
-async function copyNote(): Promise<void> {
-  if (selected.value === null) return
-  try {
-    await navigator.clipboard.writeText(selected.value.text)
-    toast.info(t('notes.copied'))
-  } catch (error) {
-    toast.error(error)
-  }
+const copyText = useCopyText()
+
+function copyNote(): Promise<void> {
+  return selected.value === null ? Promise.resolve() : copyText(selected.value.text, t('notes.copied'))
 }
 
 // The formatting bar: each button writes the Markdown for the selection (or the line) into the

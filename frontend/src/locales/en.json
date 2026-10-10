@@ -68,6 +68,8 @@
     "actions": "Actions for {name}",
     "upload": "Upload",
     "uploadFolder": "Upload folder",
+    "copyPath": "Copy path",
+    "pathCopied": "Path copied.",
     "sortBy": "Sort by",
     "sort": { "name": "Name", "modified": "Modified", "size": "Size" },
     "uploading": "Uploading … {done} of {total}",

@@ -12,6 +12,7 @@ import ConversationCleanup from '../components/ConversationCleanup.vue'
 import TrashPanel from '../components/TrashPanel.vue'
 import { DRAG_PATH_TYPE } from '../dragTypes'
 import { loadTabState } from '../composables/useWorkspaceTab'
+import { useCopyText } from '../composables/useCopyText'
 import { useScope } from '../composables/useScope'
 import { useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
@@ -35,6 +36,7 @@ const { locale, t } = useI18n()
 const { scope, secondsLeft, load: loadScope, unlock, lock } = useScope()
 const { sessionByPath } = useSessions()
 const toast = useToast()
+const copyText = useCopyText()
 
 const entries = ref<FileEntry[]>([])
 
@@ -210,6 +212,12 @@ onBeforeUnmount(() => {
   window.removeEventListener('drop', refuseFileDrop)
 })
 
+// What an agent is handed to work on: the path as it is on this machine.
+function copyPath(entry: FileEntry): void {
+  dialog.value = null
+  void copyText(entry.path, t('files.pathCopied'))
+}
+
 function createFolder(name: string): void {
   void run(() => api.createFolder(currentPath.value, name))
 }
@@ -329,6 +337,7 @@ watch(currentPath, () => {
         class="flex items-center"
         draggable="true"
         @dragstart="startDrag($event, entry)"
+        @contextmenu.prevent="dialog = { kind: 'actions', entry }"
       >
         <button
           class="flex min-h-14 min-w-0 flex-1 items-center gap-3 px-4 text-left"
@@ -377,6 +386,9 @@ watch(currentPath, () => {
         <a v-if="!dialog.entry.is_dir" class="btn-secondary" :href="rawFileUrl(dialog.entry.path, true)">
           <AppIcon name="download" />{{ $t('editor.download') }}
         </a>
+        <button class="btn-secondary" @click="copyPath(dialog.entry)">
+          <AppIcon name="copy" />{{ $t('files.copyPath') }}
+        </button>
         <button class="btn-secondary" @click="dialog = { kind: 'rename', entry: dialog.entry }">
           <AppIcon name="pencil" />{{ $t('common.rename') }}
         </button>
