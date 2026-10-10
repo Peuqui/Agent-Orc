@@ -4,16 +4,23 @@ Nur was noch aussteht. Erledigtes steht in der Git-Historie.
 
 ## Eingabefeld und Oberfläche
 
-- **Am Handy prüfen (Umbau vom 9.10.):** Höhe der Vollbild-Seiten aus dem festen Body statt `h-dvh`, Eingabefeld mit
-  `field-sizing: content` und Obergrenze 40 % der Ansicht (`cqh`), Absenden über `POST /api/sessions/{id}/message`,
-  Umbruch langer Pfade in den Antworten, „App neu laden“ und „Diktat sofort senden“ im ☰-Menü. In der Emulation
-  gemessen, auf dem echten Android nicht: langes Diktat in einer Arbeitsflächen-Spalte (Tastenleiste bleibt sichtbar),
-  Arbeitsfläche wechseln und zurück (Feld behält die Höhe), langer Text wird abgeschickt.
 - **Wackelnder Test:** `test_restart_resumes_a_busy_agent_with_its_waiting_effort` schlägt etwa in jedem zehnten vollen
   Lauf fehl (am 9.10. abends in Lauf 2 gefangen). Meldung: `concurrent.futures.CancelledError` beim Verlassen von
   `client.websocket_connect(...)` (`tests/test_api.py:779`, Starlette `TestClient.__exit__`), also beim Aufräumen der
   Test-Websocket nach dem Neustart, nicht in Agent-Orc selbst. Niedrige Priorität; eine Lösung wäre, die Websocket vor
   dem Neustart zu schließen oder den Neustart-Fall ohne Test-Websocket zu prüfen.
+
+## Mehrere Rechner
+
+- **Aragon (und beliebige weitere Rechner) anbinden:** Jeder Rechner bekommt eine eigene Agent-Orc-Instanz, der Mini
+  bündelt sie in einer Oberfläche (Peuqui, 10.10.). Jede Instanz bedient ihre eigene Maschine mit dem vorhandenen Code
+  (tmux, Transkripte, Dateien, Änderungen bleiben lokal); der Mini leitet Anfragen per SSH-Tunnel weiter. Aragon ist
+  vom Mini über `10.0.0.2:2222` (WSL) per Schlüssel erreichbar. Stand: Wheel liegt in einem venv auf Aragon
+  (`~/.local/share/agent-orc/venv`, `agent-orc` in `~/.local/bin`); noch keine Konfiguration, kein Dienst, kein Tunnel.
+  Offen: Konfiguration und Passwort auf Aragon, Dienst (systemd-User-Dienst im WSL), Tunnel (z. B. `autossh`-artig als
+  Dienst auf dem Mini), Rechner-Ebene in Backend und Oberfläche (Sitzungs-Kennungen mit Rechnername, Auswahl),
+  Anmeldung der Instanzen untereinander. Der Agent auf Aragon läuft in VS Code und nicht in tmux; er muss einmal von
+  Agent-Orc neu gestartet werden (Gespräch fortsetzen), um verwaltbar zu sein.
 
 ## AI-Connect
 
