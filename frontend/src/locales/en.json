@@ -180,6 +180,7 @@
     "UserTokenRefusedError": "The bridge does not know AI-Connect's user token. Create a new one (installer.py user-token) and restart the bridge.",
     "HostUnreachableError": "The machine does not answer (tunnel, or Agent-Orc there).",
     "UnknownHostError": "No such machine.",
+    "InvalidBaseDirError": "That is not an existing folder in the home directory.",
     "PeerSendError": "AI-Connect did not take the message.",
     "UserTokenMissingError": "AI-Connect has no user token yet. Create it in a terminal with installer.py user-token and restart the bridge."
   },
@@ -233,6 +234,9 @@
   },
   "settings": {
     "title": "Settings",
+    "baseDir": "This machine's start folder",
+    "baseDirHint": "Where files and new agents begin; only folders in the home directory.",
+    "baseDirSaved": "Start folder changed.",
     "scrollLines": "Scrolling: lines per step",
     "scrollLinesHint": "For the mouse wheel and swiping in the terminal, on this device.",
     "less": "Less",

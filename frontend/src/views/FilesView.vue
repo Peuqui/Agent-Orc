@@ -158,7 +158,7 @@ watch(currentPath, loadEntries)
       <button
         v-else
         class="btn-secondary min-h-9 shrink-0 whitespace-nowrap"
-        @click="dialog = { kind: 'unlock' }"
+        @click="scope?.password_required === false ? onUnlock('') : (dialog = { kind: 'unlock' })"
       >
         {{ $t('scope.unlock') }}
       </button>

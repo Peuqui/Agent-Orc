@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from agent_orc.scope import AccessScope, OutsideScopeError
+from agent_orc.scope import AccessScope, InvalidBaseDirError, OutsideScopeError
 from tests.conftest import FakeClock
 
 
@@ -64,3 +64,23 @@ def test_home_is_the_limit_even_when_unlocked(scope: AccessScope) -> None:
     scope.unlock()
     with pytest.raises(OutsideScopeError):
         scope.resolve("/etc")
+
+
+def test_the_base_directory_can_move_inside_the_home_directory(
+    scope: AccessScope, home: Path
+) -> None:
+    scope.change_base_dir(home / "private")
+    assert scope.root == home / "private"
+    assert scope.resolve(str(home / "private")) == home / "private"
+    with pytest.raises(OutsideScopeError):
+        scope.resolve(str(home / "projects"))
+
+
+def test_the_base_directory_is_a_folder_in_the_home_directory(
+    scope: AccessScope, home: Path, tmp_path_factory: pytest.TempPathFactory
+) -> None:
+    (home / "afile").write_text("x")
+    for wrong in (home / "afile", home / "missing", tmp_path_factory.mktemp("elsewhere")):
+        with pytest.raises(InvalidBaseDirError):
+            scope.change_base_dir(wrong)
+    assert scope.base_dir == home / "projects"

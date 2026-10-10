@@ -38,6 +38,7 @@ export function useScope() {
     secondsLeft,
     load,
     unlock: async (password: string) => apply(await api.unlock(password)),
+    setBaseDir: async (path: string, password: string) => apply(await api.setBaseDir(path, password)),
     lock: async () => apply(await api.lock()),
   }
 }

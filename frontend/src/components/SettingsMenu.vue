@@ -14,6 +14,7 @@ import {
   useSettings,
 } from '../composables/useSettings'
 import AppIcon from './AppIcon.vue'
+import BaseDirSettings from './BaseDirSettings.vue'
 import DropdownMenu from './DropdownMenu.vue'
 import HandoverSettings from './HandoverSettings.vue'
 import KeysEditor from './KeysEditor.vue'
@@ -124,6 +125,7 @@ function changeScrollLines(delta: number): void {
       >
         {{ $t('settings.keys') }}
       </button>
+      <BaseDirSettings />
       <SpeechSettings />
       <PushSettings />
       <HandoverSettings />

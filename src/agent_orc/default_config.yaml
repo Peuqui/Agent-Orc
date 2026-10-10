@@ -17,6 +17,7 @@ auth:
 
 files:
   # The file manager and new agent folders stay inside this directory.
+  # (Settings in the app can change it later; what is set there wins over this.)
   base_dir: ~/projects
   # Allowed names for new or renamed files and folders.
   name_pattern: '^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$'

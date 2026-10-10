@@ -302,6 +302,8 @@ export interface ScopeState {
   base_dir: string
   seconds_unlocked: number
   unlock_minutes: number
+  /** False on a machine without a login (controlled over SSH): nothing to confirm with. */
+  password_required: boolean
 }
 
 export interface TrashEntry {
@@ -478,6 +480,9 @@ export const api = {
 
   scope: () => request<ScopeState>('GET', 'scope'),
   unlock: (password: string) => request<ScopeState>('POST', 'scope/unlock', { body: { password } }),
+  /** Where files and new agents begin, on the machine whose app this is. */
+  setBaseDir: (path: string, password: string) =>
+    request<ScopeState>('PUT', 'scope/base-dir', { body: { path, password } }),
   lock: () => request<ScopeState>('POST', 'scope/lock'),
 
   agents: () => request<AgentProfile[]>('GET', 'agents'),

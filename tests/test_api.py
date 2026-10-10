@@ -312,6 +312,40 @@ def test_outside_scope_until_unlocked(client: TestClient, home: Path, clock: Fak
     assert client.get("/api/files", params={"path": private}).status_code == 403
 
 
+def test_the_base_directory_is_set_in_the_app_and_kept(
+    client: TestClient, home: Path, config: Config, clock: FakeClock
+) -> None:
+    assert client.get("/api/scope").json()["password_required"] is True
+    new = {"path": str(home / "private"), "password": PASSWORD}
+    assert client.put("/api/scope/base-dir", json={**new, "password": "wrong"}).status_code == 401
+    # No folder, or none in the home directory, cannot be it.
+    assert (
+        client.put("/api/scope/base-dir", json={**new, "path": str(home / "none")}).status_code
+        == 422
+    )
+    assert client.put("/api/scope/base-dir", json={**new, "path": "/etc"}).status_code == 422
+    assert client.get("/api/scope").json()["base_dir"] == str(home / "projects")
+
+    changed = client.put("/api/scope/base-dir", json=new).json()
+    assert changed["base_dir"] == str(home / "private")
+    assert client.get("/api/files", params={"path": str(home / "projects")}).status_code == 403
+
+    # A restart reads it from the state, not from the config.
+    restarted = TestClient(
+        create_app(config, new_credentials(PASSWORD), static_dir=None, clock=clock)
+    )
+    restarted.post("/api/login", json={"password": PASSWORD})
+    assert restarted.get("/api/scope").json()["base_dir"] == str(home / "private")
+
+
+def test_on_a_socket_the_base_directory_needs_no_password(trusted: TestClient, home: Path) -> None:
+    assert trusted.get("/api/scope").json()["password_required"] is False
+    changed = trusted.put(
+        "/api/scope/base-dir", json={"path": str(home / "private"), "password": ""}
+    )
+    assert changed.json()["base_dir"] == str(home / "private")
+
+
 def test_restore_outside_scope_needs_unlock(client: TestClient, home: Path) -> None:
     client.post("/api/scope/unlock", json={"password": PASSWORD})
     (home / "private" / "note.txt").write_text("x")

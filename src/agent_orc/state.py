@@ -10,6 +10,7 @@ WORKSPACES_FILE = "workspaces.json"
 PROMPT_TEMPLATES_FILE = "prompt-templates.json"
 EXTRA_KEYS_FILE = "extra-keys.json"
 NOTEBOOKS_FILE = "notebooks.json"
+BASE_DIR_FILE = "base-dir.json"
 ANSWERS_SEEN_FILE = "answers-seen.json"
 # Key of the unnamed workspace in the workspaces file; a name the user gives is never empty.
 UNNAMED_WORKSPACE = ""
@@ -181,3 +182,15 @@ def mark_answers_seen(session_id: str, time: str) -> None:
     if time <= seen.get(session_id, ""):
         return
     write_atomically(state_dir() / ANSWERS_SEEN_FILE, json.dumps({**seen, session_id: time}))
+
+
+def read_base_dir() -> Path | None:
+    """The base directory the user set in the app, which wins over the config's; None if none."""
+    path = state_dir() / BASE_DIR_FILE
+    if not path.is_file():
+        return None
+    return Path(json.loads(path.read_text(encoding="utf-8"))["path"])
+
+
+def write_base_dir(folder: Path) -> None:
+    write_atomically(state_dir() / BASE_DIR_FILE, json.dumps({"path": str(folder)}))

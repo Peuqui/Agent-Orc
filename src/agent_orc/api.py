@@ -130,7 +130,7 @@ from agent_orc.schedule import (
     remove_scheduled_of,
     take_limited,
 )
-from agent_orc.scope import AccessScope, OutsideScopeError
+from agent_orc.scope import AccessScope, InvalidBaseDirError, OutsideScopeError
 from agent_orc.sessions import (
     AgentSession,
     InvalidSuffixError,
@@ -152,6 +152,7 @@ from agent_orc.state import (
     notes_dir,
     place_workspace,
     read_answers_seen,
+    read_base_dir,
     read_card_order,
     read_extra_keys,
     read_notebooks,
@@ -161,6 +162,7 @@ from agent_orc.state import (
     rename_notebook,
     reset_extra_keys,
     state_dir,
+    write_base_dir,
     write_card_order,
     write_extra_keys,
     write_notebooks,
@@ -274,6 +276,7 @@ ERROR_STATUS: dict[type[Exception], int] = {
     UnknownNotebookError: status.HTTP_404_NOT_FOUND,
     NotConfiguredError: status.HTTP_404_NOT_FOUND,
     UnknownHostError: status.HTTP_404_NOT_FOUND,
+    InvalidBaseDirError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     HostUnreachableError: status.HTTP_502_BAD_GATEWAY,
     NotebookExistsError: status.HTTP_409_CONFLICT,
     SessionAlreadyRunningError: status.HTTP_409_CONFLICT,
@@ -309,6 +312,11 @@ ERROR_STATUS: dict[type[Exception], int] = {
 
 
 class PasswordRequest(BaseModel):
+    password: str
+
+
+class BaseDirRequest(BaseModel):
+    path: str
     password: str
 
 
@@ -549,8 +557,9 @@ def create_app(
         raise ValueError("credentials are needed exactly when the server listens on a port")
     sessions = SessionManager(config.tmux.socket_name, config.agents, config.terminal)
     home = Path.home()
+    # The folder set in the app wins over the config's (which is where a new installation starts).
     scope = AccessScope(
-        config.files.base_dir,
+        read_base_dir() or config.files.base_dir,
         home,
         config.files.unlock_minutes * SECONDS_PER_MINUTE,
         clock,
@@ -922,6 +931,8 @@ def create_app(
             "base_dir": str(scope.base_dir),
             "seconds_unlocked": scope.seconds_unlocked(),
             "unlock_minutes": config.files.unlock_minutes,
+            # A machine controlled over SSH has no login to confirm with.
+            "password_required": credentials is not None,
         }
 
     if signer is not None:
@@ -958,6 +969,15 @@ def create_app(
     def unlock(body: PasswordRequest) -> dict[str, Any]:
         check_password(body.password)
         scope.unlock()
+        return scope_state()
+
+    @app.put("/api/scope/base-dir", dependencies=authenticated)
+    def set_base_dir(body: BaseDirRequest) -> dict[str, Any]:
+        """Where files and new agents begin; confirmed with the password, as it widens what the
+        file manager reaches."""
+        check_password(body.password)
+        scope.change_base_dir(Path(body.path).expanduser())
+        write_base_dir(scope.base_dir)
         return scope_state()
 
     @app.post("/api/scope/lock", dependencies=authenticated)
