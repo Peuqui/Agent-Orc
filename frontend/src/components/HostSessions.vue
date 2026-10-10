@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { apiFor, type AgentSession, type Reasoning, type WorkspaceSet } from '../api'
@@ -18,6 +18,7 @@ import TerminalButton from './TerminalButton.vue'
 import ScheduledList from './ScheduledList.vue'
 import { moveInList, useReorder } from '../composables/useReorder'
 import { provideHost } from '../composables/useHostContext'
+import { shownAgents } from '../composables/useShownAgents'
 import { useHostLinks } from '../composables/useHostLinks'
 import { cardKey, sessionName, useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
@@ -41,6 +42,12 @@ onMounted(() => {
 onBeforeUnmount(() => {
   if (props.host !== null) stopPolling()
 })
+// This machine's own agents show their requests on their cards: the announcement at the top of the
+// page leaves them out (it only lists this machine's agents).
+if (props.host === null) {
+  watch(() => sessions.value.map((session) => session.id), (ids) => (shownAgents.value = ids), { immediate: true })
+  onBeforeUnmount(() => (shownAgents.value = []))
+}
 const { t, te } = useI18n()
 const stopping = ref<AgentSession | null>(null)
 // A chosen reasoning waiting for confirmation; the control shows it until then.
