@@ -16,7 +16,8 @@ Rechner (PWA).
 
 Jeder Agent läuft in einer eigenen `tmux`-Sitzung in einem Projektordner. Wer den Browser
 schließt, trennt nur die Verbindung: Die Agenten arbeiten weiter und lassen sich von jedem Gerät
-aus wieder aufnehmen.
+aus wieder aufnehmen. Weitere Rechner mit Agent-Orc lassen sich in derselben App zeigen, über
+einen SSH-Tunnel ([Mehrere Rechner](#mehrere-rechner)).
 
 <p align="center">
   <img src="docs/screenshots/overview-de.png" alt="Übersicht: Agentenkarten mit Kontext-Ring, Effort-Regler und Claude-Kontingent" width="860">
@@ -88,6 +89,23 @@ aus wieder aufnehmen.
   [AIfred](https://github.com/Peuqui/AIfred-Intelligence) auf einem Echo Dot ansagen, im Raum, den
   du in den Einstellungen wählst.
 
+**Gespräche** (mit [AI-Connect](https://github.com/Peuqui/AI-Connect), der Brücke, über die Agenten-Sitzungen miteinander sprechen; optional)
+- Live mitlesen: nach Gespräch (als Baum), als Verlauf oder als Spuren (Sequenzdiagramm mit einem
+  Pfeil je Nachricht); dazu die Agenten, die online sind, mit ihrem Zustand (arbeitet, wartet,
+  bereit).
+- Eingeschaltet durch den Abschnitt `peers:` der Config; AI-Connect hält seine Tokens in eigenen
+  Dateien.
+- An einen, mehrere oder alle schreiben, als du selbst; Enter sendet, Shift+Enter macht eine neue
+  Zeile. In einem aufgeklappten Gespräch antwortet das Feld darunter allen darin.
+
+**Mehrere Rechner**
+- Ein weiterer Rechner mit eigenem Agent-Orc (ein zweiter PC, ein WSL unter Windows, ein Server)
+  erscheint in derselben App: eine Rechner-Auswahl in der Kopfzeile und seine Agenten unter
+  deinen eigenen auf der Übersicht. Seine Terminals, Arbeitsflächen, Notizen und Dateien gehören
+  dem Rechner und öffnen sich wie in jeder App.
+- Ein Login, eine Adresse: Der andere Rechner hat weder einen Port noch ein Passwort, dein
+  SSH-Schlüssel ist der Weg hinein.
+
 **Notizen**
 - Notizbücher als Reiter, je mit losen Notizen und Ordnern; sie liegen wie die Arbeitsflächen auf dem Server.
 - Eine Notiz ist Markdown mit Formatierungsleiste (fett, kursiv, Überschrift, Liste, Code, Link),
@@ -131,11 +149,12 @@ aus wieder aufnehmen.
 ## Voraussetzungen
 
 - Linux mit `git` und `tmux`
-- Python 3.12 oder neuer
+- Python 3.12 oder neuer, mit dem Modul `venv` (Debian/Ubuntu: `apt install python3-venv`)
 - Node.js 20.19 oder neuer mit npm (baut bei der Installation die Web-App)
 - die gewünschten Agenten-CLIs, z. B. [Claude Code](https://docs.claude.com/en/docs/claude-code)
 - optional, fürs Diktat: [whisper-stt](https://github.com/Peuqui/whisper-stt) (lokale
   Spracherkennung)
+- optional, für mehrere Rechner: `ssh` mit Schlüssel-Login auf jeden davon
 
 ## Installation
 
@@ -153,7 +172,9 @@ agent-orc serve            # http://127.0.0.1:8770
 fragt dann nach:
 
 - dem Ordner mit deinen Projekten (wird angelegt, falls es ihn nicht gibt),
-- ob Agent-Orc hinter HTTPS läuft oder für einen ersten lokalen Test über einfaches HTTP,
+- ob ein anderes Agent-Orc diesen Rechner über SSH steuert (dann lauscht er auf einem Socket und
+  verlangt kein Passwort, siehe [Mehrere Rechner](#mehrere-rechner)); wenn nicht, ob er hinter
+  HTTPS läuft oder für einen ersten lokalen Test über einfaches HTTP,
 - einem Whisper-Dienst fürs Diktat, falls du einen betreibst (es prüft, ob er antwortet); ohne
   ihn nutzt das Mikrofon die Spracherkennung des Browsers (Chrome),
 - deiner E-Mail-Adresse für die Push-Dienste, die Benachrichtigungen zustellen (optional),
@@ -191,6 +212,45 @@ sudo systemctl enable --now agent-orc@$USER
 bereit, samt Terminal-WebSocket. Hinter HTTPS lässt sich die App auf dem Handy-Startbildschirm
 installieren.
 
+### Mehrere Rechner
+
+Jeder Rechner betreibt ein eigenes Agent-Orc; das, das du im Browser öffnest (der Hauptrechner),
+zeigt die anderen. Auf den anderen wird nichts aus dem Quellcode installiert: Der Hauptrechner
+baut die Web-App und liefert sie per SSH aus. Der andere Rechner braucht `python3` (3.12+, mit
+`venv`), `tmux`, `git`, die dort gewünschten Agenten-CLIs und einen SSH-Login mit Schlüssel (kein
+Passwort).
+
+```bash
+# 1. Auf dem Hauptrechner: das Programm zum anderen schicken (ssh-Optionen wie bei ssh).
+deploy/deploy.sh -p 2222 ich@anderer-rechner
+# 2. Einmal auf dem anderen Rechner: die Frage nach einem anderen Agent-Orc mit „ja“ beantworten.
+ssh -t -p 2222 ich@anderer-rechner agent-orc setup
+# 3. Nochmal: jetzt findet es eine Config und startet den Dienst (ein systemd-Benutzerdienst).
+deploy/deploy.sh -p 2222 ich@anderer-rechner
+```
+
+Danach den Rechner in der `~/.config/agent-orc/config.yaml` des Hauptrechners benennen und diesen
+neu starten (die Kommentare der Config enthalten dasselbe Beispiel):
+
+```yaml
+hosts:
+  Anderer:
+    ssh: ["-p", "2222", "ich@anderer-rechner"]
+    socket: /home/ich/.local/state/agent-orc/run/agent-orc.sock   # server.socket des anderen Rechners
+```
+
+Der Rechner erscheint dann in der Rechner-Auswahl der Kopfzeile (sie bleibt auf der Seite, auf der
+du bist) und unter deinen Agenten auf der Übersicht. Dahinter hält der Hauptrechner einen
+SSH-Tunnel zum Socket des anderen offen, baut ihn nach einem Abbruch neu auf und reicht dessen App
+unter `/hosts/<Name>/` durch; dein Login dort ist der einzige. Kontingent und Gespräche kommen
+immer vom Hauptrechner (ein Konto, ein AI-Connect).
+
+`deploy/deploy.sh` ist zugleich das Update: nach jeder Änderung erneut ausführen (es liefert nur
+committeten Code aus, wie `deploy/install.sh`). Die Agenten dort laufen dabei weiter. Der Dienst
+endet mit der Benutzersitzung des Rechners; `loginctl enable-linger` (einmal als root) hält ihn auch
+ohne Anmeldung am Laufen. Ein Rechner, der aus ist oder dessen Tunnel steht, erscheint als nicht
+erreichbar.
+
 ### Tipp: neue Agenten sofort loslegen lassen
 
 Ein Claude-Code-Agent wartet auf die erste Nachricht. Sein Startbefehl in der Config nimmt am
@@ -217,6 +277,11 @@ cd frontend && npm test                                               # reine Fr
 Agent-Orc gibt Zugriff auf den Rechner auf Shell-Ebene. Es bringt einen eigenen Login mit und
 lauscht nur auf `127.0.0.1`. Ins Internet nur hinter HTTPS stellen, am besten hinter einem
 Reverse Proxy mit zusätzlicher Authentifizierung.
+
+Ein von einem anderen Rechner gesteuerter Rechner hat weder Login noch Port: Er lauscht auf einem
+Unix-Socket in einem Ordner, den nur sein Benutzer betreten darf (bei jedem Start geprüft), und
+hinein kommt, wer sich mit dem Schlüssel per SSH auf diesem Rechner anmelden darf. Den Schlüssel
+genauso sorgfältig verwahren wie den Login.
 
 ## Lizenz
 

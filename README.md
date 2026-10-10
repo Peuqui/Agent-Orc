@@ -14,7 +14,8 @@ Agent-Orc starts, watches and stops coding agents (Claude Code, Codex, Aider, â€
 Linux machine, from a web app that works on the phone as well as on the desktop (PWA).
 
 Every agent runs in its own `tmux` session inside a project folder. Closing the browser only
-detaches: the agents keep working, and you pick them up again from any device.
+detaches: the agents keep working, and you pick them up again from any device. Other machines
+that run Agent-Orc can be shown in the same app, through an SSH tunnel ([Several machines](#several-machines)).
 
 <p align="center">
   <img src="docs/screenshots/overview-en.png" alt="Overview: agent cards with context ring, effort slider and Claude usage" width="860">
@@ -81,6 +82,20 @@ detaches: the agents keep working, and you pick them up again from any device.
   section in the config, the paragraph for listening can also be said on an Echo Dot through
   [AIfred](https://github.com/Peuqui/AIfred-Intelligence), in the room chosen in the settings.
 
+**Conversations** (with [AI-Connect](https://github.com/Peuqui/AI-Connect), the bridge that lets agent sessions talk to each other; optional)
+- Read along live: by conversation (a tree), as a timeline, or as lanes (a sequence diagram with
+  an arrow per message); the agents online with their state (working, waiting, ready).
+- Switched on by the `peers:` section of the config; AI-Connect keeps its tokens in its own files.
+- Write to one, several or all of them as yourself; Enter sends, Shift+Enter breaks the line. In
+  an open conversation the field below answers everyone in it.
+
+**Several machines**
+- Another machine with its own Agent-Orc (a second PC, a WSL on Windows, a server) shows up in
+  the same app: a machine menu in the header, and its agents below your own on the overview.
+  Its terminals, workspaces, notes and files are the machine's own and open as in any app.
+- One login, one address: the other machine has neither a port nor a password, and your SSH key
+  is the way in.
+
 **Notes**
 - Notebooks as tabs, each with loose notes and folders, kept on the server like the workspaces.
 - A note is Markdown with a formatting bar (bold, italic, heading, list, code, link), a
@@ -122,11 +137,12 @@ detaches: the agents keep working, and you pick them up again from any device.
 ## Requirements
 
 - Linux with `git` and `tmux`
-- Python 3.12 or newer
+- Python 3.12 or newer, with its `venv` module (Debian/Ubuntu: `apt install python3-venv`)
 - Node.js 20.19 or newer with npm (builds the web app during installation)
 - the agent CLIs you want to use, e.g. [Claude Code](https://docs.claude.com/en/docs/claude-code)
 - optional, for dictation: [whisper-stt](https://github.com/Peuqui/whisper-stt) (local speech
   recognition)
+- optional, for several machines: `ssh` with key login to each of them
 
 ## Installation
 
@@ -144,7 +160,9 @@ agent-orc serve            # http://127.0.0.1:8770
 asks for:
 
 - the folder that holds your projects (created if it does not exist),
-- whether Agent-Orc runs behind HTTPS or on plain HTTP for a first local test,
+- whether another Agent-Orc controls this machine through SSH (then it listens on a socket and
+  asks for no password, see [Several machines](#several-machines)); if not, whether it runs behind
+  HTTPS or on plain HTTP for a first local test,
 - a Whisper service for dictation, if you run one (it checks that it answers); without one
   the microphone uses the browser's own speech recognition (Chrome),
 - your e-mail address for the push services that deliver notifications (optional),
@@ -181,6 +199,43 @@ sudo systemctl enable --now agent-orc@$USER
 including the terminal WebSocket. Behind HTTPS the app can be installed on the phone's home
 screen.
 
+### Several machines
+
+Each machine runs an Agent-Orc of its own; the one you open in the browser (the main machine)
+shows the others. Nothing is installed from source on the others, the main machine builds the
+web app and ships it over SSH. The other machine needs `python3` (3.12+, with `venv`), `tmux`,
+`git`, the agent CLIs you want there, and an SSH login with a key (not a password).
+
+```bash
+# 1. On the main machine: ship the program to the other one (ssh options as you would give ssh).
+deploy/deploy.sh -p 2222 me@other-machine
+# 2. Once, on the other machine: answer "yes" to the question about another Agent-Orc.
+ssh -t -p 2222 me@other-machine agent-orc setup
+# 3. Again: now it finds a config and starts the service (a systemd user service).
+deploy/deploy.sh -p 2222 me@other-machine
+```
+
+Then name the machine in the main machine's `~/.config/agent-orc/config.yaml` and restart it
+(the config comments hold the same example):
+
+```yaml
+hosts:
+  Other:
+    ssh: ["-p", "2222", "me@other-machine"]
+    socket: /home/me/.local/state/agent-orc/run/agent-orc.sock   # the other machine's server.socket
+```
+
+The machine then appears in the machine menu in the header (it stays on the page you are on)
+and below your agents on the overview. Behind it, the main machine keeps an SSH tunnel open to
+the other's socket, builds it again when it breaks, and passes the other machine's app on under
+`/hosts/<name>/`; your login there is the only one. The usage limits and the conversations tab
+always come from the main machine (one account, one AI-Connect).
+
+`deploy/deploy.sh` is also the update: run it again after every change (it ships only committed
+code, like `deploy/install.sh`). Agents there keep running across it. The service stops with the
+machine's user session; `loginctl enable-linger` (as root, once) keeps it running without a login.
+A machine that is off, or whose tunnel is down, shows as unreachable.
+
 ### Tip: let new agents get going at once
 
 A Claude Code agent waits for your first message. Its start command in the config takes a first
@@ -207,6 +262,10 @@ cd frontend && npm test                                               # pure fro
 Agent-Orc gives shell-level access to your machine. It has its own login and listens on
 `127.0.0.1` only. Expose it to the internet only behind HTTPS, ideally behind a reverse proxy
 with additional authentication.
+
+A machine controlled from another one has no login and no port at all: it listens on a Unix
+socket in a folder that only its user may enter (checked at every start), and what gets in is
+whoever may log in to that machine over SSH with the key. Keep that key as safe as the login.
 
 ## License
 

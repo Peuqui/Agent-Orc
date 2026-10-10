@@ -630,7 +630,9 @@ export const api = {
   sessionText: (id: string) =>
     request<{ text: string }>('GET', `sessions/${encodeURIComponent(id)}/text`),
 
-  quota: () => request<AgentQuota[]>('GET', 'quota'),
+  // The usage limits belong to the account, which this machine's own app reports (the machine
+  // that serves the page); a page of another machine's app asks this one, too.
+  quota: () => request<AgentQuota[]>('GET', 'quota', { fromRoot: true }),
   /** Folders of the agent cards in the order the user arranged them (kept on the server). */
   cardOrder: () => request<string[]>('GET', 'card-order'),
   arrangeCards: (folders: string[]) => request<void>('PUT', 'card-order', { body: { folders } }),
