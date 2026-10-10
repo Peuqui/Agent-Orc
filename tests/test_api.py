@@ -727,12 +727,16 @@ def test_terminal_roundtrip_resize_and_detach(
                 break
             term.receive_bytes()
         assert tmux_client_size(socket_name) == "101x31"
+        # Ended by the server (the tmux client goes, the session lives on), see end_from_the_server.
+        end_from_the_server(term, socket_name)
 
     # Closing the terminal only detaches: the agent keeps running.
     assert client.get("/api/sessions").json()[0]["running"] is True
 
 
-def test_terminal_input_of_a_long_text_arrives_whole(client: TestClient, home: Path) -> None:
+def test_terminal_input_of_a_long_text_arrives_whole(
+    client: TestClient, home: Path, socket_name: str
+) -> None:
     session_id = start_shell(client, home / "projects")
     text = "".join(f"{number:04d}-" for number in range(120))
     with client.websocket_connect(terminal_url(session_id), headers=ORIGIN) as term:
@@ -743,6 +747,7 @@ def test_terminal_input_of_a_long_text_arrives_whole(client: TestClient, home: P
             if client.get(f"/api/sessions/{session_id}/text").json()["text"].count(text) == 2:
                 break
             time.sleep(0.1)
+        end_from_the_server(term, socket_name)
     assert client.get(f"/api/sessions/{session_id}/text").json()["text"].count(text) == 2
 
 
@@ -893,10 +898,11 @@ def test_changing_effort_resumes_the_agent(
     }
     session_id = client.post("/api/sessions", json=start).json()["id"]
     change = {"effort": "low", "ultracode": True, "immediately": False}
-    with client.websocket_connect(terminal_url(session_id), headers=ORIGIN):
+    with client.websocket_connect(terminal_url(session_id), headers=ORIGIN) as terminal:
         changed = client.post(f"/api/sessions/{session_id}/effort", json=change)
         # Restarted in its own session: the open terminal stays attached to the same id.
         assert tmux_client_size(socket_name) == f"{START_COLS}x{START_ROWS}"
+        end_from_the_server(terminal, socket_name)
     # The agent never reported to be busy, so the change applies at once.
     assert changed.json() == {"applied": True}
     assert [s["id"] for s in client.get("/api/sessions").json()] == [session_id]
@@ -2547,7 +2553,9 @@ def test_a_file_arrives_as_the_other_machine_sends_it(mini: TestClient, home: Pa
     assert answer.headers["content-type"].startswith("text/plain")
 
 
-def test_a_terminal_works_through_the_tunnel(mini: TestClient, home: Path) -> None:
+def test_a_terminal_works_through_the_tunnel(
+    mini: TestClient, home: Path, socket_name: str
+) -> None:
     folder = home / "projects" / "far"
     session_id = start_shell(mini, folder)  # on this machine's own server; the shell is shared
     url = f"/hosts/Aragon{terminal_url(session_id)}"
@@ -2555,6 +2563,9 @@ def test_a_terminal_works_through_the_tunnel(mini: TestClient, home: Path) -> No
         read_until(terminal, "READY")
         terminal.send_text(json.dumps({"type": "input", "data": "far-away\r"}))
         read_until(terminal, "far-away")
+        # Ended by the server, as in the tests above: leaving the `with` would cancel the app
+        # while it still winds the tmux client down, and now and then that fails the test.
+        assert end_from_the_server(terminal, socket_name) == WS_CLOSE_SERVICE_RESTART
     assert refused_code_at(mini, url, {"origin": "https://evil.example"}) == 4403
     mini.cookies.clear()
     assert refused_code_at(mini, url, ORIGIN) == 4401

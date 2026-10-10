@@ -33,6 +33,14 @@ Nur was noch aussteht. Erledigtes steht in der Git-Historie.
 - **„Neue vorlesen (0)“** bleibt bei null als abgedunkeltes Rot stehen (gesperrter roter Knopf); das Häkchen daneben
   wird grau. Ob auch dieser Knopf grau werden soll, ist nicht entschieden.
 
+- **Wackelnde Terminal-Tests unter Last:** Tests, die ein Terminal mit `with websocket_connect` einfach verlassen,
+  schlugen unter CPU-Last mit `CancelledError` fehl (der Test-Client bricht die App beim Verlassen ab, während sie das
+  tmux-Terminal herunterfährt). Behoben für vier Tests, indem der Server das Terminal beendet
+  (`end_from_the_server`); `test_a_terminal_works_through_the_tunnel` war vorher in 23 von 40 Läufen unter Last
+  gescheitert und danach in 0 von 40. Die übrigen drei (Roundtrip/Resize, langer Text, Aufwand ändern) sind nach
+  demselben Muster geändert, aber **noch nicht unter Last geprüft** (der Mini war für eine Stimmaufnahme gesperrt).
+  Nachholen: Suite zweimal unter künstlicher Last fahren, vorher bei `Mini:FreeEchoDot2` und Peuqui nachfragen.
+
 ## AI-Connect
 
 - **Tab „Gespräche“ nach einem Neustart der Bridge:** Mitlesen, Senden als User:Peuqui (Enter) und die Ansicht sind
