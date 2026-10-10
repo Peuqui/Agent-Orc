@@ -68,6 +68,8 @@
     "actions": "Aktionen für {name}",
     "upload": "Hochladen",
     "uploadFolder": "Ordner hochladen",
+    "sortBy": "Sortieren nach",
+    "sort": { "name": "Name", "modified": "Geändert", "size": "Größe" },
     "uploading": "Lade hoch … {done} von {total}",
     "dropHere": "Dateien hier ablegen, um sie in diesen Ordner hochzuladen"
   },

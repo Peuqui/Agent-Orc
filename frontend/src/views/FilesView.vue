@@ -16,6 +16,7 @@ import { useScope } from '../composables/useScope'
 import { useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
 import { baseName, formatCountdown, formatDate, formatSize, parentPath } from '../format'
+import { SORT_KEYS, clicked, formatSort, parseSort, sortEntries, type SortKey } from '../fileSort'
 import { collect, renameTakenFolders, type UploadItem } from '../uploadTree'
 
 type Dialog =
@@ -36,6 +37,16 @@ const { sessionByPath } = useSessions()
 const toast = useToast()
 
 const entries = ref<FileEntry[]>([])
+
+// How the list is ordered, kept in this browser.
+const SORT_STORAGE_KEY = 'agent-orc-files-sort'
+const sort = ref(parseSort(localStorage.getItem(SORT_STORAGE_KEY)))
+const sortedEntries = computed(() => sortEntries(entries.value, sort.value))
+
+function sortBy(key: SortKey): void {
+  sort.value = clicked(sort.value, key)
+  localStorage.setItem(SORT_STORAGE_KEY, formatSort(sort.value))
+}
 const dialog = ref<Dialog | null>(null)
 
 const currentPath = computed(() => {
@@ -286,6 +297,20 @@ watch(currentPath, () => {
       </button>
     </div>
 
+    <div class="mb-3 flex flex-wrap items-center gap-1.5 text-sm" role="group" :aria-label="$t('files.sortBy')">
+      <span class="mr-1 text-slate-500">{{ $t('files.sortBy') }}</span>
+      <button
+        v-for="key in SORT_KEYS"
+        :key="key"
+        class="btn-secondary btn-small"
+        :class="sort.key === key ? '!text-amber-300' : ''"
+        :aria-pressed="sort.key === key"
+        @click="sortBy(key)"
+      >
+        {{ $t(`files.sort.${key}`) }}<span v-if="sort.key === key" aria-hidden="true">&nbsp;{{ sort.descending ? '↓' : '↑' }}</span>
+      </button>
+    </div>
+
     <p v-if="upload" class="mb-3 text-sm text-amber-300" role="status">{{ $t('files.uploading', upload) }}</p>
 
     <!-- The drop area: the list (and room below a short one); only it lights up. -->
@@ -299,7 +324,7 @@ watch(currentPath, () => {
     <p v-if="entries.length === 0" class="card p-6 text-center text-slate-400">{{ $t('files.empty') }}</p>
     <ul v-else class="card divide-y divide-slate-700">
       <li
-        v-for="entry in entries"
+        v-for="entry in sortedEntries"
         :key="entry.path"
         class="flex items-center"
         draggable="true"

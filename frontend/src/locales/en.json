@@ -68,6 +68,8 @@
     "actions": "Actions for {name}",
     "upload": "Upload",
     "uploadFolder": "Upload folder",
+    "sortBy": "Sort by",
+    "sort": { "name": "Name", "modified": "Modified", "size": "Size" },
     "uploading": "Uploading … {done} of {total}",
     "dropHere": "Drop files here to upload them to this folder"
   },
