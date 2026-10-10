@@ -1,4 +1,6 @@
 import asyncio
+import subprocess
+import time
 from pathlib import Path
 
 import pytest
@@ -86,6 +88,30 @@ def test_a_tunnel_that_never_shows_its_socket_is_ended_and_opened_again(
 
     asyncio.run(run())
     assert len(starts.read_text().splitlines()) >= 2
+
+
+def test_a_tunnel_of_an_earlier_run_is_ended_and_nothing_else(tmp_path: Path) -> None:
+    command = ["sleep", "321.1"]
+    # Left behind: its parent shell is gone at once, so it is not ours.
+    subprocess.run(["sh", "-c", "sleep 321.1 &"], check=True)
+    # Not to be touched: the same command as a child of ours, and another command.
+    ours = subprocess.Popen(command)
+    other = subprocess.Popen(["sleep", "321.2"])
+    try:
+        ended = hosts.end_orphan_tunnels(command)
+        assert len(ended) == 1
+        for _ in range(50):
+            if ours.poll() is None and other.poll() is None:
+                break
+            time.sleep(0.05)
+        assert ours.poll() is None
+        assert other.poll() is None
+        assert hosts.end_orphan_tunnels(command) == []
+    finally:
+        ours.kill()
+        other.kill()
+        ours.wait()
+        other.wait()
 
 
 def hosts_section(lines: str) -> str:

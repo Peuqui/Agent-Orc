@@ -8,6 +8,8 @@ terminals) is then reachable through this one's login, which is the only one the
 
 import asyncio
 import logging
+import os
+import signal
 import time
 from collections.abc import AsyncIterator, Iterable
 from pathlib import Path
@@ -77,6 +79,32 @@ def tunnel_command(local_socket: Path, config: HostConfig) -> list[str]:
     ]  # fmt: skip
 
 
+def end_orphan_tunnels(command: list[str]) -> list[int]:
+    """Ends the processes that run exactly this command and are not ours: tunnels of an earlier
+    Agent-Orc, which a restart of the service leaves behind (systemd ends only its main process).
+    The whole command is compared and only the user's own processes are looked at, so nothing
+    else is touched; the ones ended are returned."""
+    ended: list[int] = []
+    for entry in Path("/proc").iterdir():
+        if not entry.name.isdigit() or int(entry.name) == os.getpid():
+            continue
+        try:
+            if entry.stat().st_uid != os.getuid():
+                continue
+            arguments = (entry / "cmdline").read_bytes().rstrip(b"\0").decode().split("\0")
+            parent = next(
+                int(line.split()[1])
+                for line in (entry / "status").read_text().splitlines()
+                if line.startswith("PPid:")
+            )
+        except (OSError, StopIteration):  # gone while looked at
+            continue
+        if arguments == command and parent != os.getpid():
+            os.kill(int(entry.name), signal.SIGTERM)
+            ended.append(int(entry.name))
+    return ended
+
+
 async def end_unless_listening(process: asyncio.subprocess.Process, local_socket: Path) -> None:
     """Ends the tunnel's ssh when its local socket stays away, so the next try can start."""
     deadline = time.monotonic() + TUNNEL_SETUP_SECONDS
@@ -91,6 +119,8 @@ async def end_unless_listening(process: asyncio.subprocess.Process, local_socket
 async def keep_tunnel_open(name: str, local_socket: Path, config: HostConfig) -> None:
     """Runs the tunnel to the machine, and again whenever it ends, until cancelled."""
     delay = RECONNECT_FIRST_SECONDS
+    for orphan in end_orphan_tunnels(tunnel_command(local_socket, config)):
+        logger.warning("host %s: ended tunnel %s of an earlier run", name, orphan)
     while True:
         try:
             prepare_socket(local_socket)
