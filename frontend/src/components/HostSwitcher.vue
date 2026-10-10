@@ -38,8 +38,7 @@ function choose(name: string): void {
 <template>
   <select
     v-if="state && state.hosts.length"
-    class="mr-1 h-6 max-w-28 rounded-md border bg-slate-800 px-1 text-xs"
-    :class="currentHost ? 'border-amber-500 text-amber-300' : 'border-slate-700 text-slate-300'"
+    class="mr-1 h-6 max-w-28 rounded-md border border-amber-500 bg-slate-800 px-1 text-xs text-amber-300"
     :aria-label="$t('hosts.machine')"
     :value="chosen"
     @change="choose(($event.target as HTMLSelectElement).value)"
