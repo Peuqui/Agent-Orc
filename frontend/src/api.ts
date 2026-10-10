@@ -82,7 +82,7 @@ export interface Peer {
   status: string | null
 }
 
-/** One line of AI-Connect's stream (GET peers/events). */
+/** One line of AI-Connect's stream (GET peers/events, of this machine's own app). */
 export type PeerEvent =
   | { event: 'peers'; peers: Peer[] }
   | ({ event: 'message' } & PeerMessage)
@@ -606,9 +606,11 @@ export const api = {
   answerImageUrl: (sessionId: string, entryId: string, index: number) =>
     `api/sessions/${encodeURIComponent(sessionId)}/images/${encodeURIComponent(entryId)}/${index}`,
   /** Whether answers can be read on the Echo, what the settings call it, the rooms connected now, the longest text. */
-  peers: () => request<{ configured: boolean; user_name: string }>('GET', 'peers'),
+  // AI-Connect is one for all machines, and this machine's own app reads it along: its pages (and
+  // those of another machine's app) ask this one.
+  peers: () => request<{ configured: boolean; user_name: string }>('GET', 'peers', { fromRoot: true }),
   peerMessage: (to: string[], content: string) =>
-    request<{ sent: { to: string; id: number; online: boolean }[] }>('POST', 'peers/message', { body: { to, content } }),
+    request<{ sent: { to: string; id: number; online: boolean }[] }>('POST', 'peers/message', { body: { to, content }, fromRoot: true }),
 
   announce: () =>
     request<{ configured: boolean; rooms: string[]; max_chars: number; label: string }>('GET', 'announce'),

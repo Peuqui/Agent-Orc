@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { api, type Peer, type PeerEvent, type PeerMessage } from '../api'
+import { api, rootAddress, type Peer, type PeerEvent, type PeerMessage } from '../api'
 import PeerComposer from '../components/PeerComposer.vue'
 import PeerLanes from '../components/PeerLanes.vue'
 import PeerMessageItem from '../components/PeerMessageItem.vue'
@@ -45,7 +45,7 @@ api.peers().then((state) => {
 }, toast.error)
 
 function connect(): void {
-  source = new EventSource(new URL('api/peers/events', document.baseURI))
+  source = new EventSource(new URL('api/peers/events', rootAddress()))
   source.onmessage = (event) => receive(JSON.parse(event.data) as PeerEvent)
 }
 
