@@ -125,3 +125,25 @@ Auf `~/.config/ai-connect/user.token` hat Claude keinen Zugriff.
   am Leben.
 - **Mini ist für Messläufe belegt:** `Mini:vllm-research` fährt mehrere Stunden Messungen mit allen GPUs; keine
   GPU-Last, keine schweren Builds. `Mini:FreeEchoDot2` meldet sich vor einer ruhigen Stimmaufnahme.
+
+## Nachtrag 2 (11.10.): Dateien-Reiter als kleiner Dateimanager
+
+- **Server:** `POST /api/files/upload` (Körper stückweise auf die Platte, Name unverändert außer Pfad und
+  Steuerzeichen, `subfolder` legt Unterordner an, kein `..`, kein Link aus dem Bereich), `POST /api/files/transfer`
+  (verschieben/kopieren, `as_copy`). Eine Stelle für „freier Name mit Nummer“ (`files.numbered_names`,
+  `unused_path`, `create_new_file`) und eine für das Schreiben des Körpers (`api.write_body`, auch Anhänge und
+  Notiz-Anhänge). Die strenge Namensregel (`safe_file_name`) gilt nur noch für Anhänge. Der Proxy zu anderen
+  Rechnern reicht Körper in Stücken durch.
+- **Oberfläche:** `FilePane.vue` (eine Ansicht: Liste, Häkchen, Ablagefläche, Upload), `FilesView.vue` (Werkzeugleiste,
+  Sortierung über `useFileSort`/`fileSort.ts`, Auswahlleiste, Dialoge, ein oder zwei Ansichten über `path2` im
+  Pfad), `uploadTree.ts` (Ordnerbaum beim Ziehen, belegte Ordnernamen), `dragTypes.ts` (mehrere Pfade im Zug),
+  `useCopyText.ts` (Kopieren mit Hinweis, auch Terminal und Notizen). Rechtsklick öffnet das Aktionsmenü, darin
+  „Pfad kopieren“.
+- **Geprüft in einer Test-Instanz:** Auswahl, Pfade kopieren, Verschieben und Kopieren zwischen den Ansichten (auch auf
+  der Platte), Ziehen auf einen Ordner und mit Strg auf die andere Ansicht, Sammel-Papierkorb, Upload (Auswahl,
+  Ordner mit Unterordnern), Download. **Nicht geprüft:** Ziehen eines echten Ordners aus dem Dateimanager des
+  Betriebssystems (nur die Logik mit künstlichen Einträgen), ein Upload über `/hosts/Aragon/` mit mehreren GB, Handy.
+- **Offen:** Umbenennen und „Neuer Ordner“ nutzen noch `files.name_pattern` (nur Buchstaben, Ziffern, `.`, `_`, `-`);
+  ein Name mit Umlaut lässt sich hochladen, aber nicht umbenennen. Entscheidung bei Peuqui. Leere Unterordner werden
+  beim Ordner-Upload nicht mit übertragen. SVAR Vue File Manager geprüft (nur Unterlagen) und verworfen: kein Ziehen
+  und Ablegen, Mehrfachauswahl und Ereignisse nicht dokumentiert, eigenes Protokoll.
