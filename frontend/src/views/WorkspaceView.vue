@@ -439,14 +439,20 @@ function deleteThis(): void {
         />
         <button
           v-if="speech.available.value"
-          class="btn-icon"
+          class="btn-icon relative"
           :class="speechAutoRead ? '!text-amber-300 ring-1 ring-amber-500' : ''"
           :aria-pressed="speechAutoRead"
           :aria-label="$t('answers.autoRead')"
           :title="$t('answers.autoRead')"
           @click="speechAutoRead = !speechAutoRead"
         >
-          <AppIcon name="resume" />
+          <!-- The speaker with an "A": reads by itself (the speaker beside it reads what is new now). -->
+          <AppIcon name="speaker" />
+          <span
+            class="absolute right-0.5 bottom-0.5 rounded px-[3px] text-[9px] leading-tight font-bold"
+            :class="speechAutoRead ? 'bg-amber-500 text-slate-900' : 'bg-slate-600 text-slate-200'"
+            aria-hidden="true"
+          >A</span>
         </button>
         <button
           v-if="speech.available.value"
