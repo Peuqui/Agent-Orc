@@ -27,9 +27,30 @@ class StrictModel(BaseModel):
 
 
 class ServerConfig(StrictModel):
-    host: str
-    port: int
-    cookie_secure: bool
+    """Where the server listens: on a port behind a login (host, port, cookie_secure), or on a
+    Unix socket without one (socket). The socket is for a machine that another Agent-Orc
+    controls through an SSH tunnel: it is reachable by whoever may enter the socket's folder (the
+    folder is the user's alone, see `agent-orc serve`), and SSH is the login."""
+
+    host: str | None = None
+    port: int | None = None
+    cookie_secure: bool | None = None
+    socket: Path | None = None
+
+    @field_validator("socket")
+    @classmethod
+    def expand_home(cls, value: Path | None) -> Path | None:
+        return value.expanduser() if value is not None else None
+
+    @model_validator(mode="after")
+    def one_way_to_listen(self) -> Self:
+        port_keys = (self.host, self.port, self.cookie_secure)
+        if self.socket is not None:
+            if any(key is not None for key in port_keys):
+                raise ValueError("server: socket excludes host, port and cookie_secure")
+        elif any(key is None for key in port_keys):
+            raise ValueError("server: give host, port and cookie_secure, or a socket")
+        return self
 
 
 class AuthConfig(StrictModel):

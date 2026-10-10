@@ -47,7 +47,9 @@ def test_setup_asks_checks_and_writes_config_and_password(
 ) -> None:
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
     projects = tmp_path / "projects"
-    typed = answers_from([str(projects), "y", "n", "y", "http://127.0.0.1:9", "me@example.org"])
+    typed = answers_from(
+        [str(projects), "y", "n", "n", "y", "http://127.0.0.1:9", "me@example.org"]
+    )
     monkeypatch.setattr("builtins.input", lambda _prompt: next(typed))
     passwords = answers_from(["secret-1", "secret-1"])
     monkeypatch.setattr("agent_orc.setup.getpass.getpass", lambda _prompt: next(passwords))
@@ -77,3 +79,24 @@ def test_setup_does_not_touch_an_existing_config(
     with pytest.raises(SystemExit):
         run_setup()
     assert existing.read_text() == "mine"
+
+
+def test_setup_for_a_machine_another_agent_orc_controls_needs_no_password(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
+    socket = tmp_path / "run" / "orc.sock"
+    # Folder exists, controlled through SSH: yes, the socket, no Whisper, no e-mail address.
+    typed = answers_from([str(tmp_path), "y", str(socket), "n", ""])
+    monkeypatch.setattr("builtins.input", lambda _prompt: next(typed))
+    monkeypatch.setattr(
+        "agent_orc.setup.getpass.getpass", lambda _prompt: pytest.fail("no password is asked for")
+    )
+
+    run_setup()
+
+    directory = tmp_path / "config" / "agent-orc"
+    config = load_config(directory / "config.yaml")
+    assert config.server.socket == socket
+    assert config.server.port is None
+    assert not (directory / "credentials.json").exists()

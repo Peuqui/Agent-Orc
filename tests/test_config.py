@@ -40,3 +40,20 @@ def test_key_needs_exactly_one_action() -> None:
     text = default_config_text().replace('{label: Esc, send: "\\e"}', "{label: Esc}")
     with pytest.raises(ValidationError):
         parse_config(text)
+
+
+def server_section(lines: str) -> str:
+    text = default_config_text()
+    start = text.index("server:\n")
+    end = text.index("auth:\n")
+    return text[:start] + "server:\n" + lines + "\n" + text[end:]
+
+
+def test_the_server_listens_on_a_socket_or_a_port_not_both() -> None:
+    socket = parse_config(server_section("  socket: ~/run/orc.sock\n")).server
+    assert socket.socket == Path("~/run/orc.sock").expanduser()
+    assert socket.port is None
+    with pytest.raises(ValidationError):
+        parse_config(server_section("  socket: /run/orc.sock\n  port: 8770\n"))
+    with pytest.raises(ValidationError):
+        parse_config(server_section("  host: 127.0.0.1\n  port: 8770\n"))

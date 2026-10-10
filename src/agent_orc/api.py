@@ -524,12 +524,17 @@ class DeleteConversationsRequest(BaseModel):
 
 def create_app(
     config: Config,
-    credentials: Credentials,
+    credentials: Credentials | None,
     *,
     static_dir: Path | None,
     clock: Clock = time.time,
 ) -> FastAPI:
-    """Build the app; static_dir holds the built PWA (None serves the API only, for tests)."""
+    """Build the app; static_dir holds the built PWA (None serves the API only, for tests).
+
+    `credentials` is the login's password and key; None (exactly when the config has a socket to
+    listen on) means everyone who reaches the socket is the user: nothing asks for a login."""
+    if (credentials is None) != (config.server.socket is not None):
+        raise ValueError("credentials are needed exactly when the server listens on a port")
     sessions = SessionManager(config.tmux.socket_name, config.agents, config.terminal)
     home = Path.home()
     scope = AccessScope(
@@ -539,9 +544,17 @@ def create_app(
         clock,
     )
     trash = Trash(home_trash_dir())
-    signer = TokenSigner(credentials.secret_key, config.auth.session_days * SECONDS_PER_DAY, clock)
-    guard = LoginGuard(
-        config.auth.max_failed_logins, config.auth.lockout_minutes * SECONDS_PER_MINUTE, clock
+    signer = (
+        TokenSigner(credentials.secret_key, config.auth.session_days * SECONDS_PER_DAY, clock)
+        if credentials is not None
+        else None
+    )
+    guard = (
+        LoginGuard(
+            config.auth.max_failed_logins, config.auth.lockout_minutes * SECONDS_PER_MINUTE, clock
+        )
+        if credentials is not None
+        else None
     )
     name_pattern = config.files.name_pattern
     max_edit_bytes = config.files.max_edit_bytes
@@ -823,9 +836,13 @@ def create_app(
             raise HTTPException(status.HTTP_401_UNAUTHORIZED)
 
     def is_logged_in(token: str | None) -> bool:
+        if signer is None:
+            return True
         return token is not None and signer.is_valid(token)
 
     def check_password(password: str) -> None:
+        if credentials is None or guard is None:
+            return
         locked = guard.seconds_locked()
         if locked > 0:
             raise HTTPException(
@@ -880,17 +897,21 @@ def create_app(
             "unlock_minutes": config.files.unlock_minutes,
         }
 
-    @app.post("/api/login", status_code=status.HTTP_204_NO_CONTENT)
-    def login(body: PasswordRequest, response: Response) -> None:
-        check_password(body.password)
-        response.set_cookie(
-            SESSION_COOKIE,
-            signer.issue(),
-            max_age=config.auth.session_days * SECONDS_PER_DAY,
-            httponly=True,
-            secure=config.server.cookie_secure,
-            samesite="strict",
-        )
+    if signer is not None:
+        cookie_secure = config.server.cookie_secure
+        assert cookie_secure is not None
+
+        @app.post("/api/login", status_code=status.HTTP_204_NO_CONTENT)
+        def login(body: PasswordRequest, response: Response) -> None:
+            check_password(body.password)
+            response.set_cookie(
+                SESSION_COOKIE,
+                signer.issue(),
+                max_age=config.auth.session_days * SECONDS_PER_DAY,
+                httponly=True,
+                secure=cookie_secure,
+                samesite="strict",
+            )
 
     @app.post("/api/logout", status_code=status.HTTP_204_NO_CONTENT)
     def logout(response: Response) -> None:
@@ -1832,8 +1853,12 @@ def create_app(
             await websocket.close(WS_CLOSE_UNAUTHORIZED)
             return
         # Browsers send cookies on cross-site WebSocket handshakes too; the Origin check
-        # stops other web pages from opening a terminal with the user's login.
-        if urlsplit(websocket.headers.get("origin", "")).netloc != websocket.headers.get("host"):
+        # stops other web pages from opening a terminal with the user's login. (A socket is
+        # reached by no browser, only by the other Agent-Orc, which has checked it itself.)
+        origin_foreign = urlsplit(
+            websocket.headers.get("origin", "")
+        ).netloc != websocket.headers.get("host")
+        if signer is not None and origin_foreign:
             await websocket.close(WS_CLOSE_FORBIDDEN_ORIGIN)
             return
         if all(session.id != session_id for session in sessions.list()):

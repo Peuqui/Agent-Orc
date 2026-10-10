@@ -20,7 +20,7 @@ from starlette.websockets import WebSocketDisconnect
 from agent_orc.api import BUILD_ID_FILE, BUILD_ID_HEADER, create_app
 from agent_orc.approvals import open_request, wait_for_decision
 from agent_orc.auth import new_credentials
-from agent_orc.config import Config, DictationConfig, default_config_text
+from agent_orc.config import Config, DictationConfig, ServerConfig, default_config_text
 from agent_orc.context import store_activity, store_status
 from agent_orc.effort import agent_settings_file
 from agent_orc.events import ChangeNotifier
@@ -371,6 +371,29 @@ def test_serves_pwa_next_to_api(config: Config, clock: FakeClock, tmp_path: Path
     # An update replaced the files while the server kept running.
     (static / BUILD_ID_FILE).write_text("build-2")
     assert client.get("/api/me").headers[BUILD_ID_HEADER] == "build-2"
+
+
+@pytest.fixture
+def trusted(config: Config, home: Path, clock: FakeClock) -> TestClient:
+    """The server on a socket: nobody logs in."""
+    on_socket = config.model_copy(update={"server": ServerConfig(socket=home / "run" / "orc.sock")})
+    return TestClient(create_app(on_socket, None, static_dir=None, clock=clock))
+
+
+def test_on_a_socket_nothing_asks_for_a_login(trusted: TestClient, home: Path) -> None:
+    assert trusted.get("/api/me").json() == {"authenticated": True}
+    assert trusted.get("/api/sessions").status_code == 200
+    assert trusted.post("/api/login", json={"password": "x"}).status_code == 404
+    # Unlocking the files outside the project folder needs no password either.
+    assert trusted.post("/api/scope/unlock", json={"password": ""}).status_code == 200
+
+
+def test_a_socket_and_a_login_belong_together(config: Config, home: Path) -> None:
+    on_socket = config.model_copy(update={"server": ServerConfig(socket=home / "orc.sock")})
+    with pytest.raises(ValueError, match="exactly when"):
+        create_app(on_socket, new_credentials(PASSWORD), static_dir=None)
+    with pytest.raises(ValueError, match="exactly when"):
+        create_app(config, None, static_dir=None)
 
 
 ORIGIN = {"origin": "http://testserver"}

@@ -31,17 +31,22 @@ REQUIRED_PROGRAMS = ("tmux", "git")
 AGENT_PROGRAMS = ("claude", "codex", "aider")
 WHISPER_HEALTH_PATH = "/health"
 WHISPER_CHECK_SECONDS = 5
+# Where a machine controlled by another Agent-Orc listens; the folder is the user's alone.
+DEFAULT_SOCKET = "~/.local/state/agent-orc/run/agent-orc.sock"
 
 
 @dataclass(frozen=True)
 class SetupAnswers:
     base_dir: str
-    # False: plain HTTP for a first local test; True behind HTTPS.
+    # False: plain HTTP for a first local test; True behind HTTPS. Unused with a socket.
     behind_https: bool
     # None: no Whisper service, the browser's own speech recognition listens.
     whisper_url: str | None
     # None: the default placeholder stays.
     push_contact: str | None
+    # A socket to listen on instead of a port (another Agent-Orc controls this machine through
+    # SSH, nobody logs in); None: the port with a login.
+    socket: str | None = None
 
 
 def set_value(text: str, section: str, key: str, value: str | bool | None) -> str:
@@ -61,10 +66,27 @@ def set_value(text: str, section: str, key: str, value: str | bool | None) -> st
     return text[: section_match.end()] + new_body + text[end:]
 
 
+def listen_on_socket(text: str, socket: str) -> str:
+    """The `server` section replaced by one that listens on `socket`."""
+    section = re.search(r"^server:\n(?:(?:[ #].*)?\n)*", text, re.MULTILINE)
+    if section is None:
+        raise ValueError("section 'server' not in the config")
+    replacement = (
+        "server:\n"
+        "  # No login: the folder of the socket is the user's alone, and the Agent-Orc that\n"
+        "  # controls this machine reaches it through SSH.\n"
+        f"  socket: {json.dumps(socket)}\n\n"
+    )
+    return text[: section.start()] + replacement + text[section.end() :].lstrip("\n")
+
+
 def configured_text(answers: SetupAnswers) -> str:
     text = default_config_text()
     text = set_value(text, "files", "base_dir", answers.base_dir)
-    text = set_value(text, "server", "cookie_secure", answers.behind_https)
+    if answers.socket is not None:
+        text = listen_on_socket(text, answers.socket)
+    else:
+        text = set_value(text, "server", "cookie_secure", answers.behind_https)
     text = set_value(text, "dictation", "whisper_url", answers.whisper_url)
     if answers.push_contact is not None:
         text = set_value(text, "push", "contact", answers.push_contact)
@@ -127,9 +149,18 @@ def run_setup() -> None:
     if not projects.is_dir() and ask_yes(f"{projects} does not exist. Create it?", True):
         projects.mkdir(parents=True)
 
-    behind_https = ask_yes(
-        "Will Agent-Orc run behind HTTPS (reverse proxy)? No: plain HTTP for a local test", False
-    )
+    socket: str | None = None
+    behind_https = False
+    if ask_yes(
+        "Does another Agent-Orc control this machine through SSH (listen on a socket, no login)?",
+        False,
+    ):
+        socket = ask("Socket", DEFAULT_SOCKET)
+    else:
+        behind_https = ask_yes(
+            "Will Agent-Orc run behind HTTPS (reverse proxy)? No: plain HTTP for a local test",
+            False,
+        )
 
     whisper_url: str | None = None
     if ask_yes("Do you run a Whisper service (whisper-stt) for dictation?", False):
@@ -140,13 +171,16 @@ def run_setup() -> None:
     contact = input("Your e-mail address for the push services (Enter: skip): ").strip()
     push_contact = f"mailto:{contact}" if contact else None
 
-    password = ask_password()
+    password = ask_password() if socket is None else None
 
-    answers = SetupAnswers(base_dir, behind_https, whisper_url, push_contact)
+    answers = SetupAnswers(base_dir, behind_https, whisper_url, push_contact, socket)
     directory.mkdir(parents=True, exist_ok=True)
     config_path.write_text(configured_text(answers), encoding="utf-8")
     # Written config must be valid, or the first `agent-orc serve` would fail.
     config = load_config(config_path)
+    if password is None:
+        print(f"\nWrote {config_path}. Start it with `agent-orc serve`; it listens on {socket}.")
+        return
     save_credentials(directory / CREDENTIALS_FILE_NAME, new_credentials(password))
 
     print(f"\nWrote {config_path} and the password.")

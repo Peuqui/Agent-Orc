@@ -37,6 +37,7 @@ from agent_orc.context import (
     store_activity,
     store_status,
 )
+from agent_orc.listen import SocketFolderError, prepare_socket
 from agent_orc.push import agent_message, send_to_all
 from agent_orc.schedule import mark_limited
 from agent_orc.sessions import SESSION_ENV
@@ -58,14 +59,24 @@ def set_password() -> None:
 def serve() -> None:
     directory = config_dir()
     config = load_config(directory / CONFIG_FILE_NAME)
-    credentials = load_credentials(directory / CREDENTIALS_FILE_NAME)
+    socket = config.server.socket
+    # On a socket nobody logs in: the folder's rights and SSH are the access control.
+    credentials = None if socket else load_credentials(directory / CREDENTIALS_FILE_NAME)
     static_dir = Path(str(files("agent_orc").joinpath("static")))
     if not (static_dir / "index.html").is_file():
         sys.exit(f"Frontend not built: no index.html in {static_dir} (run: npm run build)")
     app = create_app(config, credentials, static_dir=static_dir)
     # The standard asyncio loop, not uvloop: uvloop runs preexec_fn before setsid(), which
     # breaks claiming the terminal PTY (see terminal.py); the tests also run on asyncio.
-    uvicorn.run(app, host=config.server.host, port=config.server.port, loop="asyncio")
+    if socket is not None:
+        try:
+            prepare_socket(socket)
+        except SocketFolderError as error:
+            sys.exit(str(error))
+        uvicorn.run(app, uds=str(socket), loop="asyncio")
+    else:
+        assert config.server.host is not None and config.server.port is not None
+        uvicorn.run(app, host=config.server.host, port=config.server.port, loop="asyncio")
 
 
 def statusline() -> None:

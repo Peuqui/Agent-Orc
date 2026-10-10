@@ -1,0 +1,16 @@
+# Agent-Orc as a service of the user's own systemd (a machine another Agent-Orc controls):
+# `deploy/deploy.sh` installs it. A system-wide service for several users is agent-orc@.service.
+[Unit]
+Description=Agent-Orc agent orchestrator
+
+[Service]
+Type=simple
+# A login shell provides the user's PATH, where agent CLIs (claude, codex, ...) live.
+ExecStart=/bin/bash -lc 'exec agent-orc serve'
+Restart=on-failure
+# Stop only the web server: the tmux server and the agents in it keep running across
+# restarts and are picked up again via the tmux socket.
+KillMode=process
+
+[Install]
+WantedBy=default.target
