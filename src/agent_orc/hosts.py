@@ -30,6 +30,10 @@ RECONNECT_FIRST_SECONDS = 2.0
 RECONNECT_LAST_SECONDS = 30.0
 # ssh gives up a tunnel whose machine stays silent for this long times three.
 ALIVE_INTERVAL_SECONDS = 15
+# ssh watches a standing tunnel, not one that is still being made (a machine that took the
+# connection but never answers keeps it for ever): the local socket must show within this time.
+TUNNEL_SETUP_SECONDS = 20.0
+TUNNEL_SETUP_POLL_SECONDS = 0.2
 CONNECT_TIMEOUT_SECONDS = 5
 ONLINE_CHECK_SECONDS = 3
 WS_CLOSE_UNREACHABLE = 1011
@@ -73,6 +77,17 @@ def tunnel_command(local_socket: Path, config: HostConfig) -> list[str]:
     ]  # fmt: skip
 
 
+async def end_unless_listening(process: asyncio.subprocess.Process, local_socket: Path) -> None:
+    """Ends the tunnel's ssh when its local socket stays away, so the next try can start."""
+    deadline = time.monotonic() + TUNNEL_SETUP_SECONDS
+    while time.monotonic() < deadline:
+        if local_socket.exists():
+            return
+        await asyncio.sleep(TUNNEL_SETUP_POLL_SECONDS)
+    logger.warning("host tunnel: no socket after %s s, ending ssh", TUNNEL_SETUP_SECONDS)
+    process.terminate()
+
+
 async def keep_tunnel_open(name: str, local_socket: Path, config: HostConfig) -> None:
     """Runs the tunnel to the machine, and again whenever it ends, until cancelled."""
     delay = RECONNECT_FIRST_SECONDS
@@ -93,9 +108,11 @@ async def keep_tunnel_open(name: str, local_socket: Path, config: HostConfig) ->
         except OSError as error:
             logger.error("host %s: ssh does not start: %s", name, error)
         else:
+            setup_watch = asyncio.create_task(end_unless_listening(process, local_socket))
             try:
                 _, errors = await process.communicate()
             finally:
+                setup_watch.cancel()
                 if process.returncode is None:
                     process.terminate()
                     await process.wait()

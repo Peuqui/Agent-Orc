@@ -58,6 +58,36 @@ def test_the_tunnel_is_opened_again_when_it_ends(
     assert len(starts.read_text().splitlines()) >= 3
 
 
+def test_a_tunnel_that_never_shows_its_socket_is_ended_and_opened_again(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    starts = tmp_path / "starts"
+    # Stands in for an ssh that hangs while connecting: notes the start, then waits.
+    monkeypatch.setattr(
+        hosts, "tunnel_command", lambda *_: ["sh", "-c", f"echo x >> {starts}; exec sleep 30"]
+    )
+    monkeypatch.setattr(hosts, "TUNNEL_SETUP_SECONDS", 0.2)
+    monkeypatch.setattr(hosts, "RECONNECT_FIRST_SECONDS", 0.05)
+    monkeypatch.setattr(hosts, "RECONNECT_LAST_SECONDS", 0.1)
+
+    async def run() -> None:
+        task = asyncio.create_task(
+            hosts.keep_tunnel_open(
+                "A", tmp_path / "run" / "host-A.sock", HostConfig(ssh=[], socket="")
+            )
+        )
+        for _ in range(100):
+            await asyncio.sleep(0.05)
+            if starts.exists() and len(starts.read_text().splitlines()) >= 2:
+                break
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+
+    asyncio.run(run())
+    assert len(starts.read_text().splitlines()) >= 2
+
+
 def hosts_section(lines: str) -> str:
     return default_config_text() + "\nhosts:\n" + lines
 

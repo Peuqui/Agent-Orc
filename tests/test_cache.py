@@ -21,7 +21,7 @@ def write(path: Path, entries: list[dict[str, object]]) -> Path:
 
 
 def test_expires_one_window_after_the_last_request(tmp_path: Path) -> None:
-    entries = [
+    entries: list[dict[str, object]] = [
         answer(1000.0, ONE_HOUR),
         {"type": "user", "message": {"content": "next"}},
         # Only read from the cache (refreshing it): the window comes from the answer before.
