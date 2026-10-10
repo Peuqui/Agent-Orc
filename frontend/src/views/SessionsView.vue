@@ -24,7 +24,8 @@ const machines = computed(() => [
     <QuotaPanel class="mb-4" />
     <section v-for="(machine, index) in machines" :id="`host-${machine.name}`" :key="machine.name">
       <template v-if="machines.length > 1">
-        <hr v-if="index > 0" class="my-6 border-slate-700" />
+        <!-- A spindle: thickest in the middle, running out to a point at both ends. -->
+        <div v-if="index > 0" class="my-8 h-[4px] bg-amber-500 [clip-path:ellipse(50%_50%_at_50%_50%)]" aria-hidden="true" />
         <div class="mb-3 flex items-center gap-2">
           <h2 class="text-sm font-semibold text-amber-400">{{ machine.name }}</h2>
           <span class="text-xs" :class="machine.online ? 'text-emerald-400' : 'text-slate-500'">
