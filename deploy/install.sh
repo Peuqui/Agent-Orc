@@ -14,6 +14,7 @@ if [ -n "$(git status --porcelain)" ]; then
     exit 1
 fi
 
+"$REPO/deploy/require-node.sh"
 (cd frontend && npm ci && npm run build)
 [ -d "$VENV" ] || python3 -m venv "$VENV"
 "$VENV/bin/pip" install .

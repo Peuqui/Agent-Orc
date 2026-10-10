@@ -17,6 +17,7 @@ if [ -n "$(git status --porcelain)" ]; then
     exit 1
 fi
 
+"$REPO/deploy/require-node.sh"
 (cd frontend && npm ci && npm run build)
 PAYLOAD=$(mktemp -d)
 trap 'rm -rf "$PAYLOAD"' EXIT
