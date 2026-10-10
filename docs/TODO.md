@@ -28,10 +28,8 @@ Nur was noch aussteht. Erledigtes steht in der Git-Historie.
 - **Nicht geprüft (10.10.):** das Ziehen eines echten Ordners aus dem Dateimanager des Betriebssystems (Logik nur
   mit künstlichen Einträgen getestet), der Dateien-Reiter mit Auswahl und zwei Ansichten auf dem Handy, ein Upload
   über `/hosts/Aragon/` mit mehreren GB (der Proxy reicht in Stücken durch, nur mit kleinen Mengen getestet).
-- **Leere Unterordner** werden beim Ordner-Upload nicht mit übertragen (nur Dateien mit ihrem Pfad).
-- **Dienst-Stopp hängt:** `systemctl restart agent-orc@mp.service` wartete 90 s auf offene Browser-Verbindungen und
-  endete mit SIGKILL (Unit hat `KillMode=process`); der Aufräumer für verwaiste Tunnel fängt die Folgen ab, die
-  Ursache ist offen.
+- **Leere Unterordner:** Beim Ziehen eines Ordners werden sie jetzt mit übertragen. Über „Ordner hochladen“
+  (Dateiauswahl des Browsers) nicht: der Browser liefert dort nur Dateien, keine leeren Ordner.
 - **„Neue vorlesen (0)“** bleibt bei null als abgedunkeltes Rot stehen (gesperrter roter Knopf); das Häkchen daneben
   wird grau. Ob auch dieser Knopf grau werden soll, ist nicht entschieden.
 

@@ -523,6 +523,30 @@ def test_a_folder_with_a_running_agent_is_not_moved_but_may_be_copied(
     assert agent_folder.exists()
 
 
+def test_an_empty_folder_is_made_with_the_ones_on_the_way(
+    client: TestClient, home: Path, tmp_path: Path
+) -> None:
+    folder = home / "projects"
+    made = client.post(
+        "/api/files/directory", json={"folder": str(folder), "subfolder": "proj/src/leer"}
+    )
+    assert made.status_code == 200
+    assert (folder / "proj" / "src" / "leer").is_dir()
+    # Again, with a file in it: nothing is touched.
+    (folder / "proj" / "src" / "leer" / "a.txt").write_text("x")
+    again = client.post(
+        "/api/files/directory", json={"folder": str(folder), "subfolder": "proj/src/leer"}
+    )
+    assert again.status_code == 200
+    assert (folder / "proj" / "src" / "leer" / "a.txt").read_text() == "x"
+    up = {"folder": str(folder), "subfolder": "proj/../.."}
+    assert client.post("/api/files/directory", json=up).status_code == 422
+    (folder / "link").symlink_to(tmp_path)
+    out = {"folder": str(folder), "subfolder": "link/neu"}
+    assert client.post("/api/files/directory", json=out).status_code == 403
+    assert not (tmp_path / "neu").exists()
+
+
 def test_an_upload_needs_a_folder_in_scope(client: TestClient, home: Path) -> None:
     outside = client.post(
         "/api/files/upload", params={"folder": str(home), "name": "a.txt"}, content=b"x"

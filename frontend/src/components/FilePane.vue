@@ -103,7 +103,8 @@ async function uploadItems(gather: () => Promise<UploadItem[]>): Promise<void> {
     )
     progress.total = items.length
     for (const item of items) {
-      await api.uploadFile(folder, item.file, item.directory)
+      if (item.file === null) await api.makeDirectory(folder, item.directory)
+      else await api.uploadFile(folder, item.file, item.directory)
       progress.done += 1
     }
   } catch (error) {

@@ -705,6 +705,9 @@ function createApi(host?: string) {
         upload: file,
         query: subfolder ? { folder, name: file.name, subfolder } : { folder, name: file.name },
       }),
+    /** Makes `subfolder` below the folder (and the ones on the way); one that is there stays as it is. */
+    makeDirectory: (folder: string, subfolder: string) =>
+      request<{ path: string }>('POST', 'files/directory', { body: { folder, subfolder } }),
     /** Moves (or copies) the paths into the folder; a taken name gets a number. Returns where each landed. */
     transferFiles: (paths: string[], folder: string, asCopy: boolean) =>
       request<{ paths: string[] }>('POST', 'files/transfer', { body: { paths, folder, as_copy: asCopy } }),

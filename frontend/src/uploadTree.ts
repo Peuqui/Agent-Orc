@@ -2,7 +2,8 @@
 // with the folder each lies in, and the names a dropped folder takes where its own is taken.
 
 export interface UploadItem {
-  file: File
+  /** The file; none for an empty folder that is only to be made. */
+  file: File | null
   /** The folder below the open one it goes into ("" for the open one itself). */
   directory: string
 }
@@ -11,7 +12,8 @@ function readEntries(reader: FileSystemDirectoryReader): Promise<FileSystemEntry
   return new Promise((resolve, reject) => reader.readEntries(resolve, reject))
 }
 
-/** The files of a dropped file or folder, with the folder each lies in (`parent` holds the entry). */
+/** The files of a dropped file or folder, with the folder each lies in (`parent` holds the entry);
+ * a folder with nothing in it counts as an item without a file, so it is made, too. */
 export async function collect(entry: FileSystemEntry, parent: string): Promise<UploadItem[]> {
   if (entry.isFile) {
     const file = await new Promise<File>((resolve, reject) => (entry as FileSystemFileEntry).file(resolve, reject))
@@ -24,6 +26,7 @@ export async function collect(entry: FileSystemEntry, parent: string): Promise<U
     inside.push(...batch)
   }
   const directory = parent ? `${parent}/${entry.name}` : entry.name
+  if (inside.length === 0) return [{ file: null, directory }]
   return (await Promise.all(inside.map((child) => collect(child, directory)))).flat()
 }
 

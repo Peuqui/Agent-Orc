@@ -22,6 +22,20 @@ test('a dropped folder gives its files with the folder each lies in', async () =
   )
 })
 
+test('a folder with nothing in it is an item of its own, so it is made, too', async () => {
+  const dropped = folder('proj', [file('a.py'), folder('leer', []), folder('src', [folder('auch-leer', [])])])
+  const items = await collect(dropped as unknown as FileSystemEntry, '')
+  assert.deepEqual(
+    items.map((item) => `${item.directory}|${item.file?.name ?? '-'}`).sort(),
+    ['proj/leer|-', 'proj/src/auch-leer|-', 'proj|a.py'],
+  )
+  // A folder that is empty as dropped alone is made as well.
+  assert.deepEqual(
+    (await collect(folder('allein', []) as unknown as FileSystemEntry, '')).map((item) => item.directory),
+    ['allein'],
+  )
+})
+
 test('a file dropped by itself lies in the open folder', async () => {
   const items = await collect(file('probe.mp3') as unknown as FileSystemEntry, '')
   assert.deepEqual(items.map((item) => item.directory), [''])
@@ -41,12 +55,13 @@ test('a taken name gets a number', () => {
 
 test('a dropped folder whose name is taken is renamed as a whole, files stay as they are', () => {
   const item = (directory: string, name: string) => ({ file: new File(['x'], name), directory })
+  const emptyFolder = { file: null, directory: 'proj/leer' }
   const renamed = renameTakenFolders(
-    [item('proj', 'a.py'), item('proj/src', 'b.py'), item('other', 'c.py'), item('', 'loose.txt')],
+    [item('proj', 'a.py'), item('proj/src', 'b.py'), emptyFolder, item('other', 'c.py'), item('', 'loose.txt')],
     ['proj', 'readme.md'],
   )
   assert.deepEqual(
     renamed.map((entry) => entry.directory),
-    ['proj-2', 'proj-2/src', 'other', ''],
+    ['proj-2', 'proj-2/src', 'proj-2/leer', 'other', ''],
   )
 })

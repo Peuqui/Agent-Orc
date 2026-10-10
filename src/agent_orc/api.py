@@ -330,6 +330,11 @@ class CreateFolderRequest(BaseModel):
     name: str
 
 
+class DirectoryRequest(BaseModel):
+    folder: str
+    subfolder: str
+
+
 class TransferRequest(BaseModel):
     paths: list[str]
     folder: str
@@ -2011,6 +2016,22 @@ def create_app(
                 ensure_no_session_inside(source)
         return {"paths": [str(path) for path in files.transfer_into(sources, folder, body.as_copy)]}
 
+    def upload_destination(folder: str, subfolder: str) -> Path:
+        """The folder an upload goes into: `subfolder` below `folder`, made if it is not there. It
+        is checked again with the subfolder: a link in it must not lead out of the scope."""
+        target_folder = scope.resolve(folder)
+        if not target_folder.is_dir():
+            raise NotADirectoryError(str(target_folder))
+        destination = scope.resolve(str(files.upload_directory(target_folder, subfolder)))
+        destination.mkdir(parents=True, exist_ok=True)
+        return destination
+
+    @app.post("/api/files/directory", dependencies=authenticated)
+    def make_directory(body: DirectoryRequest) -> dict[str, str]:
+        """Make `subfolder` below the folder (and the folders on the way): a dropped folder keeps
+        its empty folders, too. One that is there already stays as it is."""
+        return {"path": str(upload_destination(body.folder, body.subfolder))}
+
     @app.post("/api/files/upload", dependencies=authenticated)
     async def upload_file(
         folder: str, name: str, request: Request, subfolder: str = ""
@@ -2019,12 +2040,7 @@ def create_app(
         it is not there: a dropped folder keeps its structure); returns its path. The name stays
         as it is (see upload_file_name), and one that is taken gets a number: nothing is
         overwritten."""
-        target_folder = scope.resolve(folder)
-        if not target_folder.is_dir():
-            raise NotADirectoryError(str(target_folder))
-        # Resolved again with the subfolder: a link in it must not lead out of the scope.
-        destination = scope.resolve(str(files.upload_directory(target_folder, subfolder)))
-        destination.mkdir(parents=True, exist_ok=True)
+        destination = upload_destination(folder, subfolder)
         target, handle = files.create_new_file(destination, files.upload_file_name(name))
         await write_body(request, target, handle)
         return {"path": str(target)}

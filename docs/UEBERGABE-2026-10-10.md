@@ -156,3 +156,12 @@ Auf `~/.config/ai-connect/user.token` hat Claude keinen Zugriff.
   Haiku-Agenten in einer Test-Instanz geprüft (rot nach 8 s unverändert, nach dem Klick grau).
 - **Reiter in der Arbeitsfläche:** `SectionNav.vue` (auch im Seitenkopf): ab `xl` Symbole, ab `2xl` mit Namen; auf dem
   Handy nicht (die Kopfzeile würde doppelt so hoch, der Name zerquetscht).
+- **Dienst-Stopp:** uvicorn wartete beim Beenden ohne Frist auf offene Dauerverbindungen (Server-Sent-Events der
+  Oberfläche, Terminals) bis systemd nach 90 s abschoss; dabei lief auch das Aufräumen der Tunnel nicht. Reproduziert
+  (Server hängt >30 s mit einem offenen Strom) und behoben: `cli.SHUTDOWN_GRACE_SECONDS = 5` als
+  `timeout_graceful_shutdown` (mit Frist 5,3 s). Die Reproduktion liegt nur im Scratchpad (Skript `probe.sh`).
+- **Doppelte Rückfrage:** Auf der Agentenseite stand die Freigabe-Rückfrage in der Karte und zusätzlich als Ankündigung
+  oben. Das war eine Lücke, nicht Absicht (der Banner sollte nur Agenten zeigen, die nicht im Blick sind, die Karten
+  wurden dabei nicht bedacht). `HostSessions.vue` meldet die eigenen Agenten über `shownAgents` als im Blick.
+- **Leere Ordner im Ordner-Upload:** `POST /api/files/directory` (teilt sich `upload_destination` mit dem Upload),
+  `collect` liefert leere Ordner als Einträge ohne Datei.
