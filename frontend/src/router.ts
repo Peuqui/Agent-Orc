@@ -1,4 +1,5 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
+import { currentHost, rootAddress } from './api'
 import FilesView from './views/FilesView.vue'
 import SessionsView from './views/SessionsView.vue'
 import ConsumptionView from './views/ConsumptionView.vue'
@@ -52,5 +53,13 @@ export const router = createRouter({
 router.beforeEach((to) => {
   if (to.path !== '/workspace' || window.top === null || window.self === window.top) return true
   window.top.location.hash = to.fullPath
+  return false
+})
+
+// The agents of all machines are listed in one overview, which this machine's own app shows: from
+// another machine's page, "Agents" leads there.
+router.beforeEach((to) => {
+  if (currentHost === null || to.path !== '/sessions') return true
+  window.location.assign(`${rootAddress()}#${to.fullPath}`)
   return false
 })

@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { api, type AgentSession } from '../api'
+import { type AgentSession } from '../api'
 import { sessionName, useSessions } from '../composables/useSessions'
+import { useApi } from '../composables/useHostContext'
 import { useToast } from '../composables/useToast'
 import { formatMoment } from '../format'
 import AppIcon from './AppIcon.vue'
@@ -14,6 +15,7 @@ const props = defineProps<{ session: AgentSession; buttonClass: string; withLabe
 const emit = defineEmits<{ done: [] }>()
 const { locale, t } = useI18n()
 const toast = useToast()
+const api = useApi()
 const { refresh } = useSessions()
 const MILLISECONDS_PER_SECOND = 1000
 const DEFAULT_DELAY_MILLISECONDS = 60 * 60 * MILLISECONDS_PER_SECOND

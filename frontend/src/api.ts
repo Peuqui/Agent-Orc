@@ -409,7 +409,12 @@ export function rootAddress(): string {
   return root.href
 }
 
-async function request<T>(
+/** The part of an address that leads to another machine's app (empty for this machine's own). */
+export function hostPrefix(host: string | null | undefined): string {
+  return host == null ? '' : `hosts/${encodeURIComponent(host)}/`
+}
+
+async function send<T>(
   method: string,
   path: string,
   /** body is sent as JSON, upload (e.g. recorded audio) as it is. `host` asks another machine's
@@ -425,8 +430,7 @@ async function request<T>(
   // Relative to the page, so the app also works under a reverse-proxy sub-path (and below
   // /hosts/<name>/, where it is another machine's).
   const base = options.fromRoot ? rootAddress() : document.baseURI
-  const hostPrefix = options.host === undefined ? '' : `hosts/${encodeURIComponent(options.host)}/`
-  const url = new URL(`${hostPrefix}api/${path}`, base)
+  const url = new URL(`${hostPrefix(options.host)}api/${path}`, base)
   for (const [key, value] of Object.entries(options.query ?? {})) {
     url.searchParams.set(key, value)
   }
@@ -473,247 +477,268 @@ function checkBuild(response: Response): void {
   }
 }
 
-export const api = {
-  login: (password: string) => request<void>('POST', 'login', { body: { password } }),
-  logout: () => request<void>('POST', 'logout'),
-  me: () => request<{ authenticated: boolean }>('GET', 'me'),
+/** The calls to the app of `host` (another machine's, below /hosts/<name>/), or to this page's
+ * own app without `host`. A call with its own `host` or `fromRoot` goes where it says. */
+function createApi(host?: string) {
+  const request = <T>(method: string, path: string, options: Parameters<typeof send>[2] = {}) =>
+    send<T>(method, path, options.fromRoot ? options : { host, ...options })
+  return {
+    login: (password: string) => request<void>('POST', 'login', { body: { password } }),
+    logout: () => request<void>('POST', 'logout'),
+    me: () => request<{ authenticated: boolean }>('GET', 'me'),
 
-  scope: () => request<ScopeState>('GET', 'scope'),
-  unlock: (password: string) => request<ScopeState>('POST', 'scope/unlock', { body: { password } }),
-  /** Where files and new agents begin, on the machine whose app this is. */
-  setBaseDir: (path: string, password: string) =>
-    request<ScopeState>('PUT', 'scope/base-dir', { body: { path, password } }),
-  lock: () => request<ScopeState>('POST', 'scope/lock'),
+    scope: () => request<ScopeState>('GET', 'scope'),
+    unlock: (password: string) => request<ScopeState>('POST', 'scope/unlock', { body: { password } }),
+    /** Where files and new agents begin, on the machine whose app this is. */
+    setBaseDir: (path: string, password: string) =>
+      request<ScopeState>('PUT', 'scope/base-dir', { body: { path, password } }),
+    lock: () => request<ScopeState>('POST', 'scope/lock'),
 
-  agents: () => request<AgentProfile[]>('GET', 'agents'),
-  terminalSettings: () => request<TerminalSettings>('GET', 'terminal'),
-  /** Stores the extra keys for every device. */
-  arrangeKeys: (rows: TerminalKey[][]) => request<void>('PUT', 'terminal/keys', { body: rows }),
-  /** Back to the extra keys of the config. */
-  resetKeys: () => request<void>('DELETE', 'terminal/keys'),
-  sessions: () => request<AgentSession[]>('GET', 'sessions'),
-  /** This machine's name and the others', from this machine's own app (also from another's page). */
-  hosts: () => request<HostsState>('GET', 'hosts', { fromRoot: true }),
-  /** The agents of another machine, as that machine's own app reports them. */
-  hostSessions: (host: string) => request<AgentSession[]>('GET', 'sessions', { host, fromRoot: true }),
-  /**
-   * reasoning is stored for the folder; conversation resumes that earlier conversation,
-   * resume the last one.
-   */
-  startSession: (
-    profile: string,
-    path: string,
-    resume: boolean,
-    reasoning: Reasoning,
-    conversation: string | null = null,
-    /** Start in a new git worktree on this new branch. */
-    worktree: string | null = null,
-    /** For profiles with a choice of models (AgentProfile.models). */
-    model: string | null = null,
-    /** The workspace the agent joins (null: the one it is in; "": the unnamed one). */
-    workspace: string | null = null,
-    /** Sets a further agent in the folder apart from the first (required once that one runs). */
-    suffix: string | null = null,
-  ) =>
-    request<AgentSession>('POST', 'sessions', {
-      body: { profile, path, model, resume, ...reasoning, conversation, worktree, workspace, suffix },
-    }),
-  /** Moves an agent to a workspace ("": the unnamed one); the server keeps it, every device shows it. */
-  moveSession: (sessionId: string, workspace: string) =>
-    request<void>('PUT', `sessions/${encodeURIComponent(sessionId)}/workspace`, { body: { workspace } }),
-  /** The models a profile offers at start (e.g. the local ones of llama-swap). */
-  agentModels: (profile: string) => request<ModelChoice[]>('GET', `agents/${encodeURIComponent(profile)}/models`),
-  /** The levels the profile takes with this model; empty: no level at all. */
-  agentLevels: (profile: string, model: string) =>
-    request<string[]>('GET', `agents/${encodeURIComponent(profile)}/levels`, { query: { model } }),
-  /** Removes the worktree of an ended agent and its card; the branch only if merged. */
-  removeWorktree: (sessionId: string) =>
-    request<{ branch: string; branch_deleted: boolean }>(
-      'POST',
-      `sessions/${encodeURIComponent(sessionId)}/remove-worktree`,
-    ),
-  conversations: (profile: string, path: string) =>
-    request<Conversation[]>('GET', 'conversations', { query: { profile, path } }),
-  searchConversations: (profile: string, path: string, query: string) =>
-    request<ConversationHit[]>('GET', 'conversations/search', { query: { profile, path, query } }),
-  /** The reasoning the agent of this profile, folder and suffix last had (to preselect). */
-  storedReasoning: (profile: string, path: string, suffix: string | null) =>
-    request<Reasoning>('GET', 'effort', { query: suffix === null ? { profile, path } : { profile, path, suffix } }),
-  /**
-   * Stores the folder's reasoning and resumes the agent (it reads it only at start).
-   * Without `immediately` a busy agent first finishes its answer; then applied is false.
-   */
-  changeReasoning: (sessionId: string, reasoning: Reasoning, immediately: boolean) =>
-    request<{ applied: boolean }>('POST', `sessions/${encodeURIComponent(sessionId)}/effort`, {
-      body: { ...reasoning, immediately },
-    }),
-  /** Answers a permission request in the agent's place of the terminal prompt. */
-  answerApproval: (sessionId: string, requestId: string, allow: boolean) =>
-    request<void>('POST', `sessions/${encodeURIComponent(sessionId)}/approval`, {
-      body: { request: requestId, allow },
-    }),
-  changes: (sessionId: string) =>
-    request<FileChange[]>('GET', `sessions/${encodeURIComponent(sessionId)}/changes`),
-  changeDiff: (sessionId: string, path: string) =>
-    request<FileDiff>('GET', `sessions/${encodeURIComponent(sessionId)}/changes/diff`, { query: { path } }),
-  promptTemplates: () => request<PromptTemplate[]>('GET', 'prompt-templates'),
-  storePromptTemplates: (templates: PromptTemplate[]) =>
-    request<void>('PUT', 'prompt-templates', { body: templates }),
-  /** The consumption on this machine, or on another (`host`). A page of another machine's app asks
-   * this machine's own, too: it sums them all. */
-  consumption: (host?: string) => request<ConsumptionRow[]>('GET', 'consumption', { host, fromRoot: true }),
-  /** Resumes the agent in its own session; a running answer and background tasks end. */
-  restartSession: (sessionId: string, model: string | null = null, effort: string | null = null) =>
-    request<AgentSession>('POST', `sessions/${encodeURIComponent(sessionId)}/restart`, { body: { model, effort } }),
-  /** Switches the agent to the model: in place if it can, otherwise by resuming it; applied is
-   * false while a busy agent finishes its answer first. */
-  changeModel: (sessionId: string, model: string, effort: string | null) =>
-    request<{ applied: boolean }>('POST', `sessions/${encodeURIComponent(sessionId)}/model`, {
-      body: { model, effort },
-    }),
-  /** Starts another agent (profile) in the session's place; a running answer and background
-   * tasks end. The conversation goes on if both keep it in the same place. */
-  changeProfile: (sessionId: string, choice: AgentChoice) =>
-    request<AgentSession>('POST', `sessions/${encodeURIComponent(sessionId)}/profile`, { body: choice }),
-  /** Types the prompt into the agent at `at` (Unix seconds), once it is idle. */
-  schedulePrompt: (sessionId: string, text: string, at: number) =>
-    request<ScheduledPrompt>('POST', `sessions/${encodeURIComponent(sessionId)}/scheduled`, {
-      body: { text, at },
-    }),
-  cancelScheduled: (promptId: string) =>
-    request<void>('DELETE', `scheduled/${encodeURIComponent(promptId)}`),
-  /** The agent's answers up to this time were looked at (the server only goes forward). */
-  markAnswersSeen: (sessionId: string, time: string) =>
-    request<void>('PUT', `sessions/${encodeURIComponent(sessionId)}/answers-seen`, { body: { time } }),
-  /** Types the message into the agent and submits it (the server types, then presses Enter). */
-  sendMessage: (sessionId: string, text: string) =>
-    request<void>('POST', `sessions/${encodeURIComponent(sessionId)}/message`, { body: { text } }),
-  /** Types the same prompt into each of the (running) agents; without submit it only lands in
-   * their input and the user sends it there. */
-  broadcast: (sessionIds: string[], text: string, submit = true) =>
-    request<void>('POST', 'broadcast', { body: { sessions: sessionIds, text, submit } }),
-  /** Types the handover request into the agent. */
-  requestHandover: (sessionId: string) =>
-    request<void>('POST', `sessions/${encodeURIComponent(sessionId)}/handover`),
-  handoverAuto: () => request<{ auto: boolean }>('GET', 'handover/auto'),
-  setHandoverAuto: (auto: boolean) => request<void>('PUT', 'handover/auto', { body: { auto } }),
-  /** Takes effect at the agent's next start. */
-  changePermissionMode: (sessionId: string, mode: string) =>
-    request<void>('PUT', `sessions/${encodeURIComponent(sessionId)}/permission-mode`, { body: { mode } }),
-  cancelEffortChange: (sessionId: string) =>
-    request<void>('DELETE', `sessions/${encodeURIComponent(sessionId)}/effort`),
-  /** Empties or shrinks the context of an idle agent, without a restart. */
-  changeContext: (sessionId: string, action: ContextAction) =>
-    request<void>('POST', `sessions/${encodeURIComponent(sessionId)}/context/${action}`),
-  cancelModelChange: (sessionId: string) =>
-    request<void>('DELETE', `sessions/${encodeURIComponent(sessionId)}/model`),
-  stopSession: (id: string) => request<void>('DELETE', `sessions/${encodeURIComponent(id)}`),
-  /** The terminal as plain text, for selecting and copying. */
-  /** Where a picture of a request or of something typed during an answer is served (index from 0). */
-  answerImageUrl: (sessionId: string, entryId: string, index: number) =>
-    `api/sessions/${encodeURIComponent(sessionId)}/images/${encodeURIComponent(entryId)}/${index}`,
-  /** Whether answers can be read on the Echo, what the settings call it, the rooms connected now, the longest text. */
-  // AI-Connect is one for all machines, and this machine's own app reads it along: its pages (and
-  // those of another machine's app) ask this one.
-  peers: () => request<{ configured: boolean; user_name: string }>('GET', 'peers', { fromRoot: true }),
-  peerMessage: (to: string[], content: string) =>
-    request<{ sent: { to: string; id: number; online: boolean }[] }>('POST', 'peers/message', { body: { to, content }, fromRoot: true }),
+    agents: () => request<AgentProfile[]>('GET', 'agents'),
+    terminalSettings: () => request<TerminalSettings>('GET', 'terminal'),
+    /** Stores the extra keys for every device. */
+    arrangeKeys: (rows: TerminalKey[][]) => request<void>('PUT', 'terminal/keys', { body: rows }),
+    /** Back to the extra keys of the config. */
+    resetKeys: () => request<void>('DELETE', 'terminal/keys'),
+    sessions: () => request<AgentSession[]>('GET', 'sessions'),
+    /** This machine's name and the others', from this machine's own app (also from another's page). */
+    hosts: () => request<HostsState>('GET', 'hosts', { fromRoot: true }),
+    /** The agents of another machine, as that machine's own app reports them. */
+    hostSessions: (host: string) => request<AgentSession[]>('GET', 'sessions', { host, fromRoot: true }),
+    /**
+     * reasoning is stored for the folder; conversation resumes that earlier conversation,
+     * resume the last one.
+     */
+    startSession: (
+      profile: string,
+      path: string,
+      resume: boolean,
+      reasoning: Reasoning,
+      conversation: string | null = null,
+      /** Start in a new git worktree on this new branch. */
+      worktree: string | null = null,
+      /** For profiles with a choice of models (AgentProfile.models). */
+      model: string | null = null,
+      /** The workspace the agent joins (null: the one it is in; "": the unnamed one). */
+      workspace: string | null = null,
+      /** Sets a further agent in the folder apart from the first (required once that one runs). */
+      suffix: string | null = null,
+    ) =>
+      request<AgentSession>('POST', 'sessions', {
+        body: { profile, path, model, resume, ...reasoning, conversation, worktree, workspace, suffix },
+      }),
+    /** Moves an agent to a workspace ("": the unnamed one); the server keeps it, every device shows it. */
+    moveSession: (sessionId: string, workspace: string) =>
+      request<void>('PUT', `sessions/${encodeURIComponent(sessionId)}/workspace`, { body: { workspace } }),
+    /** The models a profile offers at start (e.g. the local ones of llama-swap). */
+    agentModels: (profile: string) => request<ModelChoice[]>('GET', `agents/${encodeURIComponent(profile)}/models`),
+    /** The levels the profile takes with this model; empty: no level at all. */
+    agentLevels: (profile: string, model: string) =>
+      request<string[]>('GET', `agents/${encodeURIComponent(profile)}/levels`, { query: { model } }),
+    /** Removes the worktree of an ended agent and its card; the branch only if merged. */
+    removeWorktree: (sessionId: string) =>
+      request<{ branch: string; branch_deleted: boolean }>(
+        'POST',
+        `sessions/${encodeURIComponent(sessionId)}/remove-worktree`,
+      ),
+    conversations: (profile: string, path: string) =>
+      request<Conversation[]>('GET', 'conversations', { query: { profile, path } }),
+    searchConversations: (profile: string, path: string, query: string) =>
+      request<ConversationHit[]>('GET', 'conversations/search', { query: { profile, path, query } }),
+    /** The reasoning the agent of this profile, folder and suffix last had (to preselect). */
+    storedReasoning: (profile: string, path: string, suffix: string | null) =>
+      request<Reasoning>('GET', 'effort', { query: suffix === null ? { profile, path } : { profile, path, suffix } }),
+    /**
+     * Stores the folder's reasoning and resumes the agent (it reads it only at start).
+     * Without `immediately` a busy agent first finishes its answer; then applied is false.
+     */
+    changeReasoning: (sessionId: string, reasoning: Reasoning, immediately: boolean) =>
+      request<{ applied: boolean }>('POST', `sessions/${encodeURIComponent(sessionId)}/effort`, {
+        body: { ...reasoning, immediately },
+      }),
+    /** Answers a permission request in the agent's place of the terminal prompt. */
+    answerApproval: (sessionId: string, requestId: string, allow: boolean) =>
+      request<void>('POST', `sessions/${encodeURIComponent(sessionId)}/approval`, {
+        body: { request: requestId, allow },
+      }),
+    changes: (sessionId: string) =>
+      request<FileChange[]>('GET', `sessions/${encodeURIComponent(sessionId)}/changes`),
+    changeDiff: (sessionId: string, path: string) =>
+      request<FileDiff>('GET', `sessions/${encodeURIComponent(sessionId)}/changes/diff`, { query: { path } }),
+    promptTemplates: () => request<PromptTemplate[]>('GET', 'prompt-templates'),
+    storePromptTemplates: (templates: PromptTemplate[]) =>
+      request<void>('PUT', 'prompt-templates', { body: templates }),
+    /** The consumption on this machine, or on another (`host`). A page of another machine's app asks
+     * this machine's own, too: it sums them all. */
+    consumption: (host?: string) => request<ConsumptionRow[]>('GET', 'consumption', { host, fromRoot: true }),
+    /** Resumes the agent in its own session; a running answer and background tasks end. */
+    restartSession: (sessionId: string, model: string | null = null, effort: string | null = null) =>
+      request<AgentSession>('POST', `sessions/${encodeURIComponent(sessionId)}/restart`, { body: { model, effort } }),
+    /** Switches the agent to the model: in place if it can, otherwise by resuming it; applied is
+     * false while a busy agent finishes its answer first. */
+    changeModel: (sessionId: string, model: string, effort: string | null) =>
+      request<{ applied: boolean }>('POST', `sessions/${encodeURIComponent(sessionId)}/model`, {
+        body: { model, effort },
+      }),
+    /** Starts another agent (profile) in the session's place; a running answer and background
+     * tasks end. The conversation goes on if both keep it in the same place. */
+    changeProfile: (sessionId: string, choice: AgentChoice) =>
+      request<AgentSession>('POST', `sessions/${encodeURIComponent(sessionId)}/profile`, { body: choice }),
+    /** Types the prompt into the agent at `at` (Unix seconds), once it is idle. */
+    schedulePrompt: (sessionId: string, text: string, at: number) =>
+      request<ScheduledPrompt>('POST', `sessions/${encodeURIComponent(sessionId)}/scheduled`, {
+        body: { text, at },
+      }),
+    cancelScheduled: (promptId: string) =>
+      request<void>('DELETE', `scheduled/${encodeURIComponent(promptId)}`),
+    /** The agent's answers up to this time were looked at (the server only goes forward). */
+    markAnswersSeen: (sessionId: string, time: string) =>
+      request<void>('PUT', `sessions/${encodeURIComponent(sessionId)}/answers-seen`, { body: { time } }),
+    /** Types the message into the agent and submits it (the server types, then presses Enter). */
+    sendMessage: (sessionId: string, text: string) =>
+      request<void>('POST', `sessions/${encodeURIComponent(sessionId)}/message`, { body: { text } }),
+    /** Types the same prompt into each of the (running) agents; without submit it only lands in
+     * their input and the user sends it there. */
+    broadcast: (sessionIds: string[], text: string, submit = true) =>
+      request<void>('POST', 'broadcast', { body: { sessions: sessionIds, text, submit } }),
+    /** Types the handover request into the agent. */
+    requestHandover: (sessionId: string) =>
+      request<void>('POST', `sessions/${encodeURIComponent(sessionId)}/handover`),
+    handoverAuto: () => request<{ auto: boolean }>('GET', 'handover/auto'),
+    setHandoverAuto: (auto: boolean) => request<void>('PUT', 'handover/auto', { body: { auto } }),
+    /** Takes effect at the agent's next start. */
+    changePermissionMode: (sessionId: string, mode: string) =>
+      request<void>('PUT', `sessions/${encodeURIComponent(sessionId)}/permission-mode`, { body: { mode } }),
+    cancelEffortChange: (sessionId: string) =>
+      request<void>('DELETE', `sessions/${encodeURIComponent(sessionId)}/effort`),
+    /** Empties or shrinks the context of an idle agent, without a restart. */
+    changeContext: (sessionId: string, action: ContextAction) =>
+      request<void>('POST', `sessions/${encodeURIComponent(sessionId)}/context/${action}`),
+    cancelModelChange: (sessionId: string) =>
+      request<void>('DELETE', `sessions/${encodeURIComponent(sessionId)}/model`),
+    stopSession: (id: string) => request<void>('DELETE', `sessions/${encodeURIComponent(id)}`),
+    /** The terminal as plain text, for selecting and copying. */
+    /** Where a picture of a request or of something typed during an answer is served (index from 0). */
+    answerImageUrl: (sessionId: string, entryId: string, index: number) =>
+      `api/sessions/${encodeURIComponent(sessionId)}/images/${encodeURIComponent(entryId)}/${index}`,
+    /** Whether answers can be read on the Echo, what the settings call it, the rooms connected now, the longest text. */
+    // AI-Connect is one for all machines, and this machine's own app reads it along: its pages (and
+    // those of another machine's app) ask this one.
+    peers: () => request<{ configured: boolean; user_name: string }>('GET', 'peers', { fromRoot: true }),
+    peerMessage: (to: string[], content: string) =>
+      request<{ sent: { to: string; id: number; online: boolean }[] }>('POST', 'peers/message', { body: { to, content }, fromRoot: true }),
 
-  announce: () =>
-    request<{ configured: boolean; rooms: string[]; max_chars: number; label: string }>('GET', 'announce'),
-  /** Has the text said on the Echo of the room ("*": all); returns once it is queued. */
-  announceTexts: (room: string, texts: string[], speaker: string) =>
-    request<void>('POST', 'announce', { body: { room, texts, speaker } }),
-  /** Where a picture attached for the agent is served (the file name in its uploads folder). */
-  uploadUrl: (sessionId: string, name: string) =>
-    `api/sessions/${encodeURIComponent(sessionId)}/uploads/${encodeURIComponent(name)}`,
-  /** The last requests of the user with the agent's texts, oldest first (no thoughts or tools). */
-  answers: (sessionId: string, turns: number) =>
-    request<Turn[]>('GET', `sessions/${encodeURIComponent(sessionId)}/answers`, { query: { turns: String(turns) } }),
-  /** Where the recording of something said on the Echo is served (the id of its entry). */
-  recordingUrl: (id: string) => `api/voice/${encodeURIComponent(id)}/audio`,
-  /** What was spoken to the agent on the Echo, to mark those requests in its answers. */
-  spoken: (sessionId: string) => request<SpokenRequest[]>('GET', `sessions/${encodeURIComponent(sessionId)}/voice`),
-  sessionText: (id: string) =>
-    request<{ text: string }>('GET', `sessions/${encodeURIComponent(id)}/text`),
+    announce: () =>
+      request<{ configured: boolean; rooms: string[]; max_chars: number; label: string }>('GET', 'announce'),
+    /** Has the text said on the Echo of the room ("*": all); returns once it is queued. */
+    announceTexts: (room: string, texts: string[], speaker: string) =>
+      request<void>('POST', 'announce', { body: { room, texts, speaker } }),
+    /** Where a picture attached for the agent is served (the file name in its uploads folder). */
+    uploadUrl: (sessionId: string, name: string) =>
+      `api/sessions/${encodeURIComponent(sessionId)}/uploads/${encodeURIComponent(name)}`,
+    /** The last requests of the user with the agent's texts, oldest first (no thoughts or tools). */
+    answers: (sessionId: string, turns: number) =>
+      request<Turn[]>('GET', `sessions/${encodeURIComponent(sessionId)}/answers`, { query: { turns: String(turns) } }),
+    /** Where the recording of something said on the Echo is served (the id of its entry). */
+    recordingUrl: (id: string) => `api/voice/${encodeURIComponent(id)}/audio`,
+    /** What was spoken to the agent on the Echo, to mark those requests in its answers. */
+    spoken: (sessionId: string) => request<SpokenRequest[]>('GET', `sessions/${encodeURIComponent(sessionId)}/voice`),
+    sessionText: (id: string) =>
+      request<{ text: string }>('GET', `sessions/${encodeURIComponent(id)}/text`),
 
-  // The usage limits belong to the account, which this machine's own app reports (the machine
-  // that serves the page); a page of another machine's app asks this one, too.
-  quota: () => request<AgentQuota[]>('GET', 'quota', { fromRoot: true }),
-  /** Folders of the agent cards in the order the user arranged them (kept on the server). */
-  cardOrder: () => request<string[]>('GET', 'card-order'),
-  arrangeCards: (folders: string[]) => request<void>('PUT', 'card-order', { body: { folders } }),
+    // The usage limits belong to the account, which this machine's own app reports (the machine
+    // that serves the page); a page of another machine's app asks this one, too.
+    quota: () => request<AgentQuota[]>('GET', 'quota', { fromRoot: true }),
+    /** Folders of the agent cards in the order the user arranged them (kept on the server). */
+    cardOrder: () => request<string[]>('GET', 'card-order'),
+    arrangeCards: (folders: string[]) => request<void>('PUT', 'card-order', { body: { folders } }),
 
-  /** The server's public key a device subscribes to push messages with. */
-  pushKey: () => request<{ key: string }>('GET', 'push/key'),
-  subscribePush: (subscription: PushSubscriptionJSON) =>
-    request<void>('POST', 'push/subscriptions', { body: subscription }),
-  unsubscribePush: (endpoint: string) =>
-    request<void>('DELETE', 'push/subscriptions', { query: { endpoint } }),
-  /** A sample message to every subscribed device; returns how many took it. */
-  testPush: () => request<{ delivered: number }>('POST', 'push/test'),
+    /** The server's public key a device subscribes to push messages with. */
+    pushKey: () => request<{ key: string }>('GET', 'push/key'),
+    subscribePush: (subscription: PushSubscriptionJSON) =>
+      request<void>('POST', 'push/subscriptions', { body: subscription }),
+    unsubscribePush: (endpoint: string) =>
+      request<void>('DELETE', 'push/subscriptions', { query: { endpoint } }),
+    /** A sample message to every subscribed device; returns how many took it. */
+    testPush: () => request<{ delivered: number }>('POST', 'push/test'),
 
-  /** Every workspace, as the server keeps them for all devices. */
-  workspaces: () => request<WorkspaceSet>('GET', 'workspaces'),
-  /** An agent leaves its other workspaces: it lives in one. */
-  storeUnnamedWorkspace: (workspace: Workspace) =>
-    request<void>('PUT', 'unnamed-workspace', { body: workspace }),
-  storeWorkspace: (name: string, workspace: Workspace) =>
-    request<void>('PUT', `workspaces/${encodeURIComponent(name)}`, { body: workspace }),
-  deleteWorkspace: (name: string) => request<void>('DELETE', `workspaces/${encodeURIComponent(name)}`),
+    /** Every workspace, as the server keeps them for all devices. */
+    workspaces: () => request<WorkspaceSet>('GET', 'workspaces'),
+    /** An agent leaves its other workspaces: it lives in one. */
+    storeUnnamedWorkspace: (workspace: Workspace) =>
+      request<void>('PUT', 'unnamed-workspace', { body: workspace }),
+    storeWorkspace: (name: string, workspace: Workspace) =>
+      request<void>('PUT', `workspaces/${encodeURIComponent(name)}`, { body: workspace }),
+    deleteWorkspace: (name: string) => request<void>('DELETE', `workspaces/${encodeURIComponent(name)}`),
 
-  /** Every notebook by name, in tab order, as the server keeps them for all devices. */
-  notebooks: () => request<Record<string, Notebook>>('GET', 'notebooks'),
-  /** Stores the whole notebook; a new name adds a tab. */
-  storeNotebook: (name: string, notebook: Notebook) =>
-    request<void>('PUT', `notebooks/${encodeURIComponent(name)}`, { body: notebook }),
-  renameNotebook: (name: string, newName: string) =>
-    request<void>('PUT', `notebooks/${encodeURIComponent(name)}/name`, { body: { name: newName } }),
-  deleteNotebook: (name: string) => request<void>('DELETE', `notebooks/${encodeURIComponent(name)}`),
+    /** Every notebook by name, in tab order, as the server keeps them for all devices. */
+    notebooks: () => request<Record<string, Notebook>>('GET', 'notebooks'),
+    /** Stores the whole notebook; a new name adds a tab. */
+    storeNotebook: (name: string, notebook: Notebook) =>
+      request<void>('PUT', `notebooks/${encodeURIComponent(name)}`, { body: notebook }),
+    renameNotebook: (name: string, newName: string) =>
+      request<void>('PUT', `notebooks/${encodeURIComponent(name)}/name`, { body: { name: newName } }),
+    deleteNotebook: (name: string) => request<void>('DELETE', `notebooks/${encodeURIComponent(name)}`),
 
-  /** Stores a file for a note; returns the address the note links to it with. */
-  attachToNote: (file: File) =>
-    request<{ url: string }>('POST', 'notes/files', { upload: file, query: { name: file.name } }),
-  /** Store a file in the agent's folder; returns its path there, as the agent reads it. */
-  attach: (sessionId: string, file: File) =>
-    request<{ path: string }>('POST', `sessions/${encodeURIComponent(sessionId)}/attachments`, {
-      upload: file,
-      query: { name: file.name },
-    }),
+    /** Stores a file for a note; returns the address the note links to it with. */
+    attachToNote: (file: File) =>
+      request<{ url: string }>('POST', 'notes/files', { upload: file, query: { name: file.name } }),
+    /** Store a file in the agent's folder; returns its path there, as the agent reads it. */
+    attach: (sessionId: string, file: File) =>
+      request<{ path: string }>('POST', `sessions/${encodeURIComponent(sessionId)}/attachments`, {
+        upload: file,
+        query: { name: file.name },
+      }),
 
-  /** service: what the Whisper service transcribes with, null while it does not answer. */
-  dictationSettings: () =>
-    request<{ language: string; whisper: boolean; service: DictationService | null }>('GET', 'dictation'),
-  /** Transcribe recorded speech on the chosen device; never switches device by itself. */
-  dictate: (audio: Blob, device: DictationDevice) =>
-    request<{ text: string }>('POST', 'dictation', { upload: audio, query: { device } }),
+    /** service: what the Whisper service transcribes with, null while it does not answer. */
+    dictationSettings: () =>
+      request<{ language: string; whisper: boolean; service: DictationService | null }>('GET', 'dictation'),
+    /** Transcribe recorded speech on the chosen device; never switches device by itself. */
+    dictate: (audio: Blob, device: DictationDevice) =>
+      request<{ text: string }>('POST', 'dictation', { upload: audio, query: { device } }),
 
-  listFiles: (path: string) => request<FileEntry[]>('GET', 'files', { query: { path } }),
-  createFolder: (parent: string, name: string) =>
-    request<{ path: string }>('POST', 'files/folder', { body: { parent, name } }),
-  rename: (path: string, newName: string) =>
-    request<{ path: string }>('POST', 'files/rename', { body: { path, new_name: newName } }),
-  readFile: (path: string) => request<TextFile>('GET', 'files/content', { query: { path } }),
-  /** Of the paths an agent wrote (relative to base, absolute or from ~), those that exist. */
-  existingPaths: (base: string, candidates: string[]) =>
-    request<Record<string, ExistingPath>>('POST', 'files/existing', { body: { base, candidates } }),
-  writeFile: (path: string, content: string, expectedVersion: string | null) =>
-    request<{ version: string }>('PUT', 'files/content', {
-      body: { path, content, expected_version: expectedVersion },
-    }),
-  moveToTrash: (path: string) => request<TrashEntry>('POST', 'files/trash', { body: { path } }),
+    listFiles: (path: string) => request<FileEntry[]>('GET', 'files', { query: { path } }),
+    createFolder: (parent: string, name: string) =>
+      request<{ path: string }>('POST', 'files/folder', { body: { parent, name } }),
+    rename: (path: string, newName: string) =>
+      request<{ path: string }>('POST', 'files/rename', { body: { path, new_name: newName } }),
+    readFile: (path: string) => request<TextFile>('GET', 'files/content', { query: { path } }),
+    /** Of the paths an agent wrote (relative to base, absolute or from ~), those that exist. */
+    existingPaths: (base: string, candidates: string[]) =>
+      request<Record<string, ExistingPath>>('POST', 'files/existing', { body: { base, candidates } }),
+    writeFile: (path: string, content: string, expectedVersion: string | null) =>
+      request<{ version: string }>('PUT', 'files/content', {
+        body: { path, content, expected_version: expectedVersion },
+      }),
+    moveToTrash: (path: string) => request<TrashEntry>('POST', 'files/trash', { body: { path } }),
 
-  listTrash: () => request<TrashEntry[]>('GET', 'trash'),
-  restore: (id: string) => request<{ path: string }>('POST', 'trash/restore', { body: { id } }),
-  deleteFromTrash: (id: string) => request<void>('DELETE', `trash/${encodeURIComponent(id)}`),
-  emptyTrash: () => request<void>('DELETE', 'trash'),
+    listTrash: () => request<TrashEntry[]>('GET', 'trash'),
+    restore: (id: string) => request<{ path: string }>('POST', 'trash/restore', { body: { id } }),
+    deleteFromTrash: (id: string) => request<void>('DELETE', `trash/${encodeURIComponent(id)}`),
+    emptyTrash: () => request<void>('DELETE', 'trash'),
 
-  listAllConversations: () => request<ProjectConversations[]>('GET', 'conversations/all'),
-  /** For good, not into the trash. */
-  deleteConversations: (conversations: { directory: string; id: string }[]) =>
-    request<{ deleted: number; freed_bytes: number }>('POST', 'conversations/delete', {
-      body: { conversations },
-    }),
+    listAllConversations: () => request<ProjectConversations[]>('GET', 'conversations/all'),
+    /** For good, not into the trash. */
+    deleteConversations: (conversations: { directory: string; id: string }[]) =>
+      request<{ deleted: number; freed_bytes: number }>('POST', 'conversations/delete', {
+        body: { conversations },
+      }),
+  }
+}
+
+export const api = createApi()
+
+const hostApis = new Map<string, ReturnType<typeof createApi>>()
+
+/** The calls to another machine's app; this machine's own `api` for null. */
+export function apiFor(host: string | null): typeof api {
+  if (host === null) return api
+  let found = hostApis.get(host)
+  if (found === undefined) {
+    found = createApi(host)
+    hostApis.set(host, found)
+  }
+  return found
 }
 
 /**

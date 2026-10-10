@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { api, type AgentSession, type Approval } from '../api'
+import { type AgentSession, type Approval } from '../api'
 import AppIcon from './AppIcon.vue'
 import { sessionName, useSessions } from '../composables/useSessions'
+import { useApi } from '../composables/useHostContext'
 import { useToast } from '../composables/useToast'
 
 // named: shows whose request it is, with a button that goes to that agent (`open`) to see what it
@@ -11,6 +12,7 @@ const emit = defineEmits<{ open: [] }>()
 
 const { refresh } = useSessions()
 const toast = useToast()
+const api = useApi()
 
 async function answer(approval: Approval, allow: boolean): Promise<void> {
   try {

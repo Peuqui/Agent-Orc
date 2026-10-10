@@ -702,8 +702,6 @@
     "offline": "{name} (unreachable)",
     "online": "reachable",
     "offlineShort": "unreachable",
-    "open": "Open",
-    "noAgents": "No agent runs on this machine.",
     "unreachable": "This machine does not answer right now. The tunnel is being set up again."
   }
 }

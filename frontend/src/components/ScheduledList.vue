@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import { api, type ScheduledPrompt } from '../api'
+import { type ScheduledPrompt } from '../api'
 import { useSessions } from '../composables/useSessions'
+import { useApi } from '../composables/useHostContext'
 import { useToast } from '../composables/useToast'
 import { formatMoment } from '../format'
 import AppIcon from './AppIcon.vue'
@@ -10,6 +11,7 @@ import AppIcon from './AppIcon.vue'
 defineProps<{ prompts: ScheduledPrompt[] }>()
 const { locale } = useI18n()
 const toast = useToast()
+const api = useApi()
 const { refresh } = useSessions()
 const MILLISECONDS_PER_SECOND = 1000
 

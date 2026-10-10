@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useRouter } from 'vue-router'
-import { api } from '../api'
 import { useSessions } from '../composables/useSessions'
+import { useApi, useHostContext } from '../composables/useHostContext'
+import { useHostLinks } from '../composables/useHostLinks'
 import { useToast } from '../composables/useToast'
 import AppIcon from './AppIcon.vue'
 
@@ -10,8 +10,9 @@ import AppIcon from './AppIcon.vue'
 // What is started in it is the user's business (no second agent in the same folder).
 // agentId: the agent's session, whose workspace column the terminal opens right after.
 const props = defineProps<{ path: string; agentId: string; buttonClass: string; withLabel?: boolean }>()
-const router = useRouter()
 const toast = useToast()
+const api = useApi()
+const { go } = useHostLinks(useHostContext())
 const { terminalByPath, terminalProfile, refresh } = useSessions()
 const running = computed(() => terminalByPath.value.get(props.path))
 
@@ -26,7 +27,7 @@ async function open(): Promise<void> {
         })
     await refresh()
     // In a workspace column, the router hands this to the tab's workspace.
-    await router.push({ path: '/workspace', query: { open: terminal.id, after: props.agentId } })
+    await go({ path: '/workspace', query: { open: terminal.id, after: props.agentId } })
   } catch (error) {
     toast.error(error)
   }

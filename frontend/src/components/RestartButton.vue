@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { api, type AgentChoice, type AgentSession } from '../api'
+import { type AgentChoice, type AgentSession } from '../api'
 import { sessionName, useSessions } from '../composables/useSessions'
+import { useApi } from '../composables/useHostContext'
 import { useToast } from '../composables/useToast'
 import AppIcon from './AppIcon.vue'
 import ConfirmDialog from './ConfirmDialog.vue'
@@ -22,6 +23,7 @@ const props = defineProps<{
 const emit = defineEmits<{ done: [] }>()
 const { t } = useI18n()
 const toast = useToast()
+const api = useApi()
 const { profiles, refresh } = useSessions()
 const asking = ref(false)
 

@@ -29,9 +29,18 @@ const choices = computed(() => [
 ])
 
 function choose(name: string): void {
-  const target = name === own.value ? rootAddress() : hostPath(new URL(rootAddress()).pathname, name)
-  // Stays in the section the page is in (a terminal, folder or workspace is one machine's own).
   const section = sectionOf(window.location.hash, NAV_ITEMS.map((item) => item.to), '/sessions')
+  // The overview lists every machine: on it the choice leads to that machine's part.
+  if (section === '/sessions' && currentHost === null) {
+    document.getElementById(`host-${name}`)?.scrollIntoView({ behavior: 'smooth' })
+    return
+  }
+  // From another machine's page "Agents" leads to the overview, which is this machine's own.
+  const target =
+    name === own.value || section === '/sessions'
+      ? rootAddress()
+      : hostPath(new URL(rootAddress()).pathname, name)
+  // Stays in the section the page is in (a terminal, folder or workspace is one machine's own).
   window.location.assign(`${new URL(target, rootAddress()).href}#${section}`)
 }
 </script>

@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { api, type AgentChoice, type ModelChoice, type Reasoning } from '../api'
+import { type AgentChoice, type ModelChoice, type Reasoning } from '../api'
 import { nearestLevel } from '../effort'
 import { preferredModel, rememberModel } from '../composables/useModelChoice'
 import { useSessions } from '../composables/useSessions'
+import { useApi } from '../composables/useHostContext'
 import { useToast } from '../composables/useToast'
 import BaseDialog from './BaseDialog.vue'
 import ReasoningControl from './ReasoningControl.vue'
@@ -24,6 +25,7 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{ choose: [choice: AgentChoice]; close: [] }>()
 const toast = useToast()
+const api = useApi()
 const { profiles } = useSessions()
 const chosenProfile = ref(props.profile)
 const models = ref<ModelChoice[]>([])

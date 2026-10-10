@@ -1,50 +1,74 @@
 import { computed, ref } from 'vue'
-import { api, type AgentProfile, type AgentQuota, type AgentSession } from '../api'
+import { apiFor, type AgentProfile, type AgentQuota, type AgentSession } from '../api'
+import { useHostContext } from './useHostContext'
 import { useToast } from './useToast'
 
 const REFRESH_MILLISECONDS = 3000
 
-const sessions = ref<AgentSession[]>([])
-const profiles = ref<AgentProfile[]>([])
-const quotas = ref<AgentQuota[]>([])
-let timer: number | undefined
+/** The agents of one machine (this one's own for host null) with what belongs to them. */
+function createStore(host: string | null) {
+  const hostApi = apiFor(host)
+  const sessions = ref<AgentSession[]>([])
+  const profiles = ref<AgentProfile[]>([])
+  const quotas = ref<AgentQuota[]>([])
+  let timer: number | undefined
 
-async function refresh(): Promise<void> {
-  try {
-    const [currentSessions, currentQuotas] = await Promise.all([api.sessions(), api.quota()])
-    sessions.value = currentSessions
-    quotas.value = currentQuotas
-  } catch (error) {
-    useToast().error(error)
+  async function refresh(): Promise<void> {
+    try {
+      // The usage limits belong to the account, which this machine's own app reports.
+      const [currentSessions, currentQuotas] = await Promise.all([
+        hostApi.sessions(),
+        host === null ? hostApi.quota() : quotas.value,
+      ])
+      sessions.value = currentSessions
+      quotas.value = currentQuotas
+    } catch (error) {
+      useToast().error(error)
+    }
+  }
+
+  /** Poll while the app is visible; a backgrounded phone app should not keep polling. */
+  function startPolling(): void {
+    stopPolling()
+    void refresh()
+    timer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void refresh()
+    }, REFRESH_MILLISECONDS)
+  }
+
+  function stopPolling(): void {
+    window.clearInterval(timer)
+  }
+
+  async function loadProfiles(): Promise<void> {
+    profiles.value = await hostApi.agents()
+  }
+
+  // A folder's agent and its terminal, each by folder.
+  const sessionByPath = computed(
+    () => new Map(sessions.value.filter((s) => !s.terminal).map((s) => [s.path, s])),
+  )
+  const terminalByPath = computed(
+    () => new Map(sessions.value.filter((s) => s.terminal).map((s) => [s.path, s])),
+  )
+  // The profile that opens a plain terminal (">_"); none if the config has no such profile.
+  const terminalProfile = computed(() => profiles.value.find((profile) => profile.terminal) ?? null)
+
+  return {
+    sessions,
+    profiles,
+    quotas,
+    sessionByPath,
+    terminalByPath,
+    terminalProfile,
+    refresh,
+    startPolling,
+    stopPolling,
+    loadProfiles,
   }
 }
 
-/** Poll while the app is visible; a backgrounded phone app should not keep polling. */
-function startPolling(): void {
-  stopPolling()
-  void refresh()
-  timer = window.setInterval(() => {
-    if (document.visibilityState === 'visible') void refresh()
-  }, REFRESH_MILLISECONDS)
-}
-
-function stopPolling(): void {
-  window.clearInterval(timer)
-}
-
-async function loadProfiles(): Promise<void> {
-  profiles.value = await api.agents()
-}
-
-// A folder's agent and its terminal, each by folder.
-const sessionByPath = computed(
-  () => new Map(sessions.value.filter((s) => !s.terminal).map((s) => [s.path, s])),
-)
-const terminalByPath = computed(
-  () => new Map(sessions.value.filter((s) => s.terminal).map((s) => [s.path, s])),
-)
-// The profile that opens a plain terminal (">_"); none if the config has no such profile.
-const terminalProfile = computed(() => profiles.value.find((profile) => profile.terminal) ?? null)
+const stores = new Map<string | null, ReturnType<typeof createStore>>()
 
 const TERMINAL_KEY_SUFFIX = '\n>_'
 
@@ -60,17 +84,12 @@ export function cardKey(session: AgentSession): string {
   return session.suffix === null ? session.path : `${session.path}\n${session.suffix}`
 }
 
-export function useSessions() {
-  return {
-    sessions,
-    profiles,
-    quotas,
-    sessionByPath,
-    terminalByPath,
-    terminalProfile,
-    refresh,
-    startPolling,
-    stopPolling,
-    loadProfiles,
+/** The agents of the machine of the component's surroundings (see useHostContext), or of `host`. */
+export function useSessions(host: string | null = useHostContext()) {
+  let store = stores.get(host)
+  if (store === undefined) {
+    store = createStore(host)
+    stores.set(host, store)
   }
+  return store
 }
