@@ -9,11 +9,12 @@ import { useToast } from '../composables/useToast'
 
 // Which machine's agents the app shows: this one's or another's. A machine is a page of its own
 // (its app, served below /hosts/<name>/), so changing it loads that page.
-const { state, loadHosts } = useHosts()
+const { state, loadHosts, keepFresh } = useHosts()
 const toast = useToast()
 const { t } = useI18n()
 
 onMounted(() => loadHosts().catch(toast.error))
+keepFresh()
 
 // The name this machine goes by here; the other machines are named in the config.
 const own = computed(() => state.value?.self ?? '')

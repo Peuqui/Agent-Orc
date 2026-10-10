@@ -11,7 +11,8 @@ import ContextMeter from './ContextMeter.vue'
 // Changing them is done in the machine's own app (a click opens it), which is the same app.
 const REFRESH_MILLISECONDS = 3000
 
-const { state, refresh } = useHosts()
+const { state, refresh, keepFresh } = useHosts()
+keepFresh()
 // Per machine its agents, or why they could not be read.
 const agents = ref<Record<string, AgentSession[] | { error: string }>>({})
 let timer: number | undefined
