@@ -12,20 +12,22 @@ Nur was noch aussteht. Erledigtes steht in der Git-Historie.
 
 ## Mehrere Rechner
 
-- **Aragon (und beliebige weitere Rechner) anbinden:** Jeder Rechner bekommt eine eigene Agent-Orc-Instanz, der Mini
-  bündelt sie in einer Oberfläche (Peuqui, 10.10.). Jede Instanz bedient ihre eigene Maschine mit dem vorhandenen Code
-  (tmux, Transkripte, Dateien, Änderungen bleiben lokal), der Mini leitet Anfragen per SSH-Tunnel weiter. Aragon ist
-  vom Mini über `10.0.0.2:2222` (WSL) per Schlüssel erreichbar, ohne Klon: der Mini baut und liefert.
-  Fertig (10.10.): `server.socket` (Unix-Socket in einem 0700-Ordner statt Port und Login), `agent-orc setup` fragt
-  danach, `deploy/deploy.sh [ssh-Optionen] host` baut Wheel und Oberfläche, installiert per SSH und startet den
-  User-Dienst neu. Auf Aragon läuft die Instanz als User-Dienst (`~/.local/state/agent-orc/run/agent-orc.sock`).
-  Durch einen SSH-Tunnel (`ssh -L <Mini-Socket>:<Aragon-Socket>`) geprüft: API, Oberfläche, Sitzung starten und
-  beenden, Terminal-WebSocket (Befehl lief auf Aragon).
-  Offen: Tunnel als Dienst auf dem Mini (bleibt oben, verbindet neu), Liste der Rechner in der Konfiguration des
-  Minis, Durchleitung (HTTP, SSE, WebSocket) und Rechner-Ebene in Oberfläche und Backend (Sitzungs-Kennungen mit
-  Rechnername, Auswahl). Die Datei-Entsperrung braucht im Socket-Modus kein Passwort (der SSH-Schlüssel ist die
-  Anmeldung); die Oberfläche fragt trotzdem danach. Der Agent auf Aragon läuft in VS Code und nicht in tmux; er muss
-  einmal von Agent-Orc neu gestartet werden (Gespräch fortsetzen), um verwaltbar zu sein.
+- **Weitere Rechner und Feinschliff der Anbindung** (Stand 10.10.): Aragon ist angebunden. Jeder Rechner hat eine
+  eigene Instanz auf einem Socket (kein Login, Ordner 0700), der Mini hält je Rechner einen SSH-Tunnel
+  (`hosts` in der Konfiguration, baut sich nach Abbruch selbst neu auf) und reicht dessen App unter `/hosts/<Name>/`
+  durch; Updates per `deploy/deploy.sh`. Geprüft über die Oberfläche: Rechner-Wahl in der Kopfzeile, Agentenliste je
+  Rechner, Terminal und Agent auf Aragon starten und beenden. Offen:
+  - **Aragons Agent in VS Code** steckt nicht in tmux und lässt sich nicht übernehmen; er muss einmal von Agent-Orc
+    neu gestartet werden (Gespräch fortsetzen). Sichtbar bleibt er über „Gespräche“.
+  - **Datei-Entsperrung** fragt auf einem Rechner ohne Login trotzdem nach einem Passwort (jede Eingabe gilt, der
+    SSH-Schlüssel ist die Anmeldung). Die Oberfläche sollte die Frage dort weglassen.
+  - **Agentenliste anderer Rechner** ist schreibgeschützt (Name, Zustand, Modell, Kontext); gesteuert wird in der App
+    des Rechners („Öffnen“ oder die Wahl in der Kopfzeile). Volle Karten mit allen Knöpfen in einer Liste hieße, jeden
+    Aufruf der Oberfläche um den Rechner zu erweitern.
+  - **Arbeitsflächen, Notizen und Gespräche-Tab** gehören je Rechner (jede Instanz hat ihren eigenen Zustand);
+    Gespräche zeigt AI-Connect ohnehin für alle.
+  - **Läuft der Dienst auf Aragon nur, solange WSL läuft** (User-Dienst ohne Linger): ist Windows aus oder WSL
+    beendet, steht Aragon als „nicht erreichbar“ da.
 
 ## AI-Connect
 
