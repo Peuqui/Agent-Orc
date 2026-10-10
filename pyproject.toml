@@ -16,6 +16,8 @@ dependencies = [
     "pywebpush",
     # Forms with a file (the recording AIfred sends with what was said on the Echo Dot).
     "python-multipart",
+    # The tunnels to other machines (HTTP and WebSocket over a socket); pywebpush brings it, too.
+    "aiohttp",
 ]
 
 [project.optional-dependencies]

@@ -4,6 +4,7 @@ import asyncio
 import hmac
 import logging
 import mimetypes
+import socket
 import subprocess
 import time
 from collections.abc import AsyncIterator, Awaitable, Callable
@@ -26,7 +27,7 @@ from fastapi import (
     WebSocket,
     status,
 )
-from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -103,6 +104,14 @@ from agent_orc.history import (
     delete_claude_conversation,
     list_all_claude_conversations,
 )
+from agent_orc.hosts import (
+    HostLink,
+    HostUnreachableError,
+    UnknownHostError,
+    forward,
+    forward_websocket,
+    keep_tunnel_open,
+)
 from agent_orc.push import (
     add_subscription,
     agent_message,
@@ -151,6 +160,7 @@ from agent_orc.state import (
     remove_workspace,
     rename_notebook,
     reset_extra_keys,
+    state_dir,
     write_card_order,
     write_extra_keys,
     write_notebooks,
@@ -263,6 +273,8 @@ ERROR_STATUS: dict[type[Exception], int] = {
     UnknownWorkspaceError: status.HTTP_404_NOT_FOUND,
     UnknownNotebookError: status.HTTP_404_NOT_FOUND,
     NotConfiguredError: status.HTTP_404_NOT_FOUND,
+    UnknownHostError: status.HTTP_404_NOT_FOUND,
+    HostUnreachableError: status.HTTP_502_BAD_GATEWAY,
     NotebookExistsError: status.HTTP_409_CONFLICT,
     SessionAlreadyRunningError: status.HTTP_409_CONFLICT,
     files.InvalidNameError: status.HTTP_422_UNPROCESSABLE_CONTENT,
@@ -818,11 +830,26 @@ def create_app(
             except Exception:
                 logger.exception("handling scheduled prompts failed")
 
+    # The other machines: a tunnel to each (run in the background) and the socket it ends in.
+    host_links = {
+        name: HostLink(name, state_dir() / "run" / f"host-{name}.sock")
+        for name in config.hosts or {}
+    }
+
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         watcher = asyncio.create_task(watch_agents())
+        tunnels = [
+            asyncio.create_task(keep_tunnel_open(name, host_links[name].local_socket, host))
+            for name, host in (config.hosts or {}).items()
+        ]
         yield
         watcher.cancel()
+        for tunnel in tunnels:
+            tunnel.cancel()
+        await asyncio.gather(*tunnels, return_exceptions=True)
+        for link in host_links.values():
+            await link.close()
 
     app = FastAPI(
         title="Agent-Orc", docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan
@@ -1846,12 +1873,10 @@ def create_app(
         sessions.stop(session_id)
         return asdict(removal)
 
-    @app.websocket("/api/sessions/{session_id}/terminal")
-    async def terminal(websocket: WebSocket, session_id: str, cols: int, rows: int) -> None:
-        """The browser sends its terminal size along (cols, rows), so tmux starts at it."""
+    def websocket_refusal(websocket: WebSocket) -> int | None:
+        """The close code that turns a WebSocket away (not logged in, another page's), or None."""
         if not is_logged_in(websocket.cookies.get(SESSION_COOKIE)):
-            await websocket.close(WS_CLOSE_UNAUTHORIZED)
-            return
+            return WS_CLOSE_UNAUTHORIZED
         # Browsers send cookies on cross-site WebSocket handshakes too; the Origin check
         # stops other web pages from opening a terminal with the user's login. (A socket is
         # reached by no browser, only by the other Agent-Orc, which has checked it itself.)
@@ -1859,7 +1884,56 @@ def create_app(
             websocket.headers.get("origin", "")
         ).netloc != websocket.headers.get("host")
         if signer is not None and origin_foreign:
-            await websocket.close(WS_CLOSE_FORBIDDEN_ORIGIN)
+            return WS_CLOSE_FORBIDDEN_ORIGIN
+        return None
+
+    def host_link(name: str) -> HostLink:
+        link = host_links.get(name)
+        if link is None:
+            raise UnknownHostError(name)
+        return link
+
+    @app.get("/api/hosts", dependencies=authenticated)
+    async def list_hosts() -> dict[str, Any]:
+        """This machine's name and the other machines, with whether each one answers."""
+        links = host_links.values()
+        online = await asyncio.gather(*(link.is_online() for link in links))
+        return {
+            "self": socket.gethostname(),
+            "hosts": [
+                {"name": link.name, "online": up} for link, up in zip(links, online, strict=True)
+            ],
+        }
+
+    @app.get("/hosts/{name}", dependencies=authenticated)
+    def host_start(name: str) -> RedirectResponse:
+        """The other machine's app is served below "/hosts/<name>/"; the page's relative addresses
+        need the slash. (Relative itself, so it holds wherever this app is served.)"""
+        host_link(name)
+        return RedirectResponse(f"{name}/")
+
+    @app.api_route(
+        "/hosts/{name}/{path:path}",
+        methods=["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"],
+        dependencies=authenticated,
+    )
+    async def host_request(name: str, path: str, request: Request) -> Response:
+        return await forward(request, host_link(name), path)
+
+    @app.websocket("/hosts/{name}/{path:path}")
+    async def host_websocket(websocket: WebSocket, name: str, path: str) -> None:
+        if (refusal := websocket_refusal(websocket)) is not None:
+            await websocket.close(refusal)
+        elif name not in host_links:
+            await websocket.close(WS_CLOSE_SESSION_NOT_FOUND)
+        else:
+            await forward_websocket(websocket, host_links[name], path)
+
+    @app.websocket("/api/sessions/{session_id}/terminal")
+    async def terminal(websocket: WebSocket, session_id: str, cols: int, rows: int) -> None:
+        """The browser sends its terminal size along (cols, rows), so tmux starts at it."""
+        if (refusal := websocket_refusal(websocket)) is not None:
+            await websocket.close(refusal)
             return
         if all(session.id != session_id for session in sessions.list()):
             await websocket.close(WS_CLOSE_SESSION_NOT_FOUND)
@@ -1975,7 +2049,9 @@ def create_app(
             response = await call_next(request)
             # Read every time: an update may replace the files while this server runs, and the
             # header must name the build a reload would actually get.
-            response.headers[BUILD_ID_HEADER] = build_id_file.read_text(encoding="utf-8")
+            # Not over another machine's: its page knows its own build, which may differ.
+            if BUILD_ID_HEADER not in response.headers:
+                response.headers[BUILD_ID_HEADER] = build_id_file.read_text(encoding="utf-8")
             return response
 
         # Mounted last, so the API routes above take precedence.

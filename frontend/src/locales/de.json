@@ -178,6 +178,8 @@
     "DictationServiceError": "Whisper antwortet nicht.",
     "UnsupportedAudioError": "Dieses Audioformat kann Whisper nicht verarbeiten.",
     "UserTokenRefusedError": "Die Bridge kennt das User-Token von AI-Connect nicht. Erzeuge es neu (installer.py user-token) und starte die Bridge neu.",
+    "HostUnreachableError": "Der Rechner antwortet nicht (Tunnel oder Agent-Orc dort).",
+    "UnknownHostError": "Diesen Rechner gibt es nicht.",
     "PeerSendError": "AI-Connect hat die Nachricht nicht angenommen.",
     "UserTokenMissingError": "AI-Connect hat noch kein User-Token. Erzeuge es im Terminal mit installer.py user-token und starte die Bridge neu."
   },
@@ -687,5 +689,13 @@
       "idle": "bereit",
       "none": "meldet nichts"
     }
+  },
+  "hosts": {
+    "machine": "Rechner",
+    "offline": "{name} (nicht erreichbar)",
+    "online": "erreichbar",
+    "offlineShort": "nicht erreichbar",
+    "open": "Öffnen",
+    "unreachable": "Dieser Rechner antwortet gerade nicht. Der Tunnel wird neu aufgebaut."
   }
 }

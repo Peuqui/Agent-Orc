@@ -3,15 +3,21 @@
 import asyncio
 import json
 import os
+import shutil
 import signal
+import socket
 import subprocess
+import tempfile
+import threading
 import time
+from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 import pytest
+import uvicorn
 import yaml
 from fastapi.testclient import TestClient
 from starlette.testclient import WebSocketTestSession
@@ -20,14 +26,16 @@ from starlette.websockets import WebSocketDisconnect
 from agent_orc.api import BUILD_ID_FILE, BUILD_ID_HEADER, create_app
 from agent_orc.approvals import open_request, wait_for_decision
 from agent_orc.auth import new_credentials
-from agent_orc.config import Config, DictationConfig, ServerConfig, default_config_text
+from agent_orc.config import Config, DictationConfig, HostConfig, ServerConfig, default_config_text
 from agent_orc.context import store_activity, store_status
 from agent_orc.effort import agent_settings_file
 from agent_orc.events import ChangeNotifier
 from agent_orc.handover import write_auto
 from agent_orc.history import claude_project_dir
+from agent_orc.listen import prepare_socket
 from agent_orc.schedule import mark_limited, read_scheduled
 from agent_orc.sessions import SESSION_ENV
+from agent_orc.state import state_dir
 from agent_orc.terminal import WS_CLOSE_SERVICE_RESTART, attach_environment
 from tests.conftest import Device, FakeClock, FakePushService, FakeWhisper
 
@@ -2195,3 +2203,132 @@ def test_profile_change_takes_the_level_for_the_chosen_model(
     switched = client.post(url, json={"profile": "narrow", "model": "narrow", "effort": "medium"})
     assert switched.status_code == 200 and switched.json()["profile"] == "narrow"
     assert client.get("/api/sessions").json()[0]["effort"] == "medium"
+
+
+async def idle_tunnel(*_arguments: object) -> None:
+    """Stands in for ssh: the test's "other machine" is already at the tunnel's end."""
+    await asyncio.Event().wait()
+
+
+@pytest.fixture
+def other_machine(
+    config: Config, clock: FakeClock, monkeypatch: pytest.MonkeyPatch
+) -> Iterator[None]:
+    """A second Agent-Orc on a socket, at the end of the tunnel to host "Aragon"."""
+    # A short path: a socket's address holds 107 bytes.
+    state = Path(tempfile.mkdtemp(prefix="orc"))
+    monkeypatch.setenv("XDG_STATE_HOME", str(state))
+    local_socket = state_dir() / "run" / "host-Aragon.sock"
+    prepare_socket(local_socket)
+    on_socket = config.model_copy(update={"server": ServerConfig(socket=local_socket)})
+    app = create_app(on_socket, None, static_dir=None, clock=clock)
+    server = uvicorn.Server(
+        uvicorn.Config(app, uds=str(local_socket), log_level="warning", loop="asyncio")
+    )
+    thread = threading.Thread(target=server.run, daemon=True)
+    thread.start()
+    deadline = time.monotonic() + 10
+    while not server.started and time.monotonic() < deadline:
+        time.sleep(0.02)
+    assert server.started
+    yield
+    server.should_exit = True
+    thread.join(10)
+    shutil.rmtree(state)
+
+
+@pytest.fixture
+def mini(
+    config: Config, clock: FakeClock, other_machine: None, monkeypatch: pytest.MonkeyPatch
+) -> Iterator[TestClient]:
+    """This machine's Agent-Orc, logged in; its hosts: "Aragon" (up) and "Gone" (nothing there)."""
+    monkeypatch.setattr("agent_orc.api.keep_tunnel_open", idle_tunnel)
+    hosts = {name: HostConfig(ssh=["nowhere"], socket="unused") for name in ("Aragon", "Gone")}
+    with_hosts = config.model_copy(update={"hosts": hosts})
+    # Entered, so the app keeps one event loop (its HTTP sessions belong to it).
+    with TestClient(
+        create_app(with_hosts, new_credentials(PASSWORD), static_dir=None, clock=clock)
+    ) as c:
+        assert c.post("/api/login", json={"password": PASSWORD}).status_code == 204
+        yield c
+
+
+def test_the_hosts_and_whether_they_answer(mini: TestClient) -> None:
+    listed = mini.get("/api/hosts").json()
+    assert listed["self"] == socket.gethostname()
+    assert listed["hosts"] == [
+        {"name": "Aragon", "online": True},
+        {"name": "Gone", "online": False},
+    ]
+
+
+def test_another_machines_app_is_handed_on_through_this_ones_login(mini: TestClient) -> None:
+    assert mini.get("/hosts/Aragon/api/me").json() == {"authenticated": True}
+    assert mini.get("/hosts/Aragon/api/agents").json()[0]["name"] == "sleeper"
+    mini.cookies.clear()
+    assert mini.get("/hosts/Aragon/api/me").status_code == 401
+    assert mini.get("/api/hosts").status_code == 401
+
+
+def test_a_host_without_an_answer_or_a_name_is_told_so(mini: TestClient) -> None:
+    gone = mini.get("/hosts/Gone/api/me")
+    assert gone.status_code == 502
+    assert gone.json()["error"] == "HostUnreachableError"
+    assert mini.get("/hosts/Nowhere/api/me").status_code == 404
+
+
+def test_the_address_without_a_slash_goes_to_the_one_with(mini: TestClient) -> None:
+    redirect = mini.get("/hosts/Aragon", follow_redirects=False)
+    assert redirect.status_code == 307
+    assert redirect.headers["location"] == "Aragon/"
+
+
+def test_what_is_sent_reaches_the_other_machine(mini: TestClient, home: Path) -> None:
+    folder = home / "projects" / "far"
+    folder.mkdir()
+    started = mini.post(
+        "/hosts/Aragon/api/sessions",
+        json={
+            "profile": "shell", "path": str(folder), "resume": False, "effort": None,
+            "ultracode": False, "conversation": None, "workspace": None,
+        },
+    )  # fmt: skip
+    assert started.status_code == 200
+    assert [s["id"] for s in mini.get("/hosts/Aragon/api/sessions").json()] == [
+        started.json()["id"]
+    ]
+    # An error of the other machine arrives as its own.
+    assert mini.get("/hosts/Aragon/api/files?path=/no/such/place").status_code == 403
+
+
+def test_a_file_arrives_as_the_other_machine_sends_it(mini: TestClient, home: Path) -> None:
+    (home / "projects" / "far.txt").write_bytes(b"far away\n" * 10000)
+    answer = mini.get(
+        "/hosts/Aragon/api/files/raw", params={"path": str(home / "projects" / "far.txt")}
+    )
+    assert answer.status_code == 200
+    assert answer.content == b"far away\n" * 10000
+    assert answer.headers["content-type"].startswith("text/plain")
+
+
+def test_a_terminal_works_through_the_tunnel(mini: TestClient, home: Path) -> None:
+    folder = home / "projects" / "far"
+    session_id = start_shell(mini, folder)  # on this machine's own server; the shell is shared
+    url = f"/hosts/Aragon{terminal_url(session_id)}"
+    with mini.websocket_connect(url, headers=ORIGIN) as terminal:
+        read_until(terminal, "READY")
+        terminal.send_text(json.dumps({"type": "input", "data": "far-away\r"}))
+        read_until(terminal, "far-away")
+    assert refused_code_at(mini, url, {"origin": "https://evil.example"}) == 4403
+    mini.cookies.clear()
+    assert refused_code_at(mini, url, ORIGIN) == 4401
+
+
+def refused_code_at(client: TestClient, url: str, headers: dict[str, str]) -> int:
+    with (
+        pytest.raises(WebSocketDisconnect) as refused,
+        client.websocket_connect(url, headers=headers),
+    ):
+        pass
+    code: int = refused.value.code
+    return code

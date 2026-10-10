@@ -146,6 +146,17 @@ dictation:
 #   # The agents see what you write as coming from User:<user_name>.
 #   user_name: Ada
 
+# Other machines that run an Agent-Orc of their own (set up there with a socket instead of a port,
+# `agent-orc setup`; update them with deploy/deploy.sh). This one keeps an SSH tunnel to each and
+# shows its app below /hosts/<name>/, so its agents appear next to this machine's own.
+# Remove the leading "#" to switch it on.
+# hosts:
+#   Aragon:
+#     # The arguments of ssh: its options and the destination. It must log in without asking (a key).
+#     ssh: ["-p", "2222", "mp@10.0.0.2"]
+#     # That machine's Agent-Orc socket (its server.socket), spelled out: ssh does not expand "~".
+#     socket: /home/mp/.local/state/agent-orc/run/agent-orc.sock
+
 tmux:
   # Dedicated tmux server socket, so Agent-Orc never touches your own tmux sessions.
   socket_name: agent-orc

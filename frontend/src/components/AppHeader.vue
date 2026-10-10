@@ -8,6 +8,7 @@ import AppIcon from './AppIcon.vue'
 import HelpButton from './HelpButton.vue'
 import SettingsMenu from './SettingsMenu.vue'
 import AppLogo from './AppLogo.vue'
+import HostSwitcher from './HostSwitcher.vue'
 
 const { locale } = useI18n()
 
@@ -37,6 +38,7 @@ async function logout(): Promise<void> {
       </nav>
       <!-- Compact buttons, so the logo keeps its room on narrow screens. -->
       <div class="flex shrink-0 items-center [&_.btn-icon]:size-8">
+        <HostSwitcher />
         <select
           class="mr-1 h-6 rounded-md border border-slate-700 bg-slate-800 px-1 text-xs text-slate-300"
           :aria-label="$t('app.language')"

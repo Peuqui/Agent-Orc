@@ -1,6 +1,7 @@
 """Loading and validating the Agent-Orc configuration file."""
 
 import os
+import re
 from importlib.resources import files
 from pathlib import Path
 from typing import Any, Literal, Self
@@ -209,6 +210,20 @@ class PeersConfig(StrictModel):
         return value.expanduser()
 
 
+HOST_NAME_PATTERN = re.compile(r"[A-Za-z0-9_-]+")
+
+
+class HostConfig(StrictModel):
+    """Another machine whose Agent-Orc this one reaches through an SSH tunnel (see hosts.py)."""
+
+    # The arguments of ssh: its options and the destination, e.g. ["-p", "2222", "mp@10.0.0.2"].
+    # It must log in without asking (a key).
+    ssh: list[str]
+    # That Agent-Orc's socket on the machine (its server.socket), spelled out: ssh does not
+    # expand "~".
+    socket: str
+
+
 class TmuxConfig(StrictModel):
     socket_name: str
 
@@ -335,8 +350,20 @@ class Config(StrictModel):
     voice: VoiceConfig | None = None
     # Without it there is no AI-Connect to read along in.
     peers: PeersConfig | None = None
+    # Without it there are no other machines. A name is part of the address: /hosts/<name>/.
+    hosts: dict[str, HostConfig] | None = None
     tmux: TmuxConfig
     agents: dict[str, AgentProfile]
+
+    @field_validator("hosts")
+    @classmethod
+    def host_names_fit_an_address(
+        cls, hosts: dict[str, HostConfig] | None
+    ) -> dict[str, HostConfig] | None:
+        for name in hosts or {}:
+            if not HOST_NAME_PATTERN.fullmatch(name):
+                raise ValueError(f"host name {name!r}: letters, digits, - and _ only")
+        return hosts
 
     @model_validator(mode="after")
     def voice_needs_announce(self) -> Self:

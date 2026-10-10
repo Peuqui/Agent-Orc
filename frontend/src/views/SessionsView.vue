@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { api, type AgentSession, type Reasoning, type WorkspaceSet } from '../api'
+import { api, currentHost, type AgentSession, type Reasoning, type WorkspaceSet } from '../api'
 import AppIcon from '../components/AppIcon.vue'
 import BaseDialog from '../components/BaseDialog.vue'
 import BroadcastButton from '../components/BroadcastButton.vue'
@@ -16,6 +16,7 @@ import AgentActions from '../components/AgentActions.vue'
 import ApprovalRequests from '../components/ApprovalRequests.vue'
 import DropdownMenu from '../components/DropdownMenu.vue'
 import TerminalButton from '../components/TerminalButton.vue'
+import HostAgents from '../components/HostAgents.vue'
 import ScheduledList from '../components/ScheduledList.vue'
 import { moveInList, useReorder } from '../composables/useReorder'
 import { cardKey, sessionName, useSessions } from '../composables/useSessions'
@@ -463,6 +464,9 @@ function resumeWith(session: AgentSession, model: string | null, effort: string 
         </div>
       </li>
     </ul>
+
+    <!-- Other machines' agents; on one of theirs there are none of the others. -->
+    <HostAgents v-if="currentHost === null" />
 
     <BaseDialog v-if="effortChange" :title="$t('agent.effort')" @close="cancelEffort">
       <p class="mb-5 text-slate-300">

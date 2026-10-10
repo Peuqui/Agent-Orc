@@ -1,4 +1,5 @@
 import { ref } from 'vue'
+import { hostOf, rootOf } from './hostPaths'
 
 /** A model a profile offers at start; the note is shown beside it (e.g. until when it is free). */
 export interface ModelChoice {
@@ -340,6 +341,12 @@ export interface ProjectConversations {
   conversations: CleanupConversation[]
 }
 
+export interface HostsState {
+  /** This machine's name. */
+  self: string
+  hosts: { name: string; online: boolean }[]
+}
+
 export interface CleanupConversation extends Conversation {
   /** An agent runs in it or it was written to just now: cannot be deleted. */
   in_use: boolean
@@ -387,14 +394,37 @@ const NO_CONTENT = 204
 const BUILD_ID_HEADER = 'X-Build-Id'
 export const NETWORK_ERROR = 'NetworkError'
 
+/** The machine whose app this page is (served below /hosts/<name>/ by this machine's own), if it
+ * is not this machine's own. */
+export const currentHost = hostOf(new URL(document.baseURI).pathname)
+
+/** The address of this machine's own app, from wherever the page is. */
+export function rootAddress(): string {
+  const root = new URL(document.baseURI)
+  root.pathname = rootOf(root.pathname)
+  root.search = ''
+  root.hash = ''
+  return root.href
+}
+
 async function request<T>(
   method: string,
   path: string,
-  /** body is sent as JSON, upload (e.g. recorded audio) as it is. */
-  options: { body?: unknown; upload?: Blob; query?: Record<string, string> } = {},
+  /** body is sent as JSON, upload (e.g. recorded audio) as it is. `host` asks another machine's
+   * app, `fromRoot` this machine's own whichever machine's page this is. */
+  options: {
+    body?: unknown
+    upload?: Blob
+    query?: Record<string, string>
+    host?: string
+    fromRoot?: boolean
+  } = {},
 ): Promise<T> {
-  // Relative to the page, so the app also works under a reverse-proxy sub-path.
-  const url = new URL(`api/${path}`, document.baseURI)
+  // Relative to the page, so the app also works under a reverse-proxy sub-path (and below
+  // /hosts/<name>/, where it is another machine's).
+  const base = options.fromRoot ? rootAddress() : document.baseURI
+  const hostPrefix = options.host === undefined ? '' : `hosts/${encodeURIComponent(options.host)}/`
+  const url = new URL(`${hostPrefix}api/${path}`, base)
   for (const [key, value] of Object.entries(options.query ?? {})) {
     url.searchParams.set(key, value)
   }
@@ -416,7 +446,9 @@ async function request<T>(
   }
   checkBuild(response)
   if (response.status === 401 && path !== 'login' && path !== 'scope/unlock') {
-    authenticated.value = false
+    // Another machine's app has no login: it is this machine's that has run out, so to there.
+    if (currentHost === null) authenticated.value = false
+    else window.location.assign(rootAddress())
   }
   if (!response.ok) {
     const data = await response.json()
@@ -453,6 +485,10 @@ export const api = {
   /** Back to the extra keys of the config. */
   resetKeys: () => request<void>('DELETE', 'terminal/keys'),
   sessions: () => request<AgentSession[]>('GET', 'sessions'),
+  /** This machine's name and the others', from this machine's own app (also from another's page). */
+  hosts: () => request<HostsState>('GET', 'hosts', { fromRoot: true }),
+  /** The agents of another machine, as that machine's own app reports them. */
+  hostSessions: (host: string) => request<AgentSession[]>('GET', 'sessions', { host, fromRoot: true }),
   /**
    * reasoning is stored for the folder; conversation resumes that earlier conversation,
    * resume the last one.
