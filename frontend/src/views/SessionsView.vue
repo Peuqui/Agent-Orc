@@ -222,7 +222,7 @@ function resumeWith(session: AgentSession, model: string | null, effort: string 
 <template>
   <section>
     <!-- Always reachable: a new agent starts in a folder chosen in the file view. -->
-    <QuotaPanel />
+    <QuotaPanel class="mb-4" />
     <!-- Named workspaces next to it: a tap opens one (its own browser tab once this one shows
          agents); the link address lets a middle click open a tab, too. -->
     <div class="mb-4 flex flex-wrap items-center gap-2">

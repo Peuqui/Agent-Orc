@@ -201,7 +201,6 @@
     "five_hour": "5 hours",
     "seven_day": "Week",
     "detail": "{percent} % · reset {when}",
-    "none": "No data yet – appears once a session has worked.",
     "short": {
       "five_hour": "5 h",
       "seven_day": "Week"

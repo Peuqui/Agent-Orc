@@ -377,7 +377,7 @@ function deleteThis(): void {
         />
         <!-- Claude's usage, centred in the room between the workspaces and the buttons; it shrinks
              with the window. Not on phones: the name gets the room (the overview shows it). -->
-        <QuotaPanel v-if="!phone" compact class="min-w-0 flex-1 overflow-hidden sm:px-3" />
+        <QuotaPanel v-if="!phone" class="min-w-0 flex-1 overflow-hidden sm:px-3" />
         <AddColumnMenu :candidates="candidates" @open="open" />
         <ColumnCountControl
           v-if="!phone"
