@@ -14,13 +14,18 @@ Nur was noch aussteht. Erledigtes steht in der Git-Historie.
 
 - **Aragon (und beliebige weitere Rechner) anbinden:** Jeder Rechner bekommt eine eigene Agent-Orc-Instanz, der Mini
   bündelt sie in einer Oberfläche (Peuqui, 10.10.). Jede Instanz bedient ihre eigene Maschine mit dem vorhandenen Code
-  (tmux, Transkripte, Dateien, Änderungen bleiben lokal); der Mini leitet Anfragen per SSH-Tunnel weiter. Aragon ist
-  vom Mini über `10.0.0.2:2222` (WSL) per Schlüssel erreichbar. Stand: Wheel liegt in einem venv auf Aragon
-  (`~/.local/share/agent-orc/venv`, `agent-orc` in `~/.local/bin`); noch keine Konfiguration, kein Dienst, kein Tunnel.
-  Offen: Konfiguration und Passwort auf Aragon, Dienst (systemd-User-Dienst im WSL), Tunnel (z. B. `autossh`-artig als
-  Dienst auf dem Mini), Rechner-Ebene in Backend und Oberfläche (Sitzungs-Kennungen mit Rechnername, Auswahl),
-  Anmeldung der Instanzen untereinander. Der Agent auf Aragon läuft in VS Code und nicht in tmux; er muss einmal von
-  Agent-Orc neu gestartet werden (Gespräch fortsetzen), um verwaltbar zu sein.
+  (tmux, Transkripte, Dateien, Änderungen bleiben lokal), der Mini leitet Anfragen per SSH-Tunnel weiter. Aragon ist
+  vom Mini über `10.0.0.2:2222` (WSL) per Schlüssel erreichbar, ohne Klon: der Mini baut und liefert.
+  Fertig (10.10.): `server.socket` (Unix-Socket in einem 0700-Ordner statt Port und Login), `agent-orc setup` fragt
+  danach, `deploy/deploy.sh [ssh-Optionen] host` baut Wheel und Oberfläche, installiert per SSH und startet den
+  User-Dienst neu. Auf Aragon läuft die Instanz als User-Dienst (`~/.local/state/agent-orc/run/agent-orc.sock`).
+  Durch einen SSH-Tunnel (`ssh -L <Mini-Socket>:<Aragon-Socket>`) geprüft: API, Oberfläche, Sitzung starten und
+  beenden, Terminal-WebSocket (Befehl lief auf Aragon).
+  Offen: Tunnel als Dienst auf dem Mini (bleibt oben, verbindet neu), Liste der Rechner in der Konfiguration des
+  Minis, Durchleitung (HTTP, SSE, WebSocket) und Rechner-Ebene in Oberfläche und Backend (Sitzungs-Kennungen mit
+  Rechnername, Auswahl). Die Datei-Entsperrung braucht im Socket-Modus kein Passwort (der SSH-Schlüssel ist die
+  Anmeldung); die Oberfläche fragt trotzdem danach. Der Agent auf Aragon läuft in VS Code und nicht in tmux; er muss
+  einmal von Agent-Orc neu gestartet werden (Gespräch fortsetzen), um verwaltbar zu sein.
 
 ## AI-Connect
 
