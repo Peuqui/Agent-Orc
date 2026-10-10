@@ -65,6 +65,7 @@
     "agentRunning": "Agent running",
     "up": "Up one level",
     "empty": "This folder is empty.",
+    "loading": "Loading …",
     "actions": "Actions for {name}",
     "upload": "Upload",
     "uploadFolder": "Upload folder",

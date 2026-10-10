@@ -8,7 +8,7 @@ import { useFileSort } from '../composables/useFileSort'
 import { useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
 import { sortEntries } from '../fileSort'
-import { formatDate, formatSize, parentPath } from '../format'
+import { baseName, formatDate, formatSize, parentPath } from '../format'
 import { collect, renameTakenFolders, type UploadItem } from '../uploadTree'
 import AppIcon from './AppIcon.vue'
 
@@ -34,13 +34,16 @@ const { sessionByPath } = useSessions()
 const toast = useToast()
 
 const entries = ref<FileEntry[]>([])
+// False until the folder's listing has arrived (or failed, which is toasted): an empty list before
+// that is not an empty folder.
+const loaded = ref(false)
 const sortedEntries = computed(() => sortEntries(entries.value, sort.value))
 const selected = ref(new Set<string>())
 const selectedEntries = computed(() => entries.value.filter((entry) => selected.value.has(entry.path)))
 watch(selectedEntries, (chosen) => emit('selection', chosen))
 
 const canGoUp = computed(() => props.path !== props.root && props.path.startsWith(props.root))
-const relativePath = computed(() => props.path.slice(props.root.length) || '/')
+const relativePath = computed(() => props.path.slice(props.root.length) || baseName(props.root))
 
 async function reload(): Promise<void> {
   if (!props.path) return
@@ -49,6 +52,7 @@ async function reload(): Promise<void> {
   } catch (error) {
     toast.error(error)
   }
+  loaded.value = true
   // What is gone (moved, trashed) is not selected any more.
   const present = new Set(entries.value.map((entry) => entry.path))
   selected.value = new Set([...selected.value].filter((path) => present.has(path)))
@@ -78,6 +82,7 @@ watch(
   () => props.path,
   () => {
     clearSelection()
+    loaded.value = false
     window.scrollTo({ top: 0 })
     void reload()
   },
@@ -217,7 +222,8 @@ defineExpose({ reload, clearSelection, selectAll, pickFiles: () => fileInput.val
       >
         {{ $t(dropping === 'files' ? 'files.dropHere' : 'files.moveHere') }}
       </div>
-      <p v-if="entries.length === 0" class="card p-6 text-center text-slate-400">{{ $t('files.empty') }}</p>
+      <p v-if="!loaded" class="card p-6 text-center text-slate-400">{{ $t('files.loading') }}</p>
+      <p v-else-if="entries.length === 0" class="card p-6 text-center text-slate-400">{{ $t('files.empty') }}</p>
       <ul v-else class="card divide-y divide-slate-700">
         <li
           v-for="entry in sortedEntries"

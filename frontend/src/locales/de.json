@@ -65,6 +65,7 @@
     "agentRunning": "Agent läuft",
     "up": "Eine Ebene höher",
     "empty": "Dieser Ordner ist leer.",
+    "loading": "Lädt …",
     "actions": "Aktionen für {name}",
     "upload": "Hochladen",
     "uploadFolder": "Ordner hochladen",
