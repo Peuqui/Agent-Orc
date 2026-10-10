@@ -14,7 +14,7 @@ Object.assign(globalThis, {
   localStorage: storage(),
   sessionStorage: storage(),
 })
-const { homeOf, startWorkspace, unnamedListed } = await import('../src/composables/useWorkspaceTab.ts')
+const { homeOf, rememberLastWorkspace, setMachine, startWorkspace, unnamedListed } = await import('../src/composables/useWorkspaceTab.ts')
 
 const workspace = (tabs: string[]) => ({ tabs, visible: 1, widths: {}, active: null })
 const everything = { unnamed: workspace(['loose-1']), named: { Links: workspace(['left-2']), Rechts: workspace([]) } }
@@ -36,4 +36,16 @@ test('a tab without a workspace starts with the unnamed one while it holds agent
   assert.equal(startWorkspace(everything), null)
   const emptied = { ...everything, unnamed: workspace([]) }
   assert.equal(startWorkspace(emptied), 'Links')
+})
+
+test('what a tab remembers is kept per machine, as both apps share the browser', () => {
+  const everythingNamed = { unnamed: workspace([]), named: { Links: workspace([]), Rechts: workspace([]) } }
+  rememberLastWorkspace('Rechts')
+  assert.equal(startWorkspace(everythingNamed), 'Rechts')
+  setMachine('Aragon')
+  // Aragon has remembered nothing yet: the first by name.
+  assert.equal(startWorkspace(everythingNamed), 'Links')
+  rememberLastWorkspace('Rechts')
+  setMachine(null)
+  assert.equal(startWorkspace(everythingNamed), 'Rechts')
 })

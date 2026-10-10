@@ -2,18 +2,29 @@ import { computed, reactive } from 'vue'
 import type { Router } from 'vue-router'
 import type { Workspace, WorkspaceSet } from '../api'
 
+// Another machine's app runs at an address of this machine's (below /hosts/<name>/), so it shares
+// the browser's storage, window names and channels with it: what is kept per workspace carries
+// the machine's name, or a workspace of one would be taken for one of the other of the same name.
+// (This machine's own keep their names.)
+let machine = ''
+
+/** Says which machine's app this page is (null: this machine's own); before anything below is used. */
+export function setMachine(host: string | null): void {
+  machine = host === null ? '' : `@${host}`
+}
+
 // The workspace this browser tab shows, so each tab can show another one; a reload keeps it.
 // All workspaces live on the server (every device shows the same); the tab only remembers which.
-const TAB_STATE_KEY = 'agent-orc-workspace-tab'
+const tabStateKey = () => `agent-orc-workspace-tab${machine}`
 // A named workspace's browser tab carries this window name, so opening it again brings that
 // tab to the front instead of a second one.
-const WINDOW_NAME_PREFIX = 'agent-orc-workspace:'
+const windowNamePrefix = () => `agent-orc-workspace${machine}:`
 export const MIN_VISIBLE = 1
 // A column's tab dropped on another workspace's tab moves the agent there: the drop target is this
 // prefix and the workspace's name (empty for the unnamed one).
 export const WORKSPACE_DROP = 'workspace:'
 // The tabs of this browser tell each other which named workspace they show.
-const CHANNEL_NAME = 'agent-orc-workspaces'
+const channelName = () => `agent-orc-workspaces${machine}`
 
 export interface TabState {
   /** Name of the workspace this tab shows; null for the unnamed one. */
@@ -36,20 +47,20 @@ export function emptyWorkspace(): Workspace {
 }
 
 export function loadTabState(): TabState {
-  const stored = sessionStorage.getItem(TAB_STATE_KEY)
+  const stored = sessionStorage.getItem(tabStateKey())
   return { name: stored ? (JSON.parse(stored) as TabState).name : null }
 }
 
 /** This tab has shown a workspace before. */
 export function tabShowsWorkspace(): boolean {
-  return sessionStorage.getItem(TAB_STATE_KEY) !== null
+  return sessionStorage.getItem(tabStateKey()) !== null
 }
 
 // The workspace shown last on this device; a tab that has shown none yet starts with it.
-const LAST_WORKSPACE_KEY = 'agent-orc-last-workspace'
+const lastWorkspaceKey = () => `agent-orc-last-workspace${machine}`
 
 export function rememberLastWorkspace(name: string): void {
-  localStorage.setItem(LAST_WORKSPACE_KEY, name)
+  localStorage.setItem(lastWorkspaceKey(), name)
 }
 
 /**
@@ -59,17 +70,17 @@ export function rememberLastWorkspace(name: string): void {
 export function startWorkspace(everything: WorkspaceSet): string | null {
   const named = Object.keys(everything.named).sort()
   if (named.length === 0 || everything.unnamed.tabs.length > 0) return null
-  const last = localStorage.getItem(LAST_WORKSPACE_KEY)
+  const last = localStorage.getItem(lastWorkspaceKey())
   return last !== null && named.includes(last) ? last : named[0]
 }
 
 export function saveTabState(state: TabState): void {
-  sessionStorage.setItem(TAB_STATE_KEY, JSON.stringify(state))
+  sessionStorage.setItem(tabStateKey(), JSON.stringify(state))
 }
 
 /** Marks this browser tab as the one of the named workspace (none: an unnamed one). */
 export function nameWindow(name: string | null): void {
-  window.name = name === null ? '' : WINDOW_NAME_PREFIX + name
+  window.name = name === null ? '' : windowNamePrefix() + name
 }
 
 // The installed app (phones) has no browser tabs: workspaces take turns in its one window.
@@ -103,7 +114,7 @@ function switchWorkspace(router: Router, name: string | null, agent?: string): v
  */
 function openWorkspaceTab(router: Router, name: string | null, agent?: string): void {
   const address = router.resolve(workspaceRoute(name, agent)).href
-  window.open(address, name === null ? '_blank' : WINDOW_NAME_PREFIX + name)
+  window.open(address, name === null ? '_blank' : windowNamePrefix() + name)
 }
 
 type TabMessage = { kind: 'ask' } | { kind: 'shown'; tab: string; name: string | null }
@@ -121,7 +132,7 @@ function announce(): void {
 
 function joinChannel(): BroadcastChannel {
   if (channel !== null) return channel
-  channel = new BroadcastChannel(CHANNEL_NAME)
+  channel = new BroadcastChannel(channelName())
   channel.onmessage = (event: MessageEvent<TabMessage>) => {
     const message = event.data
     if (message.kind === 'ask') announce()

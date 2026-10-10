@@ -1,6 +1,8 @@
 import { createApp } from 'vue'
 import { registerSW } from 'virtual:pwa-register'
 import App from './App.vue'
+import { currentHost } from './api'
+import { setMachine } from './composables/useWorkspaceTab'
 import { i18n } from './i18n'
 import { router } from './router'
 import { reloadToNewVersion } from './update'
@@ -20,5 +22,8 @@ window.addEventListener('vite:preloadError', (event) => {
   event.preventDefault()
   void reloadToNewVersion()
 })
+
+// Before any workspace is shown (it keeps what it remembers per machine).
+setMachine(currentHost)
 
 createApp(App).use(i18n).use(router).mount('#app')

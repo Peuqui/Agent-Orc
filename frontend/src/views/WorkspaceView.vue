@@ -21,6 +21,7 @@ import AppIcon from '../components/AppIcon.vue'
 import ColumnCountControl from '../components/ColumnCountControl.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
 import HelpButton from '../components/HelpButton.vue'
+import HostSwitcher from '../components/HostSwitcher.vue'
 import QuotaPanel from '../components/QuotaPanel.vue'
 import SettingsMenu from '../components/SettingsMenu.vue'
 import WorkspaceSwitcher from '../components/WorkspaceSwitcher.vue'
@@ -398,6 +399,8 @@ function deleteThis(): void {
         <button class="btn-icon" :aria-label="$t('workspace.fullscreen')" :title="$t('workspace.fullscreen')" @click="fullscreen = true">
           <AppIcon name="expand" />
         </button>
+        <!-- Which machine's workspaces: the same menu as in every other page's header. -->
+        <HostSwitcher />
         <!-- The device's settings, the same menu as in every other page's header. -->
         <SettingsMenu />
         <HelpButton />
