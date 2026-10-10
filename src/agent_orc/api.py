@@ -596,7 +596,6 @@ def create_app(
         if credentials is not None
         else None
     )
-    name_pattern = config.files.name_pattern
     max_edit_bytes = config.files.max_edit_bytes
 
     # Reasoning changes waiting until their (busy) agent has finished its answer.
@@ -1987,14 +1986,14 @@ def create_app(
 
     @app.post("/api/files/folder", dependencies=authenticated)
     def create_folder(body: CreateFolderRequest) -> dict[str, str]:
-        folder = files.create_folder(scope.resolve(body.parent), body.name, name_pattern)
+        folder = files.create_folder(scope.resolve(body.parent), body.name)
         return {"path": str(folder)}
 
     @app.post("/api/files/rename", dependencies=authenticated)
     def rename(body: RenameRequest) -> dict[str, str]:
         path = scope.resolve(body.path)
         ensure_no_session_inside(path)
-        return {"path": str(files.rename(path, body.new_name, name_pattern))}
+        return {"path": str(files.rename(path, body.new_name))}
 
     @app.post("/api/files/transfer", dependencies=authenticated)
     def transfer_files(body: TransferRequest) -> dict[str, list[str]]:

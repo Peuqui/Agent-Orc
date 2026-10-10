@@ -59,8 +59,25 @@ def file_version(path: Path) -> str:
     return _version(path.stat())
 
 
-def validate_name(name: str, pattern: str) -> None:
-    if not re.fullmatch(pattern, name):
+# What a file system takes: no more than this many bytes in a name.
+MAX_NAME_BYTES = 255
+
+
+def is_usable_name(name: str) -> bool:
+    """Whether a file or folder can be called so: whatever a modern file system takes (spaces,
+    umlauts, a leading "." as in ".gitignore"), but not blank, not "." or "..", with no "/" and no
+    control characters, and short enough."""
+    return (
+        bool(name.strip())
+        and name not in (".", "..")
+        and "/" not in name
+        and CONTROL_CHARACTERS.search(name) is None
+        and len(name.encode()) <= MAX_NAME_BYTES
+    )
+
+
+def validate_name(name: str) -> None:
+    if not is_usable_name(name):
         raise InvalidNameError(name)
 
 
@@ -72,10 +89,10 @@ def safe_file_name(name: str) -> str:
 
 
 def upload_file_name(name: str) -> str:
-    """The name of an uploaded file: its last part, as it is (spaces, umlauts and a leading "."
-    as in ".gitignore" stay). Only what no name can hold goes: the path and control characters."""
+    """The name of an uploaded file: its last part, as it is. Only what no name can hold goes:
+    the path and control characters; what is still no name (is_usable_name) is "attachment"."""
     last = CONTROL_CHARACTERS.sub("", name.rsplit("/", 1)[-1])
-    return UNNAMED if last in ("", ".", "..") else last
+    return last if is_usable_name(last) else UNNAMED
 
 
 def upload_directory(folder: Path, subfolder: str) -> Path:
@@ -157,15 +174,15 @@ def list_directory(path: Path) -> list[FileEntry]:
     return sorted(entries, key=lambda entry: (not entry.is_dir, entry.name.casefold()))
 
 
-def create_folder(parent: Path, name: str, pattern: str) -> Path:
-    validate_name(name, pattern)
+def create_folder(parent: Path, name: str) -> Path:
+    validate_name(name)
     folder = parent / name
     folder.mkdir()
     return folder
 
 
-def rename(path: Path, new_name: str, pattern: str) -> Path:
-    validate_name(new_name, pattern)
+def rename(path: Path, new_name: str) -> Path:
+    validate_name(new_name)
     target = path.with_name(new_name)
     if target.exists():
         raise FileExistsError(str(target))

@@ -62,7 +62,6 @@ class AuthConfig(StrictModel):
 
 class FilesConfig(StrictModel):
     base_dir: Path
-    name_pattern: str
     unlock_minutes: int
     max_edit_bytes: int
 

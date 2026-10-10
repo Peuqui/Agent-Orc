@@ -4,9 +4,7 @@ from pathlib import Path
 import pytest
 
 from agent_orc import files
-from agent_orc.config import default_config_text, parse_config
 
-PATTERN = parse_config(default_config_text()).files.name_pattern
 MAX_BYTES = 1000
 
 
@@ -20,24 +18,34 @@ def test_list_directory_dirs_first_case_insensitive(tmp_path: Path) -> None:
 
 
 def test_create_folder(tmp_path: Path) -> None:
-    assert files.create_folder(tmp_path, "my-project", PATTERN) == tmp_path / "my-project"
+    assert files.create_folder(tmp_path, "my-project") == tmp_path / "my-project"
     assert (tmp_path / "my-project").is_dir()
     with pytest.raises(FileExistsError):
-        files.create_folder(tmp_path, "my-project", PATTERN)
+        files.create_folder(tmp_path, "my-project")
 
 
-@pytest.mark.parametrize("name", ["", "..", ".hidden", "a/b", "with space", "x" * 101])
-def test_invalid_names_are_rejected(tmp_path: Path, name: str) -> None:
+@pytest.mark.parametrize(
+    "name", ["Mein Projekt", "Ärger Übung ß", ".gitignore", "a (1)", "ä" * 127, "x" * 255]
+)
+def test_what_a_file_system_takes_is_a_name(tmp_path: Path, name: str) -> None:
+    assert files.create_folder(tmp_path, name) == tmp_path / name
+    assert files.rename(tmp_path / name, "Neuer Name äöü") == tmp_path / "Neuer Name äöü"
+
+
+@pytest.mark.parametrize(
+    "name", ["", " ", "  ", ".", "..", "a/b", "../x", "a\x00b", "a\nb", "x" * 256, "ä" * 128]
+)
+def test_what_is_no_name_is_rejected(tmp_path: Path, name: str) -> None:
     with pytest.raises(files.InvalidNameError):
-        files.create_folder(tmp_path, name, PATTERN)
+        files.create_folder(tmp_path, name)
 
 
 def test_rename_refuses_to_overwrite(tmp_path: Path) -> None:
     (tmp_path / "a.txt").write_text("a")
     (tmp_path / "b.txt").write_text("b")
     with pytest.raises(FileExistsError):
-        files.rename(tmp_path / "a.txt", "b.txt", PATTERN)
-    assert files.rename(tmp_path / "a.txt", "c.txt", PATTERN) == tmp_path / "c.txt"
+        files.rename(tmp_path / "a.txt", "b.txt")
+    assert files.rename(tmp_path / "a.txt", "c.txt") == tmp_path / "c.txt"
 
 
 def test_read_text(tmp_path: Path) -> None:

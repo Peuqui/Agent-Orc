@@ -537,6 +537,24 @@ def test_an_upload_needs_a_folder_in_scope(client: TestClient, home: Path) -> No
     assert not_a_folder.status_code == 400
 
 
+def test_folders_and_files_may_have_spaces_and_umlauts(client: TestClient, home: Path) -> None:
+    projects = home / "projects"
+    created = client.post(
+        "/api/files/folder", json={"parent": str(projects), "name": "Mein Ärger-Projekt"}
+    )
+    assert created.status_code == 200
+    assert (projects / "Mein Ärger-Projekt").is_dir()
+    (projects / "a.txt").write_text("x")
+    renamed = client.post(
+        "/api/files/rename", json={"path": str(projects / "a.txt"), "new_name": "Übung 1 (neu).txt"}
+    )
+    assert Path(renamed.json()["path"]) == projects / "Übung 1 (neu).txt"
+    refused = client.post(
+        "/api/files/rename", json={"path": str(projects / "Übung 1 (neu).txt"), "new_name": "a/b"}
+    )
+    assert refused.status_code == 422
+
+
 def test_empty_trash(client: TestClient, home: Path) -> None:
     (home / "projects" / "a.txt").write_text("x")
     client.post("/api/files/trash", json={"path": str(home / "projects" / "a.txt")})
