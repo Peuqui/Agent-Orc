@@ -119,3 +119,32 @@ Muster am Zeilenanfang verankern); vor dem Löschen `readlink -f`; Konfiguration
 erst erklären; keine Fallbacks und keine Rückwärtskompatibilität; eine Stelle pro Fakt (SSOT); Peer-Kommunikation vollständig
 zeigen; jede Antwort endet mit einem 🔊-Absatz (4 bis 8 Sätze, ohne Code und Pfade); keine Zeitschätzungen; Peuqui diktiert,
 sinngemäß lesen. Auf `~/.config/ai-connect/user.token` hat Claude keinen Zugriff.
+
+## Nachtrag, spätabends (10.10.2026): Wartezeit, Aragon, WSL
+
+- **Wartezeit von rund 30 s im Dateimanager (Ursache, behoben).** Aragon und Tunnel waren schnell (unter 0,1 s auch bei 18 parallelen
+  Anfragen). Das nginx-Log zeigte 42 s ohne eine Anfrage, danach alle gleichzeitig: Der Browser wartete auf eine freie Verbindung.
+  `useWorkspaceChanges` wurde von `ApprovalBanner`, `useWorkspaceStore` und jeder Host-Karte aufgerufen, jeder Aufruf öffnete einen
+  eigenen `EventSource` auf dieselbe Adresse; über HTTP/1.1 sind es nur etwa sechs Verbindungen je Adresse, geteilt mit allen Tabs.
+  Fix: ein gemeinsamer Stream je Adresse (`useServerEvents.ts`, Tests in `serverEvents.test.ts`). Zusätzlich HTTP/2 im nginx
+  (`http2` auf den beiden `listen`-Zeilen in `/etc/nginx/sites-available/narnia`, Sicherung `.bak-http2`, von Peuqui eingespielt).
+  Der Dateimanager zeigt „Lädt …“ bis zur ersten Antwort und den Namen des Basisordners statt „/“.
+- **Aragon an den Mini angeglichen.** Aragons Konfiguration war die ausgelieferte Standard-Datei. Sein Profil `claude` ist jetzt das des
+  Minis (Modellwahl, Start-Prompt, `clear`/`compact`, Modellwechsel live), ohne den Hook `lclaude-free-gpus` (das Skript gibt es dort
+  nicht); die Profile `claude-local` und `claude-dashscope` fehlen bewusst. Sicherung auf Aragon:
+  `config.yaml.bak-20261010-profil-angleichen`. Aragons Dienst läuft mit demselben Wheel (`5d8c3c2`).
+  Aktualisiert wird mit `deploy/deploy.sh -p 2222 mp@10.0.0.2` (vom Mini aus); heute wurde das Wheel von Hand eingespielt, mit demselben
+  Ergebnis.
+- **Aragons Tunnel brach um 22:42 ab (WSL, nicht Agent-Orc).** Die Linux-Instanz von Aragon wurde beendet und um 22:48:27 von Hand neu
+  gestartet (PIDs fingen wieder bei 1 an, die VM lief weiter). Bis 22:36 hielt ein offenes WSL-Fenster (logind-Sitzungen S1/S3 vom
+  Vormittag) die Instanz; das Start-Skript `Start-WSL.vbs` hatte nie funktioniert (Fehler 800A0046 beim Aufruf von `wsl.exe` ohne
+  Pfad). Die wahrscheinlichste Erklärung: Eines der drei geschlossenen Fenster war dieses WSL-Fenster; belegt ist das nicht. Windows hat
+  im Zeitfenster nichts protokolliert, die Aufgabe „WSL2 Port Manager“ (alle 10 min) beendet nichts. Lösung und Anleitung: README,
+  „A WSL on Windows as the other machine“ (VBS mit vollem Pfad und `--exec sleep infinity`, von Peuqui getestet, `wsl -l -v` zeigt
+  `Running`).
+- **Offen:** Ein Protokoll auf Windows (jede Minute `wsl -l -v`, `wsl.exe`/`wslhost.exe`-Prozesse mit Parent, Dienststatus) wäre als
+  geplante Aufgabe möglich; Aragon:Projekte hat einen Entwurf, nichts ist eingerichtet. Ob VirtualBox, VMware oder qemu (Installer in
+  `D:\Archiv\VM`) auf Aragon installiert sind, wurde nicht geprüft.
+- **Fallen:** AI-Connect-Namen immer voll als `Rechner:Projekt` (hier `Aragon:Projekte`); `Aragon` allein ist ein anderer Eintrag und
+  die Nachricht kommt nie an. Das Log des Mini-Dienstes steht nicht in `journalctl --user`, sondern unter
+  `journalctl _SYSTEMD_UNIT=agent-orc@mp.service`.
