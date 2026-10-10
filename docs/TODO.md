@@ -12,13 +12,16 @@ Nur was noch aussteht. Erledigtes steht in der Git-Historie.
   Rechner in den Einstellungen, Entsperren ohne Passwortfrage auf Rechnern ohne Login. Offen:
   - **Aragons Agent in VS Code** steckt nicht in tmux und lässt sich nicht übernehmen; er muss einmal von Agent-Orc
     neu gestartet werden (Gespräch fortsetzen). Sichtbar bleibt er über „Gespräche“.
-  - **Agentenliste anderer Rechner** ist schreibgeschützt (Name, Zustand, Modell, Kontext); gesteuert wird in der App
-    des Rechners („Öffnen“ oder die Wahl in der Kopfzeile). Volle Karten mit allen Knöpfen in einer Liste hieße, jeden
-    Aufruf der Oberfläche um den Rechner zu erweitern.
+  - **Gemeinsame Agentenübersicht** (11.10.): Die Agentenseite des Minis listet jeden Rechner mit Überschrift,
+    Zustandspunkt und amberfarbenem Trenner, die Karten sind überall die vollen (`HostSessions.vue`). Offen:
+    Effort ändern und Neustart auf einem anderen Rechner sind nicht an einem echten Agenten gelaufen (nur Terminal
+    starten und beenden); der Sprung der Rechner-Auswahl zum Abschnitt ist nur im Code, nicht an einer scrollenden
+    Seite geprüft.
   - **Arbeitsflächen, Notizen und Gespräche-Tab** gehören je Rechner (jede Instanz hat ihren eigenen Zustand);
     Gespräche zeigt AI-Connect ohnehin für alle.
-  - **Läuft der Dienst auf Aragon nur, solange WSL läuft** (User-Dienst ohne Linger): ist Windows aus oder WSL
-    beendet, steht Aragon als „nicht erreichbar“ da.
+  - **Läuft der Dienst auf Aragon nur, solange WSL läuft:** ist Windows aus oder WSL beendet, steht Aragon als
+    „nicht erreichbar“ da. `loginctl enable-linger mp` ist gesetzt (10.10.), der Dienst startet mit der WSL. Ob das
+    nach einem Windows-Start ohne SSH-Anmeldung wirklich klappt, ist ungeprüft.
 
 ## AI-Connect
 

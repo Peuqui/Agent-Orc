@@ -105,3 +105,23 @@ Pakete installieren ohne Rückfrage; nichts in die Cloud hochladen; kein sudo; n
 Konfigurationen des Benutzers nur mit Sicherung ändern; Peer-Kommunikation vollständig zeigen; jede Antwort endet mit
 einem 🔊-Absatz (4 bis 8 Sätze, ohne Code und Pfade); keine Zeitschätzungen; Peuqui diktiert, sinngemäß lesen.
 Auf `~/.config/ai-connect/user.token` hat Claude keinen Zugriff.
+
+## Nachtrag (spät am 10.10., autonom weitergearbeitet)
+
+- **Tunnel:** `hosts.py` beendet einen Verbindungsaufbau, dessen lokaler Socket nicht binnen 20 s erscheint
+  (`end_unless_listening`; ssh überwacht nur einen stehenden Tunnel, ein nach dem Reboot von Aragon hängender
+  Aufbau blieb sonst für immer stecken). Zusätzlich beendet `end_orphan_tunnels` beim Start Tunnel eines früheren
+  Laufs (exakt gleicher Befehl, eigener Benutzer, nicht unser Kind). Grund: die Dienst-Unit hat `KillMode=process`,
+  ein Neustart ließ bei jedem Mal einen verwaisten ssh zurück. Am echten Fall geprüft: fünf beendet, einer bleibt.
+- **Gemeinsame Übersicht:** `HostSessions.vue` (Parameter `host`) rendert Knopfzeile und Karten eines Rechners;
+  `SessionsView.vue` listet alle Rechner. `HostAgents.vue` entfiel. Der Rechner steckt in einem Kontext
+  (`useHostContext.ts`: `provideHost`, `useApi`); `api` ist eine Fabrik (`createApi`, `apiFor`), `useSessions(host)`
+  hat einen Speicher je Rechner, `useHostLinks.ts` baut Adressen auf andere Rechner. Die Kinder der Karte
+  (`RestartButton`, `ContextButton`, `ScheduleButton`, `ScheduledList`, `ApprovalRequests`, `ModelDialog`,
+  `TerminalButton`) holen `api` über `useApi()`. Der Router leitet `/sessions` auf einer Rechner-Seite in die
+  Übersicht des Minis um. `useHosts.ts` hält den Rechner-Zustand mit einem gemeinsamen 3-s-Timer frisch.
+- **Trenner:** 1,5 px Linie, Verlauf über die Deckkraft, `drop-shadow` als Glow, keine Animation.
+- **Zuletzt eingespielt** auf Mini und Aragon. Mini-Neustart des Dienstes lässt die tmux-Sitzungen der Agenten
+  am Leben.
+- **Mini ist für Messläufe belegt:** `Mini:vllm-research` fährt mehrere Stunden Messungen mit allen GPUs; keine
+  GPU-Last, keine schweren Builds. `Mini:FreeEchoDot2` meldet sich vor einer ruhigen Stimmaufnahme.
