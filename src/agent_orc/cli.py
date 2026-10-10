@@ -56,6 +56,12 @@ def set_password() -> None:
     print(f"Wrote {path}. All existing logins are now invalid.")
 
 
+# How long a stop waits for connections that do not end by themselves (the browsers' live
+# streams and terminals stay open for days). Without it the stop hangs until systemd kills the
+# service, and what the app cleans up as it ends (the tunnels to other machines) is not done.
+SHUTDOWN_GRACE_SECONDS = 5
+
+
 def serve() -> None:
     directory = config_dir()
     config = load_config(directory / CONFIG_FILE_NAME)
@@ -73,10 +79,18 @@ def serve() -> None:
             prepare_socket(socket)
         except SocketFolderError as error:
             sys.exit(str(error))
-        uvicorn.run(app, uds=str(socket), loop="asyncio")
+        uvicorn.run(
+            app, uds=str(socket), loop="asyncio", timeout_graceful_shutdown=SHUTDOWN_GRACE_SECONDS
+        )
     else:
         assert config.server.host is not None and config.server.port is not None
-        uvicorn.run(app, host=config.server.host, port=config.server.port, loop="asyncio")
+        uvicorn.run(
+            app,
+            host=config.server.host,
+            port=config.server.port,
+            loop="asyncio",
+            timeout_graceful_shutdown=SHUTDOWN_GRACE_SECONDS,
+        )
 
 
 def statusline() -> None:
