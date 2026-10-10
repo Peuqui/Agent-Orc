@@ -3,7 +3,7 @@ import { useI18n } from 'vue-i18n'
 import { api, authenticated } from '../api'
 import { LOCALES, setLocale, type Locale } from '../i18n'
 import { useHeightVariable } from '../composables/useHeightVariable'
-import { NAV_ITEMS } from '../navigation'
+import SectionNav from './SectionNav.vue'
 import AppIcon from './AppIcon.vue'
 import HelpButton from './HelpButton.vue'
 import SettingsMenu from './SettingsMenu.vue'
@@ -25,17 +25,9 @@ async function logout(): Promise<void> {
     <div class="page-width flex items-center justify-between gap-4 py-2">
       <AppLogo />
       <!-- Wide screens: sections as header tabs instead of the bottom bar. -->
-      <nav class="hidden flex-1 justify-center gap-1 lg:flex">
-        <RouterLink
-          v-for="item in NAV_ITEMS"
-          :key="item.to"
-          :to="item.to"
-          class="flex items-center gap-2 rounded-lg px-4 py-2 text-sm text-slate-400 hover:bg-slate-800 hover:text-slate-200"
-          active-class="!bg-slate-800 !text-red-400"
-        >
-          <AppIcon :name="item.icon" />{{ $t(item.label) }}
-        </RouterLink>
-      </nav>
+      <div class="hidden flex-1 justify-center lg:flex">
+        <SectionNav class="flex" />
+      </div>
       <!-- Compact buttons, so the logo keeps its room on narrow screens. -->
       <div class="flex shrink-0 items-center [&_.btn-icon]:size-8">
         <HostSwitcher />

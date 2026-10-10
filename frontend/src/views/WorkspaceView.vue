@@ -22,6 +22,7 @@ import ColumnCountControl from '../components/ColumnCountControl.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
 import HelpButton from '../components/HelpButton.vue'
 import HostSwitcher from '../components/HostSwitcher.vue'
+import SectionNav from '../components/SectionNav.vue'
 import QuotaPanel from '../components/QuotaPanel.vue'
 import SettingsMenu from '../components/SettingsMenu.vue'
 import WorkspaceSwitcher from '../components/WorkspaceSwitcher.vue'
@@ -375,6 +376,9 @@ function deleteThis(): void {
           @rename="store.rename"
           @delete="deleting = true"
         />
+        <!-- On a wide screen the other pages are one click away (the same sections as the header's
+             tabs, as icons here: the room is for the columns), not only by way of home. -->
+        <SectionNav compact class="hidden xl:flex" />
         <!-- Claude's usage, centred in the room between the workspaces and the buttons; it shrinks
              with the window. Not on phones: the name gets the room (the overview shows it). -->
         <QuotaPanel v-if="!phone" class="min-w-0 flex-1 overflow-hidden sm:px-3" />
