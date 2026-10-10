@@ -150,11 +150,20 @@ einen SSH-Tunnel ([Mehrere Rechner](#mehrere-rechner)).
 
 - Linux mit `git` und `tmux`
 - Python 3.12 oder neuer, mit dem Modul `venv` (Debian/Ubuntu: `apt install python3-venv`)
-- Node.js 20.19 oder neuer mit npm (baut bei der Installation die Web-App)
+- Node.js 20.19+ oder 22.12+ mit npm (baut bei der Installation die Web-App; das `nodejs`-Paket
+  von Ubuntu ist zu alt, siehe unten)
 - die gewünschten Agenten-CLIs, z. B. [Claude Code](https://docs.claude.com/en/docs/claude-code)
 - optional, fürs Diktat: [whisper-stt](https://github.com/Peuqui/whisper-stt) (lokale
   Spracherkennung)
 - optional, für mehrere Rechner: `ssh` mit Schlüssel-Login auf jeden davon
+
+Unter Ubuntu/Debian der ganze Satz (an einem frischen Ubuntu 24.04 ausprobiert):
+
+```bash
+sudo apt-get install -y git tmux python3-venv curl ca-certificates
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -    # ein aktuelles Node.js
+sudo apt-get install -y nodejs
+```
 
 ## Installation
 

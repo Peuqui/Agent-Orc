@@ -138,11 +138,20 @@ that run Agent-Orc can be shown in the same app, through an SSH tunnel ([Several
 
 - Linux with `git` and `tmux`
 - Python 3.12 or newer, with its `venv` module (Debian/Ubuntu: `apt install python3-venv`)
-- Node.js 20.19 or newer with npm (builds the web app during installation)
+- Node.js 20.19+ or 22.12+ with npm (builds the web app during installation; Ubuntu's own
+  `nodejs` package is too old, see below)
 - the agent CLIs you want to use, e.g. [Claude Code](https://docs.claude.com/en/docs/claude-code)
 - optional, for dictation: [whisper-stt](https://github.com/Peuqui/whisper-stt) (local speech
   recognition)
 - optional, for several machines: `ssh` with key login to each of them
+
+On Ubuntu/Debian, the whole set (tried on a fresh Ubuntu 24.04):
+
+```bash
+sudo apt-get install -y git tmux python3-venv curl ca-certificates
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -    # a current Node.js
+sudo apt-get install -y nodejs
+```
 
 ## Installation
 
