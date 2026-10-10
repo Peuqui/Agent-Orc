@@ -500,6 +500,25 @@ def tmux_client_size(socket_name: str) -> str:
     ).stdout.strip()  # fmt: skip
 
 
+def end_from_the_server(terminal: WebSocketTestSession, socket_name: str) -> int:
+    """Ends the open terminal the way a restart of Agent-Orc does (the tmux client goes while its
+    session lives on) and returns the close code the browser gets.
+
+    A test that simply leaves its `with` cancels the app at once, while it still winds the tmux
+    client down, and now and then that cancellation comes out as a CancelledError of the test.
+    Once the server has ended the terminal itself, there is nothing left to cancel."""
+    client_pid = subprocess.run(
+        ["tmux", "-L", socket_name, "list-clients", "-F", "#{client_pid}"],
+        capture_output=True, text=True, check=True,
+    ).stdout.strip()  # fmt: skip
+    os.kill(int(client_pid), signal.SIGTERM)
+    with pytest.raises(WebSocketDisconnect) as closed:
+        for _ in range(MAX_TERMINAL_FRAMES):
+            terminal.receive_bytes()
+    code: int = closed.value.code
+    return code
+
+
 def test_terminal_roundtrip_resize_and_detach(
     client: TestClient, home: Path, socket_name: str
 ) -> None:
@@ -564,16 +583,8 @@ def test_terminal_of_a_running_agent_asks_to_reconnect(
     session_id = start_shell(client, home / "projects")
     with client.websocket_connect(terminal_url(session_id), headers=ORIGIN) as term:
         read_until(term, "READY")
-        # The tmux client ends while its session lives on, as when Agent-Orc is restarted.
-        client_pid = subprocess.run(
-            ["tmux", "-L", socket_name, "list-clients", "-F", "#{client_pid}"],
-            capture_output=True, text=True, check=True,
-        ).stdout.strip()  # fmt: skip
-        os.kill(int(client_pid), signal.SIGTERM)
-        with pytest.raises(WebSocketDisconnect) as closed:
-            for _ in range(MAX_TERMINAL_FRAMES):
-                term.receive_bytes()
-    assert closed.value.code == WS_CLOSE_SERVICE_RESTART
+        closed = end_from_the_server(term, socket_name)
+    assert closed == WS_CLOSE_SERVICE_RESTART
     assert client.get("/api/sessions").json()[0]["running"] is True
 
 
@@ -841,10 +852,11 @@ def test_restart_resumes_a_busy_agent_with_its_waiting_effort(
     assert client.post(f"/api/sessions/{session_id}/effort", json=change).json() == {
         "applied": False
     }
-    with client.websocket_connect(terminal_url(session_id), headers=ORIGIN):
+    with client.websocket_connect(terminal_url(session_id), headers=ORIGIN) as terminal:
         restarted = client.post(f"/api/sessions/{session_id}/restart")
         # Restarted in its own session: the open terminal stays attached to the same id.
         assert tmux_client_size(socket_name) == f"{START_COLS}x{START_ROWS}"
+        end_from_the_server(terminal, socket_name)
     assert restarted.json()["id"] == session_id
     command = subprocess.run(
         ["tmux", "-L", socket_name, "display-message", "-p", "-t", f"={session_id}:",
