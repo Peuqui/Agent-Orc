@@ -3,18 +3,18 @@ import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { api, type TrashEntry } from '../api'
 import { PHONE_WIDTH } from '../device'
-import { DRAG_PATH_TYPE } from '../dragTypes'
+import { draggedPaths } from '../dragTypes'
 import { useToast } from '../composables/useToast'
 import { baseName, formatDate } from '../format'
 import AppIcon from './AppIcon.vue'
 import ConfirmDialog from './ConfirmDialog.vue'
 
 // The user's trash (what was deleted through Agent-Orc, the desktop's trash too): restore, delete
-// for good, empty. A file dragged here from the list is trashed (`trash`, for the list to do and
+// for good, empty. Files dragged here from the list are trashed (`trash`, for the list to do and
 // reload); a restored one goes back to where it was (`restored`).
 type Dialog = { kind: 'delete'; entry: TrashEntry } | { kind: 'empty' }
 
-const emit = defineEmits<{ trash: [path: string]; restored: [] }>()
+const emit = defineEmits<{ trash: [paths: string[]]; restored: [] }>()
 const { locale } = useI18n()
 const toast = useToast()
 const entries = ref<TrashEntry[]>([])
@@ -54,8 +54,8 @@ function confirmDialog(): void {
 
 function onDrop(event: DragEvent): void {
   dragOver.value = false
-  const path = event.dataTransfer?.getData(DRAG_PATH_TYPE)
-  if (path) emit('trash', path)
+  const paths = draggedPaths(event)
+  if (paths.length > 0) emit('trash', paths)
 }
 
 defineExpose({ load })
