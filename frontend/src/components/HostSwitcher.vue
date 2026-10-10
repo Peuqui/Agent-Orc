@@ -2,7 +2,8 @@
 import { computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { currentHost, rootAddress } from '../api'
-import { hostPath } from '../hostPaths'
+import { hostPath, sectionOf } from '../hostPaths'
+import { NAV_ITEMS } from '../navigation'
 import { useHosts } from '../composables/useHosts'
 import { useToast } from '../composables/useToast'
 
@@ -28,7 +29,9 @@ const choices = computed(() => [
 
 function choose(name: string): void {
   const target = name === own.value ? rootAddress() : hostPath(new URL(rootAddress()).pathname, name)
-  window.location.assign(new URL(target, rootAddress()).href)
+  // Stays in the section the page is in (a terminal, folder or workspace is one machine's own).
+  const section = sectionOf(window.location.hash, NAV_ITEMS.map((item) => item.to), '/sessions')
+  window.location.assign(`${new URL(target, rootAddress()).href}#${section}`)
 }
 </script>
 

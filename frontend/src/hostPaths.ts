@@ -18,3 +18,10 @@ export function rootOf(pathname: string): string {
 export function hostPath(pathname: string, name: string): string {
   return `${rootOf(pathname)}hosts/${encodeURIComponent(name)}/`
 }
+
+/** The section of the page at `hash` ("#/files?path=/x" is "/files") if `sections` has it, else
+ * `fallback`: what another machine can show alike, as it has no such folder, agent or workspace. */
+export function sectionOf(hash: string, sections: string[], fallback: string): string {
+  const section = hash.replace(/^#/, '').split('?')[0]!
+  return sections.includes(section) ? section : fallback
+}
