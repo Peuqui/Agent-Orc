@@ -65,7 +65,10 @@
     "agentRunning": "Agent running",
     "up": "Up one level",
     "empty": "This folder is empty.",
-    "actions": "Actions for {name}"
+    "actions": "Actions for {name}",
+    "upload": "Upload",
+    "uploading": "Uploading … {done} of {total}",
+    "dropHere": "Drop files here to upload them to this folder"
   },
   "scope": {
     "unlock": "Unlock outside",

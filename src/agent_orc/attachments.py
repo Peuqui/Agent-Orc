@@ -10,6 +10,7 @@ import time
 from pathlib import Path
 
 from agent_orc.auth import Clock
+from agent_orc.files import safe_file_name
 
 # Where notes link to their files (relative to the page); the server serves them there.
 NOTE_FILES_URL = "api/notes/files"
@@ -18,8 +19,6 @@ AGENT_ORC_DIR = ".agent-orc"
 UPLOADS_DIR = Path(AGENT_ORC_DIR) / "uploads"
 IGNORE_EVERYTHING = "*\n"
 # Characters that stay in a file name; everything else becomes "-".
-UNSAFE_NAME_CHARACTERS = re.compile(r"[^A-Za-z0-9._-]+")
-UNNAMED = "attachment"
 TIME_PREFIX_FORMAT = "%Y%m%d-%H%M%S"
 
 
@@ -43,7 +42,7 @@ def store_attachment(folder: Path, name: str, content: bytes, clock: Clock) -> P
     ignore = folder / AGENT_ORC_DIR / ".gitignore"
     if not ignore.exists():
         ignore.write_text(IGNORE_EVERYTHING, encoding="utf-8")
-    safe_name = UNSAFE_NAME_CHARACTERS.sub("-", Path(name).name).strip("-.") or UNNAMED
+    safe_name = safe_file_name(name)
     stamp = time.strftime(TIME_PREFIX_FORMAT, time.localtime(clock()))
     target = uploads / f"{stamp}-{safe_name}"
     counter = 1

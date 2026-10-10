@@ -1,9 +1,14 @@
 """File manager operations. Callers pass paths already checked by AccessScope."""
 
+import itertools
 import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
+from typing import BinaryIO
+
+UNSAFE_NAME_CHARACTERS = re.compile(r"[^A-Za-z0-9._-]+")
+UNNAMED = "attachment"
 
 
 class InvalidNameError(ValueError):
@@ -50,6 +55,26 @@ def file_version(path: Path) -> str:
 def validate_name(name: str, pattern: str) -> None:
     if not re.fullmatch(pattern, name):
         raise InvalidNameError(name)
+
+
+def safe_file_name(name: str) -> str:
+    """The name of a file as it is kept here: its last part, with every run of characters other
+    than letters, digits, ".", "_" and "-" made one "-" (the file may come from anywhere)."""
+    return UNSAFE_NAME_CHARACTERS.sub("-", Path(name).name).strip("-.") or UNNAMED
+
+
+def create_upload(folder: Path, name: str) -> tuple[Path, BinaryIO]:
+    """Opens a new file in the folder for an upload under that name (see safe_file_name). A name
+    that is taken gets a number before its suffix; nothing is ever overwritten."""
+    safe_name = safe_file_name(name)
+    stem, suffix = os.path.splitext(safe_name)
+    for number in itertools.count(1):
+        target = folder / (safe_name if number == 1 else f"{stem}-{number}{suffix}")
+        try:
+            return target, target.open("xb")
+        except FileExistsError:
+            continue
+    raise AssertionError("unreachable")  # count() does not end
 
 
 def list_directory(path: Path) -> list[FileEntry]:

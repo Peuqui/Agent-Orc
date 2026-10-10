@@ -1976,6 +1976,25 @@ def create_app(
         ensure_no_session_inside(path)
         return {"path": str(files.rename(path, body.new_name, name_pattern))}
 
+    @app.post("/api/files/upload", dependencies=authenticated)
+    async def upload_file(folder: str, name: str, request: Request) -> dict[str, str]:
+        """Store the file in the request body in the folder; returns its path. The name is made
+        safe, and one that is taken gets a number: nothing is overwritten. The body is written as
+        it arrives, so a large file does not fill the memory."""
+        target_folder = scope.resolve(folder)
+        if not target_folder.is_dir():
+            raise NotADirectoryError(str(target_folder))
+        target, handle = files.create_upload(target_folder, name)
+        try:
+            with handle:
+                async for chunk in request.stream():
+                    handle.write(chunk)
+        except BaseException:
+            # An upload that broke off leaves no half file behind.
+            target.unlink(missing_ok=True)
+            raise
+        return {"path": str(target)}
+
     @app.get("/api/files/content", dependencies=authenticated)
     def read_file(path: str) -> files.TextFile:
         return files.read_text(scope.resolve(path), max_edit_bytes)

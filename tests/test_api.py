@@ -389,6 +389,41 @@ def test_list_files_and_invalid_name(client: TestClient, home: Path) -> None:
     assert bad.status_code == 422
 
 
+def test_a_file_is_uploaded_and_a_taken_name_gets_a_number(client: TestClient, home: Path) -> None:
+    folder = home / "projects"
+    params = {"folder": str(folder), "name": "Aufnahme 1.wav"}
+    first = client.post("/api/files/upload", params=params, content=b"eins")
+    second = client.post("/api/files/upload", params=params, content=b"zwei")
+    assert first.status_code == second.status_code == 200
+    # The name is made safe; the second one does not overwrite the first.
+    assert Path(first.json()["path"]) == folder / "Aufnahme-1.wav"
+    assert Path(second.json()["path"]) == folder / "Aufnahme-1-2.wav"
+    assert (folder / "Aufnahme-1.wav").read_bytes() == b"eins"
+    assert (folder / "Aufnahme-1-2.wav").read_bytes() == b"zwei"
+    # A path in the name does not leave the folder.
+    sneaky = client.post(
+        "/api/files/upload", params={"folder": str(folder), "name": "../../x.txt"}, content=b"x"
+    )
+    assert Path(sneaky.json()["path"]) == folder / "x.txt"
+    # Without the login it is refused (a client of its own: this one's cookie is the login).
+    stranger = TestClient(client.app)
+    assert stranger.post("/api/files/upload", params=params, content=b"x").status_code == 401
+
+
+def test_an_upload_needs_a_folder_in_scope(client: TestClient, home: Path) -> None:
+    outside = client.post(
+        "/api/files/upload", params={"folder": str(home), "name": "a.txt"}, content=b"x"
+    )
+    assert outside.status_code == 403
+    (home / "projects" / "a.txt").write_text("x")
+    not_a_folder = client.post(
+        "/api/files/upload",
+        params={"folder": str(home / "projects" / "a.txt"), "name": "b.txt"},
+        content=b"x",
+    )
+    assert not_a_folder.status_code == 400
+
+
 def test_empty_trash(client: TestClient, home: Path) -> None:
     (home / "projects" / "a.txt").write_text("x")
     client.post("/api/files/trash", json={"path": str(home / "projects" / "a.txt")})

@@ -698,6 +698,9 @@ function createApi(host?: string) {
       request<{ text: string }>('POST', 'dictation', { upload: audio, query: { device } }),
 
     listFiles: (path: string) => request<FileEntry[]>('GET', 'files', { query: { path } }),
+    /** Stores the file in the folder under its (made safe) name; a taken name gets a number. */
+    uploadFile: (folder: string, file: File) =>
+      request<{ path: string }>('POST', 'files/upload', { upload: file, query: { folder, name: file.name } }),
     createFolder: (parent: string, name: string) =>
       request<{ path: string }>('POST', 'files/folder', { body: { parent, name } }),
     rename: (path: string, newName: string) =>

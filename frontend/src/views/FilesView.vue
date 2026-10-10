@@ -2,7 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
-import { api, type FileEntry } from '../api'
+import { api, rawFileUrl, type FileEntry } from '../api'
 import AppIcon from '../components/AppIcon.vue'
 import BaseDialog from '../components/BaseDialog.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
@@ -105,6 +105,56 @@ async function onUnlock(password: string): Promise<void> {
   }
 }
 
+// Uploads: the files of the picker, or dropped on the list, one after the other. A name that is
+// taken gets a number on the server, so nothing is asked and nothing overwritten.
+const fileInput = ref<HTMLInputElement>()
+const upload = ref<{ done: number; total: number } | null>(null)
+const dropping = ref(false)
+
+async function uploadFiles(chosen: FileList | null): Promise<void> {
+  const chosenFiles = Array.from(chosen ?? [])
+  if (chosenFiles.length === 0 || upload.value !== null) return
+  const folder = currentPath.value
+  const progress = { done: 0, total: chosenFiles.length }
+  upload.value = progress
+  for (const file of chosenFiles) {
+    try {
+      await api.uploadFile(folder, file)
+    } catch (error) {
+      toast.error(error)
+    }
+    progress.done += 1
+  }
+  upload.value = null
+  await loadEntries()
+}
+
+function onFilesPicked(event: Event): void {
+  const input = event.target as HTMLInputElement
+  void uploadFiles(input.files)
+  input.value = ''
+}
+
+// Only files from the computer: what the list drags itself (to the trash) is not meant.
+const carriesFiles = (event: DragEvent): boolean => event.dataTransfer?.types.includes('Files') ?? false
+
+function onDragOver(event: DragEvent): void {
+  if (!carriesFiles(event)) return
+  event.preventDefault()
+  dropping.value = true
+}
+
+function onDragLeave(event: DragEvent): void {
+  if (!(event.currentTarget as Node).contains(event.relatedTarget as Node | null)) dropping.value = false
+}
+
+function onDrop(event: DragEvent): void {
+  if (!carriesFiles(event)) return
+  event.preventDefault()
+  dropping.value = false
+  void uploadFiles(event.dataTransfer?.files ?? null)
+}
+
 function createFolder(name: string): void {
   void run(() => api.createFolder(currentPath.value, name))
 }
@@ -140,7 +190,13 @@ watch(currentPath, loadEntries)
 <template>
   <!-- The files, and the trash beside them (below on a phone): a file dragged onto the trash is trashed. -->
   <section class="md:grid md:grid-cols-[minmax(0,1fr)_20rem] md:items-start md:gap-4">
-    <div class="min-w-0">
+    <div
+      class="min-w-0"
+      :class="dropping ? 'rounded-lg ring-2 ring-amber-400' : ''"
+      @dragover="onDragOver"
+      @dragleave="onDragLeave"
+      @drop="onDrop"
+    >
     <div
       class="mb-3 flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm"
       :class="unlocked ? 'border-red-700 bg-red-950/60 text-red-200' : 'border-slate-700 text-slate-400'"
@@ -171,14 +227,21 @@ watch(currentPath, loadEntries)
       <h1 class="min-w-0 flex-1 truncate font-mono text-sm text-slate-300">{{ relativePath }}</h1>
     </div>
 
-    <div class="mb-4 grid grid-cols-2 gap-2">
+    <div class="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
       <button class="btn-secondary" @click="dialog = { kind: 'newFolder' }">
         <AppIcon name="plus" />{{ $t('files.newFolder') }}
       </button>
+      <button class="btn-secondary" :disabled="upload !== null" @click="fileInput?.click()">
+        <AppIcon name="upload" />{{ $t('files.upload') }}
+      </button>
+      <input ref="fileInput" type="file" multiple class="hidden" @change="onFilesPicked" />
       <button class="btn-primary" @click="dialog = { kind: 'agent', path: currentPath }">
         <AppIcon name="play" />{{ $t('files.startAgent') }}
       </button>
     </div>
+
+    <p v-if="upload" class="mb-3 text-sm text-amber-300" role="status">{{ $t('files.uploading', upload) }}</p>
+    <p v-else-if="dropping" class="mb-3 text-sm text-amber-300">{{ $t('files.dropHere') }}</p>
 
     <p v-if="entries.length === 0" class="card p-6 text-center text-slate-400">{{ $t('files.empty') }}</p>
     <ul v-else class="card divide-y divide-slate-700">
@@ -232,6 +295,9 @@ watch(currentPath, loadEntries)
         >
           <AppIcon name="play" />{{ $t('files.startAgent') }}
         </button>
+        <a v-if="!dialog.entry.is_dir" class="btn-secondary" :href="rawFileUrl(dialog.entry.path, true)">
+          <AppIcon name="download" />{{ $t('editor.download') }}
+        </a>
         <button class="btn-secondary" @click="dialog = { kind: 'rename', entry: dialog.entry }">
           <AppIcon name="pencil" />{{ $t('common.rename') }}
         </button>

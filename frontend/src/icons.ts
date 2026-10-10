@@ -37,6 +37,7 @@ export const ICONS = {
   lightbulb: 'M9 18h6 M10 21h4 M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.3 1 2.1h5c0-.8.4-1.6 1-2.1A6 6 0 0 0 12 3z',
   eye: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z M12 9a3 3 0 1 0 0 6a3 3 0 1 0 0-6',
   download: 'M12 4v11 M7 10l5 5 5-5 M5 20h14',
+  upload: 'M12 15V4 M7 9l5-5 5 5 M5 20h14',
   image: 'M4 5h16v14H4z M4 16l5-5 4 4 2-2 5 5 M15.5 9.5h.01',
   screen: 'M3 4h18v12H3z M8 20h8 M12 16v4',
   widths: 'M4 12h16 M8 8l-4 4 4 4 M16 8l4 4-4 4',
