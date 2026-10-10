@@ -145,13 +145,25 @@ that run Agent-Orc can be shown in the same app, through an SSH tunnel ([Several
   recognition)
 - optional, for several machines: `ssh` with key login to each of them
 
-On Ubuntu/Debian, the whole set (tried on a fresh Ubuntu 24.04):
+The installation was tried on fresh systems, each as a stranger would do it:
 
-```bash
-sudo apt-get install -y git tmux python3-venv curl ca-certificates
-curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -    # a current Node.js
-sudo apt-get install -y nodejs
-```
+- **Debian 13** works with its own packages: `sudo apt-get install -y git tmux python3-venv nodejs npm`
+  (Python 3.13, Node.js 20.19).
+- **Fedora 43** works with its own packages: `sudo dnf install -y git tmux python3 nodejs npm`
+  (Python 3.14, Node.js 22).
+- **Ubuntu 24.04** has Python 3.12, but its `nodejs` package is Node 18, too old for the build. A
+  current Node.js comes from NodeSource:
+
+  ```bash
+  sudo apt-get install -y git tmux python3-venv curl ca-certificates
+  curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+  sudo apt-get install -y nodejs
+  ```
+
+- **Debian 12 and Ubuntu 22.04** are too old (Python 3.11 / 3.10, Node 18): the installer says so and
+  stops; a newer Python has to come from elsewhere.
+
+`deploy/install.sh` checks the Node.js and Python versions first and names what is missing.
 
 ## Installation
 

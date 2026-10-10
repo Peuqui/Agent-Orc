@@ -157,13 +157,25 @@ einen SSH-Tunnel ([Mehrere Rechner](#mehrere-rechner)).
   Spracherkennung)
 - optional, für mehrere Rechner: `ssh` mit Schlüssel-Login auf jeden davon
 
-Unter Ubuntu/Debian der ganze Satz (an einem frischen Ubuntu 24.04 ausprobiert):
+Die Installation wurde auf frischen Systemen ausprobiert, jeweils wie ein Fremder sie macht:
 
-```bash
-sudo apt-get install -y git tmux python3-venv curl ca-certificates
-curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -    # ein aktuelles Node.js
-sudo apt-get install -y nodejs
-```
+- **Debian 13** geht mit den eigenen Paketen: `sudo apt-get install -y git tmux python3-venv nodejs npm`
+  (Python 3.13, Node.js 20.19).
+- **Fedora 43** geht mit den eigenen Paketen: `sudo dnf install -y git tmux python3 nodejs npm`
+  (Python 3.14, Node.js 22).
+- **Ubuntu 24.04** hat Python 3.12, aber sein Paket `nodejs` ist Node 18 und für den Bau zu alt. Ein
+  aktuelles Node.js kommt von NodeSource:
+
+  ```bash
+  sudo apt-get install -y git tmux python3-venv curl ca-certificates
+  curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+  sudo apt-get install -y nodejs
+  ```
+
+- **Debian 12 und Ubuntu 22.04** sind zu alt (Python 3.11 / 3.10, Node 18): Der Installer sagt es und
+  bricht ab; ein neueres Python muss von anderswo kommen.
+
+`deploy/install.sh` prüft zuerst die Versionen von Node.js und Python und nennt, was fehlt.
 
 ## Installation
 

@@ -9,6 +9,10 @@ UNIT_DIR=${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user
 CONFIG=${XDG_CONFIG_HOME:-$HOME/.config}/agent-orc/config.yaml
 WHEEL=$(ls "$SHIPPED"/*.whl)
 
+if ! python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 12) else 1)' 2>/dev/null; then
+    echo "Python 3.12 or newer is needed on this machine; python3 here is $(python3 --version 2>&1)." >&2
+    exit 1
+fi
 [ -d "$VENV" ] || python3 -m venv "$VENV"
 # The dependencies first; the wheel's version number stays the same between builds, so it is then
 # put in again explicitly.
