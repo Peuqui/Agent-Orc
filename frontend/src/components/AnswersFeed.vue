@@ -69,6 +69,15 @@ function markAllSeen(): void {
   for (const text of unread.value) markSeenHere(text.id)
 }
 
+/** A click on an answer marks it and every one above it (the older ones) as read: one reads from
+ * the top, what is below stays new, and the check marks the rest. Not a click on a button or link,
+ * and not while text is being selected. */
+function markUpTo(event: MouseEvent, clicked: AnswerText): void {
+  if ((event.target as Element).closest('button, a, input, select, textarea, audio')) return
+  if (window.getSelection()?.isCollapsed === false) return
+  for (const text of unread.value) if (text.time <= clicked.time) markSeenHere(text.id)
+}
+
 interface Shown {
   turn: Turn
   /** The agent's texts shown (all of them, or the last), for reading aloud. */
@@ -258,6 +267,8 @@ function jog(lines: number): void {
             v-else
             class="card flex flex-col gap-2 p-3"
             :class="isUnread(item, seenBefore, seenIds) ? 'border-l-4 border-l-red-500' : ''"
+            :title="isUnread(item, seenBefore, seenIds) ? $t('answers.clickToMark') : undefined"
+            @click="markUpTo($event, item)"
           >
             <div class="markdown note select-text" v-html="renderMarkdown(answersAll ? item.text : summaryOf(item.text), null)" />
             <div class="flex items-center gap-2 text-xs text-slate-500">

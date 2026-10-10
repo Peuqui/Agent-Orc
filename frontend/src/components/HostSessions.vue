@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { apiFor, type AgentSession, type Reasoning, type WorkspaceSet } from '../api'
@@ -42,12 +42,44 @@ onMounted(() => {
 onBeforeUnmount(() => {
   if (props.host !== null) stopPolling()
 })
-// This machine's own agents show their requests on their cards: the announcement at the top of the
-// page leaves them out (it only lists this machine's agents).
-if (props.host === null) {
-  watch(() => sessions.value.map((session) => session.id), (ids) => (shownAgents.value = ids), { immediate: true })
-  onBeforeUnmount(() => (shownAgents.value = []))
-}
+// A card on the screen shows its agent's request itself: the announcement at the top of the page
+// leaves that agent out. A card scrolled out of view does not, so there the announcement stays (it
+// only lists this machine's agents, so only this machine's cards are watched). Half of a card on
+// the screen counts, or the half of the screen if the card is taller.
+const VISIBLE_SHARE = 0.5
+const THRESHOLDS = [0, 0.25, VISIBLE_SHARE, 0.75, 1]
+const cardsOnScreen = new Set<string>()
+const cardWatcher =
+  props.host === null
+    ? new IntersectionObserver(
+        (entries) => {
+          for (const { target, isIntersecting, intersectionRatio, intersectionRect, rootBounds } of entries) {
+            const id = (target as HTMLElement).dataset.session
+            if (id === undefined) continue
+            const shown =
+              isIntersecting &&
+              (intersectionRatio >= VISIBLE_SHARE || intersectionRect.height >= (rootBounds?.height ?? window.innerHeight) * VISIBLE_SHARE)
+            if (shown) cardsOnScreen.add(id)
+            else cardsOnScreen.delete(id)
+          }
+          shownAgents.value = [...cardsOnScreen]
+        },
+        { threshold: THRESHOLDS },
+      )
+    : null
+// Cards come and go with the agents: the new ones are watched after they are drawn.
+watch(
+  () => sessions.value.map((session) => session.id),
+  async () => {
+    await nextTick()
+    block.value?.querySelectorAll('[data-session]').forEach((card) => cardWatcher?.observe(card))
+  },
+  { immediate: true },
+)
+onBeforeUnmount(() => {
+  cardWatcher?.disconnect()
+  if (props.host === null) shownAgents.value = []
+})
 const { t, te } = useI18n()
 const stopping = ref<AgentSession | null>(null)
 // A chosen reasoning waiting for confirmation; the control shows it until then.
@@ -299,6 +331,7 @@ function resumeWith(session: AgentSession, model: string | null, effort: string 
         v-for="session in sorted"
         :key="session.id"
         :data-card="cardKey(session)"
+        :data-session="session.id"
         class="card flex touch-pan-y flex-col gap-2 px-4 py-3 select-none [-webkit-touch-callout:none]"
         :class="[
           drag?.active && drag.target === cardKey(session) && drag.id !== cardKey(session) ? 'ring-2 ring-amber-400' : '',

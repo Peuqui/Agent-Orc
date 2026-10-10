@@ -116,6 +116,8 @@ export function useSpeechVoice(engineId: string): Ref<string> {
 const speechRate = setting('agent-orc-speech-rate', DEFAULT_SPEECH_RATE, Number)
 /** The agent's name is spoken before its answer, so one hears who is speaking. */
 const speechAnnounceName = setting('agent-orc-speech-announce-name', true, (stored) => stored === 'true')
+/** The workspace reads new answers of its columns aloud by itself, as they arrive. */
+const speechAutoRead = setting('agent-orc-speech-auto-read', false, (stored) => stored === 'true')
 /** Without a paragraph for listening, an answer is read up to this many characters. */
 const speechMaxChars = setting('agent-orc-speech-max-chars', DEFAULT_MAX_SPOKEN_CHARS, Number)
 
@@ -153,5 +155,6 @@ export function useSettings() {
     speechRate,
     speechMaxChars,
     speechAnnounceName,
+    speechAutoRead,
   }
 }

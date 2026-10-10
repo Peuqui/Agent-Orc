@@ -675,6 +675,8 @@
     "spoken": "Gesprochen · erkannt: „{heard}“",
     "pending": "wartet auf Zustellung",
     "readNewColumns": "Neue Antworten dieser Arbeitsfläche vorlesen",
+    "autoRead": "Neue Antworten dieser Arbeitsfläche automatisch vorlesen",
+    "clickToMark": "Klick: diese und alle darüber als gelesen markieren",
     "nothingNew": "Nichts Neues zum Vorlesen.",
     "picture": "Bild",
     "room": "Raum",

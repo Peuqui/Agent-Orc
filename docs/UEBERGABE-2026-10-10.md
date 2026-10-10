@@ -162,6 +162,20 @@ Auf `~/.config/ai-connect/user.token` hat Claude keinen Zugriff.
   `timeout_graceful_shutdown` (mit Frist 5,3 s). Die Reproduktion liegt nur im Scratchpad (Skript `probe.sh`).
 - **Doppelte Rückfrage:** Auf der Agentenseite stand die Freigabe-Rückfrage in der Karte und zusätzlich als Ankündigung
   oben. Das war eine Lücke, nicht Absicht (der Banner sollte nur Agenten zeigen, die nicht im Blick sind, die Karten
-  wurden dabei nicht bedacht). `HostSessions.vue` meldet die eigenen Agenten über `shownAgents` als im Blick.
+  wurden dabei nicht bedacht). `HostSessions.vue` beobachtet seine Karten (IntersectionObserver, halbe Karte oder halber
+  Bildschirm) und meldet die sichtbaren über `shownAgents`; eine aus dem Bild gescrollte Karte lässt die Ankündigung oben
+  stehen. Mit acht Terminal-Karten und einer Rückfrage für die letzte geprüft.
 - **Leere Ordner im Ordner-Upload:** `POST /api/files/directory` (teilt sich `upload_destination` mit dem Upload),
   `collect` liefert leere Ordner als Einträge ohne Datei.
+- **Klick auf eine Antwort:** setzt sie und alle darüber (älteren) auf gelesen, alles darunter bleibt neu; nicht bei
+  einem Klick auf Knopf/Link/Audio und nicht bei markiertem Text (`AnswersFeed.markUpTo`). Der Server kennt pro Agent
+  nur „gelesen bis Zeitpunkt“, deshalb nicht eine einzelne Antwort in der Mitte. Das Häkchen oben setzt den Rest.
+- **Automatisch vorlesen:** Schalter je Gerät in der Kopfzeile der Arbeitsfläche (`speechAutoRead` in `useSettings`,
+  Symbol „resume“). Liest nur Antworten, die nach dem Einschalten oder Öffnen der Seite eintreffen, aller Spalten der
+  offenen Arbeitsfläche, nacheinander; jede wird nach dem Vorlesen als gelesen markiert; es liest, was die Spalte zeigt
+  (Zusammenfassungen oder Alles, je Spalte). Prüfung mit echtem Haiku-Agenten und nachgebildeter Sprachausgabe:
+  Name und Antwort gesprochen, Gelesen-Stand gesetzt, Rückstand nicht gelesen, Schalter bleibt nach dem Neuladen.
+  Offen: auf dem Handy ist Sprachausgabe bei gesperrtem Bildschirm unsicher; „nur aktive Spalte“ statt aller Spalten
+  wäre eine Zeile (`workspace.value.tabs` in `autoReadTick`).
+- **Test-Skripte** (nur im Scratchpad der Sitzung): `cdp.mjs` steuert einen eigenen Chrome auf Port 9333 per
+  DevTools-Protokoll (Node 24, eingebautes WebSocket); Port 9222 teilen sich alle chrome-devtools-mcp-Sitzungen.

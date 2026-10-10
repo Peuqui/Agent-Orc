@@ -5,7 +5,7 @@ const scrollPositions = new Map<string | null, number>()
 </script>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import { api } from '../api'
@@ -28,7 +28,7 @@ import SettingsMenu from '../components/SettingsMenu.vue'
 import WorkspaceSwitcher from '../components/WorkspaceSwitcher.vue'
 import { markSeen, seenUntil } from '../composables/useAnswerSeen'
 import { useColumnWidths } from '../composables/useColumnWidths'
-import { readAnswersAll } from '../composables/useSettings'
+import { readAnswersAll, useSettings } from '../composables/useSettings'
 import { moveInList, useReorder } from '../composables/useReorder'
 import { shownAgents } from '../composables/useShownAgents'
 import { type Speakable, useSpeech } from '../composables/useSpeech'
@@ -148,6 +148,53 @@ async function readNewAnswers(): Promise<void> {
   for (const [id, time] of Object.entries(seen)) markSeen(id, time)
   await speech.play(items)
 }
+
+// New answers of the columns of this workspace are read aloud as they arrive (one switch for the
+// device, in the header): only what comes after the switch was on, one after the other, each
+// marked as read once it was read to its end. What a column shows (summaries or all texts) is what
+// is read. A page that is open reads; another workspace's agents are not read.
+const { speechAutoRead } = useSettings()
+const AUTO_READ_POLL_MS = 4000
+// What arrived before this time is not read by itself (the page was opened, the switch turned on,
+// or the last batch read ended with it).
+let autoReadAfter = new Date().toISOString()
+let autoReadBusy = false
+
+async function autoReadTick(): Promise<void> {
+  if (!speechAutoRead.value || autoReadBusy || speech.playing.value !== null) return
+  autoReadBusy = true
+  try {
+    const items: Speakable[] = []
+    const answered = new Map<string, { session: string; time: string }>()
+    for (const id of workspace.value.tabs) {
+      const texts = unreadTexts(await api.answers(id, NEW_ANSWERS_TURNS), readAnswersAll(id), seenUntil(id))
+      for (const text of texts.filter((candidate) => candidate.time > autoReadAfter)) {
+        items.push({ id: text.id, text: text.text, label: tabName(id) })
+        answered.set(text.id, { session: id, time: text.time })
+      }
+    }
+    if (!items.length) return
+    // A batch stopped half way is not read again; what comes after it is.
+    autoReadAfter = [...answered.values()].reduce((newest, { time }) => (time > newest ? time : newest), autoReadAfter)
+    await speech.play(items, (item) => {
+      const read = answered.get(item.id)
+      if (read) markSeen(read.session, read.time)
+    })
+  } catch (error) {
+    toast.error(error)
+  } finally {
+    autoReadBusy = false
+  }
+}
+
+watch(speechAutoRead, (on) => {
+  if (on) autoReadAfter = new Date().toISOString()
+})
+let autoReadTimer: number | undefined
+onMounted(() => {
+  autoReadTimer = window.setInterval(() => void autoReadTick(), AUTO_READ_POLL_MS)
+})
+onBeforeUnmount(() => window.clearInterval(autoReadTimer))
 
 function tabName(id: string): string {
   const session = sessions.value.find((candidate) => candidate.id === id)
@@ -390,6 +437,17 @@ function deleteThis(): void {
           @change="widths.changeVisible"
           @reset="widths.resetWidths"
         />
+        <button
+          v-if="speech.available.value"
+          class="btn-icon"
+          :class="speechAutoRead ? '!text-amber-300 ring-1 ring-amber-500' : ''"
+          :aria-pressed="speechAutoRead"
+          :aria-label="$t('answers.autoRead')"
+          :title="$t('answers.autoRead')"
+          @click="speechAutoRead = !speechAutoRead"
+        >
+          <AppIcon name="resume" />
+        </button>
         <button
           v-if="speech.available.value"
           class="btn-icon"

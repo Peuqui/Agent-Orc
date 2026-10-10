@@ -675,6 +675,8 @@
     "spoken": "Spoken · recognised: “{heard}”",
     "pending": "waiting to be delivered",
     "readNewColumns": "Read the new answers of this workspace aloud",
+    "autoRead": "Read new answers of this workspace aloud by themselves",
+    "clickToMark": "Click: mark this one and all above it as read",
     "nothingNew": "Nothing new to read.",
     "picture": "Picture",
     "room": "Room",
