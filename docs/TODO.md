@@ -12,7 +12,7 @@ Nur was noch aussteht. Erledigtes steht in der Git-Historie.
   Rechner in den Einstellungen, Entsperren ohne Passwortfrage auf Rechnern ohne Login. Offen:
   - **Aragons Agent in VS Code** steckt nicht in tmux und lässt sich nicht übernehmen; er muss einmal von Agent-Orc
     neu gestartet werden (Gespräch fortsetzen). Sichtbar bleibt er über „Gespräche“.
-  - **Gemeinsame Agentenübersicht** (11.10.): Die Agentenseite des Minis listet jeden Rechner mit Überschrift,
+  - **Gemeinsame Agentenübersicht** (10.10.): Die Agentenseite des Minis listet jeden Rechner mit Überschrift,
     Zustandspunkt und amberfarbenem Trenner, die Karten sind überall die vollen (`HostSessions.vue`). Offen:
     Effort ändern und Neustart auf einem anderen Rechner sind nicht an einem echten Agenten gelaufen (nur Terminal
     starten und beenden); der Sprung der Rechner-Auswahl zum Abschnitt ist nur im Code, nicht an einer scrollenden

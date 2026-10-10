@@ -126,7 +126,7 @@ Auf `~/.config/ai-connect/user.token` hat Claude keinen Zugriff.
 - **Mini ist für Messläufe belegt:** `Mini:vllm-research` fährt mehrere Stunden Messungen mit allen GPUs; keine
   GPU-Last, keine schweren Builds. `Mini:FreeEchoDot2` meldet sich vor einer ruhigen Stimmaufnahme.
 
-## Nachtrag 2 (11.10.): Dateien-Reiter als kleiner Dateimanager
+## Nachtrag 2 (10.10.): Dateien-Reiter als kleiner Dateimanager
 
 - **Server:** `POST /api/files/upload` (Körper stückweise auf die Platte, Name unverändert außer Pfad und
   Steuerzeichen, `subfolder` legt Unterordner an, kein `..`, kein Link aus dem Bereich), `POST /api/files/transfer`
@@ -143,7 +143,10 @@ Auf `~/.config/ai-connect/user.token` hat Claude keinen Zugriff.
   der Platte), Ziehen auf einen Ordner und mit Strg auf die andere Ansicht, Sammel-Papierkorb, Upload (Auswahl,
   Ordner mit Unterordnern), Download. **Nicht geprüft:** Ziehen eines echten Ordners aus dem Dateimanager des
   Betriebssystems (nur die Logik mit künstlichen Einträgen), ein Upload über `/hosts/Aragon/` mit mehreren GB, Handy.
-- **Offen:** Umbenennen und „Neuer Ordner“ nutzen noch `files.name_pattern` (nur Buchstaben, Ziffern, `.`, `_`, `-`);
-  ein Name mit Umlaut lässt sich hochladen, aber nicht umbenennen. Entscheidung bei Peuqui. Leere Unterordner werden
-  beim Ordner-Upload nicht mit übertragen. SVAR Vue File Manager geprüft (nur Unterlagen) und verworfen: kein Ziehen
+- **Namensregel:** Umbenennen, „Neuer Ordner“ und Upload nehmen alles, was ein Dateisystem nimmt (Leerzeichen,
+  Umlaute, führender Punkt); nicht erlaubt: leer, `.`/`..`, `/`, Steuerzeichen, mehr als 255 Bytes
+  (`files.is_usable_name`). Der Konfigurationsschlüssel `files.name_pattern` ist entfallen (Konfiguration lehnt
+  unbekannte Schlüssel ab): auf Mini und Aragon am 10.10. mit Sicherung `config.yaml.bak-20261010-name-pattern`
+  entfernt. Fremde Konfigurationen mit dem Schlüssel müssen die Zeile entfernen.
+- **Offen:** Leere Unterordner werden beim Ordner-Upload nicht mit übertragen. SVAR Vue File Manager geprüft (nur Unterlagen) und verworfen: kein Ziehen
   und Ablegen, Mehrfachauswahl und Ereignisse nicht dokumentiert, eigenes Protokoll.
