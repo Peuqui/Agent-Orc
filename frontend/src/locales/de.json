@@ -67,6 +67,7 @@
     "empty": "Dieser Ordner ist leer.",
     "actions": "Aktionen für {name}",
     "upload": "Hochladen",
+    "uploadFolder": "Ordner hochladen",
     "uploading": "Lade hoch … {done} von {total}",
     "dropHere": "Dateien hier ablegen, um sie in diesen Ordner hochzuladen"
   },

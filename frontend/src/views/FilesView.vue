@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { api, rawFileUrl, type FileEntry } from '../api'
@@ -16,6 +16,7 @@ import { useScope } from '../composables/useScope'
 import { useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
 import { baseName, formatCountdown, formatDate, formatSize, parentPath } from '../format'
+import { collect, renameTakenFolders, type UploadItem } from '../uploadTree'
 
 type Dialog =
   | { kind: 'newFolder' }
@@ -105,25 +106,32 @@ async function onUnlock(password: string): Promise<void> {
   }
 }
 
-// Uploads: the files of the picker, or dropped on the list, one after the other. A name that is
-// taken gets a number on the server, so nothing is asked and nothing overwritten.
+// Uploads: files, or whole folders with their structure, from the picker or dropped on the list,
+// one after the other. A name that is taken gets a number on the server, so nothing is asked and
+// nothing overwritten; a dropped folder whose name is taken becomes "name-2" (it is not mixed in).
 const fileInput = ref<HTMLInputElement>()
+const folderInput = ref<HTMLInputElement>()
 const upload = ref<{ done: number; total: number } | null>(null)
 const dropping = ref(false)
 
-async function uploadFiles(chosen: FileList | null): Promise<void> {
-  const chosenFiles = Array.from(chosen ?? [])
-  if (chosenFiles.length === 0 || upload.value !== null) return
+async function uploadItems(gather: () => Promise<UploadItem[]>): Promise<void> {
+  if (upload.value !== null) return
   const folder = currentPath.value
-  const progress = { done: 0, total: chosenFiles.length }
+  const progress = { done: 0, total: 0 }
   upload.value = progress
-  for (const file of chosenFiles) {
-    try {
-      await api.uploadFile(folder, file)
-    } catch (error) {
-      toast.error(error)
+  try {
+    const items = renameTakenFolders(
+      await gather(),
+      entries.value.map((entry) => entry.name),
+    )
+    progress.total = items.length
+    for (const item of items) {
+      await api.uploadFile(folder, item.file, item.directory)
+      progress.done += 1
     }
-    progress.done += 1
+  } catch (error) {
+    // Stops at the first one: a project that arrived in part is told at once, not buried in a list.
+    toast.error(error)
   }
   upload.value = null
   await loadEntries()
@@ -131,16 +139,30 @@ async function uploadFiles(chosen: FileList | null): Promise<void> {
 
 function onFilesPicked(event: Event): void {
   const input = event.target as HTMLInputElement
-  void uploadFiles(input.files)
+  const chosen = Array.from(input.files ?? [])
   input.value = ''
+  void uploadItems(async () => chosen.map((file) => ({ file, directory: '' })))
+}
+
+function onFolderPicked(event: Event): void {
+  const input = event.target as HTMLInputElement
+  const chosen = Array.from(input.files ?? [])
+  input.value = ''
+  // "folder/sub/file.txt": the folder it lies in is all but the last part.
+  void uploadItems(async () =>
+    chosen.map((file) => ({ file, directory: file.webkitRelativePath.split('/').slice(0, -1).join('/') })),
+  )
 }
 
 // Only files from the computer: what the list drags itself (to the trash) is not meant.
 const carriesFiles = (event: DragEvent): boolean => event.dataTransfer?.types.includes('Files') ?? false
 
+// The drop area is the list; stopped there, so the page's own handler (below) does not refuse it.
 function onDragOver(event: DragEvent): void {
   if (!carriesFiles(event)) return
   event.preventDefault()
+  event.stopPropagation()
+  if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy'
   dropping.value = true
 }
 
@@ -151,9 +173,31 @@ function onDragLeave(event: DragEvent): void {
 function onDrop(event: DragEvent): void {
   if (!carriesFiles(event)) return
   event.preventDefault()
+  event.stopPropagation()
   dropping.value = false
-  void uploadFiles(event.dataTransfer?.files ?? null)
+  // Taken now: the dropped entries are gone once the event is over.
+  const dropped = Array.from(event.dataTransfer?.items ?? [], (item) => item.webkitGetAsEntry())
+  void uploadItems(async () =>
+    (await Promise.all(dropped.filter((entry) => entry !== null).map((entry) => collect(entry, '')))).flat(),
+  )
 }
+
+// A file dropped beside the area is not opened by the browser (it would leave this page): nothing
+// happens, and the pointer says so.
+function refuseFileDrop(event: DragEvent): void {
+  if (!carriesFiles(event)) return
+  event.preventDefault()
+  if (event.dataTransfer) event.dataTransfer.dropEffect = 'none'
+}
+
+onMounted(() => {
+  window.addEventListener('dragover', refuseFileDrop)
+  window.addEventListener('drop', refuseFileDrop)
+})
+onBeforeUnmount(() => {
+  window.removeEventListener('dragover', refuseFileDrop)
+  window.removeEventListener('drop', refuseFileDrop)
+})
 
 function createFolder(name: string): void {
   void run(() => api.createFolder(currentPath.value, name))
@@ -184,19 +228,17 @@ onMounted(async () => {
   await loadScope()
   await loadEntries()
 })
-watch(currentPath, loadEntries)
+// Another folder starts at its top, not where the page was scrolled to in the one before.
+watch(currentPath, () => {
+  window.scrollTo({ top: 0 })
+  void loadEntries()
+})
 </script>
 
 <template>
   <!-- The files, and the trash beside them (below on a phone): a file dragged onto the trash is trashed. -->
   <section class="md:grid md:grid-cols-[minmax(0,1fr)_20rem] md:items-start md:gap-4">
-    <div
-      class="min-w-0"
-      :class="dropping ? 'rounded-lg ring-2 ring-amber-400' : ''"
-      @dragover="onDragOver"
-      @dragleave="onDragLeave"
-      @drop="onDrop"
-    >
+    <div class="min-w-0">
     <div
       class="mb-3 flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm"
       :class="unlocked ? 'border-red-700 bg-red-950/60 text-red-200' : 'border-slate-700 text-slate-400'"
@@ -227,7 +269,7 @@ watch(currentPath, loadEntries)
       <h1 class="min-w-0 flex-1 truncate font-mono text-sm text-slate-300">{{ relativePath }}</h1>
     </div>
 
-    <div class="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
+    <div class="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
       <button class="btn-secondary" @click="dialog = { kind: 'newFolder' }">
         <AppIcon name="plus" />{{ $t('files.newFolder') }}
       </button>
@@ -235,14 +277,25 @@ watch(currentPath, loadEntries)
         <AppIcon name="upload" />{{ $t('files.upload') }}
       </button>
       <input ref="fileInput" type="file" multiple class="hidden" @change="onFilesPicked" />
+      <button class="btn-secondary" :disabled="upload !== null" @click="folderInput?.click()">
+        <AppIcon name="upload" />{{ $t('files.uploadFolder') }}
+      </button>
+      <input ref="folderInput" type="file" webkitdirectory class="hidden" @change="onFolderPicked" />
       <button class="btn-primary" @click="dialog = { kind: 'agent', path: currentPath }">
         <AppIcon name="play" />{{ $t('files.startAgent') }}
       </button>
     </div>
 
     <p v-if="upload" class="mb-3 text-sm text-amber-300" role="status">{{ $t('files.uploading', upload) }}</p>
-    <p v-else-if="dropping" class="mb-3 text-sm text-amber-300">{{ $t('files.dropHere') }}</p>
 
+    <!-- The drop area: the list (and room below a short one); only it lights up. -->
+    <div class="relative min-h-40" @dragover="onDragOver" @dragleave="onDragLeave" @drop="onDrop">
+    <div
+      v-if="dropping"
+      class="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-lg border-2 border-dashed border-amber-400 bg-slate-900/85 px-4 text-center text-sm text-amber-300"
+    >
+      {{ $t('files.dropHere') }}
+    </div>
     <p v-if="entries.length === 0" class="card p-6 text-center text-slate-400">{{ $t('files.empty') }}</p>
     <ul v-else class="card divide-y divide-slate-700">
       <li
@@ -279,6 +332,7 @@ watch(currentPath, loadEntries)
         </button>
       </li>
     </ul>
+    </div>
     </div>
 
     <aside class="mt-4 md:mt-0">

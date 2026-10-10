@@ -67,6 +67,7 @@
     "empty": "This folder is empty.",
     "actions": "Actions for {name}",
     "upload": "Upload",
+    "uploadFolder": "Upload folder",
     "uploading": "Uploading … {done} of {total}",
     "dropHere": "Drop files here to upload them to this folder"
   },
