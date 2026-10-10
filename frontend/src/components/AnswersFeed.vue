@@ -6,7 +6,6 @@ import { isUnread, shownTexts, spokenAs, uploadMentions } from '../answers'
 import { summaryOf } from '../speechText'
 import { markSeen, seenUntil } from '../composables/useAnswerSeen'
 import { useAnswersAll, useSettings } from '../composables/useSettings'
-import { useSeenOnScreen } from '../composables/useSeenOnScreen'
 import { sessionName, useSessions } from '../composables/useSessions'
 import { type Speakable, useSpeech } from '../composables/useSpeech'
 import { useToast } from '../composables/useToast'
@@ -18,11 +17,11 @@ import AppIcon from './AppIcon.vue'
 import JogScroller from './JogScroller.vue'
 
 // What an agent answered, in short: per request of the user its last text (the summary), or
-// every text it wrote. Newer answers are marked until they were looked at; any of them can be
-// read aloud, or all that follow.
+// every text it wrote. Newer answers stay marked until they are marked as read (the check, here
+// or in the workspace's header) or were read aloud; any of them can be read aloud, or all that
+// follow.
 const props = withDefaults(defineProps<{ sessionId: string; turns?: number }>(), { turns: 20 })
 const POLL_MS = 4000
-const SEEN_AFTER_MS = 2000
 const toast = useToast()
 const { locale } = useI18n()
 const answersAll = useAnswersAll(props.sessionId)
@@ -35,8 +34,8 @@ const spoken = ref<SpokenRequest[]>([])
 const loaded = ref(false)
 const box = ref<HTMLElement>()
 let timer: number | undefined
-// What was looked at before this view opened; what has been looked at or read aloud since is
-// in `seenIds`. A column of the workspace stays open for days, so the marks go by themselves.
+// What was marked as read before this view opened; what has been marked or read aloud since is in
+// `seenIds`.
 const seenBefore = ref(seenUntil(props.sessionId))
 const seenIds = ref(new Set<string>())
 
@@ -55,8 +54,6 @@ function markReadAloud(item: Speakable): void {
   markSeenHere(item.id)
 }
 
-const { observe } = useSeenOnScreen(markSeenHere, SEEN_AFTER_MS)
-
 // Another view or device (a column, another tab, the workspace's speaker, the phone) has seen or
 // read answers of this agent. What this view marked itself does not count here: looking at the
 // newest answer must not make the older ones above it read.
@@ -67,7 +64,7 @@ watch(
   },
 )
 
-/** Everything there is counts as looked at, without reading it aloud or scrolling through it. */
+/** Everything there is counts as read, without reading it aloud or scrolling through it. */
 function markAllSeen(): void {
   for (const text of unread.value) markSeenHere(text.id)
 }
@@ -93,12 +90,6 @@ const shown = computed<Shown[]>(() =>
 )
 const everyText = computed(() => shown.value.flatMap((entry) => entry.texts))
 const unread = computed(() => everyText.value.filter((text) => isUnread(text, seenBefore.value, seenIds.value)))
-
-// New texts are looked at once they are on screen: observed after each change of what is shown.
-watch(shown, async () => {
-  await nextTick()
-  if (box.value) observe(box.value)
-})
 
 const agentName = computed(() => {
   const session = sessions.value.find((candidate) => candidate.id === props.sessionId)
@@ -193,11 +184,13 @@ function jog(lines: number): void {
           {{ $t('answers.modeAll') }}
         </button>
       </div>
-      <!-- Everything as read at once, without reading it aloud or scrolling through it. -->
+      <!-- Everything as read at once, without reading it aloud or scrolling through it. Red while
+           there is something new, grey and dead when there is not. -->
       <button
-        v-if="unread.length"
         type="button"
-        class="btn-secondary btn-small-icon"
+        class="btn-small-icon"
+        :class="unread.length ? 'btn-primary' : 'btn-secondary'"
+        :disabled="!unread.length"
         :title="$t('answers.markAllSeen')"
         :aria-label="$t('answers.markAllSeen')"
         @click="markAllSeen"
@@ -264,7 +257,6 @@ function jog(lines: number): void {
           <article
             v-else
             class="card flex flex-col gap-2 p-3"
-            :data-seen-id="item.id"
             :class="isUnread(item, seenBefore, seenIds) ? 'border-l-4 border-l-red-500' : ''"
           >
             <div class="markdown note select-text" v-html="renderMarkdown(answersAll ? item.text : summaryOf(item.text), null)" />

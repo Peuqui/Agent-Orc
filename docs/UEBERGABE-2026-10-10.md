@@ -150,3 +150,9 @@ Auf `~/.config/ai-connect/user.token` hat Claude keinen Zugriff.
   entfernt. Fremde Konfigurationen mit dem Schlüssel müssen die Zeile entfernen.
 - **Offen:** Leere Unterordner werden beim Ordner-Upload nicht mit übertragen. SVAR Vue File Manager geprüft (nur Unterlagen) und verworfen: kein Ziehen
   und Ablegen, Mehrfachauswahl und Ereignisse nicht dokumentiert, eigenes Protokoll.
+- **Gelesen-Markierung:** Antworten gelten nicht mehr nach zwei Sekunden auf dem Bildschirm als gelesen
+  (`useSeenOnScreen` entfernt). Sie bleiben rot, bis das Häkchen je Spalte gedrückt oder die Antwort vorgelesen wurde;
+  das Häkchen ist immer sichtbar, rot und klickbar bei Ungelesenem, sonst grau und gesperrt. Mit einem echten
+  Haiku-Agenten in einer Test-Instanz geprüft (rot nach 8 s unverändert, nach dem Klick grau).
+- **Reiter in der Arbeitsfläche:** `SectionNav.vue` (auch im Seitenkopf): ab `xl` Symbole, ab `2xl` mit Namen; auf dem
+  Handy nicht (die Kopfzeile würde doppelt so hoch, der Name zerquetscht).
