@@ -459,6 +459,70 @@ def test_umlauts_and_spaces_in_an_uploaded_name_stay(client: TestClient, home: P
         assert (folder / name).read_bytes() == b"x"
 
 
+def test_files_are_moved_and_copied_into_a_folder(client: TestClient, home: Path) -> None:
+    projects = home / "projects"
+    (projects / "ziel").mkdir()
+    (projects / "a.txt").write_text("a")
+    (projects / "b.txt").write_text("b")
+    moved = client.post(
+        "/api/files/transfer",
+        json={"paths": [str(projects / "a.txt")], "folder": str(projects / "ziel")},
+    )
+    assert moved.json() == {"paths": [str(projects / "ziel" / "a.txt")]}
+    assert not (projects / "a.txt").exists()
+    copied = client.post(
+        "/api/files/transfer",
+        json={
+            "paths": [str(projects / "b.txt")],
+            "folder": str(projects / "ziel"),
+            "as_copy": True,
+        },
+    )
+    assert copied.status_code == 200
+    assert (projects / "b.txt").exists() and (projects / "ziel" / "b.txt").exists()
+    # A folder into itself, and into a file, are refused.
+    inside = client.post(
+        "/api/files/transfer",
+        json={"paths": [str(projects / "ziel")], "folder": str(projects / "ziel")},
+    )
+    assert inside.status_code == 422
+    not_a_folder = client.post(
+        "/api/files/transfer",
+        json={"paths": [str(projects / "b.txt")], "folder": str(projects / "b.txt")},
+    )
+    assert not_a_folder.status_code == 400
+
+
+def test_the_base_folder_and_what_is_outside_the_scope_are_not_moved(
+    client: TestClient, home: Path
+) -> None:
+    (home / "projects" / "ziel").mkdir()
+    base = client.post(
+        "/api/files/transfer",
+        json={"paths": [str(home / "projects")], "folder": str(home / "projects" / "ziel")},
+    )
+    assert base.status_code == 403
+    outside = client.post(
+        "/api/files/transfer",
+        json={"paths": [str(home / "elsewhere.txt")], "folder": str(home / "projects" / "ziel")},
+    )
+    assert outside.status_code == 403
+
+
+def test_a_folder_with_a_running_agent_is_not_moved_but_may_be_copied(
+    client: TestClient, home: Path
+) -> None:
+    (home / "projects" / "ziel").mkdir()
+    agent_folder = home / "projects" / "agent"
+    agent_folder.mkdir()
+    start_in(client, agent_folder, "sleeper")
+    request = {"paths": [str(agent_folder)], "folder": str(home / "projects" / "ziel")}
+    assert client.post("/api/files/transfer", json=request).status_code == 409
+    copied = client.post("/api/files/transfer", json={**request, "as_copy": True})
+    assert copied.status_code == 200
+    assert agent_folder.exists()
+
+
 def test_an_upload_needs_a_folder_in_scope(client: TestClient, home: Path) -> None:
     outside = client.post(
         "/api/files/upload", params={"folder": str(home), "name": "a.txt"}, content=b"x"

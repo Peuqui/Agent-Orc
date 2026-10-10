@@ -3,6 +3,8 @@
 import itertools
 import os
 import re
+import shutil
+from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
 from typing import BinaryIO
@@ -22,6 +24,10 @@ class FileTooLargeError(ValueError):
 
 class NotTextError(ValueError):
     pass
+
+
+class InvalidTransferError(ValueError):
+    """A folder cannot be moved or copied into itself."""
 
 
 class FileConflictError(RuntimeError):
@@ -81,17 +87,57 @@ def upload_directory(folder: Path, subfolder: str) -> Path:
     return folder.joinpath(*parts)
 
 
+def numbered_names(name: str) -> Iterator[str]:
+    """`name`, then the same with a number before its suffix: "a.wav", "a-2.wav", "a-3.wav" ..."""
+    stem, suffix = os.path.splitext(name)
+    yield name
+    for number in itertools.count(2):
+        yield f"{stem}-{number}{suffix}"
+
+
+def unused_path(folder: Path, name: str) -> Path:
+    """`name` in the folder, or with a number when that is taken: the way every new file or
+    folder here finds its place without overwriting anything."""
+    return next(
+        folder / candidate
+        for candidate in numbered_names(name)
+        if not os.path.lexists(folder / candidate)
+    )
+
+
+def transfer_into(paths: list[Path], folder: Path, copy: bool) -> list[Path]:
+    """Moves (or copies) each path into the folder and returns where each one landed. A name that
+    is taken there gets a number; a path that is in the folder already stays where it is (when
+    moved). A folder cannot go into itself."""
+    for path in paths:
+        if folder == path or folder.is_relative_to(path):
+            raise InvalidTransferError(str(path))
+    landed = []
+    for path in paths:
+        if not copy and path.parent == folder:
+            landed.append(path)
+            continue
+        target = unused_path(folder, path.name)
+        if not copy:
+            shutil.move(path, target)
+        elif path.is_dir():
+            shutil.copytree(path, target, symlinks=True)
+        else:
+            shutil.copy2(path, target)
+        landed.append(target)
+    return landed
+
+
 def create_new_file(folder: Path, name: str) -> tuple[Path, BinaryIO]:
     """Opens a new file in the folder under that name. A name that is taken gets a number before
     its suffix: nothing is ever overwritten."""
-    stem, suffix = os.path.splitext(name)
-    for number in itertools.count(1):
-        target = folder / (name if number == 1 else f"{stem}-{number}{suffix}")
+    for candidate in numbered_names(name):
+        target = folder / candidate
         try:
             return target, target.open("xb")
         except FileExistsError:
             continue
-    raise AssertionError("unreachable")  # count() does not end
+    raise AssertionError("unreachable")  # numbered_names does not end
 
 
 def list_directory(path: Path) -> list[FileEntry]:

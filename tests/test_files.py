@@ -118,3 +118,48 @@ def test_a_new_file_never_takes_a_name_that_is_taken(tmp_path: Path) -> None:
     other, other_handle = files.create_new_file(tmp_path, "ohne")
     other_handle.close()
     assert (target.name, other.name) == ("ohne", "ohne-2")
+
+
+def test_numbered_names_run_on() -> None:
+    names = files.numbered_names("a.tar.gz")
+    assert [next(names) for _ in range(3)] == ["a.tar.gz", "a.tar-2.gz", "a.tar-3.gz"]
+
+
+def test_paths_are_moved_into_a_folder_and_a_taken_name_gets_a_number(tmp_path: Path) -> None:
+    target = tmp_path / "target"
+    target.mkdir()
+    (target / "a.txt").write_text("alt")
+    source = tmp_path / "source"
+    source.mkdir()
+    (source / "a.txt").write_text("neu")
+    (source / "sub").mkdir()
+    (source / "sub" / "b.txt").write_text("b")
+    landed = files.transfer_into([source / "a.txt", source / "sub"], target, copy=False)
+    assert landed == [target / "a-2.txt", target / "sub"]
+    assert (target / "a.txt").read_text() == "alt"
+    assert (target / "a-2.txt").read_text() == "neu"
+    assert (target / "sub" / "b.txt").read_text() == "b"
+    assert not (source / "a.txt").exists() and not (source / "sub").exists()
+
+
+def test_a_copy_leaves_the_original_and_takes_a_folder_along(tmp_path: Path) -> None:
+    folder = tmp_path / "proj"
+    (folder / "src").mkdir(parents=True)
+    (folder / "src" / "main.py").write_text("x")
+    (tmp_path / "other").mkdir()
+    files.transfer_into([folder], tmp_path / "other", copy=True)
+    again = files.transfer_into([folder], tmp_path / "other", copy=True)
+    assert again == [tmp_path / "other" / "proj-2"]
+    assert (folder / "src" / "main.py").exists()
+    assert (tmp_path / "other" / "proj-2" / "src" / "main.py").read_text() == "x"
+
+
+def test_a_folder_does_not_go_into_itself_and_a_path_in_place_stays(tmp_path: Path) -> None:
+    folder = tmp_path / "proj"
+    (folder / "inner").mkdir(parents=True)
+    with pytest.raises(files.InvalidTransferError):
+        files.transfer_into([folder], folder / "inner", copy=False)
+    with pytest.raises(files.InvalidTransferError):
+        files.transfer_into([folder], folder, copy=True)
+    (folder / "a.txt").write_text("x")
+    assert files.transfer_into([folder / "a.txt"], folder, copy=False) == [folder / "a.txt"]

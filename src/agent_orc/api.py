@@ -281,6 +281,7 @@ ERROR_STATUS: dict[type[Exception], int] = {
     NotebookExistsError: status.HTTP_409_CONFLICT,
     SessionAlreadyRunningError: status.HTTP_409_CONFLICT,
     files.InvalidNameError: status.HTTP_422_UNPROCESSABLE_CONTENT,
+    files.InvalidTransferError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     InvalidEffortError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     InvalidProfileChangeError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     InvalidPermissionModeError: status.HTTP_422_UNPROCESSABLE_CONTENT,
@@ -327,6 +328,12 @@ class PathRequest(BaseModel):
 class CreateFolderRequest(BaseModel):
     parent: str
     name: str
+
+
+class TransferRequest(BaseModel):
+    paths: list[str]
+    folder: str
+    as_copy: bool = False
 
 
 class RenameRequest(BaseModel):
@@ -1988,6 +1995,22 @@ def create_app(
         path = scope.resolve(body.path)
         ensure_no_session_inside(path)
         return {"path": str(files.rename(path, body.new_name, name_pattern))}
+
+    @app.post("/api/files/transfer", dependencies=authenticated)
+    def transfer_files(body: TransferRequest) -> dict[str, list[str]]:
+        """Move (or copy) the paths into the folder; returns where each landed. Nothing is
+        overwritten: a taken name gets a number."""
+        folder = scope.resolve(body.folder)
+        if not folder.is_dir():
+            raise NotADirectoryError(str(folder))
+        sources = [scope.resolve(path) for path in body.paths]
+        for source in sources:
+            if source in (scope.base_dir, scope.home):
+                raise OutsideScopeError(str(source))
+            # An agent works in its folder: moving it away from under it would break it.
+            if not body.as_copy:
+                ensure_no_session_inside(source)
+        return {"paths": [str(path) for path in files.transfer_into(sources, folder, body.as_copy)]}
 
     @app.post("/api/files/upload", dependencies=authenticated)
     async def upload_file(
