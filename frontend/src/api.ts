@@ -444,7 +444,9 @@ async function request<T>(
     // fetch only rejects when no HTTP response arrived at all (server down, network gone).
     throw new ApiError(0, NETWORK_ERROR, String(error), null)
   }
-  checkBuild(response)
+  // Only an answer of the page's own app says whether the page is out of date: another machine's
+  // app may be at another build, and from a page of its own the root's is not the page's.
+  if ((options.host ?? (options.fromRoot ? null : currentHost)) === currentHost) checkBuild(response)
   if (response.status === 401 && path !== 'login' && path !== 'scope/unlock') {
     // Another machine's app has no login: it is this machine's that has run out, so to there.
     if (currentHost === null) authenticated.value = false

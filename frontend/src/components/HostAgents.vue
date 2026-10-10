@@ -64,7 +64,7 @@ function problem(host: string): string | null {
     </div>
     <p v-if="!host.online" class="card p-4 text-sm text-slate-400">{{ $t('hosts.unreachable') }}</p>
     <p v-else-if="problem(host.name)" class="card border-red-700 p-4 text-sm text-red-300">{{ problem(host.name) }}</p>
-    <p v-else-if="list(host.name)?.length === 0" class="card p-4 text-sm text-slate-400">{{ $t('sessions.empty') }}</p>
+    <p v-else-if="list(host.name)?.length === 0" class="card p-4 text-sm text-slate-400">{{ $t('hosts.noAgents') }}</p>
     <ul v-else class="grid grid-cols-[repeat(auto-fill,minmax(min(24rem,100%),1fr))] gap-3">
       <li v-for="session in list(host.name) ?? []" :key="session.id" class="card flex flex-col gap-2 px-4 py-3">
         <div class="flex items-center gap-2">

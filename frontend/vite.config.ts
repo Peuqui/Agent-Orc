@@ -37,8 +37,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       // Shows Agent-Orc's push messages (public/push-sw.js).
       // Every page the app is asked for is answered with its start page, except what the server
-      // itself serves under /api (a download, a picture or a file in a tab of its own).
-      workbox: { importScripts: ['push-sw.js'], navigateFallbackDenylist: [/\/api\//] },
+      // itself serves under /api (a download, a picture or a file in a tab of its own) and the apps
+      // of other machines under /hosts (each has its own start page).
+      workbox: { importScripts: ['push-sw.js'], navigateFallbackDenylist: [/\/api\//, /\/hosts\//] },
       // The manifest request must carry credentials when a reverse proxy uses HTTP basic auth.
       useCredentials: true,
       manifest: {

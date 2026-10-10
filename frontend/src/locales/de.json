@@ -696,6 +696,7 @@
     "online": "erreichbar",
     "offlineShort": "nicht erreichbar",
     "open": "Öffnen",
+    "noAgents": "Auf diesem Rechner läuft kein Agent.",
     "unreachable": "Dieser Rechner antwortet gerade nicht. Der Tunnel wird neu aufgebaut."
   }
 }
