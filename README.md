@@ -257,6 +257,22 @@ code, like `deploy/install.sh`). Agents there keep running across it. The servic
 machine's user session; `loginctl enable-linger` (as root, once) keeps it running without a login.
 A machine that is off, or whose tunnel is down, shows as unreachable.
 
+#### A WSL on Windows as the other machine
+
+WSL ends a distribution a short while after its last open WSL window is gone, and neither the
+SSH tunnel nor the services inside (Agent-Orc, sshd) count as one: the tunnel then breaks with
+`kex_exchange_identification: Connection reset` while the PC still answers `ping`. Keep a
+session open, for example a hidden one that starts with Windows (`Start-WSL.vbs` in the Startup
+folder). The full path to `wsl.exe` matters: the bare name failed with "Permission denied"
+(error 800A0046). In VBScript a quote inside a string is written twice:
+
+```vbscript
+CreateObject("Wscript.Shell").Run """C:\Program Files\WSL\wsl.exe"" -d Ubuntu-24.04 --exec sleep infinity", 0, False
+```
+
+`wsl -l -v` shows the distribution as `Running` while it holds; use the name it prints. The
+Windows-side port forwarding to the WSL address (`netsh portproxy`) is not part of Agent-Orc.
+
 ### Tip: let new agents get going at once
 
 A Claude Code agent waits for your first message. Its start command in the config takes a first
