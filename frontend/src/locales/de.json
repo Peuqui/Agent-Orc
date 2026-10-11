@@ -434,6 +434,8 @@
     "deny": "Ablehnen"
   },
   "changes": {
+    "openFile": "Datei öffnen",
+    "openFolder": "Ordner öffnen",
     "button": "Änderungen",
     "open": "Was der Agent im Projekt geändert hat (git)",
     "title": "Änderungen · {name}",

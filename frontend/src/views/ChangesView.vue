@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { ApiError, api, type FileChange } from '../api'
+import { ApiError, api, type ExistingPath, type FileChange } from '../api'
 import AppIcon from '../components/AppIcon.vue'
+import { openExistingPath } from '../composables/useFileLinks'
 import { useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
 import { useViewZoom } from '../composables/useViewZoom'
@@ -25,10 +26,23 @@ const notARepository = ref(false)
 const open = ref<string | null>(null)
 const diffs = ref(new Map<string, { text: string; truncated: boolean }>())
 
-const folder = computed(() => {
-  const session = sessions.value.find((candidate) => candidate.id === props.id)
-  return session ? session.name : props.id
-})
+const session = computed(() => sessions.value.find((candidate) => candidate.id === props.id))
+const folder = computed(() => (session.value ? session.value.name : props.id))
+
+// Which of the changed paths exist (a deleted file does not), with their full paths: only those
+// can be opened, as everywhere else (useFileLinks).
+const existing = ref<Record<string, ExistingPath>>({})
+watch(
+  () => [files.value, session.value?.path] as const,
+  async ([changed, base]) => {
+    if (changed === null || base === undefined) return
+    try {
+      existing.value = await api.existingPaths(base, changed.map((file) => file.path))
+    } catch (error) {
+      toast.error(error)
+    }
+  },
+)
 
 async function load(): Promise<void> {
   diffs.value = new Map()
@@ -87,7 +101,8 @@ function lineClass(line: string): string {
       <p v-else-if="files?.length === 0" class="p-6 text-center text-slate-400">{{ $t('changes.none') }}</p>
       <ul v-else-if="files" ref="zoomed" class="flex flex-col gap-1" :style="zoomStyle">
         <li v-for="file in files" :key="file.path" class="card overflow-hidden">
-          <button class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-slate-700" @click="toggle(file.path)">
+          <div class="flex items-center hover:bg-slate-700">
+          <button class="flex min-w-0 flex-1 items-center gap-2 py-2 pl-3 text-left text-sm" @click="toggle(file.path)">
             <span
               class="w-20 shrink-0 rounded px-1.5 py-0.5 text-center text-xs"
               :class="{
@@ -102,6 +117,16 @@ function lineClass(line: string): string {
             <span class="min-w-0 flex-1 truncate font-mono text-xs text-slate-200">{{ file.path }}</span>
             <AppIcon name="up" class="size-4 shrink-0 text-slate-500 transition-transform" :class="open === file.path ? '' : 'rotate-180'" />
           </button>
+          <button
+            v-if="existing[file.path]"
+            class="btn-icon shrink-0"
+            :title="$t(existing[file.path]!.kind === 'folder' ? 'changes.openFolder' : 'changes.openFile')"
+            :aria-label="$t(existing[file.path]!.kind === 'folder' ? 'changes.openFolder' : 'changes.openFile')"
+            @click="openExistingPath(router, existing[file.path]!, null)"
+          >
+            <AppIcon name="external" />
+          </button>
+          </div>
           <div v-if="open === file.path" class="overflow-x-auto border-t border-slate-700 bg-slate-950/60">
             <p v-if="!diffs.has(file.path)" class="p-3 text-xs text-slate-500">{{ $t('changes.loading') }}</p>
             <pre

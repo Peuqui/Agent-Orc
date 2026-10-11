@@ -434,6 +434,8 @@
     "deny": "Deny"
   },
   "changes": {
+    "openFile": "Open file",
+    "openFolder": "Open folder",
     "button": "Changes",
     "open": "What the agent changed in the project (git)",
     "title": "Changes · {name}",
