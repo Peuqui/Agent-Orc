@@ -621,7 +621,8 @@
   "keys": {
     "fold": "Weniger Sondertasten",
     "unfold": "Alle Sondertasten",
-    "hideKeyboard": "Tastatur ausblenden"
+    "hideKeyboard": "Tastatur ausblenden",
+    "showKeyboard": "Tastatur einblenden"
   },
   "keysEditor": {
     "title": "Sondertasten anpassen",

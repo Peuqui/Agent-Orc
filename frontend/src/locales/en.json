@@ -621,7 +621,8 @@
   "keys": {
     "fold": "Fewer extra keys",
     "unfold": "All extra keys",
-    "hideKeyboard": "Hide keyboard"
+    "hideKeyboard": "Hide keyboard",
+    "showKeyboard": "Show keyboard"
   },
   "keysEditor": {
     "title": "Arrange extra keys",

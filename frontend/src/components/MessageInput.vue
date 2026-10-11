@@ -31,6 +31,9 @@ const field = ref<HTMLTextAreaElement>()
 const { dictationSendsAtOnce } = useSettings()
 const dictation = reactive(useDictation(props.sessionId, async (dictated) => {
   text.value = text.value ? `${text.value} ${dictated}` : dictated
+  // Longer than the field is high: the end, where the new words are, stays in view.
+  await nextTick()
+  showEnd()
   if (dictationSendsAtOnce.value) {
     await submit()
     return
@@ -44,6 +47,11 @@ const dictation = reactive(useDictation(props.sessionId, async (dictated) => {
   input.focus()
   input.setSelectionRange(input.value.length, input.value.length)
 }, toast.error))
+
+function showEnd(): void {
+  const input = field.value
+  if (input) input.scrollTop = input.scrollHeight
+}
 
 defineExpose({ focus: () => field.value?.focus() })
 

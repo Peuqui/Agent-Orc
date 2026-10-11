@@ -123,6 +123,36 @@ function focusInput(): void {
   else messageInput.value?.focus()
 }
 
+// The on-screen keyboard (touch screens) comes only when asked for with the keyboard button: a
+// tap into the terminal focuses it, so the extra keys work, without the keyboard rising over it.
+// For a plain terminal the keyboard types into the terminal itself (history, completion), for an
+// agent into our message field. It is up while the focus is in a field that takes typing.
+const keyboardUp = ref(false)
+
+function syncKeyboardUp(): void {
+  const field = document.activeElement
+  keyboardUp.value = (field instanceof HTMLTextAreaElement || field instanceof HTMLInputElement) && field.inputMode !== 'none'
+  // The terminal's input field takes typing only while the keyboard was asked for.
+  if (!keyboardUp.value && TOUCH_FIRST.matches) terminal.textarea?.setAttribute('inputmode', 'none')
+}
+
+function toggleKeyboard(): void {
+  if (keyboardUp.value) {
+    ;(document.activeElement as HTMLElement | null)?.blur()
+    return
+  }
+  if (!directTyping.value) {
+    messageInput.value?.focus()
+    return
+  }
+  const input = terminal.textarea
+  if (!input) return
+  // Focused again after the change, so Android raises the keyboard for it.
+  input.blur()
+  input.setAttribute('inputmode', 'text')
+  terminal.focus()
+}
+
 function focusFieldAfterClick(event: PointerEvent): void {
   if (TOUCH_FIRST.matches || (event.target as Element).closest('button, a, input, select, textarea')) return
   if (window.getSelection()?.isCollapsed === false) return
@@ -376,7 +406,14 @@ onMounted(async () => {
   connect()
 })
 
+// The focus has moved on only after a focusout event.
+const syncKeyboardUpLater = (): void => void setTimeout(syncKeyboardUp)
+document.addEventListener('focusin', syncKeyboardUp)
+document.addEventListener('focusout', syncKeyboardUpLater)
+
 onBeforeUnmount(() => {
+  document.removeEventListener('focusin', syncKeyboardUp)
+  document.removeEventListener('focusout', syncKeyboardUpLater)
   PHONE_WIDTH.removeEventListener('change', followPhoneWidth)
   window.removeEventListener(COLUMN_FULLSCREEN_EVENT, followFullscreen)
   unmounted = true
@@ -589,6 +626,8 @@ onBeforeUnmount(() => {
       v-if="settings && !fullscreen"
       :rows="settings.keys"
       :active="modifiers"
+      :keyboard-up="keyboardUp"
+      @toggle-keyboard="toggleKeyboard"
       @send="(sequence) => sendInput(withModifiers(sequence))"
       @submit="submitText"
       @toggle="toggleModifier"

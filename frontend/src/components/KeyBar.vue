@@ -5,22 +5,19 @@ import { TOUCH_FIRST } from '../device'
 import { useSettings } from '../composables/useSettings'
 import AppIcon from './AppIcon.vue'
 
-const props = defineProps<{ rows: TerminalKey[][]; active: Set<Modifier> }>()
+const props = defineProps<{ rows: TerminalKey[][]; active: Set<Modifier>; keyboardUp: boolean }>()
 const emit = defineEmits<{
   send: [sequence: string]
   submit: [text: string]
   toggle: [modifier: Modifier]
+  toggleKeyboard: []
 }>()
+// The keyboard button (on touch screens) raises or lowers the on-screen keyboard: TerminalView
+// knows what it is raised for (the terminal itself or the message field).
 // Folded, the first row stays (the keys used most go there in the config); the setting holds
 // for every terminal on this device.
 const { extraKeysUnfolded } = useSettings()
 const shownRows = computed(() => (extraKeysUnfolded.value ? props.rows : props.rows.slice(0, 1)))
-
-// The focus leaves the terminal's input field, so Android closes the keyboard; a tap into the
-// terminal or the text field opens it again.
-function hideKeyboard(): void {
-  if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
-}
 
 function press(key: TerminalKey): void {
   if (key.modifier) emit('toggle', key.modifier)
@@ -50,11 +47,13 @@ function press(key: TerminalKey): void {
       </button>
       <button
         v-if="index === 0 && TOUCH_FIRST.matches"
-        class="flex h-10 w-8 shrink-0 items-center justify-center rounded-md text-slate-400 select-none hover:bg-slate-800"
-        :aria-label="$t('keys.hideKeyboard')"
-        :title="$t('keys.hideKeyboard')"
+        class="flex h-10 w-8 shrink-0 items-center justify-center rounded-md select-none hover:bg-slate-800"
+        :class="keyboardUp ? 'text-amber-300' : 'text-slate-400'"
+        :aria-label="$t(keyboardUp ? 'keys.hideKeyboard' : 'keys.showKeyboard')"
+        :title="$t(keyboardUp ? 'keys.hideKeyboard' : 'keys.showKeyboard')"
+        :aria-pressed="keyboardUp"
         @pointerdown.prevent
-        @click="hideKeyboard"
+        @click="emit('toggleKeyboard')"
       >
         <AppIcon name="keyboard" />
       </button>
