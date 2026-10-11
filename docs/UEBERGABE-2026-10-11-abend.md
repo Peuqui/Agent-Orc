@@ -71,3 +71,25 @@ Vorbereitet und gepusht, nichts davon eingespielt (kein sudo):
   gehen ohne Token, Ändern (Start/Stopp, Konfiguration, Stimmen-Abgleich) verlangt das Token (einmal in der
   Seite eintragen). Wer die Anmeldung der Site hat, kann also vorlesen lassen (inkl. kostenpflichtigem
   DashScope, wenn ein Client es so anfragt) – das ist dieselbe Vertrauensgrenze wie bei Agent-Orc.
+
+## Nachtrag 12.10. (nachts): TTS-Fenster, Feed, Stand
+
+- TTS-Fenster (Einstellungen → Sprachausgabe → „Engines des TTS-Dienstes …“): zeigt immer den ganzen Katalog
+  (Engine × Rechner), je Zeile Schalter, Einheit, Reihenfolge per Ziehen; Stimme je Engine. Nichts wird
+  entfernt: was der Dienst nicht mehr anbietet, bleibt mit „vom Dienst nicht angeboten“ stehen und wird nie
+  gesendet (`offered` wird bei jedem Lesen berechnet, nicht gespeichert); neue Zeilen kommen unten, AUS.
+  Kein Rechner-Schalter (Peuqui: Zeilenschalter genügen). Dazu „Pause zwischen Absätzen (ms)“ (Standard 700,
+  wird als `paragraph_pause_ms` gesendet, der Browser spielt `pause_ms`-Marker als Stille) und „Bereits
+  geladene lokale Engine bevorzugen“ (Standard aus; läuft eine GPU-Engine der eigenen Liste schon, geht sie
+  nach vorn). Gespeichert in `~/.local/state/agent-orc/tts-choices.json` (entries, voices,
+  paragraph_pause_ms, prefer_loaded).
+- Antworten-Feed: kommt eine neue Antwort und der Leser ist unten, scrollt der Feed, bis die älteste
+  ungelesene Antwort oben anstößt (oder ans Ende, wenn alles darunter passt); nie zurück, nichts bei
+  Lesern weiter oben, nichts beim „alles gelesen“-Haken; ist nichts Ungelesenes da (z. B. nach
+  Ansichtswechsel), geht es ans Ende. Im Browser noch nicht mit echten Antworten gesehen.
+- TTS-Suite-Oberfläche: Freigeben je Zeile und „Alle freigeben“ (`POST /release`), Pausenfeld im
+  Probesprechen. Betrieb (System-Unit, nginx, Landingpage, Dienst-Seite): siehe Nachtrag oben.
+- Offen: Aragon aus → Agent-Orc dort nicht eingespielt; Peuqui hört die TTS-Suite im Browser an;
+  Umstellung auf die System-Unit (sudo, Skript liegt bereit); alten Sprachausgabe-Abschnitt der Dienst-Seite
+  erst nach AIfreds Umstellung (Branch `tts-alte-sprachausgabe-entfernen`); Reddit-Entwurf zuletzt;
+  STT-Suite-Oberfläche nach TTS-Muster.
