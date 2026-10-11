@@ -5,6 +5,7 @@ import { api, type AnswerText, type Interjection, type SpokenRequest, type Turn 
 import { isUnread, shownTexts, spokenAs, uploadMentions } from '../answers'
 import { summaryOf } from '../speechText'
 import { markSeen, seenUntil } from '../composables/useAnswerSeen'
+import { useAnswerFileLinks } from '../composables/useAnswerFileLinks'
 import { useAnswersAll } from '../composables/useSettings'
 import { useViewZoom } from '../composables/useViewZoom'
 import { sessionName, useSessions } from '../composables/useSessions'
@@ -34,6 +35,8 @@ const loaded = ref(false)
 const box = ref<HTMLElement>()
 const zoomed = ref<HTMLElement>()
 const { zoomStyle } = useViewZoom(zoomed, box)
+// The files and folders the answers name open on a click, as in the terminal.
+useAnswerFileLinks(zoomed, () => sessions.value.find((session) => session.id === props.sessionId)?.path)
 let timer: number | undefined
 // What was marked as read before this view opened; what has been marked or read aloud since is in
 // `seenIds`.
@@ -74,7 +77,7 @@ function markAllSeen(): void {
  * the top, what is below stays new, and the check marks the rest. Not a click on a button or link,
  * and not while text is being selected. */
 function markUpTo(event: MouseEvent, clicked: AnswerText): void {
-  if ((event.target as Element).closest('button, a, input, select, textarea, audio')) return
+  if ((event.target as Element).closest('button, a, input, select, textarea, audio, .file-link')) return
   if (window.getSelection()?.isCollapsed === false) return
   for (const text of unread.value) if (text.time <= clicked.time) markSeenHere(text.id)
 }

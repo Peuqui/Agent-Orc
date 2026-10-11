@@ -170,6 +170,10 @@
   .markdown pre code {
     @apply bg-transparent p-0;
   }
+  /* A file or folder an agent names, which opens on a click (useAnswerFileLinks). */
+  .markdown code.file-link {
+    @apply cursor-pointer underline decoration-dotted underline-offset-2 hover:bg-slate-700;
+  }
   .markdown blockquote {
     @apply border-l-4 border-slate-600 pl-3 text-slate-400;
   }

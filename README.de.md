@@ -165,7 +165,9 @@ einen SSH-Tunnel ([Mehrere Rechner](#mehrere-rechner)).
   neben der Liste: Datei darauf ziehen, dort wiederherstellen oder leeren);
   Markdown als Vorschau, Bilder als Bild, andere Dateien zum Herunterladen.
 - Dateipfade in der Ausgabe eines Agenten sind anklickbar und öffnen die Datei (an der
-  genannten Zeile) oder den Ordner.
+  genannten Zeile) oder den Ordner: im Terminal und in der Antworten-Ansicht bei Pfaden, die als
+  Code geschrieben sind (`docs/TODO.md`, `src/app.py:42`). Angeboten werden nur Pfade, die im
+  Ordner des Agenten existieren.
 - Einstellungen pro Gerät (Terminal-Schrift, die zwei Schriftgrößen, Zeilenabstand,
   Scrollgeschwindigkeit, Sprachausgabe) und eine Hilfe (Glühbirne); das Einstellungsmenü scrollt,
   wenn es länger ist als der Bildschirm, damit auch die untersten Einträge bis „App neu laden“

@@ -50,9 +50,10 @@ Nur was noch aussteht. Erledigtes steht in der Git-Historie.
 
 ## AI-Connect
 
-- **Tab „Gespräche“ nach einem Neustart der Bridge:** Mitlesen, Senden als User:Peuqui (Enter) und die Ansicht sind
-  im echten Betrieb geprüft (9.10. abends). Offen: ob sich eine offene Seite nach einem Neustart der Bridge von selbst
-  neu verbindet und den Verlauf wieder zeigt.
+- **Tab „Gespräche“ nach einem Neustart der Bridge** (11.10.): Nach `sudo systemctl restart ai-connect` waren alle Agenten binnen
+  2 s wieder verbunden; der offene Tab zeigte danach Agenten und Verlauf vollständig (Peuqui). Ob sich der Tab dabei ohne Zutun
+  neu verbunden hat, ist nicht sicher: Peuqui hat ihn eventuell neu geladen, und der Beobachter-Client ist Agenten gesperrt
+  (Absicht von AI-Connect).
 
 ## Sprache am Echo Dot
 

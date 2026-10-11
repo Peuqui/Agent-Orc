@@ -154,7 +154,8 @@ that run Agent-Orc can be shown in the same app, through an SSH tunnel ([Several
   file onto it, restore or empty it there); Markdown as a preview, pictures as
   pictures, other files to download.
 - File paths in an agent's output are clickable and open the file (at the line named) or the
-  folder.
+  folder: in the terminal, and in the answers view for paths written as code (`docs/TODO.md`,
+  `src/app.py:42`). Only paths that exist in the agent's folder are offered.
 - Settings per device (terminal font, the two font sizes, line spacing, scroll speed, speech) and
   a help dialog (light bulb); the settings menu scrolls when it is longer than the screen, so
   the bottom entries, down to “Reload app”, can always be reached.
