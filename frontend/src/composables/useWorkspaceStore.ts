@@ -9,8 +9,10 @@ import {
   emptyWorkspace,
   homeOf,
   loadTabState,
+  moveColumnWidths,
   nameWindow,
   rememberLastWorkspace,
+  saveColumnWidths,
   saveTabState,
   startWorkspace,
   tabShowsWorkspace,
@@ -194,6 +196,7 @@ export function useWorkspaceStore(options: { afterLoad: () => Promise<void> }) {
       toast.error(error)
       return
     }
+    saveColumnWidths(current, {})
     // The route watcher ignores a change while nothing is ready; so load the unnamed one here.
     await router.replace({ path: '/workspace', query: { unnamed: '1' } })
     load().catch(toast.error)
@@ -219,6 +222,7 @@ export function useWorkspaceStore(options: { afterLoad: () => Promise<void> }) {
       toast.error(error)
       return
     }
+    moveColumnWidths(current, wanted)
     savedNames.value = [...savedNames.value.filter((saved) => saved !== current), wanted]
     name.value = wanted
     nameInput.value = wanted

@@ -1,6 +1,6 @@
 import { computed, type Ref, ref, watch } from 'vue'
 import type { Workspace } from '../api'
-import { boundaryShift } from './boundaryShift'
+import { boundaryShift, MAX_VISIBLE } from './boundaryShift'
 import { loadColumnWidths, MIN_VISIBLE, saveColumnWidths } from './useWorkspaceTab'
 
 // The widths of a workspace's columns: N of them fill the screen. A divider sits between two
@@ -45,7 +45,7 @@ export function useColumnWidths(
 
   /** Sets the width of all columns: N of them fill the screen; individual widths are dropped. */
   function changeVisible(delta: number): void {
-    workspace.value.visible = Math.max(MIN_VISIBLE, workspace.value.visible + delta)
+    workspace.value.visible = Math.min(MAX_VISIBLE, Math.max(MIN_VISIBLE, workspace.value.visible + delta))
     shares.value = {}
   }
 

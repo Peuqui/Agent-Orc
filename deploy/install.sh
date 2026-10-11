@@ -10,7 +10,7 @@ BIN=$HOME/.local/bin
 
 cd "$REPO"
 # A clone installs only committed code; a downloaded ZIP has no git history and is taken as it is.
-if [ -d .git ]; then
+if [ -e .git ]; then
     if [ -n "$(git status --porcelain)" ]; then
         echo "Uncommitted changes in $REPO — commit them first; only committed code is installed." >&2
         exit 1

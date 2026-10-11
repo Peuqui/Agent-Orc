@@ -8,6 +8,7 @@ service, on a local server and in a cloud run side by side.
 """
 
 import fnmatch
+import http.client
 import json
 import os
 import shlex
@@ -20,10 +21,14 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Any
 
-from agent_orc.config import BackendConfig, BackendModelConfig, Config
+from agent_orc.config import (
+    KEY_VARIABLES,
+    LEVELS,
+    BackendConfig,
+    BackendModelConfig,
+    Config,
+)
 
-# Claude Code's levels of effort, from the lowest. A model takes only some of them.
-LEVELS = ("low", "medium", "high", "xhigh", "max")
 # What Claude Code asks for without being told (its own default).
 DEFAULT_LEVEL = "high"
 # The effort a profile hands over to the start (AgentProfile.env: {effort}).
@@ -39,6 +44,8 @@ CONTEXT_SECONDS = 900
 LISTING_SECONDS = 30
 
 Fetch = Callable[[str, str | None, float], Any]
+# What a request to a server can raise: no answer, an answer that is no JSON, a broken one.
+FETCH_ERRORS = (OSError, ValueError, http.client.HTTPException)
 
 
 class BackendError(RuntimeError):
@@ -124,7 +131,7 @@ def reachable_base_url(backend: BackendConfig, key: str, fetch: Fetch) -> str:
     for base_url in backend.base_urls:
         try:
             fetch(base_url + backend.models_path, key, PROBE_SECONDS)
-        except (OSError, ValueError):
+        except FETCH_ERRORS:
             continue
         return base_url
     raise BackendError(f"{backend.label} does not answer at {', '.join(backend.base_urls)}")
@@ -134,7 +141,7 @@ def listed_models(backend: BackendConfig, base_url: str, key: str, fetch: Fetch)
     try:
         listing = fetch(base_url + backend.models_path, key, LISTING_SECONDS)
         return [entry["id"] for entry in listing["data"]]
-    except (OSError, ValueError, KeyError, TypeError) as error:
+    except (*FETCH_ERRORS, KeyError, TypeError) as error:
         raise BackendError(
             f"{backend.label} lists no models at {base_url}{backend.models_path}: {error}"
         ) from error
@@ -151,7 +158,7 @@ def context_length(
             base_url + backend.context_path.replace("{model}", model), key, CONTEXT_SECONDS
         )
         return int(reported["data"][0]["max_model_len"])
-    except (OSError, ValueError, KeyError, IndexError, TypeError):
+    except (*FETCH_ERRORS, KeyError, IndexError, TypeError):
         return None
 
 
@@ -247,9 +254,13 @@ def prepare_launch(
         *claude_arguments,
         *level_arguments(entry_of(backend, model), wanted_level),
     ]
+    # The keys of other services stay behind: Claude Code sends every key it finds to the backend.
+    inherited = {
+        variable: value for variable, value in os.environ.items() if variable not in KEY_VARIABLES
+    }
     return Launch(
         arguments,
-        {**os.environ, **claude_environment(name, backend, base_url, model, key, context)},
+        {**inherited, **claude_environment(name, backend, base_url, model, key, context)},
     )
 
 
@@ -285,6 +296,8 @@ def split_effort(
 
 def choose_model(models: list[str], ask: Callable[[str], str] = input) -> str:
     """The model by number or name, asked for on the terminal."""
+    if not models:
+        raise BackendError("the backend offers no model to choose")
     for number, line in enumerate(models, start=1):
         print(f"  {number:2d}) {line.replace(chr(9), '  ')}", file=sys.stderr)
     answer = ask(f"Model [1-{len(models)}]: ").strip()

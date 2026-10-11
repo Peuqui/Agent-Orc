@@ -88,6 +88,12 @@ export function saveColumnWidths(name: string | null, widths: Record<string, num
   else localStorage.setItem(columnWidthsKey(name), JSON.stringify(widths))
 }
 
+/** A renamed workspace keeps its widths. */
+export function moveColumnWidths(from: string | null, to: string): void {
+  saveColumnWidths(to, loadColumnWidths(from))
+  saveColumnWidths(from, {})
+}
+
 export function saveTabState(state: TabState): void {
   sessionStorage.setItem(tabStateKey(), JSON.stringify(state))
 }

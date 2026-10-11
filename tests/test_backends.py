@@ -1,5 +1,6 @@
 """Claude Code on other backends: levels, the offered models, the environment, the start."""
 
+import http.client
 import json
 import threading
 from datetime import date
@@ -20,6 +21,7 @@ from agent_orc.backends import (
     free_note,
     level_arguments,
     levels_of,
+    listed_models,
     models_lines,
     offered,
     prepare_launch,
@@ -387,3 +389,43 @@ def test_wrong_arguments_print_how_to_call_it(
     write_config(tmp_path, "http://127.0.0.1:1")
     with pytest.raises(SystemExit, match="usage: agent-orc backend"):
         cli.run_backend([])
+
+
+def test_the_keys_of_other_services_do_not_go_to_the_backend(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-of-anthropic")
+    monkeypatch.setenv("ANTHROPIC_AUTH_TOKEN", "token-of-someone-else")
+    config = backend(key="the-backends-own", key_variable="ANTHROPIC_AUTH_TOKEN")
+    launch = prepare_launch("local", config, "Qwen-27B-vllm", None, [], TODAY, listing_fetch())
+    assert "ANTHROPIC_API_KEY" not in launch.environment
+    assert launch.environment["ANTHROPIC_AUTH_TOKEN"] == "the-backends-own"
+
+
+def test_levels_must_rise_and_be_known() -> None:
+    BackendModelConfig.model_validate({"levels": ["low", "xhigh"]})
+    for wrong in (["high", "low"], ["low", "low"], ["low", "x-high"]):
+        with pytest.raises(ValueError):
+            BackendModelConfig.model_validate({"levels": wrong})
+
+
+def test_a_broken_answer_of_a_server_is_no_answer() -> None:
+    def broken(url: str, key: str | None, timeout: float) -> Any:
+        raise http.client.IncompleteRead(b"{")
+
+    with pytest.raises(BackendError, match="does not answer"):
+        reachable_base_url(backend(), "k", broken)
+    with pytest.raises(BackendError, match="lists no models"):
+        listed_models(backend(), "http://one", "k", broken)
+
+
+def test_choosing_among_no_model_says_so() -> None:
+    with pytest.raises(BackendError, match="offers no model"):
+        choose_model([])
+
+
+def test_an_empty_model_name_is_refused(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+    write_config(tmp_path, "http://127.0.0.1:1")
+    with pytest.raises(SystemExit, match="model is empty"):
+        cli.run_backend(["run", "local", ""])

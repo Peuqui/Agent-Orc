@@ -225,6 +225,8 @@ def run_backend(arguments: list[str]) -> None:
                 print(" ".join(levels_of(backend_named(config, name), model)))
             case ["run", name, *rest]:
                 backend = backend_named(config, name)
+                if rest and not rest[0]:
+                    raise BackendError("the model is empty: name one or leave it out")
                 named = None if not rest or rest[0].startswith("-") else rest[0]
                 wanted, claude_arguments = split_effort(
                     rest if named is None else rest[1:], os.environ.get(EFFORT_VARIABLE)

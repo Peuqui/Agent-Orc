@@ -6,7 +6,7 @@ import pytest
 import yaml
 
 from agent_orc.auth import load_credentials, verify_password
-from agent_orc.config import Config, default_config_text, load_config
+from agent_orc.config import BackendConfig, Config, default_config_text, load_config
 from agent_orc.setup import (
     SetupAnswers,
     ask_backend,
@@ -15,6 +15,7 @@ from agent_orc.setup import (
     configured_text,
     run_setup,
     set_value,
+    write_key,
 )
 
 
@@ -184,3 +185,22 @@ def test_a_server_that_does_not_answer_writes_no_entry(
     monkeypatch.setattr("agent_orc.setup.fetch_json", unreachable)
     assert ask_backend(backend_presets()["local"]) is None
     assert "Skipped" in capsys.readouterr().out
+
+
+def test_an_existing_key_file_gets_the_rights_for_the_user_alone(tmp_path: Path) -> None:
+    key_file = tmp_path / "dashscope.key"
+    key_file.write_text("old")
+    key_file.chmod(0o644)
+    write_key(key_file, "new-key")
+    assert key_file.read_text() == "new-key\n"
+    assert key_file.stat().st_mode & 0o777 == 0o600
+
+
+def test_the_name_of_a_model_is_no_pattern_in_the_config() -> None:
+    from agent_orc.backends import entry_of
+
+    name = "qwen3-coder[Q4_K_M]"
+    entry = backend_entry(backend_presets()["local"], "http://127.0.0.1:11435", [name, "other"])
+    config = BackendConfig.model_validate(entry)
+    assert entry_of(config, name) is not None
+    assert entry_of(config, "qwen3-coderQ") is None

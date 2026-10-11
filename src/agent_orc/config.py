@@ -5,7 +5,7 @@ import re
 from datetime import date
 from importlib.resources import files
 from pathlib import Path
-from typing import Any, Literal, Self
+from typing import Any, Literal, Self, get_args
 
 import yaml
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
@@ -342,14 +342,29 @@ class AgentProfile(StrictModel):
         return self
 
 
+# Claude Code's levels of effort, from the lowest; a model takes only some of them.
+Level = Literal["low", "medium", "high", "xhigh", "max"]
+LEVELS: tuple[str, ...] = get_args(Level)
+# The two variables Claude Code reads a key from.
+KeyVariable = Literal["ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN"]
+KEY_VARIABLES: tuple[str, ...] = get_args(KeyVariable)
+
+
 class BackendModelConfig(StrictModel):
     """What is known about a model that a backend offers."""
 
-    # The levels the model takes (Claude Code's low ... max); without them no level is passed on
-    # and the model's own default holds.
-    levels: list[str] | None = None
+    # The levels the model takes, from the lowest up; without them no level is passed on and the
+    # model's own default holds.
+    levels: list[Level] | None = None
     # The last day its quota is free. Afterwards it is not offered, as it would be billed.
     free_until: date | None = None
+
+    @field_validator("levels")
+    @classmethod
+    def levels_rise(cls, levels: list[Level] | None) -> list[Level] | None:
+        if levels is not None and levels != sorted(set(levels), key=LEVELS.index):
+            raise ValueError(f"levels go from the lowest up, each once ({', '.join(LEVELS)})")
+        return levels
 
 
 class BackendConfig(StrictModel):
@@ -365,7 +380,7 @@ class BackendConfig(StrictModel):
     models_path: str = "/v1/models"
     # The variable Claude Code reads the key from, and where the key comes from: a value (local
     # servers take any), a file (kept readable for you alone) or an environment variable.
-    key_variable: Literal["ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN"] = "ANTHROPIC_AUTH_TOKEN"
+    key_variable: KeyVariable = "ANTHROPIC_AUTH_TOKEN"
     key: str | None = None
     key_file: Path | None = None
     key_env: str | None = None

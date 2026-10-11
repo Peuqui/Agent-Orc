@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { MAX_VISIBLE } from '../composables/boundaryShift'
 import AppIcon from './AppIcon.vue'
 
 // Columns as one boxed group: fewer | count | more, and back to equal widths (dimmed while no
@@ -14,7 +15,14 @@ const emit = defineEmits<{ change: [delta: number]; reset: [] }>()
   >
     <button class="w-7 hover:bg-slate-700" :aria-label="$t('workspace.fewerColumns')" @click="emit('change', -1)">−</button>
     <span class="flex w-7 items-center justify-center text-slate-400">{{ visible }}</span>
-    <button class="w-7 hover:bg-slate-700" :aria-label="$t('workspace.moreColumns')" @click="emit('change', 1)">+</button>
+    <button
+      class="w-7 hover:bg-slate-700 disabled:opacity-30 disabled:hover:bg-transparent"
+      :disabled="visible >= MAX_VISIBLE"
+      :aria-label="$t('workspace.moreColumns')"
+      @click="emit('change', 1)"
+    >
+      +
+    </button>
     <button
       class="flex w-8 items-center justify-center hover:bg-slate-700 disabled:opacity-30 disabled:hover:bg-transparent"
       :disabled="!resized"

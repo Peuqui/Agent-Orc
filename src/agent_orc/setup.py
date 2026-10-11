@@ -6,6 +6,7 @@ comments stay and explain every other setting.
 """
 
 import getpass
+import glob
 import json
 import os
 import re
@@ -71,7 +72,8 @@ def backend_entry(preset: dict[str, Any], address: str, listed: list[str]) -> di
     models the preset names, otherwise those the server lists."""
     entry = dict(preset["backend"])
     entry["base_urls"] = [address]
-    entry.setdefault("models", {name: {} for name in listed})
+    # The names are patterns in the config: what the server calls a model is taken literally.
+    entry.setdefault("models", {glob.escape(name): {} for name in listed})
     return entry
 
 
@@ -183,6 +185,8 @@ def write_key(path: Path, key: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, BACKEND_KEY_FILE_MODE)
     with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+        # The mode of `os.open` holds only for a new file; a file that is there keeps its own.
+        os.fchmod(descriptor, BACKEND_KEY_FILE_MODE)
         handle.write(key + "\n")
 
 
