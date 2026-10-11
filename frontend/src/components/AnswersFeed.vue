@@ -127,25 +127,24 @@ function readUnread(): void {
 // The room kept above an answer that is read from its top: the padding of the list.
 const TOP_ROOM_PX = 12
 
-/** Brings the newest answer into view the way it is read best: one that fits the screen ends at its
- * lower edge, one that is taller starts at its upper edge, so reading can begin at once. */
-function showNewest(): void {
+/** Scrolls down until the oldest unread answer meets the upper edge, or to the end if everything
+ * from there on fits the screen first: new answers below it come into view without pushing it out of
+ * the top, and a long one starts at its upper edge so reading can begin at once. With nothing unread
+ * the newest answer takes its place. Never scrolls back up. */
+function showUnread(): void {
   const scroller = box.value
   if (!scroller) return
-  const newest = [...scroller.querySelectorAll<HTMLElement>('article')].at(-1)
-  if (newest === undefined || newest.offsetHeight <= scroller.clientHeight) {
-    scroller.scrollTo({ top: scroller.scrollHeight })
-    return
-  }
-  const above = newest.getBoundingClientRect().top - scroller.getBoundingClientRect().top
-  scroller.scrollTo({ top: scroller.scrollTop + above - TOP_ROOM_PX })
+  const articles = [...scroller.querySelectorAll<HTMLElement>('article')]
+  const anchor = articles.find((article) => article.classList.contains('border-l-red-500')) ?? articles.at(-1)
+  const end = scroller.scrollHeight - scroller.clientHeight
+  const above = anchor ? anchor.getBoundingClientRect().top - scroller.getBoundingClientRect().top : end
+  scroller.scrollTo({ top: Math.max(scroller.scrollTop, Math.min(end, scroller.scrollTop + above - TOP_ROOM_PX)) })
 }
 
 // The newest answer at the last look: a different one is a new answer.
 let newestSeen: string | undefined
 
 async function load(): Promise<void> {
-  const hadUnread = unread.value.length > 0
   const bottomBefore = box.value ? box.value.scrollHeight - box.value.scrollTop - box.value.clientHeight < 80 : true
   try {
     ;[turns.value, spoken.value] = await Promise.all([api.answers(props.sessionId, props.turns), api.spoken(props.sessionId)])
@@ -158,11 +157,11 @@ async function load(): Promise<void> {
   const newest = everyText.value.at(-1)?.id
   const arrived = newest !== newestSeen
   newestSeen = newest
-  // Only a new answer moves the list, and only for a reader at the bottom with nothing unread above
-  // it: with unread answers waiting it is appended below them, and marking them read moves nothing.
-  if (first || (arrived && bottomBefore && !hadUnread)) {
+  // Only a new answer moves the list, and only for a reader at the bottom: whoever has scrolled up to
+  // read keeps the place, and marking answers as read moves nothing.
+  if (first || (arrived && bottomBefore)) {
     await nextTick()
-    showNewest()
+    showUnread()
   }
 }
 
