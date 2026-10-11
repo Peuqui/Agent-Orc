@@ -440,3 +440,9 @@ def test_a_loaded_gpu_engine_goes_first_only_when_asked_for_and_only_if_switched
     choose(client, entry("piper"), entry("qwen3local", "Aragon", enabled=False), prefer_loaded=True)
     client.post("/api/tts/speak", json={"text": "Hello.", "language": "en"})
     assert [each["engine"] for each in FakeSpeechService.heard[0]["engines"]] == ["piper"]
+    FakeSpeechService.heard.clear()
+    choose(
+        client, entry("piper"), entry("qwen3local", "Aragon"), off=("Aragon",), prefer_loaded=True
+    )
+    client.post("/api/tts/speak", json={"text": "Hello.", "language": "en"})
+    assert [each["engine"] for each in FakeSpeechService.heard[0]["engines"]] == ["piper"]

@@ -125,10 +125,14 @@ def with_loaded_first(chosen: dict[str, Any], rows: list[dict[str, Any]]) -> dic
         if row["status"] == "running" and row["needs_gpu"]
     }
     entries = chosen["entries"]
+    hosts_on = {each["host"] for each in chosen["hosts"] if each["enabled"] and each["offered"]}
     usable = [
         entry
         for entry in entries
-        if entry["enabled"] and entry["offered"] and (entry["engine"], entry["host"]) in loaded
+        if entry["enabled"]
+        and entry["offered"]
+        and entry["host"] in hosts_on
+        and (entry["engine"], entry["host"]) in loaded
     ]
     if not usable:
         return chosen
