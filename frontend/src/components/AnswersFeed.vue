@@ -268,10 +268,12 @@ function jog(lines: number): void {
               <span v-if="item.pending"> · {{ $t('answers.pending') }}</span>
             </p>
           </div>
+          <!-- The red edge is 3px thicker than the card's own; the padding gives them back, so the text
+               neither moves nor wraps differently when the answer is marked as read. -->
           <article
             v-else
             class="card flex flex-col gap-2 p-3"
-            :class="isUnread(item, seenBefore, seenIds) ? 'border-l-4 border-l-red-500' : ''"
+            :class="isUnread(item, seenBefore, seenIds) ? 'border-l-4 border-l-red-500 pl-[calc(0.75rem-3px)]' : ''"
             :title="isUnread(item, seenBefore, seenIds) ? $t('answers.clickToMark') : undefined"
             @click="markUpTo($event, item)"
           >
