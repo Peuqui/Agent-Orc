@@ -54,7 +54,7 @@ that run Agent-Orc can be shown in the same app, through an SSH tunnel ([Several
 
 **Workspaces**
 - Several agents side by side as columns; drag the column heads to sort them and the dividers
-  to set their width.
+  between two columns to move their boundary (the width of all together stays).
 - Workspaces live on the server, so every device shows the same and a change appears
   everywhere at once. "Default" stands there while there is no workspace yet, and the "+" in the bar starts a new
   one; give it a name and it becomes a named one, which shows up in the overview and in the bar of every workspace. An

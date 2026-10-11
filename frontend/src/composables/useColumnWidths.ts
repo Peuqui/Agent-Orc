@@ -1,19 +1,22 @@
 import { computed, type Ref, ref } from 'vue'
 import type { Workspace } from '../api'
+import { boundaryShift } from './boundaryShift'
 import { MIN_VISIBLE } from './useWorkspaceTab'
 
-// The widths of a workspace's columns: N of them fill the screen, a column's right divider makes
-// it wider or narrower (mouse or finger), a double click or the reset button makes it equal again.
-// On a phone every column fills the screen; the widths set on a computer stay as they are for it.
-// Narrowest and widest column a divider can set, as a share of the screen width.
-const MIN_WIDTH_SHARE = 0.1
-const MAX_WIDTH_SHARE = 1
+// The widths of a workspace's columns: N of them fill the screen. A divider sits between two
+// neighbours and only moves their boundary (mouse or finger): what one gains the other loses, so
+// the width of all columns together stays. A double click on a divider or the reset button makes
+// the columns equal again. On a phone every column fills the screen; the widths set on a computer
+// stay as they are for it.
 
 interface Resize {
+  // The column left of the dragged divider; its right neighbour is the other one that changes.
   id: string
+  neighbourId: string
   pointerId: number
   startX: number
   startShare: number
+  startNeighbourShare: number
 }
 
 export function useColumnWidths(workspace: Ref<Workspace>, phone: Ref<boolean>, row: Ref<HTMLElement | undefined>) {
@@ -35,18 +38,35 @@ export function useColumnWidths(workspace: Ref<Workspace>, phone: Ref<boolean>, 
     workspace.value.widths = {}
   }
 
+  /** The column right of `id`, the other one a divider between them changes. */
+  function neighbourOf(id: string): string | undefined {
+    return workspace.value.tabs[workspace.value.tabs.indexOf(id) + 1]
+  }
+
   /** Back to equal columns: the ones dragged wider or narrower return to the default. */
   function resetWidths(): void {
     workspace.value.widths = {}
   }
 
+  /** Equal again for the two columns beside the divider right of `id`. */
   function resetWidth(id: string): void {
     delete workspace.value.widths[id]
+    const neighbourId = neighbourOf(id)
+    if (neighbourId !== undefined) delete workspace.value.widths[neighbourId]
   }
 
   function onDividerPointerDown(event: PointerEvent, id: string): void {
     if (event.button !== 0) return
-    resize.value = { id, pointerId: event.pointerId, startX: event.clientX, startShare: widthShare(id) }
+    const neighbourId = neighbourOf(id)
+    if (neighbourId === undefined) return
+    resize.value = {
+      id,
+      neighbourId,
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startShare: widthShare(id),
+      startNeighbourShare: widthShare(neighbourId),
+    }
     const divider = event.currentTarget as HTMLElement
     divider.setPointerCapture(event.pointerId)
   }
@@ -55,8 +75,13 @@ export function useColumnWidths(workspace: Ref<Workspace>, phone: Ref<boolean>, 
     const current = resize.value
     const screenWidth = row.value?.clientWidth
     if (current === null || event.pointerId !== current.pointerId || !screenWidth) return
-    const share = current.startShare + (event.clientX - current.startX) / screenWidth
-    workspace.value.widths[current.id] = Math.min(MAX_WIDTH_SHARE, Math.max(MIN_WIDTH_SHARE, share))
+    const shift = boundaryShift(
+      current.startShare,
+      current.startNeighbourShare,
+      (event.clientX - current.startX) / screenWidth,
+    )
+    workspace.value.widths[current.id] = current.startShare + shift
+    workspace.value.widths[current.neighbourId] = current.startNeighbourShare - shift
   }
 
   function endResize(): void {

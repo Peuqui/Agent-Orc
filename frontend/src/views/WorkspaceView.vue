@@ -563,16 +563,16 @@ function deleteThis(): void {
             :src="frameUrl(id)"
             :title="tabName(id)"
             class="h-full snap-start bg-slate-900"
-            :class="showTabs ? 'w-[calc(100%-var(--divider-width))]' : 'w-full'"
+            :class="showTabs && id !== workspace.tabs.at(-1) ? 'w-[calc(100%-var(--divider-width))]' : 'w-full'"
             :style="{ gridColumn: column(id), gridRow: '2' }"
             allow="microphone; clipboard-write"
             @load="onFrameLoad(id)"
           />
-          <!-- Divider on each column's right edge, in room the iframes leave free (they are that much
+          <!-- Divider on the boundary of two neighbouring columns (not after the last), in room the iframes leave free (they are that much
                narrower), so it does not cover the jog at their right edge; wider for a finger. On
                phones every column fills the screen, so there is nothing to divide. -->
           <div
-            v-for="id in showTabs ? workspace.tabs : []"
+            v-for="id in showTabs ? workspace.tabs.slice(0, -1) : []"
             :key="`divider-${id}`"
             class="z-10 w-(--divider-width) cursor-col-resize touch-none justify-self-end border-r border-slate-700 hover:bg-red-500/30 pointer-coarse:bg-slate-700/40"
             :class="{ 'bg-red-500/40': widths.resize.value?.id === id }"
