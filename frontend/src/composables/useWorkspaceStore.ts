@@ -21,10 +21,9 @@ import {
 /**
  * The workspace a page shows, as the server keeps it for every device: loaded by the name in the
  * address, stored when it changes, updated when another device changes it, renamed and deleted.
- * `paused` holds storing back (a divider being dragged is stored once it is let go); `afterLoad`
- * runs once a workspace has been loaded (the page brings the right column into view).
+ * `afterLoad` runs once a workspace has been loaded (the page brings the right column into view).
  */
-export function useWorkspaceStore(options: { paused: () => boolean; afterLoad: () => Promise<void> }) {
+export function useWorkspaceStore(options: { afterLoad: () => Promise<void> }) {
   const route = useRoute()
   const router = useRouter()
   const toast = useToast()
@@ -77,7 +76,6 @@ export function useWorkspaceStore(options: { paused: () => boolean; afterLoad: (
     const index = tabs.indexOf(id)
     tabs.splice(index, 1)
     frameIds.value.splice(frameIds.value.indexOf(id), 1)
-    delete workspace.value.widths[id]
     if (workspace.value.active === id) workspace.value.active = tabs[Math.max(0, index - 1)] ?? null
   }
 
@@ -98,7 +96,7 @@ export function useWorkspaceStore(options: { paused: () => boolean; afterLoad: (
 
   /** Store the workspace on the server, where every device shows it. */
   function persist(): void {
-    if (!ready.value || options.paused()) return
+    if (!ready.value) return
     remember()
     const current = JSON.stringify(workspace.value)
     if (current === stored) return
@@ -112,13 +110,12 @@ export function useWorkspaceStore(options: { paused: () => boolean; afterLoad: (
   onBeforeUnmount(() => announceWorkspace(null))
   watch(workspace, persist, { deep: true })
 
-  /** Which agents are open here, in which order, as the server has it now; widths stay local. */
+  /** Which agents are open here, in which order, as the server has it now. */
   function adoptAgents(agents: string[]): void {
     const current = workspace.value
     if (current.tabs.join() === agents.join()) return
     for (const id of current.tabs.filter((tab) => !agents.includes(tab))) {
       frameIds.value.splice(frameIds.value.indexOf(id), 1)
-      delete current.widths[id]
     }
     frameIds.value.push(...agents.filter((id) => !current.tabs.includes(id)))
     current.tabs = [...agents]

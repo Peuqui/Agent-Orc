@@ -43,7 +43,7 @@ export function homeOf(workspaces: WorkspaceSet, agent: string): string | null |
 }
 
 export function emptyWorkspace(): Workspace {
-  return { tabs: [], visible: MIN_VISIBLE, widths: {}, active: null }
+  return { tabs: [], visible: MIN_VISIBLE, active: null }
 }
 
 export function loadTabState(): TabState {
@@ -72,6 +72,20 @@ export function startWorkspace(everything: WorkspaceSet): string | null {
   if (named.length === 0 || everything.unnamed.tabs.length > 0) return null
   const last = localStorage.getItem(lastWorkspaceKey())
   return last !== null && named.includes(last) ? last : named[0]
+}
+
+// The widths of a workspace's columns are kept on this device (screens differ), per workspace.
+const columnWidthsKey = (name: string | null) => `agent-orc-column-widths${machine}:${name ?? ''}`
+
+/** The columns of the workspace set wider or narrower here, as a share of the screen width. */
+export function loadColumnWidths(name: string | null): Record<string, number> {
+  const stored = localStorage.getItem(columnWidthsKey(name))
+  return stored === null ? {} : (JSON.parse(stored) as Record<string, number>)
+}
+
+export function saveColumnWidths(name: string | null, widths: Record<string, number>): void {
+  if (Object.keys(widths).length === 0) localStorage.removeItem(columnWidthsKey(name))
+  else localStorage.setItem(columnWidthsKey(name), JSON.stringify(widths))
 }
 
 export function saveTabState(state: TabState): void {

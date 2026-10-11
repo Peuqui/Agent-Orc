@@ -49,7 +49,7 @@ def write_card_order(folders: list[str]) -> None:
 
 
 def read_workspaces() -> dict[str, Any]:
-    """Workspaces (open agents, columns, widths) by name, the unnamed one under
+    """Workspaces (open agents, columns) by name, the unnamed one under
     UNNAMED_WORKSPACE; empty until one is arranged."""
     path = state_dir() / WORKSPACES_FILE
     if not path.is_file():
@@ -63,7 +63,7 @@ def write_workspaces(workspaces: dict[str, Any]) -> None:
 
 
 def empty_workspace() -> dict[str, Any]:
-    return {"tabs": [], "visible": 1, "widths": {}, "active": None}
+    return {"tabs": [], "visible": 1, "active": None}
 
 
 def remove_workspace(workspaces: dict[str, Any], name: str) -> None:
@@ -82,7 +82,6 @@ def keep_living_agents(workspace: dict[str, Any], living: set[str]) -> dict[str,
     return {
         **workspace,
         "tabs": tabs,
-        "widths": {agent: width for agent, width in workspace["widths"].items() if agent in tabs},
         "active": active if active in tabs else (tabs[0] if tabs else None),
     }
 
@@ -113,7 +112,6 @@ def place_workspace(workspaces: dict[str, Any], key: str, workspace: dict[str, A
         if other_key == key:
             continue
         other["tabs"] = [agent for agent in other["tabs"] if agent not in workspace["tabs"]]
-        other["widths"] = {a: w for a, w in other["widths"].items() if a in other["tabs"]}
         if other["active"] not in other["tabs"]:
             other["active"] = other["tabs"][0] if other["tabs"] else None
 

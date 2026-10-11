@@ -279,7 +279,6 @@ export interface Workspace {
   /** How many columns fill the screen. */
   visible: number
   /** Columns set wider or narrower by dragging their divider, as a share of the screen width. */
-  widths: Record<string, number>
   active: string | null
 }
 

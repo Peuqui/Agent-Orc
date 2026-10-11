@@ -1502,17 +1502,17 @@ def test_workspaces_are_kept_and_deleted(
 ) -> None:
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
     a, b, c = start_agents(client, home, 3)
-    empty = {"tabs": [], "visible": 1, "widths": {}, "active": None}
+    empty = {"tabs": [], "visible": 1, "active": None}
     # Agents in no workspace show in the unnamed one.
     assert client.get("/api/workspaces").json() == {
         "unnamed": {**empty, "tabs": sorted([a, b, c]), "active": min(a, b, c)},
         "named": {},
     }
-    left = {"tabs": [a, b], "visible": 2, "widths": {a: 0.3}, "active": b}
+    left = {"tabs": [a, b], "visible": 2, "active": b}
     assert client.put("/api/workspaces/Links", json=left).status_code == 204
-    right = {"tabs": [], "visible": 1, "widths": {}, "active": None}
+    right = {"tabs": [], "visible": 1, "active": None}
     assert client.put("/api/workspaces/Rechts", json=right).status_code == 204
-    loose = {"tabs": [c], "visible": 1, "widths": {}, "active": c}
+    loose = {"tabs": [c], "visible": 1, "active": c}
     assert client.put("/api/unnamed-workspace", json=loose).status_code == 204
     assert client.get("/api/workspaces").json() == {
         "unnamed": loose,
@@ -1530,7 +1530,7 @@ def test_an_agent_started_for_a_workspace_joins_it_on_the_server(
 ) -> None:
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
     (a,) = start_agents(client, home, 1)
-    right = {"tabs": [], "visible": 1, "widths": {}, "active": None}
+    right = {"tabs": [], "visible": 1, "active": None}
     assert client.put("/api/workspaces/Rechts", json=right).status_code == 204
     folder = home / "projects" / "joined"
     joined = start_shell(client, folder, workspace="Rechts")
@@ -1563,7 +1563,7 @@ def test_an_agent_is_moved_between_workspaces(
 ) -> None:
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
     a, b = start_agents(client, home, 2)
-    left = {"tabs": [a, b], "visible": 2, "widths": {}, "active": a}
+    left = {"tabs": [a, b], "visible": 2, "active": a}
     assert client.put("/api/workspaces/Links", json=left).status_code == 204
     assert client.put(f"/api/sessions/{b}/workspace", json={"workspace": ""}).status_code == 204
     shown = client.get("/api/workspaces").json()
@@ -1585,8 +1585,8 @@ def test_deleting_a_workspace_moves_its_agents_to_the_unnamed_one(
 ) -> None:
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
     a, b, c = start_agents(client, home, 3)
-    left = {"tabs": [a, b], "visible": 2, "widths": {}, "active": a}
-    loose = {"tabs": [c], "visible": 1, "widths": {}, "active": c}
+    left = {"tabs": [a, b], "visible": 2, "active": a}
+    loose = {"tabs": [c], "visible": 1, "active": c}
     client.put("/api/workspaces/Links", json=left)
     client.put("/api/unnamed-workspace", json=loose)
     assert client.delete("/api/workspaces/Links").status_code == 204
@@ -1600,16 +1600,15 @@ def test_an_agent_lives_in_one_workspace(
 ) -> None:
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
     a, b = start_agents(client, home, 2)
-    left = {"tabs": [a, b], "visible": 2, "widths": {a: 0.3, b: 0.7}, "active": a}
+    left = {"tabs": [a, b], "visible": 2, "active": a}
     assert client.put("/api/workspaces/Links", json=left).status_code == 204
-    moved = {"tabs": [a], "visible": 1, "widths": {}, "active": a}
+    moved = {"tabs": [a], "visible": 1, "active": a}
     assert client.put("/api/unnamed-workspace", json=moved).status_code == 204
     shown = client.get("/api/workspaces").json()
     assert shown["unnamed"] == moved
     assert shown["named"]["Links"] == {
         "tabs": [b],
         "visible": 2,
-        "widths": {b: 0.7},
         "active": b,
     }
 
@@ -1622,14 +1621,12 @@ def test_a_workspace_shows_no_agent_that_no_longer_exists(
     stored = {
         "tabs": ["gone-123456", a],
         "visible": 2,
-        "widths": {"gone-123456": 0.4},
         "active": "gone-123456",
     }
     assert client.put("/api/workspaces/Links", json=stored).status_code == 204
     assert client.get("/api/workspaces").json()["named"]["Links"] == {
         "tabs": [a],
         "visible": 2,
-        "widths": {},
         "active": a,
     }
 

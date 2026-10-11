@@ -454,8 +454,6 @@ class Workspace(BaseModel):
     tabs: list[str]
     # How many columns fill the screen.
     visible: int
-    # Columns set wider or narrower, as a share of the screen width.
-    widths: dict[str, float]
     active: str | None
 
 

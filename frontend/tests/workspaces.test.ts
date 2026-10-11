@@ -16,7 +16,7 @@ Object.assign(globalThis, {
 })
 const { homeOf, rememberLastWorkspace, setMachine, startWorkspace, unnamedListed } = await import('../src/composables/useWorkspaceTab.ts')
 
-const workspace = (tabs: string[]) => ({ tabs, visible: 1, widths: {}, active: null })
+const workspace = (tabs: string[]) => ({ tabs, visible: 1, active: null })
 const everything = { unnamed: workspace(['loose-1']), named: { Links: workspace(['left-2']), Rechts: workspace([]) } }
 
 test('an agent is found in the workspace it lives in', () => {

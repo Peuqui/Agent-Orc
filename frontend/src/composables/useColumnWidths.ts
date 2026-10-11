@@ -1,13 +1,13 @@
-import { computed, type Ref, ref } from 'vue'
+import { computed, type Ref, ref, watch } from 'vue'
 import type { Workspace } from '../api'
 import { boundaryShift } from './boundaryShift'
-import { MIN_VISIBLE } from './useWorkspaceTab'
+import { loadColumnWidths, MIN_VISIBLE, saveColumnWidths } from './useWorkspaceTab'
 
 // The widths of a workspace's columns: N of them fill the screen. A divider sits between two
 // neighbours and only moves their boundary (mouse or finger): what one gains the other loses, so
 // the width of all columns together stays. A double click on a divider or the reset button makes
-// the columns equal again. On a phone every column fills the screen; the widths set on a computer
-// stay as they are for it.
+// the columns equal again. The widths are kept on this device, per workspace (screens differ);
+// on a phone every column fills the screen, and the widths set on a computer stay as they are.
 
 interface Resize {
   // The column left of the dragged divider; its right neighbour is the other one that changes.
@@ -19,13 +19,24 @@ interface Resize {
   startNeighbourShare: number
 }
 
-export function useColumnWidths(workspace: Ref<Workspace>, phone: Ref<boolean>, row: Ref<HTMLElement | undefined>) {
-  // The divider being dragged; the workspace is stored once it is let go.
+export function useColumnWidths(
+  name: Ref<string | null>,
+  workspace: Ref<Workspace>,
+  phone: Ref<boolean>,
+  row: Ref<HTMLElement | undefined>,
+) {
+  // The columns set wider or narrower, by agent, as a share of the screen width.
+  const shares = ref<Record<string, number>>({})
+  watch(name, (shown) => (shares.value = loadColumnWidths(shown)), { immediate: true })
+  watch(shares, () => saveColumnWidths(name.value, shares.value), { deep: true })
+  const resized = computed(() => Object.keys(shares.value).length > 0)
+
+  // The divider being dragged.
   const resize = ref<Resize | null>(null)
 
   function widthShare(id: string): number {
     if (phone.value) return 1
-    return workspace.value.widths[id] ?? 1 / workspace.value.visible
+    return shares.value[id] ?? 1 / workspace.value.visible
   }
 
   const gridStyle = computed(() => ({
@@ -35,7 +46,7 @@ export function useColumnWidths(workspace: Ref<Workspace>, phone: Ref<boolean>, 
   /** Sets the width of all columns: N of them fill the screen; individual widths are dropped. */
   function changeVisible(delta: number): void {
     workspace.value.visible = Math.max(MIN_VISIBLE, workspace.value.visible + delta)
-    workspace.value.widths = {}
+    shares.value = {}
   }
 
   /** The column right of `id`, the other one a divider between them changes. */
@@ -45,14 +56,14 @@ export function useColumnWidths(workspace: Ref<Workspace>, phone: Ref<boolean>, 
 
   /** Back to equal columns: the ones dragged wider or narrower return to the default. */
   function resetWidths(): void {
-    workspace.value.widths = {}
+    shares.value = {}
   }
 
   /** Equal again for the two columns beside the divider right of `id`. */
   function resetWidth(id: string): void {
-    delete workspace.value.widths[id]
+    delete shares.value[id]
     const neighbourId = neighbourOf(id)
-    if (neighbourId !== undefined) delete workspace.value.widths[neighbourId]
+    if (neighbourId !== undefined) delete shares.value[neighbourId]
   }
 
   function onDividerPointerDown(event: PointerEvent, id: string): void {
@@ -80,13 +91,16 @@ export function useColumnWidths(workspace: Ref<Workspace>, phone: Ref<boolean>, 
       current.startNeighbourShare,
       (event.clientX - current.startX) / screenWidth,
     )
-    workspace.value.widths[current.id] = current.startShare + shift
-    workspace.value.widths[current.neighbourId] = current.startNeighbourShare - shift
+    shares.value[current.id] = current.startShare + shift
+    shares.value[current.neighbourId] = current.startNeighbourShare - shift
   }
 
+  /** Let go: what belongs to agents that are no longer open here is dropped. */
   function endResize(): void {
     resize.value = null
+    const open = new Set(workspace.value.tabs)
+    shares.value = Object.fromEntries(Object.entries(shares.value).filter(([id]) => open.has(id)))
   }
 
-  return { resize, gridStyle, changeVisible, resetWidths, resetWidth, onDividerPointerDown, onDividerPointerMove, endResize }
+  return { resize, resized, gridStyle, changeVisible, resetWidths, resetWidth, onDividerPointerDown, onDividerPointerMove, endResize }
 }

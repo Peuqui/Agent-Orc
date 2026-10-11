@@ -65,12 +65,9 @@ const followPhoneWidth = (event: MediaQueryListEvent): void => {
 PHONE_WIDTH.addEventListener('change', followPhoneWidth)
 onBeforeUnmount(() => PHONE_WIDTH.removeEventListener('change', followPhoneWidth))
 
-// The divider being dragged holds storing back (created below, asked only later).
-const store = useWorkspaceStore({ paused: () => widths.resize.value !== null, afterLoad: showRequested })
+const store = useWorkspaceStore({ afterLoad: showRequested })
 const { name, nameInput, workspace, ready, loaded, frameIds, otherTabs, workspaceOrder } = store
-const widths = useColumnWidths(workspace, phone, row)
-// A divider is stored once it is let go.
-watch(widths.resize, store.persist)
+const widths = useColumnWidths(name, workspace, phone, row)
 
 const candidates = computed(() =>
   sessions.value
@@ -437,7 +434,7 @@ function deleteThis(): void {
         <ColumnCountControl
           v-if="!phone"
           :visible="workspace.visible"
-          :resized="Object.keys(workspace.widths).length > 0"
+          :resized="widths.resized.value"
           @change="widths.changeVisible"
           @reset="widths.resetWidths"
         />
