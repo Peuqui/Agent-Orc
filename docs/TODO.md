@@ -22,16 +22,16 @@ Nur was noch aussteht. Erledigtes steht in der Git-Historie.
     Gespräche zeigt AI-Connect ohnehin für alle.
   - **Läuft der Dienst auf Aragon nur, solange WSL läuft:** ist Windows aus oder WSL beendet, steht Aragon als
     „nicht erreichbar“ da. `loginctl enable-linger mp` ist gesetzt (10.10.), der Dienst startet mit der WSL.
-    **Behoben, Dauertest steht aus (11.10.):** Nach einem Start der WSL ohne Windows-Anmeldung war `systemctl --user` per SSH
-    unerreichbar („Failed to connect to bus“): `/run/user/1000` ist doppelt eingehängt, unten das Runtime-Dir von systemd,
-    darüber das von WSLg (nach dem Start von `user@1000`, `Aragon:Projekte` fand es über `/proc/301/mountinfo`), das es
-    verdeckt. Ein einmaliges `wsl -d Ubuntu-24.04 -u root -- systemctl restart user@1000` (Administrator-Shell) legt die
-    Sockets in die sichtbare Schicht, beide Verzeichnisse liegen dann nebeneinander (geprüft: `bus`, `systemd` neben
-    `wayland-0`, `pulse`), WSLg bleibt. Dauerhaft: `D:\Archiv\VM\Start-WSL.vbs` (Sicherung `.bak`) ruft nach dem Start
-    `D:\Archiv\VM\wsl-user-bus-fix.sh` als root auf (wartet auf die zweite Schicht, startet `user@1000` nur neu, wenn der
-    Bus verdeckt ist, Protokoll `/var/log/wsl-user-bus-fix.log`). Offen: nach `wsl --shutdown` und Start über das VBS prüfen,
-    dass `systemctl --user` ohne weiteres Zutun geht; erst danach gilt es als erledigt. Der Neustart kostet beim Start nichts
-    (kein Agent läuft), später würde er laufende Agenten beenden (das Skript tut es nur bei verdecktem Bus).
+    **Behoben (11.10.), ein kalter Start steht aus:** Nach einem Start der WSL ohne Windows-Anmeldung war `systemctl --user`
+    per SSH unerreichbar („Failed to connect to bus“): `/run/user/1000` ist doppelt eingehängt, unten das Runtime-Dir von
+    systemd, darüber das von WSLg (nach dem Start von `user@1000`; `Aragon:Projekte` fand es über `/proc/301/mountinfo`),
+    das es verdeckt. Ein `systemctl restart user@1000` als root legt die Sockets in die sichtbare Schicht, beide Verzeichnisse
+    liegen dann nebeneinander (`bus`, `systemd` neben `wayland-0`, `pulse`), WSLg bleibt. Das tut `Start-WSL.vbs`
+    (Referenzkopie `docs/aragon/Start-WSL.vbs`, auf Aragon `D:\Archiv\VM\Start-WSL.vbs`, Autostart von Windows): nach dem
+    Start wartet es bis zu 60 s auf die zweite Schicht und startet `user@1000` nur neu, wenn der Bus verdeckt ist
+    (Protokoll `/var/log/wsl-user-bus-fix.log`). Geprüft am 11.10. 12:37: `restarted layers=2`, danach `systemctl --user`
+    aktiv, `agent-orc serve` neu gestartet. Noch nicht gesehen: die Wartezeit bei einem kalten Start (`wsl --shutdown`, dann
+    nur das VBS). Hinweis: Ein Doppelklick auf das VBS bei laufender WSL startet ein weiteres `sleep infinity` (harmlos).
 
 ## Dateien-Reiter und Oberfläche
 
