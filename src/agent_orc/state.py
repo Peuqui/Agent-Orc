@@ -3,6 +3,9 @@
 import json
 import os
 import tempfile
+import threading
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -36,9 +39,14 @@ def write_atomically(target: Path, text: str) -> Path:
         dir=target.parent, prefix=f"{target.name}.", suffix=".tmp"
     )
     temporary = Path(temporary_name)
-    with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
-        handle.write(text)
-    temporary.replace(target)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            handle.write(text)
+        temporary.replace(target)
+    except BaseException:
+        # A failed write (disk full) must not leave a file behind for every try.
+        temporary.unlink(missing_ok=True)
+        raise
     return target
 
 
@@ -67,6 +75,20 @@ def read_workspaces() -> dict[str, Any]:
 
 def write_workspaces(workspaces: dict[str, Any]) -> None:
     write_atomically(state_dir() / WORKSPACES_FILE, json.dumps(workspaces))
+
+
+# Requests run in parallel threads, and each changes the workspaces by reading, changing and
+# writing them: without this, one change overwrites another made at the same time.
+_changing_workspaces = threading.Lock()
+
+
+@contextmanager
+def changing_workspaces() -> Iterator[dict[str, Any]]:
+    """The workspaces to change in the `with` block; written back when it ends without an error."""
+    with _changing_workspaces:
+        stored = read_workspaces()
+        yield stored
+        write_workspaces(stored)
 
 
 def empty_workspace() -> dict[str, Any]:

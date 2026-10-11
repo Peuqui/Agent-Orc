@@ -146,6 +146,7 @@ from agent_orc.state import (
     UNNAMED_WORKSPACE,
     add_unassigned_agents,
     assign_agent,
+    changing_workspaces,
     empty_workspace,
     keep_living_agents,
     mark_answers_seen,
@@ -167,7 +168,6 @@ from agent_orc.state import (
     write_extra_keys,
     write_notebooks,
     write_prompt_templates,
-    write_workspaces,
 )
 from agent_orc.terminal import bridge
 from agent_orc.trash import RestoreConflictError, Trash, TrashEntryNotFoundError, home_trash_dir
@@ -1105,18 +1105,16 @@ def create_app(
         "/api/workspaces/{name}", dependencies=authenticated, status_code=status.HTTP_204_NO_CONTENT
     )
     def store_workspace(name: str, body: Workspace) -> None:
-        stored = read_workspaces()
-        place_workspace(stored, name, body.model_dump())
-        write_workspaces(stored)
+        with changing_workspaces() as stored:
+            place_workspace(stored, name, body.model_dump())
         workspace_changes.notify()
 
     @app.put(
         "/api/unnamed-workspace", dependencies=authenticated, status_code=status.HTTP_204_NO_CONTENT
     )
     def store_unnamed_workspace(body: Workspace) -> None:
-        stored = read_workspaces()
-        place_workspace(stored, UNNAMED_WORKSPACE, body.model_dump())
-        write_workspaces(stored)
+        with changing_workspaces() as stored:
+            place_workspace(stored, UNNAMED_WORKSPACE, body.model_dump())
         workspace_changes.notify()
 
     def check_workspace(workspace: str) -> None:
@@ -1124,9 +1122,8 @@ def create_app(
             raise UnknownWorkspaceError(workspace)
 
     def assign_workspace(session_id: str, workspace: str) -> None:
-        stored = read_workspaces()
-        assign_agent(stored, workspace, session_id)
-        write_workspaces(stored)
+        with changing_workspaces() as stored:
+            assign_agent(stored, workspace, session_id)
         workspace_changes.notify()
 
     @app.put(
@@ -1191,9 +1188,8 @@ def create_app(
         "/api/workspaces/{name}", dependencies=authenticated, status_code=status.HTTP_204_NO_CONTENT
     )
     def delete_workspace(name: str) -> None:
-        stored = read_workspaces()
-        remove_workspace(stored, name)
-        write_workspaces(stored)
+        with changing_workspaces() as stored:
+            remove_workspace(stored, name)
         workspace_changes.notify()
 
     @app.get("/api/push/key", dependencies=authenticated)
