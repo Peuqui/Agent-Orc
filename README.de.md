@@ -71,9 +71,14 @@ einen SSH-Tunnel ([Mehrere Rechner](#mehrere-rechner)).
   Agenten dorthin; ein Knopf neben der Spaltenzahl setzt alle verstellten Breiten zurück.
 - Tastenkürzel am Rechner: Alt+Umschalt+1 … 9 für die Spalten, Alt+Umschalt+← / → für die
   Arbeitsflächen.
-- Am Handy eine Spalte auf einmal: seitlich im Terminal wischen holt die nächste; ein Vollbild
-  zeigt nur Terminal und Eingabefeld, die Sondertasten lassen sich einklappen, und die Aktionen
-  eines Terminals liegen hinter ⋮.
+- Am Handy eine Spalte auf einmal: seitlich im Terminal wischen holt die nächste. Die Kopfzeile
+  ist für den schmalen Bildschirm gebaut: Der Name der Arbeitsfläche ist ein Knopf mit einem Menü
+  dahinter (umbenennen, zu einer anderen Fläche wechseln, eine neue beginnen, löschen), dann „+“
+  zum Hinzufügen eines Agenten, die zwei Lautsprecher (Neues vorlesen; automatisch vorlesen),
+  Vollbild und der Rechner als kurzer Knopf (an ganzen Buchstaben auf die Breite von „Mini“
+  gekürzt; im Menü stehen die vollen Namen). Was man selten braucht, liegt hinter ⋮ (die Hilfe),
+  die Einstellungen hinter ☰. Ein Vollbild zeigt nur Terminal und Eingabefeld, die Sondertasten
+  lassen sich einklappen, und die Aktionen eines Terminals liegen hinter ⋮.
 
 <p align="center">
   <img src="docs/screenshots/workspace-de.png" alt="Arbeitsfläche mit einem Agenten und seinem Terminal nebeneinander" width="860">
@@ -87,7 +92,13 @@ einen SSH-Tunnel ([Mehrere Rechner](#mehrere-rechner)).
   Tabellen werden ausgelassen). Die Sprachausgabe ist eine Liste von Engines: mit einem Abschnitt
   `announce:` in der Konfiguration lässt sich der Hörabsatz auch über
   [AIfred](https://github.com/Peuqui/AIfred-Intelligence) auf einem Echo Dot ansagen, im Raum, den
-  du in den Einstellungen wählst.
+  du in den Einstellungen wählst. „Neue vorlesen (n)“ wird grau, wenn nichts Neues da ist, wie
+  das Häkchen daneben.
+- Jeder Codeblock in den Antworten, in Notizen und in der Markdown-Vorschau hat am rechten Rand
+  einen Kopieren-Knopf, über dem Text des Blocks; er bleibt dort stehen, wenn der Block seitlich
+  scrollt. Ein Tipp legt den Block in die Zwischenablage, ohne den Zeilenumbruch am Ende (ins
+  Terminal eingefügt, würde ein Befehl sonst sofort laufen) – leichter, als am Handy genau die
+  richtigen Buchstaben zu markieren.
 
 **Gespräche** (mit [AI-Connect](https://github.com/Peuqui/AI-Connect), der Brücke, über die Agenten-Sitzungen miteinander sprechen; optional)
 - Live mitlesen: nach Gespräch (als Baum), als Verlauf oder als Spuren (Sequenzdiagramm mit einem
@@ -105,6 +116,10 @@ einen SSH-Tunnel ([Mehrere Rechner](#mehrere-rechner)).
   dem Rechner und öffnen sich wie in jeder App.
 - Ein Login, eine Adresse: Der andere Rechner hat weder einen Port noch ein Passwort, dein
   SSH-Schlüssel ist der Weg hinein.
+- Jeder Rechner liefert seine eigene Web-App: Eine Seite „von“ einem anderen Rechner läuft mit
+  dessen Version der Oberfläche. Nach einer Änderung an der Web-App sie auf jeden Rechner
+  ausliefern (`deploy/deploy.sh`); ein Handy lädt die neue Version jeder Seite einmal (der Eintrag
+  „App neu laden“ am Ende des ☰-Menüs erzwingt es).
 
 **Notizen**
 - Notizbücher als Reiter, je mit losen Notizen und Ordnern; sie liegen wie die Arbeitsflächen auf dem Server.
@@ -126,9 +141,24 @@ einen SSH-Tunnel ([Mehrere Rechner](#mehrere-rechner)).
   eingefügt) oder Datei anhängen: Sie landen im Projektordner, erscheinen als kleine Vorschau
   über dem Eingabefeld und gehen mit der nächsten Nachricht an den Agenten.
 - Sondertasten-Leiste (Esc, Tab, Shift+Tab, Pfeile, einrastendes Strg/Alt, …) für die
-  Bildschirmtastatur, frei anpassbar und mit Text-Tasten (Makros); ein Griff zum schnellen
-  Scrollen, zwei Schriftgrößen pro Gerät (Terminal und Ansichten), eine Textansicht zum Markieren und Kopieren,
-  anklickbare Links.
+  Bildschirmtastatur, frei anpassbar und mit Text-Tasten (Makros); eine Textansicht zum
+  Markieren und Kopieren, anklickbare Links.
+- Auf dem Touchscreen fokussiert ein Tipp ins Terminal es (die Sondertasten wirken), ohne die
+  Bildschirmtastatur hochzuholen; der Tastaturknopf am Ende der Sondertasten-Leiste holt sie
+  herauf und wieder herunter und zeigt, wann sie oben ist. In einem normalen Terminal schreibt
+  die Tastatur dann direkt ins Terminal (Verlauf mit den Pfeiltasten, Vervollständigung mit Tab,
+  das Diktat der Tastatur); bei einem Agenten öffnet sie das Nachrichtenfeld. Mit Gboard
+  gesehen: Schreiben und sein Diktat funktionieren im Terminal, aber ein angetippter
+  Wortvorschlag der Vorschlagsleiste schickt „Wort löschen, anderes einfügen“ und zeigt doppelten
+  Text; das lässt sich von der Seite aus nicht abschalten.
+- Nach einem Diktat scrollt das Nachrichtenfeld ans Ende, damit die neuen Worte zu sehen sind,
+  auch wenn der Text länger ist als das Feld.
+- Ein Griff am Rand eines Terminals oder der Antworten scrollt schnell, solange er aus der Mitte
+  gezogen wird: über die meiste Strecke langsam, am Ende bis zu 200 Zeilen in der Sekunde.
+- Zwei Schriftgrößen pro Gerät, in Pixeln, im ☰-Menü (A− und A+): eine für die Terminals, eine
+  für die Ansichten (Antworten, Notizen, Gespräche, Dateien, der Editor, Verbrauch, Änderungen),
+  deren Texte alle gemeinsam skalieren. Eine Änderung hält den Text, den du liest, an seinem
+  Platz, auch wenn größere Buchstaben in mehr Zeilen umbrechen.
 
 **Dateien und mehr**
 - Dateien in den Projektordnern durchsuchen, bearbeiten und in den Papierkorb legen (er steht
@@ -136,8 +166,14 @@ einen SSH-Tunnel ([Mehrere Rechner](#mehrere-rechner)).
   Markdown als Vorschau, Bilder als Bild, andere Dateien zum Herunterladen.
 - Dateipfade in der Ausgabe eines Agenten sind anklickbar und öffnen die Datei (an der
   genannten Zeile) oder den Ordner.
-- Einstellungen pro Gerät (Schrift, Größe, Zeilenabstand, Scrollgeschwindigkeit) und eine Hilfe
-  (Glühbirne).
+- Einstellungen pro Gerät (Terminal-Schrift, die zwei Schriftgrößen, Zeilenabstand,
+  Scrollgeschwindigkeit, Sprachausgabe) und eine Hilfe (Glühbirne); das Einstellungsmenü scrollt,
+  wenn es länger ist als der Bildschirm, damit auch die untersten Einträge bis „App neu laden“
+  erreichbar sind.
+- Menüs und Auswahlen sehen überall gleich aus: eine Liste, die an dem Knopf aufgeht, der sie
+  verlangt hat, am Handy wie am Rechner (nicht die Auswahl des Systems). Sie öffnet nach oben oder
+  unten, wo Platz ist (Kopfzeile und Navigationsleiste der App zählen mit), und scrollt, wenn
+  keine Seite genug hat.
 - Claude-Code-Sitzungen starten mit Remote Control und erscheinen dadurch auch in der Claude-App.
 
 <p align="center">
@@ -271,6 +307,40 @@ committeten Code aus, wie `deploy/install.sh`). Die Agenten dort laufen dabei we
 endet mit der Benutzersitzung des Rechners; `loginctl enable-linger` (einmal als root) hält ihn auch
 ohne Anmeldung am Laufen. Ein Rechner, der aus ist oder dessen Tunnel steht, erscheint als nicht
 erreichbar.
+
+#### Ein WSL unter Windows als anderer Rechner
+
+WSL beendet eine Distribution kurz nach dem letzten offenen WSL-Fenster, und weder der SSH-Tunnel
+noch die Dienste darin (Agent-Orc, sshd) zählen als eines: Der Tunnel bricht dann mit
+`kex_exchange_identification: Connection reset` ab, während der PC noch auf `ping` antwortet.
+Eine Sitzung offen halten, zum Beispiel eine versteckte, die mit Windows startet (`Start-WSL.vbs`
+im Autostart-Ordner). Auf den vollen Pfad zu `wsl.exe` kommt es an: Der bloße Name scheiterte mit
+„Zugriff verweigert“ (Fehler 800A0046). In VBScript wird ein Anführungszeichen in einer
+Zeichenkette doppelt geschrieben:
+
+```vbscript
+CreateObject("Wscript.Shell").Run """C:\Program Files\WSL\wsl.exe"" -d Ubuntu-24.04 --exec sleep infinity", 0, False
+```
+
+`wsl -l -v` zeigt die Distribution als `Running`, solange sie hält; den Namen verwenden, den es
+ausgibt. Die Portweiterleitung von Windows zur WSL-Adresse (`netsh portproxy`) gehört nicht zu
+Agent-Orc.
+
+**`systemctl --user` nach einem Start ohne Windows-Anmeldung.** Mit `loginctl enable-linger`
+startet der Dienst mit der Distribution, aber dann kann WSLg sein eigenes Verzeichnis über
+`/run/user/1000` legen, nachdem systemd seine Sockets dort angelegt hat. Sie sind verdeckt:
+`systemctl --user` meldet `Failed to connect to bus`, und der Neustart am Ende von
+`deploy/deploy.sh` ebenso (das neue Programm ist installiert, das alte läuft weiter; bei einer
+Änderung nur an der Web-App ist das egal, sie wird von der Platte ausgeliefert). Ein einmaliger
+Neustart des User-Managers (`systemctl restart user@1000`, als root) legt die Sockets in die
+sichtbare Schicht; beide Verzeichnisse liegen dann nebeneinander, und WSLg bleibt.
+[`docs/aragon/Start-WSL.vbs`](docs/aragon/Start-WSL.vbs) macht das nach jedem Start (als root über
+`wsl.exe -u root`, das kein Passwort braucht): Es wartet bis zu 60 Sekunden auf die Schicht von
+WSLg, startet `user@1000` nur neu, wenn der Bus verdeckt ist, und protokolliert in
+`/var/log/wsl-user-bus-fix.log`, was es getan hat. Den Namen der Distribution und die Nummer des
+Benutzers (1000) anpassen. In VBScript ist `Fix` ein Befehl und kann deshalb nicht als
+Variablenname dienen. Ein Doppelklick bei laufender WSL startet ein weiteres `sleep infinity`
+(harmlos).
 
 ### Tipp: neue Agenten sofort loslegen lassen
 

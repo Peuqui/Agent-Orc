@@ -65,9 +65,14 @@ that run Agent-Orc can be shown in the same app, through an SSH tunnel ([Several
   next to the column count resets all widths dragged to another size.
 - Shortcuts on a computer: Alt+Shift+1 … 9 for the columns, Alt+Shift+← / → for the
   workspaces.
-- On a phone one column at a time: a sideways swipe in the terminal brings the next; a
-  fullscreen shows terminal and input field only, the extra keys fold away, and a terminal's
-  actions sit behind ⋮.
+- On a phone one column at a time: a sideways swipe in the terminal brings the next. The header
+  is made for the narrow screen: the workspace's name is a button with a menu behind it (rename
+  it, go to another workspace, start a new one, delete it), then “+” to add an agent, the two
+  speaker buttons (read aloud what is new; read aloud by itself), full screen, and the machine
+  as a short button (cut at whole letters to the width of “Mini”; its menu holds the full
+  names). What is needed rarely sits behind ⋮ (the help), the settings behind ☰. A full screen
+  shows terminal and input field only, the extra keys fold away, and a terminal's actions sit
+  behind ⋮.
 
 <p align="center">
   <img src="docs/screenshots/workspace-en.png" alt="Workspace with an agent and its terminal side by side" width="860">
@@ -81,6 +86,12 @@ that run Agent-Orc can be shown in the same app, through an SSH tunnel ([Several
   code and tables are left out). The speech output is a list of engines: with an `announce:`
   section in the config, the paragraph for listening can also be said on an Echo Dot through
   [AIfred](https://github.com/Peuqui/AIfred-Intelligence), in the room chosen in the settings.
+  “Read new (n)” turns grey when nothing is new, like the check mark beside it.
+- Every code block in the answers, in notes and in the Markdown preview has a copy button at the
+  right edge of the block, over its text; it stays there while the block scrolls sideways. One
+  tap puts the block into the clipboard, without the line break at its end (pasted into a
+  terminal, a command would otherwise run at once), which beats marking exactly the right
+  letters on a phone.
 
 **Conversations** (with [AI-Connect](https://github.com/Peuqui/AI-Connect), the bridge that lets agent sessions talk to each other; optional)
 - Read along live: by conversation (a tree), as a timeline, or as lanes (a sequence diagram with
@@ -95,6 +106,10 @@ that run Agent-Orc can be shown in the same app, through an SSH tunnel ([Several
   Its terminals, workspaces, notes and files are the machine's own and open as in any app.
 - One login, one address: the other machine has neither a port nor a password, and your SSH key
   is the way in.
+- Each machine serves its own web app: a page “from” another machine runs with that machine's
+  version of the interface. After a change to the web app, ship it to every machine
+  (`deploy/deploy.sh`); a phone loads the new version of each page once (the “Reload app”
+  entry at the bottom of the ☰ menu forces it).
 
 **Notes**
 - Notebooks as tabs, each with loose notes and folders, kept on the server like the workspaces.
@@ -116,8 +131,23 @@ that run Agent-Orc can be shown in the same app, through an SSH tunnel ([Several
   simply pasted with Ctrl+V) or a file: it lands in the project folder, shows as a small preview
   above the input field and goes to the agent with the next message.
 - Extra-keys bar (Esc, Tab, Shift+Tab, arrows, sticky Ctrl/Alt, …) for the on-screen keyboard,
-  freely arranged and with text keys (macros); a jog grip for fast scrolling, two font sizes per
-  device (terminal and views), a text view for selecting and copying, clickable links.
+  freely arranged and with text keys (macros); a text view for selecting and copying, clickable
+  links.
+- On a touch screen a tap into the terminal focuses it (so the extra keys work) without raising
+  the on-screen keyboard; the keyboard button at the end of the extra-keys bar raises and lowers
+  it, and shows when it is up. In a plain terminal the keyboard then types into the terminal
+  itself (history with the arrow keys, completion with Tab, the keyboard's own dictation); with
+  an agent it opens the message field. Seen with Gboard: typing and its dictation work in the
+  terminal, but tapping a word suggestion of the suggestion strip sends “delete the word, insert
+  the other” and shows doubled text; the page cannot switch that off.
+- After a dictation the message field scrolls to its end, so the new words are in view even when
+  the text is longer than the field.
+- A jog grip at the edge of a terminal or of the answers scrolls fast while it is pulled away
+  from the middle: slowly over most of the track, up to 200 lines a second at its end.
+- Two font sizes per device, in pixels, in the ☰ menu (A− and A+): one for the terminals, one for
+  the views (answers, notes, conversations, files, the editor, consumption, changes), whose
+  texts all scale together. A change keeps the text you are reading in place, also when larger
+  letters wrap into more lines.
 
 **Files and more**
 - Browse, edit and trash files in your project folders (the trash sits beside the list: drag a
@@ -125,7 +155,13 @@ that run Agent-Orc can be shown in the same app, through an SSH tunnel ([Several
   pictures, other files to download.
 - File paths in an agent's output are clickable and open the file (at the line named) or the
   folder.
-- Settings per device (font, size, line spacing, scroll speed) and a help dialog (light bulb).
+- Settings per device (terminal font, the two font sizes, line spacing, scroll speed, speech) and
+  a help dialog (light bulb); the settings menu scrolls when it is longer than the screen, so
+  the bottom entries, down to “Reload app”, can always be reached.
+- Menus and choices look the same everywhere: a list that opens at the button which asked for it,
+  on a phone as on a computer (not the system's picker). It opens above or below, wherever the
+  room is (the header and the bottom bar of the app count), and scrolls when neither side has
+  enough.
 - Claude Code sessions start with Remote Control, so they also show up in the Claude app.
 
 <p align="center">
@@ -272,6 +308,20 @@ CreateObject("Wscript.Shell").Run """C:\Program Files\WSL\wsl.exe"" -d Ubuntu-24
 
 `wsl -l -v` shows the distribution as `Running` while it holds; use the name it prints. The
 Windows-side port forwarding to the WSL address (`netsh portproxy`) is not part of Agent-Orc.
+
+**`systemctl --user` after a start without a Windows login.** With `loginctl enable-linger` the
+service starts with the distribution, but then WSLg may mount its own directory over
+`/run/user/1000` after systemd has put its sockets there. They are hidden: `systemctl --user`
+fails with `Failed to connect to bus`, and so does the restart at the end of `deploy/deploy.sh`
+(the new program is installed, the old one keeps running; for a change to the web app alone that
+does not matter, it is served from disk). Restarting the user manager once (`systemctl restart
+user@1000`, as root) puts the sockets into the visible layer; both directories then live side by
+side and WSLg stays. [`docs/aragon/Start-WSL.vbs`](docs/aragon/Start-WSL.vbs) does it after every
+start (as root through `wsl.exe -u root`, which needs no password): it waits up to 60 seconds for
+WSLg's layer, restarts `user@1000` only if the bus is hidden, and logs what it did to
+`/var/log/wsl-user-bus-fix.log`. Adapt the distribution's name and the user's number (1000). In
+VBScript `Fix` is a command, so it cannot be a variable name. A double click while WSL runs
+starts one more `sleep infinity` (harmless).
 
 ### Tip: let new agents get going at once
 
