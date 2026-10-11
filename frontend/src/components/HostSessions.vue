@@ -14,6 +14,7 @@ import ReasoningControl from './ReasoningControl.vue'
 import AgentActions from './AgentActions.vue'
 import ApprovalRequests from './ApprovalRequests.vue'
 import DropdownMenu from './DropdownMenu.vue'
+import SelectMenu from './SelectMenu.vue'
 import TerminalButton from './TerminalButton.vue'
 import ScheduledList from './ScheduledList.vue'
 import { moveInList, useReorder } from '../composables/useReorder'
@@ -172,6 +173,10 @@ const block = ref<HTMLElement | null>(null)
 // Named workspaces, opened again with one tap; the unnamed one has a button of its own.
 const workspaces = ref<WorkspaceSet | null>(null)
 const workspaceNames = computed(() => Object.keys(workspaces.value?.named ?? {}).sort())
+const workspaceOptions = computed(() => [
+  { value: '', label: t('workspace.unnamed') },
+  ...workspaceNames.value.map((name) => ({ value: name, label: name })),
+])
 // The unnamed workspace is listed while it holds agents or is the only one; otherwise "+" starts one.
 const showUnnamed = computed(
   () =>
@@ -377,31 +382,26 @@ function resumeWith(session: AgentSession, model: string | null, effort: string 
               }}
             </span>
             <label v-if="workspaces" class="flex items-center gap-1 text-xs text-slate-400" :title="$t('sessions.workspace')">
-              <select
-                class="h-7 rounded-lg border border-slate-600 bg-slate-800 pr-1 pl-1.5 text-xs text-slate-200"
+              <SelectMenu
+                button-class="h-7 rounded-lg border border-slate-600 bg-slate-800 pr-1 pl-1.5 text-xs text-slate-200"
+                :model-value="workspaceOf(session.id)"
+                :options="workspaceOptions"
                 :aria-label="$t('sessions.workspace')"
-                :value="workspaceOf(session.id)"
-                @change="moveToWorkspace(session, ($event.target as HTMLSelectElement).value)"
-              >
-                <option value="">{{ $t('workspace.unnamed') }}</option>
-                <option v-for="name in workspaceNames" :key="name" :value="name">{{ name }}</option>
-              </select>
+                @update:model-value="(workspace) => moveToWorkspace(session, workspace)"
+              />
             </label>
             <label
               v-if="permissionModes.get(session.profile)?.length"
               class="flex items-center gap-1 text-xs text-slate-400"
               :title="$t('permission.title')"
             >
-              <select
-                class="h-7 rounded-lg border border-slate-600 bg-slate-800 pr-1 pl-1.5 text-xs text-slate-200"
+              <SelectMenu
+                button-class="h-7 rounded-lg border border-slate-600 bg-slate-800 pr-1 pl-1.5 text-xs text-slate-200"
+                :model-value="session.permission_mode"
+                :options="(permissionModes.get(session.profile) ?? []).map((mode) => ({ value: mode, label: permissionLabel(mode) }))"
                 :aria-label="$t('permission.label')"
-                :value="session.permission_mode"
-                @change="changePermissionMode(session, ($event.target as HTMLSelectElement).value)"
-              >
-                <option v-for="mode in permissionModes.get(session.profile)" :key="mode" :value="mode">
-                  {{ permissionLabel(mode) }}
-                </option>
-              </select>
+                @update:model-value="(mode) => changePermissionMode(session, mode)"
+              />
             </label>
           </div>
         </div>

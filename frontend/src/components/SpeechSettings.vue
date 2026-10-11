@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { DEFAULT_SPEECH_RATE, useSettings, useSpeechVoice } from '../composables/useSettings'
 import { useSpeech } from '../composables/useSpeech'
 import { useToast } from '../composables/useToast'
 import { speechEngines, type VoiceChoice } from '../speech'
+import SelectMenu from './SelectMenu.vue'
 import ToggleSwitch from './ToggleSwitch.vue'
 
 // Reading answers aloud, for this device: the engine (once more than one is offered), what is
@@ -15,6 +17,7 @@ const RATE_STEP = 0.1
 const { speechEngine, speechRate, speechMaxChars, speechAnnounceName } = useSettings()
 const speech = useSpeech()
 const toast = useToast()
+const { t } = useI18n()
 const choices = ref<VoiceChoice[]>([])
 // What is chosen is kept for each engine.
 const choice = computed({
@@ -23,6 +26,10 @@ const choice = computed({
     useSpeechVoice(speechEngine.value).value = value
   },
 })
+const choiceOptions = computed(() => [
+  { value: '', label: t('answers.voiceDefault') },
+  ...choices.value.map((entry) => ({ value: entry.id, label: entry.label })),
+])
 const choiceLabel = computed(() => speech.engine.value?.choiceLabel ?? 'answers.voice')
 
 async function loadChoices(): Promise<void> {
@@ -42,16 +49,15 @@ watch(speechEngine, loadChoices)
     <h3 class="font-semibold text-slate-200">{{ $t('answers.speechTitle') }}</h3>
     <label v-if="speechEngines.length > 1" class="flex flex-col gap-1 text-slate-400">
       {{ $t('answers.engine') }}
-      <select v-model="speechEngine" class="input text-sm text-slate-200">
-        <option v-for="engine in speechEngines" :key="engine.id" :value="engine.id">{{ engine.label }}</option>
-      </select>
+      <SelectMenu
+        v-model="speechEngine"
+        :options="speechEngines.map((engine) => ({ value: engine.id, label: engine.label }))"
+        button-class="input text-sm text-slate-200"
+      />
     </label>
     <label class="flex flex-col gap-1 text-slate-400">
       {{ $t(choiceLabel) }}
-      <select v-model="choice" class="input text-sm text-slate-200">
-        <option value="">{{ $t('answers.voiceDefault') }}</option>
-        <option v-for="entry in choices" :key="entry.id" :value="entry.id">{{ entry.label }}</option>
-      </select>
+      <SelectMenu v-model="choice" :options="choiceOptions" button-class="input text-sm text-slate-200" />
     </label>
     <label class="flex flex-col gap-1 text-slate-400">
       <span class="flex justify-between">

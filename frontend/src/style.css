@@ -156,6 +156,17 @@
   .markdown pre {
     @apply overflow-x-auto rounded-lg bg-slate-800 p-3;
   }
+  /* The copy button of a code block sits at the block's right edge, over the text: the block
+     scrolls sideways, the button stays. */
+  .markdown .code-block {
+    @apply relative;
+  }
+  .markdown .code-copy {
+    @apply absolute top-1.5 right-1.5 flex size-9 items-center justify-center rounded-md border border-slate-600 bg-slate-700/90 text-slate-200 hover:bg-slate-600;
+  }
+  .markdown .code-copy svg {
+    @apply size-5;
+  }
   .markdown pre code {
     @apply bg-transparent p-0;
   }

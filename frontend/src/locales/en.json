@@ -255,6 +255,9 @@
     "leaveFullscreen": "Leave fullscreen",
     "more": "More"
   },
+  "markdown": {
+    "copyCode": "Copy code"
+  },
   "settings": {
     "title": "Settings",
     "baseDir": "This machine's start folder",

@@ -9,8 +9,10 @@ import HelpButton from './HelpButton.vue'
 import SettingsMenu from './SettingsMenu.vue'
 import AppLogo from './AppLogo.vue'
 import HostSwitcher from './HostSwitcher.vue'
+import SelectMenu from './SelectMenu.vue'
 
 const { locale } = useI18n()
+const LANGUAGE_OPTIONS = LOCALES.map((code) => ({ value: code, label: code.toUpperCase() }))
 
 useHeightVariable('--app-header-height', 'header')
 
@@ -31,14 +33,14 @@ async function logout(): Promise<void> {
       <!-- Compact buttons, so the logo keeps its room on narrow screens. -->
       <div class="flex shrink-0 items-center [&_.btn-icon]:size-8">
         <HostSwitcher />
-        <select
-          class="mr-1 h-6 rounded-md border border-slate-700 bg-slate-800 px-1 text-xs text-slate-300"
+        <SelectMenu
+          class="mr-1"
+          button-class="h-6 rounded-md border border-slate-700 bg-slate-800 pr-0.5 pl-1.5 text-xs text-slate-300"
+          :model-value="locale"
+          :options="LANGUAGE_OPTIONS"
           :aria-label="$t('app.language')"
-          :value="locale"
-          @change="setLocale(($event.target as HTMLSelectElement).value as Locale)"
-        >
-          <option v-for="code in LOCALES" :key="code" :value="code">{{ code.toUpperCase() }}</option>
-        </select>
+          @update:model-value="(code) => setLocale(code as Locale)"
+        />
         <HelpButton />
         <SettingsMenu />
         <button class="btn-icon" :title="$t('app.logout')" :aria-label="$t('app.logout')" @click="logout">

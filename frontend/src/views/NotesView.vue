@@ -6,6 +6,7 @@ import AppIcon from '../components/AppIcon.vue'
 import AttachMenu from '../components/AttachMenu.vue'
 import BroadcastDialog from '../components/BroadcastDialog.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
+import SelectMenu from '../components/SelectMenu.vue'
 import DictationMic from '../components/DictationMic.vue'
 import DictationRetry from '../components/DictationRetry.vue'
 import InputDialog from '../components/InputDialog.vue'
@@ -246,15 +247,20 @@ function moveNote(target: FolderIndex): void {
 const NEW_FOLDER = 'new'
 
 /** The folder field of the open note: a folder, none, or a new one (asked for by name). */
-function onFolderChosen(field: HTMLSelectElement): void {
-  if (field.value === NEW_FOLDER) {
-    // The field shows the note's folder again until the new one exists.
-    field.value = String(selection.value?.folder ?? '')
+function onFolderChosen(chosen: string): void {
+  // The choice shows the note's folder until the new one exists.
+  if (chosen === NEW_FOLDER) {
     dialog.value = { kind: 'newFolder', thenMoveNote: true }
     return
   }
-  moveNote(field.value === '' ? null : Number(field.value))
+  moveNote(chosen === '' ? null : Number(chosen))
 }
+
+const folderOptions = computed(() => [
+  { value: '', label: t('notes.noFolder') },
+  ...(notebook.value?.folders ?? []).map((folder, index) => ({ value: String(index), label: folder.name })),
+  { value: NEW_FOLDER, label: t('notes.newFolderOption') },
+])
 
 const copyText = useCopyText()
 
@@ -432,16 +438,13 @@ function firstLine(note: Note): string {
           <button class="btn-primary btn-small" @click="dialog = { kind: 'send' }">
             <AppIcon name="send" />{{ $t('notes.send') }}
           </button>
-          <select
-            class="h-9 rounded-lg border border-slate-600 bg-slate-800 px-2 text-sm text-slate-200"
+          <SelectMenu
+            button-class="h-9 rounded-lg border border-slate-600 bg-slate-800 px-2 text-sm text-slate-200"
+            :model-value="String(selection?.folder ?? '')"
+            :options="folderOptions"
             :aria-label="$t('notes.folder')"
-            :value="selection?.folder ?? ''"
-            @change="onFolderChosen($event.target as HTMLSelectElement)"
-          >
-            <option value="">{{ $t('notes.noFolder') }}</option>
-            <option v-for="(folder, index) in notebook?.folders" :key="index" :value="index">{{ folder.name }}</option>
-            <option :value="NEW_FOLDER">{{ $t('notes.newFolderOption') }}</option>
-          </select>
+            @update:model-value="onFolderChosen"
+          />
           <button class="btn-secondary btn-small-icon ml-auto" :title="$t('notes.deleteNote')" :aria-label="$t('notes.deleteNote')" @click="dialog = { kind: 'deleteNote' }">
             <AppIcon name="trash" />
           </button>

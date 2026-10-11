@@ -2,12 +2,13 @@
 import { computed, ref, watch } from 'vue'
 import { type AgentChoice, type ModelChoice, type Reasoning } from '../api'
 import { nearestLevel } from '../effort'
-import { preferredModel, rememberModel } from '../composables/useModelChoice'
+import { modelOptions, preferredModel, rememberModel } from '../composables/useModelChoice'
 import { useSessions } from '../composables/useSessions'
 import { useApi } from '../composables/useHostContext'
 import { useToast } from '../composables/useToast'
 import BaseDialog from './BaseDialog.vue'
 import ReasoningControl from './ReasoningControl.vue'
+import SelectMenu from './SelectMenu.vue'
 
 // Asks for a model (an agent cannot be started without one), where the agent has none stored
 // (started before the choice existed), e.g. on restart or resume. With `chooseProfile` the agent
@@ -123,9 +124,11 @@ function confirm(): void {
     <p v-if="!switching" class="mb-4 text-slate-300">{{ message }}</p>
     <label v-if="chooseProfile && agentChoices.length > 1" class="mb-4 flex flex-col gap-1 text-sm text-slate-400">
       {{ $t('agent.profile') }}
-      <select v-model="chosenProfile" class="input text-sm text-slate-200">
-        <option v-for="choice in agentChoices" :key="choice.name" :value="choice.name">{{ choice.label }}</option>
-      </select>
+      <SelectMenu
+        v-model="chosenProfile"
+        :options="agentChoices.map((choice) => ({ value: choice.name, label: choice.label }))"
+        button-class="input text-sm text-slate-200"
+      />
     </label>
     <p
       v-if="switching"
@@ -135,11 +138,7 @@ function confirm(): void {
     </p>
     <label v-if="offersModels" class="mb-5 flex flex-col gap-1 text-sm text-slate-400">
       {{ $t('agent.model') }}
-      <select v-model="model" class="input text-sm text-slate-200">
-        <option v-for="choice in models" :key="choice.name" :value="choice.name">
-          {{ choice.note ? `${choice.name} – ${choice.note}` : choice.name }}
-        </option>
-      </select>
+      <SelectMenu v-model="model" :options="modelOptions(models)" button-class="input text-sm text-slate-200" />
     </label>
     <ReasoningControl v-if="asksEffort" v-model="reasoning" :levels="levels" :ultracode-offered="false" class="mb-5" />
     <div class="flex justify-end gap-2">

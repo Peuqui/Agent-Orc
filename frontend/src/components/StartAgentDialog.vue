@@ -2,13 +2,14 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { api, type Conversation, type ConversationHit, type ModelChoice, type Reasoning } from '../api'
-import { preferredModel, rememberModel } from '../composables/useModelChoice'
+import { modelOptions, preferredModel, rememberModel } from '../composables/useModelChoice'
 import { useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
 import { nearestLevel } from '../effort'
 import { baseName, formatDate, formatSize } from '../format'
 import BaseDialog from './BaseDialog.vue'
 import ReasoningControl from './ReasoningControl.vue'
+import SelectMenu from './SelectMenu.vue'
 import ToggleSwitch from './ToggleSwitch.vue'
 
 // defaultWorkspace: the workspace preselected for the agent (null: the unnamed one).
@@ -44,6 +45,10 @@ const UNNAMED_TARGET = 'unnamed'
 const NAMED_PREFIX = 'named:'
 const workspaceTarget = ref(props.defaultWorkspace === null ? UNNAMED_TARGET : NAMED_PREFIX + props.defaultWorkspace)
 const workspaceNames = ref<string[]>([])
+const workspaceOptions = computed(() => [
+  { value: UNNAMED_TARGET, label: t('workspace.unnamed') },
+  ...workspaceNames.value.map((name) => ({ value: NAMED_PREFIX + name, label: name })),
+])
 const conversations = ref<Conversation[]>([])
 // Searching the earlier conversations' messages; shorter queries just show the list.
 const MIN_QUERY_CHARS = 2
@@ -75,7 +80,7 @@ function marked(excerpt: string): [string, string, string] {
   return [excerpt.slice(0, at), excerpt.slice(at, at + words.length), excerpt.slice(at + words.length)]
 }
 const MILLISECONDS_PER_SECOND = 1000
-const { locale } = useI18n()
+const { locale, t } = useI18n()
 
 const profile = computed(() => profiles.value.find((candidate) => candidate.name === selected.value))
 // Profiles with a choice of models (e.g. the local ones): the list, the choice, its levels.
@@ -199,11 +204,7 @@ async function start(resume: boolean, conversation: string | null = null): Promi
     </p>
     <label v-if="profile?.models" class="mb-5 flex flex-col gap-1 text-sm text-slate-400">
       {{ $t('agent.model') }}
-      <select v-model="model" class="input text-sm text-slate-200">
-        <option v-for="choice in models" :key="choice.name" :value="choice.name">
-          {{ choice.note ? `${choice.name} – ${choice.note}` : choice.name }}
-        </option>
-      </select>
+      <SelectMenu v-model="model" :options="modelOptions(models)" button-class="input text-sm text-slate-200" />
     </label>
     <ReasoningControl
       v-if="effortLevels.length"
@@ -214,10 +215,7 @@ async function start(resume: boolean, conversation: string | null = null): Promi
     />
     <label class="mb-5 flex flex-col gap-1 text-sm text-slate-400">
       {{ $t('agent.workspace') }}
-      <select v-model="workspaceTarget" class="input text-sm text-slate-200">
-        <option :value="UNNAMED_TARGET">{{ $t('workspace.unnamed') }}</option>
-        <option v-for="name in workspaceNames" :key="name" :value="NAMED_PREFIX + name">{{ name }}</option>
-      </select>
+      <SelectMenu v-model="workspaceTarget" :options="workspaceOptions" button-class="input text-sm text-slate-200" />
     </label>
     <div class="mb-5 flex flex-col gap-2">
       <ToggleSwitch class="h-7 self-start text-sm text-slate-300" :checked="inWorktree" @click="inWorktree = !inWorktree">

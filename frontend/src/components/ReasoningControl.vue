@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import type { Reasoning } from '../api'
+import SelectMenu from './SelectMenu.vue'
 import ToggleSwitch from './ToggleSwitch.vue'
 
 // Reasoning of an agent: the effort as a slider (the profile's levels from fast to smart;
@@ -40,8 +41,7 @@ function onChange(): void {
   }
 }
 
-function onSelect(event: Event): void {
-  const chosen = (event.target as HTMLSelectElement).value
+function onSelect(chosen: string): void {
   if (chosen !== props.modelValue.effort) emit('update:modelValue', { ...props.modelValue, effort: chosen })
 }
 
@@ -54,17 +54,16 @@ function toggleUltracode(): void {
   <div class="flex" :class="compact ? 'items-center gap-x-3' : 'items-end gap-x-4'">
     <!-- On the card: a dropdown, which a swipe over the card cannot change by accident (a slider
          is easily caught) and which takes less room. -->
-    <select
+    <SelectMenu
       v-if="compact"
-      class="h-7 rounded-lg border border-slate-600 bg-slate-800 pr-1 pl-1.5 text-xs text-slate-200 disabled:opacity-50"
-      :value="effort"
+      button-class="h-7 rounded-lg border border-slate-600 bg-slate-800 pr-1 pl-1.5 text-xs text-slate-200"
+      :model-value="effort"
+      :options="stops.map((stop) => ({ value: stop, label: stop }))"
       :disabled="disabled"
       :aria-label="$t('agent.effort')"
       :title="$t('agent.effort')"
-      @change="onSelect"
-    >
-      <option v-for="stop in stops" :key="stop" :value="stop">{{ stop }}</option>
-    </select>
+      @update:model-value="onSelect"
+    />
     <div v-else class="flex min-w-0 flex-1 flex-col gap-y-1">
       <div class="flex shrink-0 items-baseline gap-2 text-sm">
         <span class="text-slate-400">{{ $t('agent.effort') }}</span>

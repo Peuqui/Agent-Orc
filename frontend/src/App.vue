@@ -8,12 +8,14 @@ import BottomNav from './components/BottomNav.vue'
 import AppIcon from './components/AppIcon.vue'
 import ToastList from './components/ToastList.vue'
 import UpdateBanner from './components/UpdateBanner.vue'
+import { useCodeCopy } from './composables/useCodeCopy'
 import { useSessions } from './composables/useSessions'
 import { useToast } from './composables/useToast'
 import LoginView from './views/LoginView.vue'
 
 const { startPolling, stopPolling, loadProfiles } = useSessions()
 const toast = useToast()
+useCodeCopy()
 const route = useRoute()
 const router = useRouter()
 // A column of the workspace shows its agent's terminal in an iframe; pages opened from there

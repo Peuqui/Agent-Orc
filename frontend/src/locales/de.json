@@ -255,6 +255,9 @@
     "leaveFullscreen": "Vollbild verlassen",
     "more": "Mehr"
   },
+  "markdown": {
+    "copyCode": "Code kopieren"
+  },
   "settings": {
     "title": "Einstellungen",
     "baseDir": "Startverzeichnis dieses Rechners",
