@@ -11,6 +11,7 @@ import ToggleSwitch from './ToggleSwitch.vue'
 // Reading answers aloud, for this device: the engine (once more than one is offered), what is
 // chosen with it (a voice, a room), speed, the agent's name before its answer, and how much of
 // an answer without a paragraph for listening is read. A section of the settings menu.
+const emit = defineEmits<{ configure: [] }>()
 const MIN_RATE = 0.6
 const MAX_RATE = 1.8
 const RATE_STEP = 0.1
@@ -55,7 +56,10 @@ watch(speechEngine, loadChoices)
         button-class="input text-sm text-slate-200"
       />
     </label>
-    <label class="flex flex-col gap-1 text-slate-400">
+    <button v-if="speech.engine.value?.hasSettings" class="btn-secondary btn-small w-full justify-center" @click="emit('configure')">
+      {{ $t('ttsSettings.open') }}
+    </button>
+    <label v-else class="flex flex-col gap-1 text-slate-400">
       {{ $t(choiceLabel) }}
       <SelectMenu v-model="choice" :options="choiceOptions" button-class="input text-sm text-slate-200" />
     </label>

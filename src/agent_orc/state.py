@@ -12,6 +12,7 @@ from typing import Any
 CARD_ORDER_FILE = "card-order.json"
 WORKSPACES_FILE = "workspaces.json"
 PROMPT_TEMPLATES_FILE = "prompt-templates.json"
+TTS_ENGINES_FILE = "tts-engines.json"
 EXTRA_KEYS_FILE = "extra-keys.json"
 NOTEBOOKS_FILE = "notebooks.json"
 BASE_DIR_FILE = "base-dir.json"
@@ -143,6 +144,20 @@ def place_workspace(workspaces: dict[str, Any], key: str, workspace: dict[str, A
         other["tabs"] = [agent for agent in other["tabs"] if agent not in workspace["tabs"]]
         if other["active"] not in other["tabs"]:
             other["active"] = other["tabs"][0] if other["tabs"] else None
+
+
+def read_tts_engines() -> list[dict[str, Any]]:
+    """The user's choice among the engines of the TTS service, in the order of speaking: per engine
+    `engine`, `enabled` and `voice` ("": the engine's own); empty until one was made."""
+    path = state_dir() / TTS_ENGINES_FILE
+    if not path.is_file():
+        return []
+    engines: list[dict[str, Any]] = json.loads(path.read_text(encoding="utf-8"))
+    return engines
+
+
+def write_tts_engines(engines: list[dict[str, Any]]) -> None:
+    write_atomically(state_dir() / TTS_ENGINES_FILE, json.dumps(engines))
 
 
 def read_prompt_templates() -> list[dict[str, str]]:

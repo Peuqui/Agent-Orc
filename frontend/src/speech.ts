@@ -32,6 +32,8 @@ export interface SpeechEngine {
   split: (text: string) => string[]
   /** Whether this device can speak with it. */
   available: () => boolean
+  /** It has settings of its own, in a window of their own (the engines of a TTS service). */
+  hasSettings?: boolean
   /** What can be chosen (voices of a language, rooms). */
   voices: (lang: string) => Promise<VoiceChoice[]>
   /** Speaks one piece of text; ends when it was spoken or cancelled. */
@@ -137,7 +139,7 @@ function frameError(body: Uint8Array): Error {
  * it exists. The pieces are decoded and queued one after the other, so the first one starts while
  * the rest is still being made.
  */
-function ttsSuite(label: string, voiceChoices: VoiceChoice[]): SpeechEngine {
+function ttsSuite(label: string): SpeechEngine {
   let context: AudioContext | undefined
   let abort: AbortController | undefined
   let playing = new Set<AudioBufferSourceNode>()
@@ -158,7 +160,7 @@ function ttsSuite(label: string, voiceChoices: VoiceChoice[]): SpeechEngine {
     await audio.resume()
     let lastEnded: Promise<void> = Promise.resolve()
     try {
-      const response = await api.ttsSpeak(text, options.lang, options.voice, options.rate, controller.signal)
+      const response = await api.ttsSpeak(text, options.lang, options.rate, controller.signal)
       const reader = (response.body as ReadableStream<Uint8Array>).getReader()
       const frames = new FrameReader()
       let startAt = audio.currentTime
@@ -197,7 +199,9 @@ function ttsSuite(label: string, voiceChoices: VoiceChoice[]): SpeechEngine {
     maxChars: Number.POSITIVE_INFINITY,
     split: (text) => [text],
     available: () => true,
-    voices: () => Promise.resolve(voiceChoices),
+    // Which engines speak and with which voice is set in the engine's window of its own.
+    hasSettings: true,
+    voices: () => Promise.resolve([]),
     speak,
     cancel,
     pause: () => void context?.suspend(),
@@ -220,7 +224,7 @@ export function loadServerEngines(): Promise<void> {
       found.push(echo(echoState.value.label, echoState.value.max_chars))
     }
     if (ttsState.status === 'fulfilled' && ttsState.value.configured) {
-      found.push(ttsSuite(ttsState.value.label, ttsState.value.voices))
+      found.push(ttsSuite(ttsState.value.label))
     }
     speechEngines.value = [...browserEngines, ...found]
     if (echoState.status === 'rejected' || ttsState.status === 'rejected') serverEngines = undefined

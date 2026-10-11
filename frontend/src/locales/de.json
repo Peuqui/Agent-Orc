@@ -393,7 +393,7 @@
         "items": [
           "Statt des Terminals zeigt der Umschalter oben (Terminal- / Sprechblasen-Symbol, im Kopf jedes Terminals und jeder Spalte) nur das, was der Agent geantwortet hat – ohne Gedanken, Dateiänderungen und Diffs. Die Wahl gilt für alle Terminals dieses Geräts; das Eingabefeld bleibt unten.",
           "Pro Anfrage steht deine Frage in einer grauen Zeile (antippen zeigt sie ganz) und darunter die letzte Antwort des Agenten, die Zusammenfassung. Der Schalter „Zusammenfassungen | Alles“ (hervorgehoben ist, was gilt, je Agent) wählt: zu jeder Eingabe von dir nur den Hörabsatz aus dem letzten Text des Agenten (ohne Hörabsatz den ganzen letzten Text), oder alle Texte samt Zwischenkommentaren und Details. Neue Antworten haben einen roten Streifen. Er verschwindet von selbst, sobald die Antwort zwei Sekunden überwiegend sichtbar war (eine Antwort weiter oben bleibt rot, bis du zu ihr scrollst), sobald sie vorgelesen wurde oder in einem anderen Fenster oder auf einem anderen Gerät gesehen wurde. Das Häkchen markiert alle auf einmal als gelesen. „Neue vorlesen (n)“ zählt die Antworten mit rotem Streifen.",
-          "Vorlesen: „Vorlesen“ liest eine Antwort, „Ab hier“ diese und alle folgenden, „Neue vorlesen“ die noch nicht gesehenen. Codeblöcke und Tabellen werden ausgelassen („hier folgt ein Codeblock“), Adressen und Formatierung nicht mitgesprochen. Pause und Stopp stehen oben. Stimme, Tempo, die Ansage des Agentennamens vor jeder Antwort und die Höchstlänge stehen im Menü ☰ (für das ganze Gerät); es sind die Stimmen des Geräts, mit einem Bluetooth-Headset kommt der Ton dort an. Bei gesperrtem Bildschirm bricht das Vorlesen am Handy oft ab. Hat die Antwort am Ende einen Absatz mit 🔊 (der „Antwort zum Hören“ aus deiner globalen CLAUDE.md), wird nur er gesprochen; sonst die Antwort bis zur im Zahnrad eingestellten Zeichenzahl. Der Lautsprecher in der Kopfzeile der Arbeitsfläche liest die neuen Antworten aller Spalten dieser Fläche nacheinander vor; ein zweiter Druck beendet. Mit dem Echo (Menü ☰, „Sprachausgabe“, sobald Agent-Orc ihn kennt) sagt AIfred den Hörabsatz im gewählten Raum an, mit Signalton davor und danach; die Ansage lässt sich von hier aus nicht anhalten."
+          "Vorlesen: „Vorlesen“ liest eine Antwort, „Ab hier“ diese und alle folgenden, „Neue vorlesen“ die noch nicht gesehenen. Codeblöcke und Tabellen werden ausgelassen („hier folgt ein Codeblock“), Adressen und Formatierung nicht mitgesprochen. Pause und Stopp stehen oben. Stimme, Tempo, die Ansage des Agentennamens vor jeder Antwort und die Höchstlänge stehen im Menü ☰ (für das ganze Gerät); es sind die Stimmen des Geräts, mit einem Bluetooth-Headset kommt der Ton dort an. Bei gesperrtem Bildschirm bricht das Vorlesen am Handy oft ab. Hat die Antwort am Ende einen Absatz mit 🔊 (der „Antwort zum Hören“ aus deiner globalen CLAUDE.md), wird nur er gesprochen; sonst die Antwort bis zur im Zahnrad eingestellten Zeichenzahl. Der Lautsprecher in der Kopfzeile der Arbeitsfläche liest die neuen Antworten aller Spalten dieser Fläche nacheinander vor; ein zweiter Druck beendet. Mit dem Echo (Menü ☰, „Sprachausgabe“, sobald Agent-Orc ihn kennt) sagt AIfred den Hörabsatz im gewählten Raum an, mit Signalton davor und danach; die Ansage lässt sich von hier aus nicht anhalten. Mit einem TTS-Dienst (Konfigurationsabschnitt `tts_suite`) hat die Sprachausgabe „TTS-Suite“ ein eigenes Fenster (☰ ▸ Sprachausgabe ▸ Engines des TTS-Dienstes): Engines in die Reihenfolge ziehen, in der sie versucht werden, nicht gewünschte ausschalten und je Engine eine Stimme wählen; fällt eine aus, spricht die nächste, die an ist. Vorgelesen wird erst, wenn dort einmal gespeichert wurde."
         ]
       },
       {
@@ -410,6 +410,14 @@
         ]
       }
     ]
+  },
+  "ttsSettings": {
+    "open": "Engines des TTS-Dienstes …",
+    "title": "Engines des TTS-Dienstes",
+    "hint": "Die Engines werden von oben nach unten versucht; fällt eine aus, spricht die nächste, die an ist. Ziehen ändert die Reihenfolge (am Handy: halten, dann ziehen), hier nicht gewünschte Engines schaltest du aus, und je Engine wählst du eine Stimme.",
+    "on": "An",
+    "loading": "Lädt …",
+    "nothingOn": "Keine Engine ist an: es lässt sich nichts vorlesen."
   },
   "models": {
     "freeUntil": "frei bis {date} (noch {count} Tag | noch {count} Tage)"

@@ -413,6 +413,21 @@ export function hostPrefix(host: string | null | undefined): string {
   return host == null ? '' : `hosts/${encodeURIComponent(host)}/`
 }
 
+/** An engine of the TTS service: its label per language of the interface. */
+export interface TtsEngine {
+  engine: string
+  label: Record<string, string>
+  cloud: boolean
+  needs_gpu: boolean
+}
+
+/** What the user set for an engine of the TTS service (the voice is "" for one that has none). */
+export interface TtsChoice {
+  engine: string
+  enabled: boolean
+  voice: string
+}
+
 interface SendOptions {
   body?: unknown
   upload?: Blob
@@ -633,15 +648,17 @@ function createApi(host?: string) {
     peerMessage: (to: string[], content: string) =>
       request<{ sent: { to: string; id: number; online: boolean }[] }>('POST', 'peers/message', { body: { to, content }, fromRoot: true }),
 
-    /** Whether a TTS-Suite service reads answers aloud, what it is called and the voices it has. */
-    tts: () => request<{ configured: boolean; label: string; voices: { id: string; label: string }[] }>('GET', 'tts'),
+    /** Whether a TTS-Suite service reads answers aloud, and what it is called. */
+    tts: () => request<{ configured: boolean; label: string }>('GET', 'tts'),
+    /** The engines the service offers (each once), and the voices of one. */
+    ttsEngines: () => request<TtsEngine[]>('GET', 'tts/engines'),
+    ttsVoices: (engine: string) => request<{ id: string; label: string }[]>('GET', 'tts/voices', { query: { engine } }),
+    /** Which engines speak, in which order and with which voice (what the service offers now is in it). */
+    ttsChoices: () => request<{ engines: TtsChoice[] }>('GET', 'tts/choices'),
+    storeTtsChoices: (engines: TtsChoice[]) => request<void>('PUT', 'tts/choices', { body: { engines } }),
     /** The service's frames of audio for the text (see audioFrames.ts), read as they come. */
-    ttsSpeak: (text: string, language: string, voice: string, speed: number, signal: AbortSignal) =>
-      fetchApi(
-        'POST',
-        'tts/speak',
-        { body: { text, language, voice, speed }, host, signal },
-      ),
+    ttsSpeak: (text: string, language: string, speed: number, signal: AbortSignal) =>
+      fetchApi('POST', 'tts/speak', { body: { text, language, speed }, host, signal }),
     announce: () =>
       request<{ configured: boolean; rooms: string[]; max_chars: number; label: string }>('GET', 'announce'),
     /** Has the text said on the Echo of the room ("*": all); returns once it is queued. */

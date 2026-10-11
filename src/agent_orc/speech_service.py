@@ -7,6 +7,7 @@ and the token stays on the server.
 import contextlib
 import json
 import urllib.error
+import urllib.parse
 import urllib.request
 from collections.abc import Iterator
 from http.client import HTTPResponse
@@ -21,6 +22,10 @@ CHUNK_BYTES = 16384
 
 class SpeechServiceError(RuntimeError):
     """The service cannot be reached or refused; the message is what it said."""
+
+
+class NothingSwitchedOnError(ValueError):
+    """Every engine is switched off in the settings, so there is nothing to speak with."""
 
 
 def _request(
@@ -51,9 +56,39 @@ def _open(config: TtsSuiteConfig, request: urllib.request.Request) -> HTTPRespon
     return response
 
 
-def voices(config: TtsSuiteConfig, directory: Path) -> list[dict[str, str]]:
-    """The voices of the shared folder: `id` (what a request names) and `label`."""
-    with _open(config, _request(config, directory, "/voices", None)) as response:
+def engines(config: TtsSuiteConfig, directory: Path) -> list[dict[str, Any]]:
+    """The engines the service offers, one per key in the order the service tries them (an engine
+    on several machines is one): `engine`, `label` (per language), `cloud`, `needs_gpu`. The
+    browser's voice is the client's own and not offered."""
+    with _open(config, _request(config, directory, "/engines", None)) as response:
+        listed: list[dict[str, Any]] = json.load(response)
+    offered: dict[str, dict[str, Any]] = {}
+    for entry in listed:
+        if entry["browser"] or entry["engine"] in offered:
+            continue
+        offered[entry["engine"]] = {
+            key: entry[key] for key in ("engine", "label", "cloud", "needs_gpu")
+        }
+    return list(offered.values())
+
+
+def merged_choices(
+    stored: list[dict[str, Any]], offered: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """What the user chose, with what the service offers now: an engine the service no longer has
+    is dropped, one it newly has joins at the end (switched on, its own voice)."""
+    keys = [engine["engine"] for engine in offered]
+    kept = [choice for choice in stored if choice["engine"] in keys]
+    known = {choice["engine"] for choice in kept}
+    return kept + [
+        {"engine": key, "enabled": True, "voice": ""} for key in keys if key not in known
+    ]
+
+
+def voices(config: TtsSuiteConfig, directory: Path, engine: str) -> list[dict[str, str]]:
+    """The voices of an engine: `id` (what a request names) and `label`."""
+    request = _request(config, directory, f"/voices?engine={urllib.parse.quote(engine)}", None)
+    with _open(config, request) as response:
         listed: list[dict[str, str]] = json.load(response)
     return [{"id": voice["name"], "label": voice["label"]} for voice in listed]
 
@@ -63,14 +98,24 @@ def speak(
     directory: Path,
     text: str,
     language: str,
-    voice: str | None,
     speed: float | None,
+    chosen: list[dict[str, Any]],
 ) -> Iterator[bytes]:
-    """The frames of the reading. The service answers once the first piece exists, so a reading
-    that cannot start raises here, before anything is sent on; later failures are frames."""
+    """The frames of the reading, with the engines the user switched on (`chosen`: `engine`,
+    `enabled`, `voice`, in the order of speaking). The service answers once the first piece exists,
+    so a reading that cannot start raises here, before anything is sent on; later failures are
+    frames."""
     head: dict[str, Any] = {"text": text, "language": language}
-    if voice:
-        head["voice"] = voice
+    # Without a choice the service would go through its whole list: engines that have no voice to
+    # speak with, and a cloud engine that is paid for. The user chooses first.
+    on = [entry for entry in chosen if entry["enabled"]]
+    if not on:
+        raise NothingSwitchedOnError(
+            "no engine of the TTS service is switched on: choose them in the settings"
+            " (Engines of the TTS service)"
+        )
+    head["engines"] = [entry["engine"] for entry in on]
+    head["voices"] = {entry["engine"]: {"voice": entry["voice"]} for entry in on if entry["voice"]}
     if speed is not None:
         head["speed"] = speed
     response = _open(config, _request(config, directory, "/speak", head))

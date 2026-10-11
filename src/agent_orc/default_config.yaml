@@ -110,8 +110,9 @@ dictation:
 
 # Answers read aloud by a TTS-Suite service (https://github.com/Peuqui/TTS-Suite): it picks the
 # engine, cleans and cuts the text and sends audio back, which the browser plays. Remove the leading
-# "#" to switch it on; it joins the engines of the speech settings. The browser's own voices
-# need nothing of this.
+# "#" to switch it on; it joins the engines of the speech settings, and the engines of the service
+# (which speak, in which order, with which voice) are set in a window of their own there. The
+# browser's own voices need nothing of this.
 # tts_suite:
 #   url: http://127.0.0.1:5090
 #   # Only if the service wants a token for speaking (it does on a network): a file next to this one,

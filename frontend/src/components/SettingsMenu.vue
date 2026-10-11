@@ -20,6 +20,7 @@ import HandoverSettings from './HandoverSettings.vue'
 import KeysEditor from './KeysEditor.vue'
 import PushSettings from './PushSettings.vue'
 import SpeechSettings from './SpeechSettings.vue'
+import TtsSettingsDialog from './TtsSettingsDialog.vue'
 import { reloadToNewVersion } from '../update'
 
 // Settings of this device; more entries join here as they become adjustable.
@@ -28,6 +29,8 @@ const toast = useToast()
 const open = ref(false)
 // The extra-keys editor stays open after the menu has closed.
 const editingKeys = ref(false)
+// The window for the engines of the TTS service, likewise.
+const editingTts = ref(false)
 // What the Whisper service transcribes with; asked when the menu opens.
 const service = ref<DictationService | null>(null)
 
@@ -126,7 +129,7 @@ function changeScrollLines(delta: number): void {
         {{ $t('settings.keys') }}
       </button>
       <BaseDirSettings />
-      <SpeechSettings />
+      <SpeechSettings @configure="((editingTts = true), (open = false))" />
       <PushSettings />
       <HandoverSettings />
       <button class="btn-secondary btn-small mt-3 w-full justify-center" @click="reloadToNewVersion">
@@ -134,6 +137,9 @@ function changeScrollLines(delta: number): void {
       </button>
       <p class="mt-1 text-xs text-slate-500">{{ $t('settings.reloadHint') }}</p>
     </div>
-    <template #extra><KeysEditor v-if="editingKeys" @close="editingKeys = false" /></template>
+    <template #extra>
+      <KeysEditor v-if="editingKeys" @close="editingKeys = false" />
+      <TtsSettingsDialog v-if="editingTts" @close="editingTts = false" />
+    </template>
   </DropdownMenu>
 </template>

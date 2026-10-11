@@ -58,6 +58,7 @@ from agent_orc.config import (
     Config,
     LiveEffortConfig,
     TerminalKey,
+    TtsSuiteConfig,
     config_dir,
 )
 from agent_orc.consumption import claude_consumption
@@ -158,6 +159,7 @@ from agent_orc.state import (
     read_extra_keys,
     read_notebooks,
     read_prompt_templates,
+    read_tts_engines,
     read_workspaces,
     remove_workspace,
     rename_notebook,
@@ -168,6 +170,7 @@ from agent_orc.state import (
     write_extra_keys,
     write_notebooks,
     write_prompt_templates,
+    write_tts_engines,
 )
 from agent_orc.terminal import bridge
 from agent_orc.trash import RestoreConflictError, Trash, TrashEntryNotFoundError, home_trash_dir
@@ -245,6 +248,10 @@ class NotConfiguredError(LookupError):
     """The config has no section for this (e.g. the Echo Dot, AI-Connect)."""
 
 
+class TtsChoiceInvalidError(ValueError):
+    """The user's choice of TTS engines cannot be kept."""
+
+
 class UnknownNotebookError(LookupError):
     """No notebook of this name."""
 
@@ -306,6 +313,8 @@ ERROR_STATUS: dict[type[Exception], int] = {
     announcing.TextTooLongError: status.HTTP_413_CONTENT_TOO_LARGE,
     announcing.AnnounceError: status.HTTP_502_BAD_GATEWAY,
     speech_service.SpeechServiceError: status.HTTP_502_BAD_GATEWAY,
+    speech_service.NothingSwitchedOnError: status.HTTP_422_UNPROCESSABLE_CONTENT,
+    TtsChoiceInvalidError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     # Not 401: that would send the page to the login.
     peers.UserTokenRefusedError: status.HTTP_403_FORBIDDEN,
     peers.UserTokenMissingError: status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -475,9 +484,22 @@ class TtsSpeakRequest(BaseModel):
     text: str
     # The language of the text, as the interface language ("de", "en").
     language: str
-    # A voice of the service's shared folder; none: its default.
-    voice: str | None = None
     speed: float | None = None
+
+
+class TtsEngineChoice(BaseModel):
+    """One engine of the TTS service as the user set it."""
+
+    engine: str
+    enabled: bool
+    # The voice of this engine; empty only for one that has no voice to choose.
+    voice: str
+
+
+class TtsChoices(BaseModel):
+    """Which engines of the TTS service speak, in which order and with which voice."""
+
+    engines: list[TtsEngineChoice]
 
 
 class PeerMessageRequest(BaseModel):
@@ -1745,25 +1767,45 @@ def create_app(
             raise NotConfiguredError("announce")
         announcing.announce(config.announce, config_dir(), body.room, body.texts, body.speaker)
 
+    def tts_settings() -> TtsSuiteConfig:
+        if config.tts_suite is None:
+            raise NotConfiguredError("tts_suite")
+        return config.tts_suite
+
     @app.get("/api/tts", dependencies=authenticated)
     def tts_state() -> dict[str, Any]:
-        """Whether a TTS-Suite service reads answers aloud, what it is called and its voices."""
+        """Whether a TTS-Suite service reads answers aloud and what it is called."""
         settings = config.tts_suite
-        if settings is None:
-            return {"configured": False, "label": "", "voices": []}
-        return {
-            "configured": True,
-            "label": settings.label,
-            "voices": speech_service.voices(settings, config_dir()),
-        }
+        return {"configured": settings is not None, "label": settings.label if settings else ""}
+
+    @app.get("/api/tts/engines", dependencies=authenticated)
+    def tts_engines() -> list[dict[str, Any]]:
+        """The engines the service offers (an engine once, however many machines run it)."""
+        return speech_service.engines(tts_settings(), config_dir())
+
+    @app.get("/api/tts/voices", dependencies=authenticated)
+    def tts_voices(engine: str) -> list[dict[str, str]]:
+        return speech_service.voices(tts_settings(), config_dir(), engine)
+
+    @app.get("/api/tts/choices", dependencies=authenticated)
+    def tts_choices() -> TtsChoices:
+        """The engines in the order the user set them, with what the service offers now."""
+        offered = speech_service.engines(tts_settings(), config_dir())
+        merged = speech_service.merged_choices(read_tts_engines(), offered)
+        return TtsChoices(engines=[TtsEngineChoice.model_validate(choice) for choice in merged])
+
+    @app.put("/api/tts/choices", dependencies=authenticated, status_code=status.HTTP_204_NO_CONTENT)
+    def store_tts_choices(body: TtsChoices) -> None:
+        names = [choice.engine for choice in body.engines]
+        if len(set(names)) != len(names):
+            raise TtsChoiceInvalidError("an engine may be listed once")
+        write_tts_engines([choice.model_dump() for choice in body.engines])
 
     @app.post("/api/tts/speak", dependencies=authenticated)
     def tts_speak(body: TtsSpeakRequest) -> StreamingResponse:
         """The service's frames of audio for the text, passed on as they come."""
-        if config.tts_suite is None:
-            raise NotConfiguredError("tts_suite")
         frames = speech_service.speak(
-            config.tts_suite, config_dir(), body.text, body.language, body.voice, body.speed
+            tts_settings(), config_dir(), body.text, body.language, body.speed, read_tts_engines()
         )
         return StreamingResponse(frames, media_type=speech_service.FRAMES_MEDIA_TYPE)
 
