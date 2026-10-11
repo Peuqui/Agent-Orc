@@ -421,6 +421,7 @@
     "unit": { "sentence": "A sentence at a time", "paragraph": "A paragraph at a time", "whole": "The whole text" },
     "loading": "Loading …",
     "nothingOn": "No engine is on: nothing can be read aloud.",
+    "unreachable": "Switched on, but not reachable – skipped when speaking",
     "notOffered": "not offered by the service",
     "preferLoaded": "Prefer a local engine that is already loaded",
     "preferLoadedHint": "If a local GPU engine that is switched on above is running already, it speaks first instead of a second one being loaded. Cloud and CPU engines are not meant.",

@@ -49,6 +49,12 @@ async function load(): Promise<void> {
 }
 void load()
 
+/** Switched on, but the machine does not answer: the service skips it when speaking. */
+const unreachable = (entry: TtsEntry): boolean =>
+  entry.enabled &&
+  entry.offered &&
+  catalog.value.find((row) => placeOf(row) === placeOf(entry))?.status === 'unreachable'
+
 function label(entry: TtsEntry): string {
   const row = catalog.value.find((candidate) => placeOf(candidate) === placeOf(entry))
   const name = row?.label[locale.value] ?? row?.label.en ?? entry.engine
@@ -122,6 +128,7 @@ async function save(): Promise<void> {
             <span class="min-w-0 truncate font-medium" :class="entry.enabled && entry.offered ? 'text-slate-200' : 'text-slate-500'">
               {{ label(entry) }}
             </span>
+            <span v-if="unreachable(entry)" class="shrink-0 text-amber-400" :title="$t('ttsSettings.unreachable')" aria-hidden="false">⚠</span>
             <span v-if="!entry.offered" class="shrink-0 text-xs text-amber-400">{{ $t('ttsSettings.notOffered') }}</span>
             <ToggleSwitch v-else data-no-drag :checked="entry.enabled" @click="entry.enabled = !entry.enabled">
               <span class="sr-only">{{ $t('ttsSettings.on') }}</span>
