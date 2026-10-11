@@ -12,12 +12,9 @@ export const DEFAULT_LINE_HEIGHT = 1.2
 export const MIN_LINE_HEIGHT = 1
 export const MAX_LINE_HEIGHT = 1.6
 export const LINE_HEIGHT_STEP = 0.05
+// Font sizes in pixels, for the terminal and for the views (answers, notes, conversations,
+// files, consumption) alike, so both are set in the same unit and within the same bounds.
 export const DEFAULT_FONT_SIZE = 14
-// Size of the answers view, in percent, as a whole (its texts keep their proportions).
-export const DEFAULT_ANSWERS_SCALE = 100
-export const MIN_ANSWERS_SCALE = 70
-export const MAX_ANSWERS_SCALE = 200
-export const ANSWERS_SCALE_STEP = 10
 export const MIN_FONT_SIZE = 8
 export const MAX_FONT_SIZE = 28
 
@@ -70,8 +67,8 @@ const scrollLines = setting('agent-orc-scroll-lines', DEFAULT_SCROLL_LINES, Numb
 const lineHeight = setting('agent-orc-line-height', DEFAULT_LINE_HEIGHT, Number)
 /** Font size of every terminal of this device. */
 const fontSize = setting('agent-orc-font-size', DEFAULT_FONT_SIZE, Number)
-/** Size of every answers view of this device, in percent. */
-const answersScale = setting('agent-orc-answers-scale', DEFAULT_ANSWERS_SCALE, Number)
+/** Font size of every view of this device: the base size its texts are scaled from (useViewZoom). */
+const viewFontSize = setting('agent-orc-view-font-size', DEFAULT_FONT_SIZE, Number)
 const terminalFont = setting<TerminalFont>(
   'agent-orc-terminal-font',
   'jetbrains',
@@ -128,15 +125,19 @@ const extraKeysVersion = setting('agent-orc-extra-keys-version', 0, Number)
 /** All rows of extra keys; folded, only the first (the config orders them). */
 const extraKeysUnfolded = setting('agent-orc-extra-keys-unfolded', false, (stored) => stored === 'true')
 
-/** One step larger (1) or smaller (-1), within the bounds; from the settings or a terminal. */
-function stepFontSize(delta: number): void {
-  fontSize.value = Math.min(MAX_FONT_SIZE, Math.max(MIN_FONT_SIZE, fontSize.value + delta))
+/** One pixel larger (1) or smaller (-1), within the bounds. */
+function stepWithinBounds(size: Ref<number>, delta: number): void {
+  size.value = Math.min(MAX_FONT_SIZE, Math.max(MIN_FONT_SIZE, size.value + delta))
 }
 
-/** One step larger (1) or smaller (-1), within the bounds. */
-function stepAnswersScale(delta: number): void {
-  const scale = answersScale.value + delta * ANSWERS_SCALE_STEP
-  answersScale.value = Math.min(MAX_ANSWERS_SCALE, Math.max(MIN_ANSWERS_SCALE, scale))
+/** The terminal's font size; from the settings or a terminal. */
+function stepFontSize(delta: number): void {
+  stepWithinBounds(fontSize, delta)
+}
+
+/** The views' font size; from the settings or the editor. */
+function stepViewFontSize(delta: number): void {
+  stepWithinBounds(viewFontSize, delta)
 }
 
 export function useSettings() {
@@ -145,8 +146,8 @@ export function useSettings() {
     lineHeight,
     fontSize,
     stepFontSize,
-    answersScale,
-    stepAnswersScale,
+    viewFontSize,
+    stepViewFontSize,
     terminalFont,
     dictationSendsAtOnce,
     extraKeysUnfolded,

@@ -127,7 +127,7 @@ einen SSH-Tunnel ([Mehrere Rechner](#mehrere-rechner)).
   über dem Eingabefeld und gehen mit der nächsten Nachricht an den Agenten.
 - Sondertasten-Leiste (Esc, Tab, Shift+Tab, Pfeile, einrastendes Strg/Alt, …) für die
   Bildschirmtastatur, frei anpassbar und mit Text-Tasten (Makros); ein Griff zum schnellen
-  Scrollen, eine Schriftgröße pro Gerät, eine Textansicht zum Markieren und Kopieren,
+  Scrollen, zwei Schriftgrößen pro Gerät (Terminal und Ansichten), eine Textansicht zum Markieren und Kopieren,
   anklickbare Links.
 
 **Dateien und mehr**

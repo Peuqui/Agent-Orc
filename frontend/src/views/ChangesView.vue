@@ -5,6 +5,7 @@ import { ApiError, api, type FileChange } from '../api'
 import AppIcon from '../components/AppIcon.vue'
 import { useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
+import { useViewZoom } from '../composables/useViewZoom'
 
 // What an agent changed in its project: the changed files, each one's diff on a tap. Read only;
 // the agent stages and commits itself.
@@ -13,6 +14,10 @@ const HTTP_UNPROCESSABLE = 422
 
 const router = useRouter()
 const toast = useToast()
+// The views' font size scales the list of changes (see useViewZoom).
+const scroller = ref<HTMLElement>()
+const zoomed = ref<HTMLElement>()
+const { zoomStyle } = useViewZoom(zoomed, scroller)
 const { sessions } = useSessions()
 
 const files = ref<FileChange[] | null>(null)
@@ -77,10 +82,10 @@ function lineClass(line: string): string {
       </button>
     </header>
 
-    <main class="min-h-0 flex-1 overflow-y-auto p-2">
+    <main ref="scroller" class="min-h-0 flex-1 overflow-y-auto p-2">
       <p v-if="notARepository" class="p-6 text-center text-slate-400">{{ $t('changes.notARepository') }}</p>
       <p v-else-if="files?.length === 0" class="p-6 text-center text-slate-400">{{ $t('changes.none') }}</p>
-      <ul v-else-if="files" class="flex flex-col gap-1">
+      <ul v-else-if="files" ref="zoomed" class="flex flex-col gap-1" :style="zoomStyle">
         <li v-for="file in files" :key="file.path" class="card overflow-hidden">
           <button class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-slate-700" @click="toggle(file.path)">
             <span

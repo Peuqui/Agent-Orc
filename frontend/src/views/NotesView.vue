@@ -14,6 +14,7 @@ import { useDictation } from '../composables/useDictation'
 import { useServerEvents } from '../composables/useServerEvents'
 import { useCopyText } from '../composables/useCopyText'
 import { useToast } from '../composables/useToast'
+import { useViewZoom } from '../composables/useViewZoom'
 import { renderMarkdown } from '../markdown'
 import { attachInOrder } from '../attachInOrder'
 import { pastedImages } from '../composables/usePastedImages'
@@ -40,6 +41,9 @@ type Dialog =
 
 const { t } = useI18n()
 const toast = useToast()
+// The views' font size scales what this page shows (see useViewZoom).
+const zoomed = ref<HTMLElement>()
+const { zoomStyle } = useViewZoom(zoomed)
 const notebooks = ref<Record<string, Notebook>>({})
 const current = ref<string | null>(null)
 const selection = ref<Selection | null>(null)
@@ -349,7 +353,7 @@ function firstLine(note: Note): string {
 </script>
 
 <template>
-  <section class="flex flex-col gap-3">
+  <section ref="zoomed" class="flex flex-col gap-3" :style="zoomStyle">
     <div class="flex flex-wrap items-center gap-1.5">
       <button
         v-for="name in names"

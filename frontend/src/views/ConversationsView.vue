@@ -7,6 +7,7 @@ import PeerLanes from '../components/PeerLanes.vue'
 import PeerMessageItem from '../components/PeerMessageItem.vue'
 import { useHeightVariable } from '../composables/useHeightVariable'
 import { useToast } from '../composables/useToast'
+import { useViewZoom } from '../composables/useViewZoom'
 import { formatMoment } from '../format'
 import { EVERYONE, groupConversations, isMachine, laneLabel, lanesOf, replyRecipients, type Conversation } from '../peerConversations'
 
@@ -17,6 +18,9 @@ import { EVERYONE, groupConversations, isMachine, laneLabel, lanesOf, replyRecip
 const FINAL_ERRORS = new Set(['token_refused', 'token_missing'])
 
 const toast = useToast()
+// The conversations (not the lanes, which are drawn at measured positions) scale with the views' font size.
+const zoomed = ref<HTMLElement>()
+const { zoomStyle } = useViewZoom(zoomed)
 // So a field opened in a conversation stays clear of the foot when it gets the cursor.
 useHeightVariable('--peers-foot-height', 'foot')
 const { locale, t } = useI18n()
@@ -192,7 +196,7 @@ function replyPlaceholder(recipients: string[]): string {
         {{ $t('peers.empty') }}
       </p>
 
-      <div v-else-if="view === 'tree'" class="flex flex-col gap-2">
+      <div v-else-if="view === 'tree'" ref="zoomed" class="flex flex-col gap-2" :style="zoomStyle">
         <div v-for="conversation in conversations" :key="conversation.key" class="card">
           <div class="flex items-center gap-2 p-1.5">
             <button
@@ -229,7 +233,7 @@ function replyPlaceholder(recipients: string[]): string {
         </div>
       </div>
 
-      <div v-else-if="view === 'timeline'" class="card px-3 py-1">
+      <div v-else-if="view === 'timeline'" ref="zoomed" class="card px-3 py-1" :style="zoomStyle">
         <PeerMessageItem v-for="message in timeline" :key="message.id" :message="message" />
       </div>
 

@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { api, type ConsumptionRow } from '../api'
 import { useHosts } from '../composables/useHosts'
 import { useToast } from '../composables/useToast'
+import { useViewZoom } from '../composables/useViewZoom'
 import { useTokenFormat } from '../composables/useTokenFormat'
 import { baseName } from '../format'
 
@@ -18,6 +19,9 @@ type MachineRow = ConsumptionRow & { machine: string }
 const ALL = ''
 
 const toast = useToast()
+// The views' font size scales what this page shows (see useViewZoom).
+const zoomed = ref<HTMLElement>()
+const { zoomStyle } = useViewZoom(zoomed)
 const { locale } = useI18n()
 const formatTokens = useTokenFormat()
 const { state: hosts, loadHosts } = useHosts()
@@ -92,7 +96,7 @@ function dayLabel(day: string): string {
 </script>
 
 <template>
-  <section class="flex flex-col gap-4">
+  <section ref="zoomed" class="flex flex-col gap-4" :style="zoomStyle">
     <div class="flex flex-wrap items-center gap-2">
       <h1 class="flex-1 text-lg font-semibold">{{ $t('consumption.title') }}</h1>
       <div class="flex overflow-hidden rounded-md border border-slate-600 text-sm">

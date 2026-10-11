@@ -7,13 +7,15 @@ import { Compartment, EditorState } from '@codemirror/state'
 import { oneDark } from '@codemirror/theme-one-dark'
 import { EditorView, keymap } from '@codemirror/view'
 import { basicSetup } from 'codemirror'
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ApiError, api, rawFileUrl } from '../api'
 import AppIcon from '../components/AppIcon.vue'
 import BaseDialog from '../components/BaseDialog.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
+import { useSettings } from '../composables/useSettings'
 import { useToast } from '../composables/useToast'
+import { useViewZoom } from '../composables/useViewZoom'
 import { baseName, parentPath } from '../format'
 import { isExternal, linkedPath, renderMarkdown } from '../markdown'
 
@@ -29,10 +31,6 @@ const VIDEO_EXTENSIONS = ['mp4', 'webm', 'ogv', 'mov']
 const MARKDOWN_EXTENSIONS = ['md', 'markdown']
 const NOT_SHOWN_AS_TEXT = ['NotTextError', 'FileTooLargeError']
 
-const FONT_SIZE_KEY = 'agent-orc-editor-font-size'
-const DEFAULT_FONT_SIZE = 14
-const MIN_FONT_SIZE = 8
-const MAX_FONT_SIZE = 28
 const HTTP_CONFLICT = 409
 
 const router = useRouter()
@@ -43,7 +41,13 @@ const loaded = ref(false)
 const dirty = ref(false)
 const saving = ref(false)
 const dialog = ref<'conflict' | 'leave' | null>(null)
-const fontSize = ref(Number(localStorage.getItem(FONT_SIZE_KEY)) || DEFAULT_FONT_SIZE)
+// The views' font size, in pixels: the editor's text is set by it directly (a zoom would upset
+// CodeMirror's own measuring of positions).
+const { viewFontSize, stepViewFontSize } = useSettings()
+// The Markdown preview is plain page content, scaled as a whole like the other views.
+const previewBox = ref<HTMLElement>()
+const previewContent = ref<HTMLElement>()
+const { zoomStyle } = useViewZoom(previewContent, previewBox)
 let version = ''
 let view: EditorView | null = null
 
@@ -78,7 +82,7 @@ function createView(content: string): void {
         oneDark,
         EditorView.lineWrapping,
         language.of([]),
-        fontTheme.of(fontSizeTheme(fontSize.value)),
+        fontTheme.of(fontSizeTheme(viewFontSize.value)),
         EditorView.theme({ '&': { height: '100%' } }),
         EditorView.updateListener.of((update) => {
           if (update.docChanged) dirty.value = true
@@ -171,11 +175,7 @@ async function reload(): Promise<void> {
   await load()
 }
 
-function changeFontSize(delta: number): void {
-  fontSize.value = Math.min(MAX_FONT_SIZE, Math.max(MIN_FONT_SIZE, fontSize.value + delta))
-  localStorage.setItem(FONT_SIZE_KEY, String(fontSize.value))
-  view?.dispatch({ effects: fontTheme.reconfigure(fontSizeTheme(fontSize.value)) })
-}
+watch(viewFontSize, (size) => view?.dispatch({ effects: fontTheme.reconfigure(fontSizeTheme(size)) }))
 
 function leave(): void {
   dialog.value = null
@@ -230,8 +230,8 @@ onBeforeUnmount(() => view?.destroy())
         <button class="btn-icon" :aria-label="$t('editor.search')" @click="view && openSearchPanel(view)">
           <AppIcon name="search" />
         </button>
-        <button class="btn-icon text-sm" :aria-label="$t('terminal.smaller')" @click="changeFontSize(-1)">A−</button>
-        <button class="btn-icon text-base" :aria-label="$t('terminal.larger')" @click="changeFontSize(1)">A+</button>
+        <button class="btn-icon text-sm" :aria-label="$t('terminal.smaller')" @click="stepViewFontSize(-1)">A−</button>
+        <button class="btn-icon text-base" :aria-label="$t('terminal.larger')" @click="stepViewFontSize(1)">A+</button>
       </template>
       <a
         class="btn-icon"
@@ -256,10 +256,12 @@ onBeforeUnmount(() => view?.destroy())
     <!-- v-html is safe here: renderMarkdown passes the HTML through DOMPurify. -->
     <article
       v-if="kind === 'markdown' && previewing"
+      ref="previewBox"
       class="markdown min-h-0 flex-1 overflow-y-auto px-4 py-3 sm:px-8"
       @click="followLink"
-      v-html="previewHtml"
-    />
+    >
+      <div ref="previewContent" :style="zoomStyle" v-html="previewHtml" />
+    </article>
     <div v-if="kind === 'image'" class="flex min-h-0 flex-1 items-center justify-center overflow-auto p-3">
       <img :src="rawFileUrl(path)" :alt="name" class="max-h-full max-w-full object-contain" />
     </div>

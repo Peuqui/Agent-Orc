@@ -11,7 +11,8 @@ Nur was noch aussteht. Erledigtes steht in der Git-Historie.
   Rechner, Terminal und Agent auf Aragon starten und beenden; Verbrauch über alle Rechner zusammen, Startverzeichnis je
   Rechner in den Einstellungen, Entsperren ohne Passwortfrage auf Rechnern ohne Login. Offen:
   - **Aragons Agent in VS Code** steckt nicht in tmux und lässt sich nicht übernehmen; er muss einmal von Agent-Orc
-    neu gestartet werden (Gespräch fortsetzen). Sichtbar bleibt er über „Gespräche“.
+    neu gestartet werden (Gespräch fortsetzen). Sichtbar bleibt er über „Gespräche“. Peuqui nutzt VS Code nur noch
+    selten (Dateioperationen, Überblick am PC), der Rest läuft über Agent-Orc.
   - **Gemeinsame Agentenübersicht** (10.10.): Die Agentenseite des Minis listet jeden Rechner mit Überschrift,
     Zustandspunkt und amberfarbenem Trenner, die Karten sind überall die vollen (`HostSessions.vue`). Offen:
     Effort ändern und Neustart auf einem anderen Rechner sind nicht an einem echten Agenten gelaufen (nur Terminal
@@ -25,14 +26,12 @@ Nur was noch aussteht. Erledigtes steht in der Git-Historie.
 
 ## Dateien-Reiter und Oberfläche
 
-- **Nicht geprüft (10.10.):** das Ziehen eines echten Ordners aus dem Dateimanager des Betriebssystems (Logik nur
-  mit künstlichen Einträgen getestet), der Dateien-Reiter mit Auswahl und zwei Ansichten auf dem Handy, ein Upload
-  über `/hosts/Aragon/` mit mehreren GB (der Proxy reicht in Stücken durch, nur mit kleinen Mengen getestet).
+- **Nicht geprüft:** der Dateien-Reiter mit Auswahl und zwei Ansichten auf dem Handy und ein Upload über
+  `/hosts/Aragon/` mit mehreren GB (der Proxy reicht in Stücken durch). Geprüft (11.10.): Ordner aus dem
+  Dateimanager des Betriebssystems ziehen, mehrere hundert MB in vielen Dateien.
+
 - **Leere Unterordner:** Beim Ziehen eines Ordners werden sie jetzt mit übertragen. Über „Ordner hochladen“
   (Dateiauswahl des Browsers) nicht: der Browser liefert dort nur Dateien, keine leeren Ordner.
-- **„Neue vorlesen (0)“** bleibt bei null als abgedunkeltes Rot stehen (gesperrter roter Knopf); das Häkchen daneben
-  wird grau. Ob auch dieser Knopf grau werden soll, ist nicht entschieden.
-
 - **Wackelnde Terminal-Tests unter Last:** Tests, die ein Terminal mit `with websocket_connect` einfach verlassen,
   schlugen unter CPU-Last mit `CancelledError` fehl (der Test-Client bricht die App beim Verlassen ab, während sie das
   tmux-Terminal herunterfährt). Behoben für vier Tests, indem der Server das Terminal beendet

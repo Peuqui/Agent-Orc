@@ -5,7 +5,8 @@ import { api, type AnswerText, type Interjection, type SpokenRequest, type Turn 
 import { isUnread, shownTexts, spokenAs, uploadMentions } from '../answers'
 import { summaryOf } from '../speechText'
 import { markSeen, seenUntil } from '../composables/useAnswerSeen'
-import { useAnswersAll, useSettings } from '../composables/useSettings'
+import { useAnswersAll } from '../composables/useSettings'
+import { useViewZoom } from '../composables/useViewZoom'
 import { sessionName, useSessions } from '../composables/useSessions'
 import { type Speakable, useSpeech } from '../composables/useSpeech'
 import { useToast } from '../composables/useToast'
@@ -25,14 +26,14 @@ const POLL_MS = 4000
 const toast = useToast()
 const { locale } = useI18n()
 const answersAll = useAnswersAll(props.sessionId)
-const { answersScale } = useSettings()
-const PERCENT = 100
 const { sessions } = useSessions()
 const speech = useSpeech()
 const turns = ref<Turn[]>([])
 const spoken = ref<SpokenRequest[]>([])
 const loaded = ref(false)
 const box = ref<HTMLElement>()
+const zoomed = ref<HTMLElement>()
+const { zoomStyle } = useViewZoom(zoomed, box)
 let timer: number | undefined
 // What was marked as read before this view opened; what has been marked or read aloud since is in
 // `seenIds`.
@@ -209,7 +210,8 @@ function jog(lines: number): void {
       <template v-if="speech.available.value">
         <button
           type="button"
-          class="btn-primary btn-small"
+          class="btn-small"
+          :class="unread.length ? 'btn-primary' : 'btn-secondary'"
           :disabled="!unread.length"
           :title="$t('answers.readNewHint')"
           @click="readUnread"
@@ -228,8 +230,8 @@ function jog(lines: number): void {
     </div>
     <div class="flex min-h-0 flex-1">
     <div ref="box" class="min-h-0 min-w-0 flex-1 overflow-y-auto p-3 [scrollbar-width:none]">
-    <!-- Scaled as a whole (the device's answers size), so all sizes keep their proportions. -->
-    <div class="flex flex-col gap-4" :style="{ zoom: answersScale / PERCENT }">
+    <!-- Scaled as a whole (the device's size for views), so all sizes keep their proportions. -->
+    <div ref="zoomed" class="flex flex-col gap-4" :style="zoomStyle">
       <p v-if="loaded && !turns.length" class="text-slate-400">{{ $t('answers.empty') }}</p>
       <section v-for="entry in shown" :key="entry.turn.id" class="flex flex-col gap-2">
         <!-- What the user asked: a few lines, more on a click. -->

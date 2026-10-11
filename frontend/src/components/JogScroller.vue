@@ -11,9 +11,10 @@ const emit = defineEmits<{ scroll: [lines: number] }>()
 
 // Pulls shorter than this do nothing, so a grip that is merely touched stays still.
 const DEAD_ZONE_PX = 6
-// At the end of the track the history moves at this many lines per second; kept moderate, as
-// a jog overshoots easily.
-const MAX_LINES_PER_SECOND = 100
+// At the end of the track the history moves at this many lines per second. The cubic curve
+// below keeps the first part of the track slow, so a high top speed does not make slow
+// scrolling harder (doubled from 100 on 11.10.2026: that was too slow for long histories).
+const MAX_LINES_PER_SECOND = 200
 // Cubic: slow over most of the way, fast only near the end of the track.
 const SPEED_CURVE = 3
 const MILLISECONDS_PER_SECOND = 1000

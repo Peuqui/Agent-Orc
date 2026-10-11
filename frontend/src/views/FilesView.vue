@@ -16,6 +16,7 @@ import { useCopyText } from '../composables/useCopyText'
 import { useFileSort } from '../composables/useFileSort'
 import { useScope } from '../composables/useScope'
 import { useToast } from '../composables/useToast'
+import { useViewZoom } from '../composables/useViewZoom'
 import { SORT_KEYS } from '../fileSort'
 import { baseName, formatCountdown } from '../format'
 
@@ -32,6 +33,9 @@ const router = useRouter()
 const { t } = useI18n()
 const { scope, secondsLeft, load: loadScope, unlock, lock } = useScope()
 const toast = useToast()
+// The views' font size scales what this page shows (see useViewZoom).
+const zoomed = ref<HTMLElement>()
+const { zoomStyle } = useViewZoom(zoomed)
 const copyText = useCopyText()
 const { sort, sortBy } = useFileSort()
 
@@ -187,7 +191,7 @@ function onAgentStarted(): void {
 <template>
   <!-- The files, and the trash beside them (below on a phone): a file dragged onto the trash is trashed. -->
   <section class="md:grid md:grid-cols-[minmax(0,1fr)_20rem] md:items-start md:gap-4">
-    <div class="min-w-0">
+    <div ref="zoomed" class="min-w-0" :style="zoomStyle">
       <div
         class="mb-3 flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm"
         :class="unlocked ? 'border-red-700 bg-red-950/60 text-red-200' : 'border-slate-700 text-slate-400'"

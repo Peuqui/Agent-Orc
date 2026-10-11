@@ -116,8 +116,8 @@ that run Agent-Orc can be shown in the same app, through an SSH tunnel ([Several
   simply pasted with Ctrl+V) or a file: it lands in the project folder, shows as a small preview
   above the input field and goes to the agent with the next message.
 - Extra-keys bar (Esc, Tab, Shift+Tab, arrows, sticky Ctrl/Alt, …) for the on-screen keyboard,
-  freely arranged and with text keys (macros); a jog grip for fast scrolling, one font size per
-  device, a text view for selecting and copying, clickable links.
+  freely arranged and with text keys (macros); a jog grip for fast scrolling, two font sizes per
+  device (terminal and views), a text view for selecting and copying, clickable links.
 
 **Files and more**
 - Browse, edit and trash files in your project folders (the trash sits beside the list: drag a
