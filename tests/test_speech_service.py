@@ -29,27 +29,38 @@ def frame(header: dict[str, Any], body: bytes = b"") -> bytes:
 FRAMES = frame({"kind": "audio", "engine": "xtts"}, b"RIFF1") + frame({"kind": "summary"}, b"{}")
 
 
-def listed(
-    engine: str, host: str | None, cloud: bool = False, browser: bool = False
+def row(
+    engine: str,
+    host: str | None,
+    *,
+    cloud: bool = False,
+    browser: bool = False,
+    unit: str = "sentence",
 ) -> dict[str, Any]:
     return {
         "engine": engine,
         "host": host,
         "label": {"de": engine.title(), "en": engine.title()},
+        "unit_default": unit,
         "cloud": cloud,
         "needs_gpu": False,
         "browser": browser,
-        "enabled": True,
+        "status": "stopped",
+        "installed": True,
+        "start_hint": None,
+        "deactivated": False,
+        "vram_mib": {},
     }
 
 
-# The service's list: an engine on two machines, a cloud engine, the browser's voice.
+# The service's catalog: an engine on two machines, a cloud engine, the browser's voice.
 ENGINES = [
-    listed("qwen3local", "Aragon"),
-    listed("qwen3local", None),
-    listed("edge", None, cloud=True),
-    listed("piper", None),
-    listed("browser", None, browser=True),
+    row("qwen3local", None),
+    row("qwen3local", "Aragon"),
+    row("edge", None, cloud=True),
+    row("piper", None),
+    row("dashscope_audio3", None, cloud=True, unit="whole"),
+    row("browser", None, browser=True),
 ]
 
 
@@ -127,10 +138,18 @@ def make_client(
     return client
 
 
-def choose(client: TestClient, *engines: str) -> None:
-    """The user's choice: the engines switched on, in this order, with the voice of the test."""
-    chosen = [{"engine": engine, "enabled": True, "voice": ""} for engine in engines]
-    assert client.put("/api/tts/choices", json={"engines": chosen}).status_code == 204
+def entry(
+    engine: str, host: str | None = None, unit: str = "sentence", enabled: bool = True
+) -> dict[str, Any]:
+    return {"engine": engine, "host": host, "unit": unit, "enabled": enabled}
+
+
+def choose(
+    client: TestClient, *entries: dict[str, Any], voices: dict[str, str] | None = None
+) -> None:
+    """The user's choice: these entries in this order, with these voices."""
+    chosen = {"entries": list(entries), "voices": voices or {}}
+    assert client.put("/api/tts/choices", json=chosen).status_code == 204
 
 
 def test_without_a_section_in_the_config_there_is_no_service(
@@ -148,17 +167,27 @@ def test_the_service_is_known_by_its_label(
     assert client.get("/api/tts").json() == {"configured": True, "label": "TTS-Suite"}
 
 
-def test_the_engines_are_each_offered_once_and_without_the_browser(
+def test_the_catalog_has_every_engine_on_every_machine_and_not_the_browser(
     clock: FakeClock, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, service: str
 ) -> None:
     client = make_client(clock, tmp_path, monkeypatch, service)
-    engines = client.get("/api/tts/engines").json()
-    assert [engine["engine"] for engine in engines] == ["qwen3local", "edge", "piper"]
-    assert engines[1] == {
+    rows = client.get("/api/tts/catalog").json()
+    assert [(each["engine"], each["host"]) for each in rows] == [
+        ("qwen3local", None),
+        ("qwen3local", "Aragon"),
+        ("edge", None),
+        ("piper", None),
+        ("dashscope_audio3", None),
+    ]
+    assert rows[2] == {
         "engine": "edge",
+        "host": None,
         "label": {"de": "Edge", "en": "Edge"},
+        "unit_default": "sentence",
         "cloud": True,
         "needs_gpu": False,
+        "status": "stopped",
+        "installed": True,
     }
 
 
@@ -172,82 +201,109 @@ def test_the_voices_of_an_engine_are_asked_of_the_service(
     assert client.get("/api/tts/voices", params={"engine": "piper"}).json() == []
 
 
-def test_before_anything_is_chosen_every_engine_is_on_in_the_order_of_the_service(
+def test_before_anything_is_chosen_every_catalog_row_is_listed_and_off(
     clock: FakeClock, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, service: str
 ) -> None:
     client = make_client(clock, tmp_path, monkeypatch, service)
-    assert client.get("/api/tts/choices").json() == {
-        "engines": [
-            {"engine": "qwen3local", "enabled": True, "voice": ""},
-            {"engine": "edge", "enabled": True, "voice": ""},
-            {"engine": "piper", "enabled": True, "voice": ""},
-        ]
-    }
+    chosen = client.get("/api/tts/choices").json()
+    assert [
+        (each["engine"], each["host"], each["unit"], each["enabled"]) for each in chosen["entries"]
+    ] == [
+        ("qwen3local", None, "sentence", False),
+        ("qwen3local", "Aragon", "sentence", False),
+        ("edge", None, "sentence", False),
+        ("piper", None, "sentence", False),
+        ("dashscope_audio3", None, "whole", False),
+    ]
+    assert chosen["voices"] == {}
 
 
-def test_the_choice_of_engines_is_kept_and_follows_what_the_service_offers(
+def test_the_choice_is_kept_and_follows_what_the_catalog_has(
     clock: FakeClock, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, service: str
 ) -> None:
     client = make_client(clock, tmp_path, monkeypatch, service)
-    chosen = {
-        "engines": [
-            {"engine": "piper", "enabled": True, "voice": ""},
-            {"engine": "gone", "enabled": True, "voice": ""},
-            {"engine": "edge", "enabled": False, "voice": "Katja"},
-        ]
-    }
-    assert client.put("/api/tts/choices", json=chosen).status_code == 204
-    assert client.get("/api/tts/choices").json() == {
-        "engines": [
-            {"engine": "piper", "enabled": True, "voice": ""},
-            {"engine": "edge", "enabled": False, "voice": "Katja"},
-            # Newly offered by the service: switched on, at the end.
-            {"engine": "qwen3local", "enabled": True, "voice": ""},
-        ]
-    }
+    choose(
+        client,
+        entry("piper", unit="paragraph"),
+        entry("gone"),
+        entry("edge", enabled=False),
+        voices={"piper": "Thorsten", "gone": "X", "edge": "Katja"},
+    )
+    chosen = client.get("/api/tts/choices").json()
+    assert [
+        (each["engine"], each["host"], each["unit"], each["enabled"]) for each in chosen["entries"]
+    ] == [
+        ("piper", None, "paragraph", True),
+        ("edge", None, "sentence", False),
+        # Newly in the catalog: at the end, switched off, in the unit the engine recommends.
+        ("qwen3local", None, "sentence", False),
+        ("qwen3local", "Aragon", "sentence", False),
+        ("dashscope_audio3", None, "whole", False),
+    ]
+    assert chosen["voices"] == {"piper": "Thorsten", "edge": "Katja"}
 
 
-def test_an_engine_listed_twice_is_refused(
+def test_an_engine_listed_twice_on_one_machine_is_refused(
     clock: FakeClock, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, service: str
 ) -> None:
     client = make_client(clock, tmp_path, monkeypatch, service)
-    twice = {"engines": [{"engine": "edge", "enabled": True, "voice": ""}] * 2}
+    twice = {"entries": [entry("edge"), entry("edge")], "voices": {}}
     assert client.put("/api/tts/choices", json=twice).status_code == 422
+    elsewhere = {"entries": [entry("qwen3local"), entry("qwen3local", "Aragon")], "voices": {}}
+    assert client.put("/api/tts/choices", json=elsewhere).status_code == 204
+
+
+def test_an_entry_needs_a_known_unit(
+    clock: FakeClock, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, service: str
+) -> None:
+    client = make_client(clock, tmp_path, monkeypatch, service)
+    wrong = {"entries": [entry("edge", unit="line")], "voices": {}}
+    assert client.put("/api/tts/choices", json=wrong).status_code == 422
 
 
 def test_the_frames_of_the_service_come_back_unchanged(
     clock: FakeClock, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, service: str
 ) -> None:
     client = make_client(clock, tmp_path, monkeypatch, service)
-    choose(client, "piper")
+    choose(client, entry("piper"))
     answer = client.post("/api/tts/speak", json={"text": "Hello.", "language": "en", "speed": 1.2})
     assert answer.status_code == 200
     assert answer.headers["content-type"] == "application/x-tts-frames"
     assert answer.content == FRAMES
     assert FakeSpeechService.heard == [
-        {"text": "Hello.", "language": "en", "engines": ["piper"], "voices": {}, "speed": 1.2}
+        {
+            "text": "Hello.",
+            "language": "en",
+            "engines": [{"engine": "piper", "unit": "sentence", "host": None}],
+            "voices": {},
+            "speed": 1.2,
+        }
     ]
 
 
-def test_a_reading_names_the_engines_switched_on_in_order_with_their_voices(
+def test_a_reading_names_the_entries_switched_on_in_order_with_unit_host_and_voices(
     clock: FakeClock, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, service: str
 ) -> None:
     client = make_client(clock, tmp_path, monkeypatch, service)
-    chosen = {
-        "engines": [
-            {"engine": "edge", "enabled": True, "voice": "Katja"},
-            {"engine": "qwen3local", "enabled": False, "voice": "Codine"},
-            {"engine": "piper", "enabled": True, "voice": ""},
-        ]
-    }
-    client.put("/api/tts/choices", json=chosen)
+    choose(
+        client,
+        entry("edge", unit="whole"),
+        entry("qwen3local", "Aragon", unit="paragraph"),
+        entry("qwen3local", enabled=False),
+        entry("piper"),
+        voices={"edge": "Katja", "qwen3local": "Codine", "piper": ""},
+    )
     client.post("/api/tts/speak", json={"text": "Hello.", "language": "en"})
     assert FakeSpeechService.heard == [
         {
             "text": "Hello.",
             "language": "en",
-            "engines": ["edge", "piper"],
-            "voices": {"edge": {"voice": "Katja"}},
+            "engines": [
+                {"engine": "edge", "unit": "whole", "host": None},
+                {"engine": "qwen3local", "unit": "paragraph", "host": "Aragon"},
+                {"engine": "piper", "unit": "sentence", "host": None},
+            ],
+            "voices": {"edge": {"voice": "Katja"}, "qwen3local": {"voice": "Codine"}},
         }
     ]
 
@@ -277,7 +333,7 @@ def test_a_service_that_refuses_is_a_bad_gateway_with_its_reason(
     clock: FakeClock, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, service: str
 ) -> None:
     client = make_client(clock, tmp_path, monkeypatch, service)
-    choose(client, "piper")
+    choose(client, entry("piper"))
     answer = client.post("/api/tts/speak", json={"text": "fail", "language": "en"})
     assert answer.status_code == 502
     assert "503: nobody can speak" in answer.text
@@ -287,18 +343,18 @@ def test_a_service_that_is_not_there_is_a_bad_gateway(
     clock: FakeClock, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     client = make_client(clock, tmp_path, monkeypatch, "http://127.0.0.1:1")
-    choose(client, "piper")
+    choose(client, entry("piper"))
     assert client.post("/api/tts/speak", json={"text": "Hi", "language": "en"}).status_code == 502
-    assert client.get("/api/tts/engines").status_code == 502
+    assert client.get("/api/tts/catalog").status_code == 502
 
 
 def test_the_token_goes_to_the_service_only_when_configured(
     clock: FakeClock, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, service: str
 ) -> None:
-    make_client(clock, tmp_path, monkeypatch, service).get("/api/tts/engines")
+    make_client(clock, tmp_path, monkeypatch, service).get("/api/tts/catalog")
     assert FakeSpeechService.asked_with == [None]
     FakeSpeechService.asked_with = []
     other = tmp_path / "other"
     other.mkdir()
-    make_client(clock, other, monkeypatch, service, token_file="tts-token").get("/api/tts/engines")
+    make_client(clock, other, monkeypatch, service, token_file="tts-token").get("/api/tts/catalog")
     assert FakeSpeechService.asked_with == [f"Bearer {TOKEN}"]

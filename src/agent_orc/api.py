@@ -159,7 +159,7 @@ from agent_orc.state import (
     read_extra_keys,
     read_notebooks,
     read_prompt_templates,
-    read_tts_engines,
+    read_tts_choices,
     read_workspaces,
     remove_workspace,
     rename_notebook,
@@ -170,7 +170,7 @@ from agent_orc.state import (
     write_extra_keys,
     write_notebooks,
     write_prompt_templates,
-    write_tts_engines,
+    write_tts_choices,
 )
 from agent_orc.terminal import bridge
 from agent_orc.trash import RestoreConflictError, Trash, TrashEntryNotFoundError, home_trash_dir
@@ -487,19 +487,23 @@ class TtsSpeakRequest(BaseModel):
     speed: float | None = None
 
 
-class TtsEngineChoice(BaseModel):
-    """One engine of the TTS service as the user set it."""
+class TtsEntry(BaseModel):
+    """One engine on one machine as the user set it; the list is the order of speaking."""
 
     engine: str
+    # The machine the service runs it on, by the name in the service's configuration; none: its own.
+    host: str | None
+    # How much text the engine is given at once.
+    unit: Literal["sentence", "paragraph", "whole"]
     enabled: bool
-    # The voice of this engine; empty only for one that has no voice to choose.
-    voice: str
 
 
 class TtsChoices(BaseModel):
-    """Which engines of the TTS service speak, in which order and with which voice."""
+    """Which engines of the TTS service speak, in which order, and with which voice."""
 
-    engines: list[TtsEngineChoice]
+    entries: list[TtsEntry]
+    # The voice of an engine (the same on every machine); an engine without one is not listed.
+    voices: dict[str, str]
 
 
 class PeerMessageRequest(BaseModel):
@@ -1778,10 +1782,10 @@ def create_app(
         settings = config.tts_suite
         return {"configured": settings is not None, "label": settings.label if settings else ""}
 
-    @app.get("/api/tts/engines", dependencies=authenticated)
-    def tts_engines() -> list[dict[str, Any]]:
-        """The engines the service offers (an engine once, however many machines run it)."""
-        return speech_service.engines(tts_settings(), config_dir())
+    @app.get("/api/tts/catalog", dependencies=authenticated)
+    def tts_catalog() -> list[dict[str, Any]]:
+        """What the service can speak with: each engine on each machine."""
+        return speech_service.catalog(tts_settings(), config_dir())
 
     @app.get("/api/tts/voices", dependencies=authenticated)
     def tts_voices(engine: str) -> list[dict[str, str]]:
@@ -1789,23 +1793,22 @@ def create_app(
 
     @app.get("/api/tts/choices", dependencies=authenticated)
     def tts_choices() -> TtsChoices:
-        """The engines in the order the user set them, with what the service offers now."""
-        offered = speech_service.engines(tts_settings(), config_dir())
-        merged = speech_service.merged_choices(read_tts_engines(), offered)
-        return TtsChoices(engines=[TtsEngineChoice.model_validate(choice) for choice in merged])
+        """The user's choice, with what the catalog has now."""
+        rows = speech_service.catalog(tts_settings(), config_dir())
+        return TtsChoices.model_validate(speech_service.merged_choices(read_tts_choices(), rows))
 
     @app.put("/api/tts/choices", dependencies=authenticated, status_code=status.HTTP_204_NO_CONTENT)
     def store_tts_choices(body: TtsChoices) -> None:
-        names = [choice.engine for choice in body.engines]
-        if len(set(names)) != len(names):
-            raise TtsChoiceInvalidError("an engine may be listed once")
-        write_tts_engines([choice.model_dump() for choice in body.engines])
+        places = [(entry.engine, entry.host) for entry in body.entries]
+        if len(set(places)) != len(places):
+            raise TtsChoiceInvalidError("an engine may be listed once on a machine")
+        write_tts_choices(body.model_dump())
 
     @app.post("/api/tts/speak", dependencies=authenticated)
     def tts_speak(body: TtsSpeakRequest) -> StreamingResponse:
         """The service's frames of audio for the text, passed on as they come."""
         frames = speech_service.speak(
-            tts_settings(), config_dir(), body.text, body.language, body.speed, read_tts_engines()
+            tts_settings(), config_dir(), body.text, body.language, body.speed, read_tts_choices()
         )
         return StreamingResponse(frames, media_type=speech_service.FRAMES_MEDIA_TYPE)
 

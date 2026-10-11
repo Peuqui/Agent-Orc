@@ -56,33 +56,36 @@ def _open(config: TtsSuiteConfig, request: urllib.request.Request) -> HTTPRespon
     return response
 
 
-def engines(config: TtsSuiteConfig, directory: Path) -> list[dict[str, Any]]:
-    """The engines the service offers, one per key in the order the service tries them (an engine
-    on several machines is one): `engine`, `label` (per language), `cloud`, `needs_gpu`. The
-    browser's voice is the client's own and not offered."""
+def catalog(config: TtsSuiteConfig, directory: Path) -> list[dict[str, Any]]:
+    """The service's catalog: one row per engine and machine that can speak (`engine`, `host`: null
+    for the service's own machine; `label` per language, `unit_default`, `cloud`, `needs_gpu`,
+    `status`, `installed`). The browser's voice is the client's own and not in it."""
     with _open(config, _request(config, directory, "/engines", None)) as response:
         listed: list[dict[str, Any]] = json.load(response)
-    offered: dict[str, dict[str, Any]] = {}
-    for entry in listed:
-        if entry["browser"] or entry["engine"] in offered:
-            continue
-        offered[entry["engine"]] = {
-            key: entry[key] for key in ("engine", "label", "cloud", "needs_gpu")
+    keys = ("engine", "host", "label", "unit_default", "cloud", "needs_gpu", "status", "installed")
+    return [{key: row[key] for key in keys} for row in listed if not row["browser"]]
+
+
+def merged_choices(stored: dict[str, Any], rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """What the user chose, with what the catalog has now: an entry the catalog no longer has is
+    dropped; a row it newly has joins at the end, switched OFF (an engine may cost money), in the
+    unit the engine recommends."""
+    present = {(row["engine"], row["host"]) for row in rows}
+    kept = [entry for entry in stored["entries"] if (entry["engine"], entry["host"]) in present]
+    known = {(entry["engine"], entry["host"]) for entry in kept}
+    joined = [
+        {
+            "engine": row["engine"],
+            "host": row["host"],
+            "unit": row["unit_default"],
+            "enabled": False,
         }
-    return list(offered.values())
-
-
-def merged_choices(
-    stored: list[dict[str, Any]], offered: list[dict[str, Any]]
-) -> list[dict[str, Any]]:
-    """What the user chose, with what the service offers now: an engine the service no longer has
-    is dropped, one it newly has joins at the end (switched on, its own voice)."""
-    keys = [engine["engine"] for engine in offered]
-    kept = [choice for choice in stored if choice["engine"] in keys]
-    known = {choice["engine"] for choice in kept}
-    return kept + [
-        {"engine": key, "enabled": True, "voice": ""} for key in keys if key not in known
+        for row in rows
+        if (row["engine"], row["host"]) not in known
     ]
+    engines = {row["engine"] for row in rows}
+    voices = {engine: voice for engine, voice in stored["voices"].items() if engine in engines}
+    return {"entries": kept + joined, "voices": voices}
 
 
 def voices(config: TtsSuiteConfig, directory: Path, engine: str) -> list[dict[str, str]]:
@@ -99,23 +102,32 @@ def speak(
     text: str,
     language: str,
     speed: float | None,
-    chosen: list[dict[str, Any]],
+    chosen: dict[str, Any],
 ) -> Iterator[bytes]:
-    """The frames of the reading, with the engines the user switched on (`chosen`: `engine`,
-    `enabled`, `voice`, in the order of speaking). The service answers once the first piece exists,
-    so a reading that cannot start raises here, before anything is sent on; later failures are
-    frames."""
-    head: dict[str, Any] = {"text": text, "language": language}
-    # Without a choice the service would go through its whole list: engines that have no voice to
-    # speak with, and a cloud engine that is paid for. The user chooses first.
-    on = [entry for entry in chosen if entry["enabled"]]
+    """The frames of the reading, with the entries the user switched on (`chosen`: `entries` in the
+    order of speaking, `voices` per engine). The service answers once the first piece exists, so a
+    reading that cannot start raises here, before anything is sent on; later failures are frames."""
+    # Without a choice the service refuses (a request names its engines); the user chooses first.
+    on = [entry for entry in chosen["entries"] if entry["enabled"]]
     if not on:
         raise NothingSwitchedOnError(
             "no engine of the TTS service is switched on: choose them in the settings"
             " (Engines of the TTS service)"
         )
-    head["engines"] = [entry["engine"] for entry in on]
-    head["voices"] = {entry["engine"]: {"voice": entry["voice"]} for entry in on if entry["voice"]}
+    engines = list(dict.fromkeys(entry["engine"] for entry in on))
+    head: dict[str, Any] = {
+        "text": text,
+        "language": language,
+        "engines": [
+            {"engine": entry["engine"], "unit": entry["unit"], "host": entry["host"]}
+            for entry in on
+        ],
+        "voices": {
+            engine: {"voice": chosen["voices"][engine]}
+            for engine in engines
+            if chosen["voices"].get(engine)
+        },
+    }
     if speed is not None:
         head["speed"] = speed
     response = _open(config, _request(config, directory, "/speak", head))

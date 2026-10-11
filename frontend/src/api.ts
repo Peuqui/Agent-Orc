@@ -413,19 +413,33 @@ export function hostPrefix(host: string | null | undefined): string {
   return host == null ? '' : `hosts/${encodeURIComponent(host)}/`
 }
 
-/** An engine of the TTS service: its label per language of the interface. */
-export interface TtsEngine {
+/** How much text an engine is given at once. */
+export type TtsUnit = 'sentence' | 'paragraph' | 'whole'
+
+/** A row of the TTS service's catalog: an engine on a machine (host null: the service's own). */
+export interface TtsCatalogRow {
   engine: string
+  host: string | null
   label: Record<string, string>
+  unit_default: TtsUnit
   cloud: boolean
   needs_gpu: boolean
+  status: string
+  installed: boolean
 }
 
-/** What the user set for an engine of the TTS service (the voice is "" for one that has none). */
-export interface TtsChoice {
+/** An engine on a machine as the user set it; the list is the order of speaking. */
+export interface TtsEntry {
   engine: string
+  host: string | null
+  unit: TtsUnit
   enabled: boolean
-  voice: string
+}
+
+/** What the user chose of the TTS service: the entries, and one voice per engine. */
+export interface TtsChoices {
+  entries: TtsEntry[]
+  voices: Record<string, string>
 }
 
 interface SendOptions {
@@ -650,12 +664,12 @@ function createApi(host?: string) {
 
     /** Whether a TTS-Suite service reads answers aloud, and what it is called. */
     tts: () => request<{ configured: boolean; label: string }>('GET', 'tts'),
-    /** The engines the service offers (each once), and the voices of one. */
-    ttsEngines: () => request<TtsEngine[]>('GET', 'tts/engines'),
+    /** What the service can speak with (each engine on each machine), and the voices of an engine. */
+    ttsCatalog: () => request<TtsCatalogRow[]>('GET', 'tts/catalog'),
     ttsVoices: (engine: string) => request<{ id: string; label: string }[]>('GET', 'tts/voices', { query: { engine } }),
-    /** Which engines speak, in which order and with which voice (what the service offers now is in it). */
-    ttsChoices: () => request<{ engines: TtsChoice[] }>('GET', 'tts/choices'),
-    storeTtsChoices: (engines: TtsChoice[]) => request<void>('PUT', 'tts/choices', { body: { engines } }),
+    /** Which engines speak, in which order and with which voice (what the catalog has now is in it). */
+    ttsChoices: () => request<TtsChoices>('GET', 'tts/choices'),
+    storeTtsChoices: (choices: TtsChoices) => request<void>('PUT', 'tts/choices', { body: choices }),
     /** The service's frames of audio for the text (see audioFrames.ts), read as they come. */
     ttsSpeak: (text: string, language: string, speed: number, signal: AbortSignal) =>
       fetchApi('POST', 'tts/speak', { body: { text, language, speed }, host, signal }),
