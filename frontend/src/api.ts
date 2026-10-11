@@ -454,6 +454,7 @@ export interface TtsChoices {
   entries: TtsEntry[]
   hosts: TtsHost[]
   paragraph_pause_ms: number
+  prefer_loaded: boolean
   voices: Record<string, string>
 }
 

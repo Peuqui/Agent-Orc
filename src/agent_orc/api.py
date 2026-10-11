@@ -518,6 +518,8 @@ class TtsChoices(BaseModel):
     hosts: list[TtsHost]
     # The silence the service puts between paragraphs of a reading (0: none).
     paragraph_pause_ms: int = Field(ge=0)
+    # Put a GPU engine that is running already first when reading, instead of loading another.
+    prefer_loaded: bool
     # The voice of an engine (the same on every machine); an engine without one is not listed.
     voices: dict[str, str]
 
@@ -1828,8 +1830,9 @@ def create_app(
     def tts_speak(body: TtsSpeakRequest) -> StreamingResponse:
         """The service's frames of audio for the text, passed on as they come."""
         settings = tts_settings()
-        chosen = speech_service.merged_choices(
-            read_tts_choices(), speech_service.catalog(settings, config_dir())
+        rows = speech_service.catalog(settings, config_dir())
+        chosen = speech_service.with_loaded_first(
+            speech_service.merged_choices(read_tts_choices(), rows), rows
         )
         frames = speech_service.speak(
             settings, config_dir(), body.text, body.language, body.speed, chosen

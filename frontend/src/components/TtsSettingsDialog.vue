@@ -17,7 +17,7 @@ const toast = useToast()
 const { t, locale } = useI18n()
 
 const UNITS: TtsUnit[] = ['sentence', 'paragraph', 'whole']
-const choices = ref<TtsChoices>({ entries: [], hosts: [], voices: {}, paragraph_pause_ms: 0 })
+const choices = ref<TtsChoices>({ entries: [], hosts: [], voices: {}, paragraph_pause_ms: 0, prefer_loaded: false })
 const catalog = ref<TtsCatalogRow[]>([])
 // The voices of each engine, asked when the window opens; an engine without any has no choice.
 const voices = ref<Record<string, { id: string; label: string }[]>>({})
@@ -96,6 +96,12 @@ async function save(): Promise<void> {
   <BaseDialog :title="$t('ttsSettings.title')" @close="emit('close')">
     <div class="flex max-h-[65dvh] flex-col gap-3 overflow-y-auto text-sm">
       <p class="text-xs text-slate-500">{{ $t('ttsSettings.hint') }}</p>
+      <div class="flex items-center justify-between gap-2" :title="$t('ttsSettings.preferLoadedHint')">
+        <span>{{ $t('ttsSettings.preferLoaded') }}</span>
+        <ToggleSwitch :checked="choices.prefer_loaded" @click="choices.prefer_loaded = !choices.prefer_loaded">
+          <span class="sr-only">{{ $t('ttsSettings.preferLoaded') }}</span>
+        </ToggleSwitch>
+      </div>
       <label class="flex items-center justify-between gap-2">
         <span>{{ $t('ttsSettings.pause') }}</span>
         <input v-model.number="choices.paragraph_pause_ms" type="number" min="0" step="50" class="input w-24 text-right text-sm" />

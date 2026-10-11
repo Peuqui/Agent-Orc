@@ -422,6 +422,8 @@
     "loading": "Loading …",
     "nothingOn": "No engine is on: nothing can be read aloud.",
     "notOffered": "not offered by the service",
+    "preferLoaded": "Prefer a local engine that is already loaded",
+    "preferLoadedHint": "If a local GPU engine that is switched on above is running already, it speaks first instead of a second one being loaded. Cloud and CPU engines are not meant.",
     "pause": "Pause between paragraphs (ms)",
     "ownMachine": "This machine (the service's own)",
     "hostOn": "Machine on",

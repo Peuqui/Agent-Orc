@@ -149,6 +149,7 @@ def choose(
     *entries: dict[str, Any],
     voices: dict[str, str] | None = None,
     off: tuple[str | None, ...] = (),
+    prefer_loaded: bool = False,
 ) -> None:
     """The user's choice: these entries in this order, with these voices; the machines are on
     unless named in `off`."""
@@ -159,6 +160,7 @@ def choose(
         "hosts": hosts,
         "voices": voices or {},
         "paragraph_pause_ms": 700,
+        "prefer_loaded": prefer_loaded,
     }
     assert client.put("/api/tts/choices", json=chosen).status_code == 204
 
@@ -301,6 +303,7 @@ def test_an_engine_listed_twice_on_one_machine_is_refused(
         "hosts": [],
         "voices": {},
         "paragraph_pause_ms": 0,
+        "prefer_loaded": False,
     }
     assert client.put("/api/tts/choices", json=twice).status_code == 422
     elsewhere = {
@@ -308,6 +311,7 @@ def test_an_engine_listed_twice_on_one_machine_is_refused(
         "hosts": [],
         "voices": {},
         "paragraph_pause_ms": 0,
+        "prefer_loaded": False,
     }
     assert client.put("/api/tts/choices", json=elsewhere).status_code == 204
 
@@ -419,3 +423,20 @@ def test_the_token_goes_to_the_service_only_when_configured(
     other.mkdir()
     make_client(clock, other, monkeypatch, service, token_file="tts-token").get("/api/tts/catalog")
     assert FakeSpeechService.asked_with == [f"Bearer {TOKEN}"]
+
+
+def test_a_loaded_gpu_engine_goes_first_only_when_asked_for_and_only_if_switched_on(
+    clock: FakeClock, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, service: str
+) -> None:
+    loaded = {**ENGINES[1], "status": "running", "needs_gpu": True}
+    monkeypatch.setitem(globals(), "ENGINES", [ENGINES[0], loaded, *ENGINES[2:]])
+    client = make_client(clock, tmp_path, monkeypatch, service)
+    for prefer, expected in ((False, ["piper", "qwen3local"]), (True, ["qwen3local", "piper"])):
+        FakeSpeechService.heard.clear()
+        choose(client, entry("piper"), entry("qwen3local", "Aragon"), prefer_loaded=prefer)
+        client.post("/api/tts/speak", json={"text": "Hello.", "language": "en"})
+        assert [each["engine"] for each in FakeSpeechService.heard[0]["engines"]] == expected
+    FakeSpeechService.heard.clear()
+    choose(client, entry("piper"), entry("qwen3local", "Aragon", enabled=False), prefer_loaded=True)
+    client.post("/api/tts/speak", json={"text": "Hello.", "language": "en"})
+    assert [each["engine"] for each in FakeSpeechService.heard[0]["engines"]] == ["piper"]

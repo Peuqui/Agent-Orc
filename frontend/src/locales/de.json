@@ -422,6 +422,8 @@
     "loading": "Lädt …",
     "nothingOn": "Keine Engine ist an: es lässt sich nichts vorlesen.",
     "notOffered": "vom Dienst nicht angeboten",
+    "preferLoaded": "Bereits geladene lokale Engine bevorzugen",
+    "preferLoadedHint": "Läuft schon eine lokale GPU-Engine, die oben an ist, spricht sie zuerst, statt dass eine zweite geladen wird. Cloud- und CPU-Engines sind nicht gemeint.",
     "pause": "Pause zwischen Absätzen (ms)",
     "ownMachine": "Dieser Rechner (des Dienstes)",
     "hostOn": "Rechner an",

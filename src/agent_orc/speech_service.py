@@ -93,6 +93,7 @@ def merged_choices(stored: dict[str, Any], rows: list[dict[str, Any]]) -> dict[s
         "hosts": hosts,
         "voices": stored["voices"],
         "paragraph_pause_ms": stored["paragraph_pause_ms"],
+        "prefer_loaded": stored["prefer_loaded"],
     }
 
 
@@ -109,6 +110,30 @@ def _merged_hosts(stored: list[dict[str, Any]], offered: list[str | None]) -> li
         {"host": host, "enabled": False, "offered": True} for host in offered if host not in known
     ]
     return kept + joined
+
+
+def with_loaded_first(chosen: dict[str, Any], rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """With `prefer_loaded`, the entry of a GPU engine that is running already goes first (the
+    highest in the user's order if several run), so a reading attaches to what is loaded instead of
+    loading a second engine. Only entries the user switched on can move; the rest keeps its
+    order."""
+    if not chosen["prefer_loaded"]:
+        return chosen
+    loaded = {
+        (row["engine"], row["host"])
+        for row in rows
+        if row["status"] == "running" and row["needs_gpu"]
+    }
+    entries = chosen["entries"]
+    usable = [
+        entry
+        for entry in entries
+        if entry["enabled"] and entry["offered"] and (entry["engine"], entry["host"]) in loaded
+    ]
+    if not usable:
+        return chosen
+    first = usable[0]
+    return {**chosen, "entries": [first] + [entry for entry in entries if entry is not first]}
 
 
 def voices(config: TtsSuiteConfig, directory: Path, engine: str) -> list[dict[str, str]]:
