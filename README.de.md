@@ -43,10 +43,10 @@ einen SSH-Tunnel ([Mehrere Rechner](#mehrere-rechner)).
   Voreinstellung Auto). Fragt ein Agent um Erlaubnis, zeigt seine Karte den Befehl mit
   „Erlauben“ und „Ablehnen“; es gilt die Antwort, die zuerst kommt, auf der Karte oder im
   Terminal.
-- Profile mit Modellwahl: Über ein kleines Startskript läuft Claude Code auch mit lokalen
-  Modellen (z. B. vLLM oder llama-swap) oder bei anderen Anbietern. Der Startdialog bietet dann
-  die Modelle und ihre Denkstufen an, mit einem Hinweis je Modell (etwa wie lange es frei
-  nutzbar ist); ein Beispiel steht in den Kommentaren der Standard-Config.
+- Backends: `agent-orc backend` startet Claude Code mit lokalen Modellen (z. B. vLLM oder
+  llama-swap) oder bei anderen Anbietern (z. B. Qwen bei Alibabas DashScope). Der Startdialog
+  bietet dann die Modelle und ihre Denkstufen an, mit einem Hinweis je Modell (etwa wie lange es
+  frei nutzbar ist). Siehe „Andere Backends“ unten.
 - Ein Agent kann in einem eigenen Git-Worktree starten (zweite Arbeitskopie auf einem neuen
   Branch), damit zwei Agenten an einem Projekt arbeiten können; danach wird er wieder
   entfernt, ohne Arbeit zu verlieren.
@@ -362,6 +362,49 @@ agents:
 ```
 
 Beim Fortsetzen wird sie nicht wiederholt.
+
+## Andere Backends
+
+`agent-orc backend` startet Claude Code bei einem anderen Dienst als dem von Anthropic. Jeder Start
+ist ein eigener Prozess, dessen Umgebung allein sagt, mit wem er spricht; Agenten bei Anthropic,
+auf einem lokalen Server und in einer Cloud laufen daher nebeneinander. (Ein Server, der große
+Modelle ein- und auslagert, etwa llama-swap mit exklusiver Gruppe, hält nur eines: Agenten auf
+verschiedenen Modellen davon verdrängen sich.)
+
+```
+agent-orc backend models <Backend>             die angebotenen Modelle, eines je Zeile
+agent-orc backend levels <Backend> <Modell>    die Denkstufen, die ein Modell annimmt
+agent-orc backend run <Backend> [<Modell>] ... Claude Code darauf (weitere Argumente gehen an Claude)
+```
+
+Ein Backend steht im Abschnitt `backends` der Config, ein Profil benutzt es (die Standard-Config
+enthält beides als auskommentierte Beispiele). Der Server muss Anthropics Messages-API unter
+`anthropic_path` anbieten und seine Modelle unter `models_path` auflisten. Angeboten werden nur
+die in der Config genannten Modelle; ein Name darf ein Shell-Muster sein. `levels` nennt die
+Denkstufen eines Modells (eine gewünschte, die es nicht kennt, wird zur nächsthöheren, die es
+kennt); `free_until` blendet ein Modell aus, sobald sein Gratis-Kontingent endet. Der Schlüssel
+kommt aus genau einem von `key`, `key_file` (nur für Sie lesbar, `chmod 600`) oder `key_env`. Wo
+der Server sie meldet (vLLM: `max_model_len`), wird die Kontextlänge an Claude Code übergeben, das
+sonst 200k annähme.
+
+```yaml
+backends:
+  local:
+    label: Lokale Modelle
+    base_urls: [http://127.0.0.1:11435]
+    key_variable: ANTHROPIC_API_KEY
+    key: no-key
+    models:
+      mein-modell: {levels: [low, medium, xhigh]}
+  dashscope:
+    label: Qwen (DashScope)
+    base_urls: [https://dashscope-intl.aliyuncs.com]
+    anthropic_path: /apps/anthropic
+    models_path: /compatible-mode/v1/models
+    key_file: ~/.config/agent-orc/dashscope.key
+    models:
+      qwen3.8-flash: {levels: [low, medium, xhigh]}
+```
 
 ## Tests
 
