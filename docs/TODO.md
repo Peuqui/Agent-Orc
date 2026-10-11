@@ -22,11 +22,17 @@ Nur was noch aussteht. Erledigtes steht in der Git-Historie.
     Gespräche zeigt AI-Connect ohnehin für alle.
   - **Läuft der Dienst auf Aragon nur, solange WSL läuft:** ist Windows aus oder WSL beendet, steht Aragon als
     „nicht erreichbar“ da. `loginctl enable-linger mp` ist gesetzt (10.10.), der Dienst startet mit der WSL. Geprüft
-    (11.10., nach einem Start der WSL): `agent-orc serve` läuft von selbst, aber `systemctl --user` per SSH meldet
-    „Failed to connect to bus“ (`/run/user/1000/systemd` fehlt; vermutlich bindet WSLg `/run/user/1000` nach dem
-    User-Systemd neu ein). `deploy.sh` kann den Dienst dann nicht neu starten: das Paket ist installiert, der
-    Prozess läuft mit altem Code. Bei reinen Oberflächen-Änderungen schadet das nicht (die Dateien werden von der
-    Platte ausgeliefert), bei Python-Änderungen schon. Offen: Ursache beheben, damit der Neustart per SSH geht.
+    (11.10., nach einem Start der WSL ohne Windows-Anmeldung): `agent-orc serve` läuft von selbst, aber `systemctl --user`
+    meldet „Failed to connect to bus“, auch in der VS-Code-Sitzung. Ursache (`Aragon:Projekte`, aus
+    `/proc/301/mountinfo`): `/run/user/1000` ist doppelt eingehängt. Unten das echte Runtime-Dir von systemd (tmpfs,
+    Modus 700, mit `systemd/` und `bus`), darüber das tmpfs von WSLg (755, noexec, nur `dbus-1`, `pulse`,
+    `wayland-0`), das es verdeckt: WSLg hängt es nach dem Start von `user@1000` ein (Reihenfolge). Folge: `deploy.sh`
+    kann den Dienst nicht neu starten, das Paket ist installiert, der Prozess läuft mit altem Code. Bei reinen
+    Oberflächen-Änderungen schadet das nicht (die Dateien liegen auf der Platte), bei Python-Änderungen schon.
+    Behelf ohne root: den Webserver-Prozess mit `kill -9` beenden, `Restart=on-failure` startet ihn mit neuem Code
+    (ein normales Beenden zählt nicht als Fehler); die Agenten laufen weiter (`KillMode=process`). Dauerhaft braucht
+    es root (Peuqui): das obere Mount lösen (WSLg-Sockets fehlen dann) oder die Reihenfolge ändern; vorher klären,
+    was WSLg dort für VS Code/Remote braucht.
 
 ## Dateien-Reiter und Oberfläche
 
