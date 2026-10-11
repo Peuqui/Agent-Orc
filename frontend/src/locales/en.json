@@ -422,6 +422,7 @@
     "loading": "Loading …",
     "nothingOn": "No engine is on: nothing can be read aloud.",
     "notOffered": "not offered by the service",
+    "pause": "Pause between paragraphs (ms)",
     "ownMachine": "This machine (the service's own)",
     "hostOn": "Machine on",
     "hostOff": "Machine off"

@@ -17,7 +17,7 @@ const toast = useToast()
 const { t, locale } = useI18n()
 
 const UNITS: TtsUnit[] = ['sentence', 'paragraph', 'whole']
-const choices = ref<TtsChoices>({ entries: [], hosts: [], voices: {} })
+const choices = ref<TtsChoices>({ entries: [], hosts: [], voices: {}, paragraph_pause_ms: 0 })
 const catalog = ref<TtsCatalogRow[]>([])
 // The voices of each engine, asked when the window opens; an engine without any has no choice.
 const voices = ref<Record<string, { id: string; label: string }[]>>({})
@@ -96,6 +96,10 @@ async function save(): Promise<void> {
   <BaseDialog :title="$t('ttsSettings.title')" @close="emit('close')">
     <div class="flex max-h-[65dvh] flex-col gap-3 overflow-y-auto text-sm">
       <p class="text-xs text-slate-500">{{ $t('ttsSettings.hint') }}</p>
+      <label class="flex items-center justify-between gap-2">
+        <span>{{ $t('ttsSettings.pause') }}</span>
+        <input v-model.number="choices.paragraph_pause_ms" type="number" min="0" step="50" class="input w-24 text-right text-sm" />
+      </label>
       <ul class="flex flex-col gap-1">
         <li v-for="each in choices.hosts" :key="each.host ?? ''" class="flex items-center justify-between gap-2 rounded-lg border border-slate-700 p-2">
           <span class="min-w-0 truncate font-medium" :class="each.enabled && each.offered ? 'text-slate-200' : 'text-slate-500'">

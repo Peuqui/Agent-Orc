@@ -13,6 +13,8 @@ CARD_ORDER_FILE = "card-order.json"
 WORKSPACES_FILE = "workspaces.json"
 PROMPT_TEMPLATES_FILE = "prompt-templates.json"
 TTS_CHOICES_FILE = "tts-choices.json"
+# The silence between paragraphs until the user sets another in the TTS window.
+DEFAULT_PARAGRAPH_PAUSE_MS = 700
 EXTRA_KEYS_FILE = "extra-keys.json"
 NOTEBOOKS_FILE = "notebooks.json"
 BASE_DIR_FILE = "base-dir.json"
@@ -148,11 +150,16 @@ def place_workspace(workspaces: dict[str, Any], key: str, workspace: dict[str, A
 
 def read_tts_choices() -> dict[str, Any]:
     """What the user chose of the TTS service: `entries` (engine, host, unit, enabled; in the order
-    of speaking), `hosts` (host, enabled) and `voices` (a voice per engine); empty until a choice
-    was made."""
+    of speaking), `hosts` (host, enabled), `voices` (a voice per engine) and the pause between
+    paragraphs in ms; empty until a choice was made."""
     path = state_dir() / TTS_CHOICES_FILE
     if not path.is_file():
-        return {"entries": [], "hosts": [], "voices": {}}
+        return {
+            "entries": [],
+            "hosts": [],
+            "voices": {},
+            "paragraph_pause_ms": DEFAULT_PARAGRAPH_PAUSE_MS,
+        }
     choices: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
     return choices
 

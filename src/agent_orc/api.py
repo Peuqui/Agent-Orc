@@ -29,7 +29,7 @@ from fastapi import (
 )
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from agent_orc import announce as announcing
 from agent_orc import files, peers, speech_service
@@ -516,6 +516,8 @@ class TtsChoices(BaseModel):
 
     entries: list[TtsEntry]
     hosts: list[TtsHost]
+    # The silence the service puts between paragraphs of a reading (0: none).
+    paragraph_pause_ms: int = Field(ge=0)
     # The voice of an engine (the same on every machine); an engine without one is not listed.
     voices: dict[str, str]
 

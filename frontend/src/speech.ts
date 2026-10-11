@@ -169,6 +169,10 @@ function ttsSuite(label: string): SpeechEngine {
         if (done) break
         for (const { header, body } of frames.push(value)) {
           if (header.kind === 'error') throw frameError(body)
+          if (header.kind === 'audio' && (header.pause_ms ?? 0) > 0) {
+            startAt = Math.max(startAt, audio.currentTime) + (header.pause_ms as number) / 1000
+            continue
+          }
           if (header.kind !== 'audio' || header.keepalive || body.length === 0) continue
           const buffer = await audio.decodeAudioData(body.buffer as ArrayBuffer)
           const source = audio.createBufferSource()

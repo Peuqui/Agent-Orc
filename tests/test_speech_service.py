@@ -154,7 +154,12 @@ def choose(
     unless named in `off`."""
     machines = [None, "Aragon", "Gone"]
     hosts = [{"host": host, "enabled": host not in off} for host in machines]
-    chosen = {"entries": list(entries), "hosts": hosts, "voices": voices or {}}
+    chosen = {
+        "entries": list(entries),
+        "hosts": hosts,
+        "voices": voices or {},
+        "paragraph_pause_ms": 700,
+    }
     assert client.put("/api/tts/choices", json=chosen).status_code == 204
 
 
@@ -291,12 +296,18 @@ def test_an_engine_listed_twice_on_one_machine_is_refused(
     clock: FakeClock, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, service: str
 ) -> None:
     client = make_client(clock, tmp_path, monkeypatch, service)
-    twice = {"entries": [entry("edge"), entry("edge")], "hosts": [], "voices": {}}
+    twice = {
+        "entries": [entry("edge"), entry("edge")],
+        "hosts": [],
+        "voices": {},
+        "paragraph_pause_ms": 0,
+    }
     assert client.put("/api/tts/choices", json=twice).status_code == 422
     elsewhere = {
         "entries": [entry("qwen3local"), entry("qwen3local", "Aragon")],
         "hosts": [],
         "voices": {},
+        "paragraph_pause_ms": 0,
     }
     assert client.put("/api/tts/choices", json=elsewhere).status_code == 204
 
@@ -322,6 +333,7 @@ def test_the_frames_of_the_service_come_back_unchanged(
         {
             "text": "Hello.",
             "language": "en",
+            "paragraph_pause_ms": 700,
             "engines": [{"engine": "piper", "unit": "sentence", "host": None}],
             "voices": {},
             "speed": 1.2,
@@ -346,6 +358,7 @@ def test_a_reading_names_the_entries_switched_on_in_order_with_unit_host_and_voi
         {
             "text": "Hello.",
             "language": "en",
+            "paragraph_pause_ms": 700,
             "engines": [
                 {"engine": "edge", "unit": "whole", "host": None},
                 {"engine": "qwen3local", "unit": "paragraph", "host": "Aragon"},

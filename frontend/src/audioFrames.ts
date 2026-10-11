@@ -10,6 +10,8 @@ export interface FrameHeader {
   media_type?: string
   /** Audio: a marker that only holds the stream open; there is nothing to play. */
   keepalive?: boolean
+  /** Audio: a marker for silence of this many ms between two paragraphs; there is nothing to play. */
+  pause_ms?: number
 }
 
 export interface Frame {

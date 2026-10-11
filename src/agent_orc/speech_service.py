@@ -88,7 +88,12 @@ def merged_choices(stored: dict[str, Any], rows: list[dict[str, Any]]) -> dict[s
         if (row["engine"], row["host"]) not in known
     ]
     hosts = _merged_hosts(stored["hosts"], sorted({row["host"] for row in rows}, key=_local_first))
-    return {"entries": kept + joined, "hosts": hosts, "voices": stored["voices"]}
+    return {
+        "entries": kept + joined,
+        "hosts": hosts,
+        "voices": stored["voices"],
+        "paragraph_pause_ms": stored["paragraph_pause_ms"],
+    }
 
 
 def _local_first(host: str | None) -> tuple[bool, str]:
@@ -142,6 +147,7 @@ def speak(
     head: dict[str, Any] = {
         "text": text,
         "language": language,
+        "paragraph_pause_ms": chosen["paragraph_pause_ms"],
         "engines": [
             {"engine": entry["engine"], "unit": entry["unit"], "host": entry["host"]}
             for entry in on
