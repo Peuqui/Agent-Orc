@@ -186,6 +186,8 @@ def test_claude_code_is_pointed_at_the_backend_and_every_alias_at_the_model() ->
     )
     environment = claude_environment(config, "http://one", "Qwen-27B-vllm", "secret", 262144)
     assert environment == {
+        "AGENT_ORC_BACKEND_URL": "http://one",
+        "AGENT_ORC_BACKEND_MODEL": "Qwen-27B-vllm",
         "ANTHROPIC_BASE_URL": "http://one/apps/anthropic",
         "ANTHROPIC_AUTH_TOKEN": "secret",
         "ANTHROPIC_DEFAULT_HAIKU_MODEL": "Qwen-Flash-1",

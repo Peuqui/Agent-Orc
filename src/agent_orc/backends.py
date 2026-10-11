@@ -28,6 +28,9 @@ LEVELS = ("low", "medium", "high", "xhigh", "max")
 DEFAULT_LEVEL = "high"
 # The effort a profile hands over to the start (AgentProfile.env: {effort}).
 EFFORT_VARIABLE = "AGENT_ORC_EFFORT"
+# What a start tells the hooks of its session: where the backend is and which model runs.
+BASE_URL_VARIABLE = "AGENT_ORC_BACKEND_URL"
+MODEL_VARIABLE = "AGENT_ORC_BACKEND_MODEL"
 # How long an address gets to answer before the next one is tried.
 PROBE_SECONDS = 2
 # Loading a model can take minutes (the server loads it on the first request).
@@ -158,6 +161,10 @@ def claude_environment(
     background requests and aliases (sonnet, opus, subagents), which the backend does not know:
     all of them are mapped to the chosen model."""
     environment = {
+        # For hooks of the session (Claude Code hands its environment on to them), e.g. one that
+        # frees the graphics cards before a model is loaded.
+        BASE_URL_VARIABLE: base_url,
+        MODEL_VARIABLE: model,
         "ANTHROPIC_BASE_URL": base_url + backend.anthropic_path,
         backend.key_variable: key,
         "ANTHROPIC_DEFAULT_HAIKU_MODEL": backend.background_model or model,
