@@ -54,13 +54,7 @@ function changeScrollLines(delta: number): void {
 </script>
 
 <template>
-  <!-- Longer than a phone's screen, and the workspace page does not scroll: the panel scrolls itself,
-       within what the header and the bottom bar leave (the workspace has neither variable set). -->
-  <DropdownMenu
-    v-model:open="open"
-    right
-    panel-class="w-64 max-h-[calc(100dvh_-_var(--app-header-height,5.5rem)_-_var(--bottom-nav-height,0px)_-_1rem)] overflow-y-auto overscroll-contain p-3"
-  >
+  <DropdownMenu v-model:open="open" right panel-class="w-64 overscroll-contain p-3">
     <template #trigger="{ toggle }">
       <button class="btn-icon" :title="$t('settings.title')" :aria-label="$t('settings.title')" @click="toggle">
         <AppIcon name="menu" />
