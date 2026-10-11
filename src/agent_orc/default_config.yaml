@@ -86,7 +86,7 @@ push:
   timeout_seconds: 10
 
 # Dictation in the terminal's input field: the browser records, Agent-Orc hands the audio to a
-# Whisper service (whisper-stt API: POST /transcribe) and puts the text into the field.
+# Whisper service (STT-Suite API: POST /transcribe) and puts the text into the field.
 dictation:
   # null: no Whisper service, the browser's own speech recognition listens instead (Chrome;
   # it sends the audio to Google). Firefox has none, so the microphone is missing there.
@@ -173,6 +173,37 @@ tmux:
 # agent-tool-done takes a request answered in the terminal off the card again, agent-limited
 # plans the resume after a usage limit, agent-compacting and agent-compacted mark an agent that
 # shrinks its context as working (no Stop follows it). All only for sessions started by Agent-Orc.
+# Claude Code on other backends than Anthropic's, run by `agent-orc backend` (profiles below). A
+# backend is a service that speaks Anthropic's Messages API: models on a server of your own
+# (llama-swap in front of llama.cpp or vLLM) or in a cloud. Nothing is shared or switched between
+# backends: every start is a process of its own whose environment says where it talks to, so
+# agents on Anthropic's service, on a local server and in a cloud run side by side. (A server
+# that swaps big models in and out, such as llama-swap with an exclusive group, lets only one of
+# them be loaded: agents on different models of it push each other out.)
+#   agent-orc backend models <backend>            the models on offer, one per line
+#   agent-orc backend levels <backend> <model>    the levels a model takes
+#   agent-orc backend run <backend> [<model>] ... Claude Code on it (more arguments go on to Claude)
+# backends:
+#   local:
+#     label: Local models
+#     base_urls: [http://127.0.0.1:11435]       # the first address that answers is used
+#     key_variable: ANTHROPIC_API_KEY
+#     key: no-key                                # a local server takes any key
+#     context_path: /upstream/{model}/v1/models  # the context length (vLLM: max_model_len)
+#     api_timeout_ms: 600000
+#     # before_start: [my-script, "{base_url}", "{model}"]   # e.g. to free graphics cards first
+#     models:                                    # name (a shell pattern is allowed): its levels
+#       Qwen3.8-27B-NVFP4-vllm: {levels: [low, medium, xhigh]}
+#   dashscope:
+#     label: Qwen (DashScope)
+#     base_urls: [https://dashscope-intl.aliyuncs.com]
+#     anthropic_path: /apps/anthropic
+#     models_path: /compatible-mode/v1/models
+#     key_file: ~/.config/agent-orc/dashscope.key   # the API key, readable for you alone (chmod 600)
+#     background_model: qwen3.8-flash            # for Claude Code's background requests
+#     models:
+#       qwen3.8-flash: {levels: [low, medium, xhigh], free_until: 2026-11-24}   # not offered after
+#
 agents:
   claude:
     label: Claude Code
@@ -281,29 +312,33 @@ agents:
   # A profile may offer a choice of models at start: "models" prints them (one per line), the
   # choice fills {model} in its commands; "effort.levels_command" prints the levels a model takes
   # (nothing: no level at all), "env" sets the agent's environment ({effort}: the folder's level).
-  # Example, Claude Code on local models through a wrapper script (lclaude, not shipped); a
-  # script for a cloud service with its own models (e.g. Qwen on DashScope) works the same way:
+  # Example, Claude Code on local models with `agent-orc backend` (see `backends` below); one for
+  # a cloud service works the same way, with its backend's name in place of `local`:
   #
   # claude-local:
   #   label: Claude (local)
   #   hint: Stop other users of the GPUs first, or the models push each other out.
-  #   models: [lclaude, --models]
-  #   # A running agent takes another model in place (typed into it once it is idle), without a
-  #   # restart; Agent-Orc puts the protected file back as the agent rewrote it. Without this,
-  #   # changing the model restarts (resumes) the agent.
+  #   models: [agent-orc, backend, models, local]
   #   # Typed into an idle agent to empty or shrink its context without a restart (menu items).
   #   clear_command: /clear
   #   compact_command: /compact
-  #   model_live: {command: "/model {model}", confirm: "Switch model?", protected_file: ~/.claude/settings.json}
-  #   start: [lclaude, "{model}", --settings, "{settings}"]
-  #   resume: [lclaude, "{model}", --settings, "{settings}", --continue]
+  #   start: [agent-orc, backend, run, local, "{model}", --settings, "{settings}"]
+  #   resume: [agent-orc, backend, run, local, "{model}", --settings, "{settings}", --continue]
+  #   conversations:
+  #     source: claude
+  #     resume: [agent-orc, backend, run, local, "{model}", --settings, "{settings}", --resume, "{conversation}"]
   #   settings: *claude_settings
-  #   env: {LCLAUDE_EFFORT: "{effort}", AI_CONNECT_PEER_SUFFIX: "{suffix}"}
+  #   env: {AGENT_ORC_EFFORT: "{effort}", AI_CONNECT_PEER_SUFFIX: "{suffix}"}
+  #   trust: claude
   #   effort:
   #     levels: [low, medium, high, xhigh, max]
   #     default: high
-  #     levels_command: [lclaude, --levels, "{model}"]
-  #   trust: claude
+  #     # The levels the chosen model takes (from `backends`); nothing: no slider, its own default.
+  #     levels_command: [agent-orc, backend, levels, local, "{model}"]
+  #     live:
+  #       command: /effort {level}
+  #       ultracode_command: /effort ultracode {state}
+  #       protected_file: ~/.claude/settings.json
   shell:
     label: Shell
     # A plain terminal: it may run next to the folder's agent (">_" on its card).

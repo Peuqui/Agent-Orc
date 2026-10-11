@@ -6,6 +6,7 @@ import json
 import os
 import signal
 import sys
+from datetime import date
 from importlib.resources import files
 from pathlib import Path
 from typing import Any
@@ -24,6 +25,18 @@ from agent_orc.approvals import (
     wait_for_decision,
 )
 from agent_orc.auth import load_credentials, new_credentials, save_credentials
+from agent_orc.backends import (
+    EFFORT_VARIABLE,
+    BackendError,
+    backend_named,
+    choose_model,
+    exec_claude,
+    levels_of,
+    models_lines,
+    prepare_launch,
+    run_before_start,
+    split_effort,
+)
 from agent_orc.config import (
     CONFIG_FILE_NAME,
     CREDENTIALS_FILE_NAME,
@@ -195,6 +208,45 @@ def _notify(kind: str, hook: dict[str, Any], text: str) -> None:
     send_to_all(message, config.push)
 
 
+BACKEND_USAGE = (
+    "usage: agent-orc backend models <backend> | levels <backend> <model>"
+    " | run <backend> [<model>] [claude arguments]"
+)
+
+
+def run_backend(arguments: list[str]) -> None:
+    """`agent-orc backend ...`: Claude Code on a backend other than Anthropic's (backends.py)."""
+    config = load_config(config_dir() / CONFIG_FILE_NAME)
+    try:
+        match arguments:
+            case ["models", name]:
+                print("\n".join(models_lines(backend_named(config, name), date.today())))
+            case ["levels", name, model]:
+                print(" ".join(levels_of(backend_named(config, name), model)))
+            case ["run", name, *rest]:
+                backend = backend_named(config, name)
+                named = None if not rest or rest[0].startswith("-") else rest[0]
+                wanted, claude_arguments = split_effort(
+                    rest if named is None else rest[1:], os.environ.get(EFFORT_VARIABLE)
+                )
+                if named is None and not sys.stdin.isatty():
+                    raise BackendError("name a model: this is not a terminal to choose in")
+                model = named or choose_model(models_lines(backend, date.today()))
+                launch = prepare_launch(
+                    backend,
+                    model,
+                    wanted,
+                    claude_arguments,
+                    date.today(),
+                    run_hook=run_before_start,
+                )
+                exec_claude(launch)
+            case _:
+                sys.exit(BACKEND_USAGE)
+    except BackendError as error:
+        sys.exit(f"agent-orc backend: {error}")
+
+
 COMMANDS = {
     "setup": (run_setup, "first-run setup: config and password in ~/.config/agent-orc/"),
     "set-password": (set_password, "change the login password"),
@@ -209,12 +261,20 @@ COMMANDS = {
     "agent-tool-done": (agent_tool_done, "hook command: a tool call ran, failed or was denied"),
     "agent-permission": (agent_permission, "hook command: a permission request for the web app"),
 }
+BACKEND_HELP = (
+    "start Claude Code on another backend (local models, DashScope); see backends in the config"
+)
 
 
 def main() -> None:
+    # Its arguments go partly on to Claude Code, so argparse does not see them.
+    if sys.argv[1:2] == ["backend"]:
+        run_backend(sys.argv[2:])
+        return
     parser = argparse.ArgumentParser(prog="agent-orc", description="Agent orchestrator")
     subcommands = parser.add_subparsers(dest="command", required=True)
     for name, (_, help_text) in COMMANDS.items():
         subcommands.add_parser(name, help=help_text)
+    subcommands.add_parser("backend", help=BACKEND_HELP)
     arguments = parser.parse_args()
     COMMANDS[arguments.command][0]()

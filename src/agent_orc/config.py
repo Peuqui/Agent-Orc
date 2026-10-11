@@ -2,6 +2,7 @@
 
 import os
 import re
+from datetime import date
 from importlib.resources import files
 from pathlib import Path
 from typing import Any, Literal, Self
@@ -341,6 +342,56 @@ class AgentProfile(StrictModel):
         return self
 
 
+class BackendModelConfig(StrictModel):
+    """What is known about a model that a backend offers."""
+
+    # The levels the model takes (Claude Code's low ... max); without them no level is passed on
+    # and the model's own default holds.
+    levels: list[str] | None = None
+    # The last day its quota is free. Afterwards it is not offered, as it would be billed.
+    free_until: date | None = None
+
+
+class BackendConfig(StrictModel):
+    """A service that Claude Code can run on instead of Anthropic's: models on a local server
+    (llama-swap, vLLM) or in a cloud (Qwen on DashScope). Used by `agent-orc backend`."""
+
+    label: str
+    # Where the models are served; the first address that answers is used.
+    base_urls: list[str]
+    # What follows the address for Claude's own API (Anthropic's Messages API).
+    anthropic_path: str = ""
+    # Where the server lists its models (OpenAI style).
+    models_path: str = "/v1/models"
+    # The variable Claude Code reads the key from, and where the key comes from: a value (local
+    # servers take any), a file (kept readable for you alone) or an environment variable.
+    key_variable: Literal["ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN"] = "ANTHROPIC_AUTH_TOKEN"
+    key: str | None = None
+    key_file: Path | None = None
+    key_env: str | None = None
+    # The models on offer, name (a shell pattern is allowed) to what is known about them. Only
+    # these are listed and chosen from.
+    models: dict[str, BackendModelConfig]
+    # The model for Claude Code's background requests (titles, summaries); without it the chosen
+    # model does them. On a server that swaps models in and out, never name another one here.
+    background_model: str | None = None
+    # Where the server tells the context length of a model (max_model_len); {model} is the model.
+    # Claude Code does not know the models and assumes 200k.
+    context_path: str | None = None
+    # A command run before Claude Code starts, e.g. to free graphics cards; {base_url} and {model}
+    # are filled in. A failure is reported and the start goes on.
+    before_start: list[str] | None = None
+    # How long Claude Code waits for an answer of the server.
+    api_timeout_ms: int | None = None
+
+    @model_validator(mode="after")
+    def one_place_for_the_key(self) -> Self:
+        given = [source for source in (self.key, self.key_file, self.key_env) if source is not None]
+        if len(given) != 1:
+            raise ValueError("give the key as exactly one of key, key_file and key_env")
+        return self
+
+
 class Config(StrictModel):
     server: ServerConfig
     auth: AuthConfig
@@ -358,6 +409,8 @@ class Config(StrictModel):
     peers: PeersConfig | None = None
     # Without it there are no other machines. A name is part of the address: /hosts/<name>/.
     hosts: dict[str, HostConfig] | None = None
+    # Without it Claude Code runs on Anthropic's service only; see `agent-orc backend`.
+    backends: dict[str, BackendConfig] | None = None
     tmux: TmuxConfig
     agents: dict[str, AgentProfile]
 
