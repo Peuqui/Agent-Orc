@@ -21,18 +21,17 @@ Nur was noch aussteht. Erledigtes steht in der Git-Historie.
   - **Arbeitsflächen, Notizen und Gespräche-Tab** gehören je Rechner (jede Instanz hat ihren eigenen Zustand);
     Gespräche zeigt AI-Connect ohnehin für alle.
   - **Läuft der Dienst auf Aragon nur, solange WSL läuft:** ist Windows aus oder WSL beendet, steht Aragon als
-    „nicht erreichbar“ da. `loginctl enable-linger mp` ist gesetzt (10.10.), der Dienst startet mit der WSL. Geprüft
-    (11.10., nach einem Start der WSL ohne Windows-Anmeldung): `agent-orc serve` läuft von selbst, aber `systemctl --user`
-    meldet „Failed to connect to bus“, auch in der VS-Code-Sitzung. Ursache (`Aragon:Projekte`, aus
-    `/proc/301/mountinfo`): `/run/user/1000` ist doppelt eingehängt. Unten das echte Runtime-Dir von systemd (tmpfs,
-    Modus 700, mit `systemd/` und `bus`), darüber das tmpfs von WSLg (755, noexec, nur `dbus-1`, `pulse`,
-    `wayland-0`), das es verdeckt: WSLg hängt es nach dem Start von `user@1000` ein (Reihenfolge). Folge: `deploy.sh`
-    kann den Dienst nicht neu starten, das Paket ist installiert, der Prozess läuft mit altem Code. Bei reinen
-    Oberflächen-Änderungen schadet das nicht (die Dateien liegen auf der Platte), bei Python-Änderungen schon.
-    Behelf ohne root: den Webserver-Prozess mit `kill -9` beenden, `Restart=on-failure` startet ihn mit neuem Code
-    (ein normales Beenden zählt nicht als Fehler); die Agenten laufen weiter (`KillMode=process`). Dauerhaft braucht
-    es root (Peuqui): das obere Mount lösen (WSLg-Sockets fehlen dann) oder die Reihenfolge ändern; vorher klären,
-    was WSLg dort für VS Code/Remote braucht.
+    „nicht erreichbar“ da. `loginctl enable-linger mp` ist gesetzt (10.10.), der Dienst startet mit der WSL.
+    **Behoben, Dauertest steht aus (11.10.):** Nach einem Start der WSL ohne Windows-Anmeldung war `systemctl --user` per SSH
+    unerreichbar („Failed to connect to bus“): `/run/user/1000` ist doppelt eingehängt, unten das Runtime-Dir von systemd,
+    darüber das von WSLg (nach dem Start von `user@1000`, `Aragon:Projekte` fand es über `/proc/301/mountinfo`), das es
+    verdeckt. Ein einmaliges `wsl -d Ubuntu-24.04 -u root -- systemctl restart user@1000` (Administrator-Shell) legt die
+    Sockets in die sichtbare Schicht, beide Verzeichnisse liegen dann nebeneinander (geprüft: `bus`, `systemd` neben
+    `wayland-0`, `pulse`), WSLg bleibt. Dauerhaft: `D:\Archiv\VM\Start-WSL.vbs` (Sicherung `.bak`) ruft nach dem Start
+    `D:\Archiv\VM\wsl-user-bus-fix.sh` als root auf (wartet auf die zweite Schicht, startet `user@1000` nur neu, wenn der
+    Bus verdeckt ist, Protokoll `/var/log/wsl-user-bus-fix.log`). Offen: nach `wsl --shutdown` und Start über das VBS prüfen,
+    dass `systemctl --user` ohne weiteres Zutun geht; erst danach gilt es als erledigt. Der Neustart kostet beim Start nichts
+    (kein Agent läuft), später würde er laufende Agenten beenden (das Skript tut es nur bei verdecktem Bus).
 
 ## Dateien-Reiter und Oberfläche
 
