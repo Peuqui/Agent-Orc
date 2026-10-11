@@ -155,17 +155,14 @@ async function load(): Promise<void> {
   }
   const first = !loaded.value
   loaded.value = true
-  // Following the newest answers, unless the reader has scrolled up.
-  // Unread answers already wait: what arrives now is only appended below them, so the reader keeps
-  // the place at the oldest unread one and scrolls down through them.
-  if (first || (bottomBefore && !hadUnread)) {
+  const newest = everyText.value.at(-1)?.id
+  const arrived = newest !== newestSeen
+  newestSeen = newest
+  // Only a new answer moves the list, and only for a reader at the bottom with nothing unread above
+  // it: with unread answers waiting it is appended below them, and marking them read moves nothing.
+  if (first || (arrived && bottomBefore && !hadUnread)) {
     await nextTick()
-    const newest = everyText.value.at(-1)?.id
-    // A new answer is shown from its start if it is long; otherwise the list only follows what grows
-    // at its end (a long answer that is being read is not pulled back to its start).
-    if (first || newest !== newestSeen) showNewest()
-    else box.value?.scrollTo({ top: box.value.scrollHeight })
-    newestSeen = newest
+    showNewest()
   }
 }
 
