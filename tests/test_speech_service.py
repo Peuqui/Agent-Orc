@@ -145,10 +145,16 @@ def entry(
 
 
 def choose(
-    client: TestClient, *entries: dict[str, Any], voices: dict[str, str] | None = None
+    client: TestClient,
+    *entries: dict[str, Any],
+    voices: dict[str, str] | None = None,
+    off: tuple[str | None, ...] = (),
 ) -> None:
-    """The user's choice: these entries in this order, with these voices."""
-    chosen = {"entries": list(entries), "voices": voices or {}}
+    """The user's choice: these entries in this order, with these voices; the machines are on
+    unless named in `off`."""
+    machines = [None, "Aragon", "Gone"]
+    hosts = [{"host": host, "enabled": host not in off} for host in machines]
+    chosen = {"entries": list(entries), "hosts": hosts, "voices": voices or {}}
     assert client.put("/api/tts/choices", json=chosen).status_code == 204
 
 
@@ -216,6 +222,10 @@ def test_before_anything_is_chosen_every_catalog_row_is_listed_and_off(
         ("dashscope_audio3", None, "whole", False),
     ]
     assert chosen["voices"] == {}
+    assert [(each["host"], each["enabled"], each["offered"]) for each in chosen["hosts"]] == [
+        (None, False, True),
+        ("Aragon", False, True),
+    ]
 
 
 def test_the_choice_is_kept_and_nothing_is_removed_when_the_catalog_changes(
@@ -244,6 +254,28 @@ def test_the_choice_is_kept_and_nothing_is_removed_when_the_catalog_changes(
         ("dashscope_audio3", None, "whole", False, True),
     ]
     assert chosen["voices"] == {"piper": "Thorsten", "gone": "X", "edge": "Katja"}
+    # A machine the service no longer offers stays, marked.
+    assert [(each["host"], each["offered"]) for each in chosen["hosts"]] == [
+        (None, True),
+        ("Aragon", True),
+        ("Gone", False),
+    ]
+
+
+def test_nothing_is_sent_to_a_machine_that_is_switched_off(
+    clock: FakeClock, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, service: str
+) -> None:
+    client = make_client(clock, tmp_path, monkeypatch, service)
+    choose(client, entry("qwen3local", "Aragon"), entry("piper"), voices={}, off=("Aragon",))
+    client.post("/api/tts/speak", json={"text": "Hello.", "language": "en"})
+    assert [each["engine"] for each in FakeSpeechService.heard[0]["engines"]] == ["piper"]
+    # The rows under it keep their switches.
+    kept = client.get("/api/tts/choices").json()["entries"]
+    assert [(each["engine"], each["host"], each["enabled"]) for each in kept][0] == (
+        "qwen3local",
+        "Aragon",
+        True,
+    )
 
 
 def test_an_entry_the_service_does_not_offer_is_never_sent(
@@ -259,9 +291,13 @@ def test_an_engine_listed_twice_on_one_machine_is_refused(
     clock: FakeClock, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, service: str
 ) -> None:
     client = make_client(clock, tmp_path, monkeypatch, service)
-    twice = {"entries": [entry("edge"), entry("edge")], "voices": {}}
+    twice = {"entries": [entry("edge"), entry("edge")], "hosts": [], "voices": {}}
     assert client.put("/api/tts/choices", json=twice).status_code == 422
-    elsewhere = {"entries": [entry("qwen3local"), entry("qwen3local", "Aragon")], "voices": {}}
+    elsewhere = {
+        "entries": [entry("qwen3local"), entry("qwen3local", "Aragon")],
+        "hosts": [],
+        "voices": {},
+    }
     assert client.put("/api/tts/choices", json=elsewhere).status_code == 204
 
 

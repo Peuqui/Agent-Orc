@@ -87,7 +87,23 @@ def merged_choices(stored: dict[str, Any], rows: list[dict[str, Any]]) -> dict[s
         for row in rows
         if (row["engine"], row["host"]) not in known
     ]
-    return {"entries": kept + joined, "voices": stored["voices"]}
+    hosts = _merged_hosts(stored["hosts"], sorted({row["host"] for row in rows}, key=_local_first))
+    return {"entries": kept + joined, "hosts": hosts, "voices": stored["voices"]}
+
+
+def _local_first(host: str | None) -> tuple[bool, str]:
+    return (host is not None, host or "")
+
+
+def _merged_hosts(stored: list[dict[str, Any]], offered: list[str | None]) -> list[dict[str, Any]]:
+    """The switch of each machine the service offers (`None`: its own): a machine the service no
+    longer offers stays, marked; a newly offered one joins at the end, switched OFF."""
+    kept = [{**each, "offered": each["host"] in offered} for each in stored]
+    known = {each["host"] for each in kept}
+    joined = [
+        {"host": host, "enabled": False, "offered": True} for host in offered if host not in known
+    ]
+    return kept + joined
 
 
 def voices(config: TtsSuiteConfig, directory: Path, engine: str) -> list[dict[str, str]]:
@@ -111,7 +127,12 @@ def speak(
     The service answers once the first piece exists, so a
     reading that cannot start raises here, before anything is sent on; later failures are frames."""
     # Without a choice the service refuses (a request names its engines); the user chooses first.
-    on = [entry for entry in chosen["entries"] if entry["enabled"] and entry["offered"]]
+    hosts_on = {each["host"] for each in chosen["hosts"] if each["enabled"] and each["offered"]}
+    on = [
+        entry
+        for entry in chosen["entries"]
+        if entry["enabled"] and entry["offered"] and entry["host"] in hosts_on
+    ]
     if not on:
         raise NothingSwitchedOnError(
             "no engine of the TTS service is switched on: choose them in the settings"

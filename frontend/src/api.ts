@@ -442,9 +442,17 @@ export interface TtsEntry {
   offered: boolean
 }
 
+/** A machine the service offers; nothing is sent to one that is switched off (null: its own). */
+export interface TtsHost {
+  host: string | null
+  enabled: boolean
+  offered: boolean
+}
+
 /** What the user chose of the TTS service: the entries, and one voice per engine. */
 export interface TtsChoices {
   entries: TtsEntry[]
+  hosts: TtsHost[]
   voices: Record<string, string>
 }
 

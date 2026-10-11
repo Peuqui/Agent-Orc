@@ -421,7 +421,10 @@
     "unit": { "sentence": "A sentence at a time", "paragraph": "A paragraph at a time", "whole": "The whole text" },
     "loading": "Loading …",
     "nothingOn": "No engine is on: nothing can be read aloud.",
-    "notOffered": "not offered by the service"
+    "notOffered": "not offered by the service",
+    "ownMachine": "This machine (the service's own)",
+    "hostOn": "Machine on",
+    "hostOff": "Machine off"
   },
   "models": {
     "freeUntil": "free until {date} ({count} day left | {count} days left)"

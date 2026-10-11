@@ -501,10 +501,21 @@ class TtsEntry(BaseModel):
     offered: bool = True
 
 
+class TtsHost(BaseModel):
+    """A machine the service offers; nothing is sent to one that is switched off."""
+
+    # The name in the service's configuration; none: the service's own machine.
+    host: str | None
+    enabled: bool
+    # Worked out on every read, never stored (see TtsEntry).
+    offered: bool = True
+
+
 class TtsChoices(BaseModel):
     """Which engines of the TTS service speak, in which order, and with which voice."""
 
     entries: list[TtsEntry]
+    hosts: list[TtsHost]
     # The voice of an engine (the same on every machine); an engine without one is not listed.
     voices: dict[str, str]
 
@@ -1805,7 +1816,11 @@ def create_app(
         places = [(entry.engine, entry.host) for entry in body.entries]
         if len(set(places)) != len(places):
             raise TtsChoiceInvalidError("an engine may be listed once on a machine")
-        write_tts_choices(body.model_dump(exclude={"entries": {"__all__": {"offered"}}}))
+        write_tts_choices(
+            body.model_dump(
+                exclude={"entries": {"__all__": {"offered"}}, "hosts": {"__all__": {"offered"}}}
+            )
+        )
 
     @app.post("/api/tts/speak", dependencies=authenticated)
     def tts_speak(body: TtsSpeakRequest) -> StreamingResponse:

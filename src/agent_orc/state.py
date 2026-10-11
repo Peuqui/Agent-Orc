@@ -148,10 +148,11 @@ def place_workspace(workspaces: dict[str, Any], key: str, workspace: dict[str, A
 
 def read_tts_choices() -> dict[str, Any]:
     """What the user chose of the TTS service: `entries` (engine, host, unit, enabled; in the order
-    of speaking) and `voices` (a voice per engine); empty until a choice was made."""
+    of speaking), `hosts` (host, enabled) and `voices` (a voice per engine); empty until a choice
+    was made."""
     path = state_dir() / TTS_CHOICES_FILE
     if not path.is_file():
-        return {"entries": [], "voices": {}}
+        return {"entries": [], "hosts": [], "voices": {}}
     choices: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
     return choices
 

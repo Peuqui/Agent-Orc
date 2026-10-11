@@ -421,7 +421,10 @@
     "unit": { "sentence": "Satz für Satz", "paragraph": "Absatz für Absatz", "whole": "Der ganze Text" },
     "loading": "Lädt …",
     "nothingOn": "Keine Engine ist an: es lässt sich nichts vorlesen.",
-    "notOffered": "vom Dienst nicht angeboten"
+    "notOffered": "vom Dienst nicht angeboten",
+    "ownMachine": "Dieser Rechner (des Dienstes)",
+    "hostOn": "Rechner an",
+    "hostOff": "Rechner aus"
   },
   "models": {
     "freeUntil": "frei bis {date} (noch {count} Tag | noch {count} Tage)"
