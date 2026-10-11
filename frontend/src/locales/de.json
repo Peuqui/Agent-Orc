@@ -252,7 +252,8 @@
     "openElsewhere": "In einem anderen Tab offen – springt dorthin",
     "others": "Andere Arbeitsflächen",
     "fullscreen": "Vollbild: nur Terminal und Eingabe",
-    "leaveFullscreen": "Vollbild verlassen"
+    "leaveFullscreen": "Vollbild verlassen",
+    "more": "Mehr"
   },
   "settings": {
     "title": "Einstellungen",

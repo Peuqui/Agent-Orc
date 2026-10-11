@@ -252,7 +252,8 @@
     "openElsewhere": "Open in another tab – jumps there",
     "others": "Other workspaces",
     "fullscreen": "Fullscreen: terminal and input only",
-    "leaveFullscreen": "Leave fullscreen"
+    "leaveFullscreen": "Leave fullscreen",
+    "more": "More"
   },
   "settings": {
     "title": "Settings",

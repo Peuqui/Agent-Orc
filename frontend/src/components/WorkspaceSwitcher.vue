@@ -28,22 +28,30 @@ const choosing = ref(false)
 
 <template>
   <template v-if="!tabsInHeader">
-    <WorkspaceNameField
-      v-model="nameInput"
-      class="flex-1"
-      input-class="rounded-md px-2 py-1 font-semibold text-amber-300 placeholder:font-normal placeholder:text-slate-500 hover:bg-slate-800 focus:bg-slate-800"
-      :placeholder="$t('workspace.unnamed')"
-      :hint="$t('workspace.nameHint')"
-      :deletable="name !== null"
-      @rename="emit('rename')"
-      @delete="emit('delete')"
-    />
-    <DropdownMenu v-model:open="choosing" panel-class="flex w-56 flex-col p-1">
+    <!-- The name is the button of a menu with all that concerns workspaces: renaming (the field),
+         the others, a new one, deleting. -->
+    <DropdownMenu v-model:open="choosing" class="min-w-0 flex-1" panel-class="flex w-64 flex-col gap-1 p-2">
       <template #trigger="{ toggle }">
-        <button class="btn-icon" :aria-label="$t('workspace.others')" :title="$t('workspace.others')" @click="toggle">
-          <AppIcon name="chevron" />
+        <button
+          class="flex w-full min-w-0 items-center gap-1 rounded-md px-2 py-1 text-left hover:bg-slate-800"
+          :class="name === null ? 'text-slate-400' : 'font-semibold text-amber-300'"
+          :aria-label="$t('workspace.others')"
+          :title="$t('workspace.others')"
+          @click="toggle"
+        >
+          <span class="min-w-0 truncate">{{ name ?? $t('workspace.unnamed') }}</span>
+          <AppIcon name="chevron" class="size-4" />
         </button>
       </template>
+      <WorkspaceNameField
+        v-model="nameInput"
+        class="w-full"
+        input-class="rounded-md border border-slate-600 px-2 py-1 text-sm text-slate-100 placeholder:text-slate-500 focus:bg-slate-800"
+        :placeholder="$t('workspace.unnamed')"
+        :hint="$t('workspace.nameHint')"
+        :deletable="false"
+        @rename="emit('rename')"
+      />
       <template v-for="other in order" :key="other ?? ''">
         <button
           v-if="other !== name"
@@ -59,6 +67,13 @@ const choosing = ref(false)
         @click="((choosing = false), jumpToWorkspace(router, null))"
       >
         <AppIcon name="plus" />{{ $t('workspace.new') }}
+      </button>
+      <button
+        v-if="name !== null"
+        class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-red-400 hover:bg-slate-700"
+        @click="((choosing = false), emit('delete'))"
+      >
+        <AppIcon name="trash" />{{ $t('workspace.delete') }}
       </button>
     </DropdownMenu>
   </template>

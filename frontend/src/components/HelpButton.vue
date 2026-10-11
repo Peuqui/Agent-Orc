@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import messages from '../locales/de.json'
 import AppIcon from './AppIcon.vue'
@@ -7,7 +7,9 @@ import AppIcon from './AppIcon.vue'
 // Usage hints in one place, opened from a light bulb (as in AIfred). Every language has the
 // same sections and hints; the German file gives their number, the current language the text.
 const { t } = useI18n()
-const open = ref(false)
+// `bare`: no button of its own, something else opens the dialog (v-model:open).
+defineProps<{ bare?: boolean }>()
+const open = defineModel<boolean>('open', { default: false })
 
 const sections = computed(() =>
   messages.help.sections.map((section, sectionIndex) => ({
@@ -19,6 +21,7 @@ const sections = computed(() =>
 
 <template>
   <button
+    v-if="!bare"
     class="btn-icon text-amber-300 hover:text-amber-200"
     :title="$t('help.button')"
     :aria-label="$t('help.button')"

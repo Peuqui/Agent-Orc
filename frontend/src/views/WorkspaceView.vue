@@ -20,6 +20,7 @@ import AddColumnMenu from '../components/AddColumnMenu.vue'
 import AppIcon from '../components/AppIcon.vue'
 import ColumnCountControl from '../components/ColumnCountControl.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
+import DropdownMenu from '../components/DropdownMenu.vue'
 import HelpButton from '../components/HelpButton.vue'
 import HostSwitcher from '../components/HostSwitcher.vue'
 import SectionNav from '../components/SectionNav.vue'
@@ -86,6 +87,9 @@ const agentsInView = computed(() => {
 })
 watch(agentsInView, (ids) => (shownAgents.value = [...ids]), { immediate: true })
 onBeforeUnmount(() => (shownAgents.value = []))
+// The menu of the rarely used buttons and the help dialog it opens (where the room is short).
+const moreOpen = ref(false)
+const helpOpen = ref(false)
 // The workspaces as tabs in the header: on computers and wherever one row has room for them.
 const tabsInHeader = ref(!PHONE_WIDTH.matches || TABS_WIDTH.matches)
 const followTabsWidth = (): void => {
@@ -438,7 +442,7 @@ function deleteThis(): void {
           @reset="widths.resetWidths"
         />
         <button
-          v-if="speech.available.value"
+          v-if="speech.available.value && tabsInHeader"
           class="btn-icon relative"
           :class="speechAutoRead ? '!text-amber-300 ring-1 ring-amber-500' : ''"
           :aria-pressed="speechAutoRead"
@@ -464,14 +468,55 @@ function deleteThis(): void {
         >
           <AppIcon :name="speech.playing.value !== null ? 'stop' : 'speaker'" />
         </button>
-        <button class="btn-icon" :aria-label="$t('workspace.fullscreen')" :title="$t('workspace.fullscreen')" @click="fullscreen = true">
+        <button
+          v-if="tabsInHeader"
+          class="btn-icon"
+          :aria-label="$t('workspace.fullscreen')"
+          :title="$t('workspace.fullscreen')"
+          @click="fullscreen = true"
+        >
           <AppIcon name="expand" />
         </button>
+        <!-- Without room for these buttons (a phone): the rarely used ones behind one. -->
+        <DropdownMenu v-else v-model:open="moreOpen" right panel-class="flex w-64 flex-col p-1">
+          <template #trigger="{ toggle }">
+            <button
+              class="btn-icon"
+              :class="speechAutoRead ? '!text-amber-300 ring-1 ring-amber-500' : ''"
+              :aria-label="$t('workspace.more')"
+              :title="$t('workspace.more')"
+              @click="toggle"
+            >
+              <AppIcon name="more" />
+            </button>
+          </template>
+          <button
+            v-if="speech.available.value"
+            class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-slate-700"
+            :class="speechAutoRead ? 'text-amber-300' : 'text-slate-300'"
+            :aria-pressed="speechAutoRead"
+            @click="((moreOpen = false), (speechAutoRead = !speechAutoRead))"
+          >
+            <AppIcon name="speaker" />{{ $t('answers.autoRead') }}
+          </button>
+          <button
+            class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-slate-300 hover:bg-slate-700"
+            @click="((moreOpen = false), (fullscreen = true))"
+          >
+            <AppIcon name="expand" />{{ $t('workspace.fullscreen') }}
+          </button>
+          <button
+            class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-slate-300 hover:bg-slate-700"
+            @click="((moreOpen = false), (helpOpen = true))"
+          >
+            <AppIcon name="lightbulb" class="text-amber-300" />{{ $t('help.button') }}
+          </button>
+        </DropdownMenu>
         <!-- Which machine's workspaces: the same menu as in every other page's header. -->
         <HostSwitcher />
         <!-- The device's settings, the same menu as in every other page's header. -->
         <SettingsMenu />
-        <HelpButton />
+        <HelpButton v-model:open="helpOpen" :bare="!tabsInHeader" />
       </header>
       <!-- The way back from fullscreen, small in the corner above the columns. -->
       <button
