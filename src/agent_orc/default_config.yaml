@@ -53,6 +53,10 @@ terminal:
   # for a paste and wraps it as pasted content, which the agent may then refuse to follow.
   # type_chunk_chars: 200
   # type_chunk_delay_ms: 30
+  # An agent with an `exit_command` is asked to end by itself first, when it is stopped or
+  # restarted, and given this many seconds for it (the default below); what still runs after
+  # that is killed.
+  # exit_wait_seconds: 5
   # How much history the plain-text view (for selecting and copying) shows.
   text_history_lines: 5000
 
@@ -174,6 +178,10 @@ agents:
     label: Claude Code
     start: [claude, --settings, "{settings}", --remote-control, "{name}"]
     resume: [claude, --settings, "{settings}", --continue, --remote-control, "{name}"]
+    # Typed into the agent to end it by itself before it is stopped or restarted: only then does
+    # Claude Code close its Remote Control session in the Claude app; a killed one stays there
+    # as an offline entry until it is archived by hand.
+    exit_command: /exit
     # Every earlier conversation in the folder (also from VS Code or a terminal) can be resumed.
     conversations:
       source: claude

@@ -175,6 +175,11 @@ einen SSH-Tunnel ([Mehrere Rechner](#mehrere-rechner)).
   unten, wo Platz ist (Kopfzeile und Navigationsleiste der App zählen mit), und scrollt, wenn
   keine Seite genug hat.
 - Claude-Code-Sitzungen starten mit Remote Control und erscheinen dadurch auch in der Claude-App.
+  Beim Beenden und Neustarten eines Agenten wird er zuerst gebeten, sich selbst zu beenden (sein
+  `exit_command`, bei Claude `/exit`, dafür gibt `terminal.exit_wait_seconds` Zeit) und erst dann
+  wird beendet, was noch läuft: Ein abgeschossenes Claude Code lässt seine Sitzung als Offline-Eintrag
+  in der App stehen, den man von Hand archivieren müsste. Ein Ende von außen (der Rechner oder die
+  WSL wird ausgeschaltet) lässt sich so nicht abmildern.
 
 <p align="center">
   <img src="docs/screenshots/phone-overview-de.png" alt="Übersicht am Handy" width="280">

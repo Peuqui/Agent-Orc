@@ -302,3 +302,73 @@ def test_a_long_line_is_typed_in_pieces_and_arrives_whole(
             break
         time.sleep(0.1)
     assert manager.text(session.id, 50).count(line) == 2
+
+
+def exit_agents(marker: Path) -> dict[str, AgentProfile]:
+    """An agent that tidies up when told to quit, and one that takes no notice."""
+    return {
+        "polite": AgentProfile(
+            label="Polite",
+            start=["sh", "-c", f'read line; echo "$line" > {marker}; exit 0'],
+            resume=["sleep", "60"],
+            exit_command="quit",
+        ),
+        "deaf": AgentProfile(
+            label="Deaf", start=["sleep", "60"], resume=["true"], exit_command="quit"
+        ),
+    }
+
+
+def exiting_manager(socket_name: str, marker: Path, wait_seconds: int) -> SessionManager:
+    terminal = TerminalConfig(
+        keys=[],
+        submit_delay_ms=50,
+        text_history_lines=200,
+        type_chunk_chars=50,
+        type_chunk_delay_ms=5,
+        exit_wait_seconds=wait_seconds,
+    )
+    return SessionManager(socket_name, exit_agents(marker), terminal)
+
+
+def test_stop_lets_an_agent_with_an_exit_command_end_by_itself(
+    socket_name: str, workdir: Path, tmp_path: Path
+) -> None:
+    marker = tmp_path / "tidied-up"
+    manager = exiting_manager(socket_name, marker, wait_seconds=5)
+    session = manager.start("polite", workdir, resume=False)
+
+    started = time.monotonic()
+    manager.stop(session.id)
+
+    # It read the exit command and ended on its own, well before the time it was given.
+    assert marker.read_text().strip() == "quit"
+    assert time.monotonic() - started < 3
+    assert manager.list() == []
+
+
+def test_stop_kills_an_agent_that_does_not_exit_when_asked(
+    socket_name: str, workdir: Path, tmp_path: Path
+) -> None:
+    manager = exiting_manager(socket_name, tmp_path / "unused", wait_seconds=1)
+    session = manager.start("deaf", workdir, resume=False)
+
+    started = time.monotonic()
+    manager.stop(session.id)
+
+    # It waited for the time it was given, then killed it.
+    assert time.monotonic() - started >= 1
+    assert manager.list() == []
+
+
+def test_restart_lets_an_agent_with_an_exit_command_end_by_itself(
+    socket_name: str, workdir: Path, tmp_path: Path
+) -> None:
+    marker = tmp_path / "tidied-up"
+    manager = exiting_manager(socket_name, marker, wait_seconds=5)
+    session = manager.start("polite", workdir, resume=False)
+
+    restarted = manager.restart(session, {}, None)
+
+    assert marker.read_text().strip() == "quit"
+    assert (restarted.id, restarted.running) == (session.id, True)

@@ -46,6 +46,8 @@ LIST_FORMAT = FIELD_SEPARATOR.join(
     ]
 )
 MILLISECONDS_PER_SECOND = 1000
+# How often a session asked to exit is looked at.
+EXIT_POLL_SECONDS = 0.2
 # tmux reports a missing server on stderr; that state simply means "no sessions".
 NO_SERVER_MARKERS = ("no server running", "error connecting")
 
@@ -296,6 +298,7 @@ class SessionManager:
         env: dict[str, str],
     ) -> AgentSession:
         """Replace the session's process (ending a running one); attached terminals stay."""
+        self._exit_by_itself(session)
         self._tmux(
             "respawn-pane", "-k", "-t", exact_target(session.id), "-c", str(session.path),
             "-e", f"{SESSION_ENV}={session.id}", *environment_options(env), *command, ";",
@@ -342,9 +345,29 @@ class SessionManager:
         return result.stdout.rstrip("\n")
 
     def stop(self, session_id: str) -> None:
+        session = next((s for s in self.list() if s.id == session_id), None)
+        if session is None:
+            raise SessionNotFoundError(session_id)
+        self._exit_by_itself(session)
         result = self._tmux("kill-session", "-t", exact_target(session_id), check=False)
         if result.returncode != 0:
             raise SessionNotFoundError(session_id)
+
+    def _exit_by_itself(self, session: AgentSession) -> None:
+        """Ask a running agent that has an exit command to end by itself, and wait until it has
+        (at most `exit_wait_seconds`). Only then can it tidy up after itself, e.g. Claude Code
+        closing its Remote Control session in the Claude app; whatever still runs is up to the
+        caller to kill."""
+        profile = self._agents.get(session.profile)
+        if profile is None or profile.exit_command is None or not session.running:
+            return
+        self.type_line(session.id, profile.exit_command)
+        deadline = time.monotonic() + self._terminal.exit_wait_seconds
+        while time.monotonic() < deadline:
+            current = next((s for s in self.list() if s.id == session.id), None)
+            if current is None or not current.running:
+                return
+            time.sleep(EXIT_POLL_SECONDS)
 
     def _parse_line(self, line: str) -> AgentSession:
         session_id, profile, path, model, suffix, pane_dead, dead_status, created = line.split(

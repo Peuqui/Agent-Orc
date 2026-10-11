@@ -162,7 +162,11 @@ that run Agent-Orc can be shown in the same app, through an SSH tunnel ([Several
   on a phone as on a computer (not the system's picker). It opens above or below, wherever the
   room is (the header and the bottom bar of the app count), and scrolls when neither side has
   enough.
-- Claude Code sessions start with Remote Control, so they also show up in the Claude app.
+- Claude Code sessions start with Remote Control, so they also show up in the Claude app. Stopping
+  or restarting an agent asks it to end by itself first (its `exit_command`, for Claude `/exit`,
+  with `terminal.exit_wait_seconds` to do so) and only then kills what still runs: a killed Claude
+  Code leaves its session in the app as an offline entry, which you would have to archive by hand.
+  An end from outside (the machine or the WSL is switched off) cannot be softened that way.
 
 <p align="center">
   <img src="docs/screenshots/phone-overview-en.png" alt="Overview on the phone" width="280">

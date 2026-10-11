@@ -96,6 +96,9 @@ class TerminalConfig(StrictModel):
     # content, which the agent then may refuse to follow.
     type_chunk_chars: int = 200
     type_chunk_delay_ms: int = 30
+    # An agent with an exit command is asked to end by itself first and given this long for it
+    # (seconds); what still runs after that is killed.
+    exit_wait_seconds: int = 5
 
 
 class HandoverConfig(StrictModel):
@@ -318,6 +321,10 @@ class AgentProfile(StrictModel):
     clear_command: str | None = None
     # Typed into an idle agent to shrink its context to a summary (Claude: /compact).
     compact_command: str | None = None
+    # Typed into a running agent to end it by itself before it is stopped or restarted (Claude:
+    # /exit): only then does Claude Code close its Remote Control session in the Claude app, a
+    # killed one stays there as an offline entry until it is archived by hand.
+    exit_command: str | None = None
     # Environment of the agent; {effort} is its level, {suffix} that of a further agent in the
     # folder (an entry is left out when its placeholder has no value).
     env: dict[str, str] = {}
