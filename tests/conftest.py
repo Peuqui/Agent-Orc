@@ -41,7 +41,7 @@ def socket_name(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[str
 
 
 class FakeWhisper:
-    """A stand-in for the whisper-stt service: records requests, answers as configured."""
+    """A stand-in for the STT-Suite service: records requests, answers as configured."""
 
     def __init__(self) -> None:
         self.status = 200

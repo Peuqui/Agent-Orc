@@ -133,7 +133,7 @@ einen SSH-Tunnel ([Mehrere Rechner](#mehrere-rechner)).
 **Terminal**
 - Ein normales Eingabefeld unter dem Terminal, damit Handytastatur, Autokorrektur und Diktat
   funktionieren; Enter sendet, Shift+Enter macht eine neue Zeile.
-- Diktat über einen lokalen Whisper-Dienst ([whisper-stt](https://github.com/Peuqui/whisper-stt),
+- Diktat über einen lokalen Whisper-Dienst ([STT-Suite](https://github.com/Peuqui/STT-Suite),
   GPU oder CPU, Engine pro Gerät wählbar, z. B. Parakeet oder Whisper) oder die
   Spracherkennung des Browsers.
 - Prompt-Vorlagen für häufige Anweisungen, mit einem Tipp im Eingabefeld.
@@ -196,7 +196,7 @@ einen SSH-Tunnel ([Mehrere Rechner](#mehrere-rechner)).
 - Node.js 20.19+ oder 22.12+ mit npm (baut bei der Installation die Web-App; das `nodejs`-Paket
   von Ubuntu ist zu alt, siehe unten)
 - die gewünschten Agenten-CLIs, z. B. [Claude Code](https://docs.claude.com/en/docs/claude-code)
-- optional, fürs Diktat: [whisper-stt](https://github.com/Peuqui/whisper-stt) (lokale
+- optional, fürs Diktat: [STT-Suite](https://github.com/Peuqui/STT-Suite) (lokale
   Spracherkennung)
 - optional, für mehrere Rechner: `ssh` mit Schlüssel-Login auf jeden davon
 

@@ -1,6 +1,6 @@
 """Dictation: audio recorded in the browser, transcribed by a Whisper service.
 
-Speaks the API of the whisper-stt service: POST /transcribe with a multipart form holding the
+Speaks the API of the STT-Suite service: POST /transcribe with a multipart form holding the
 audio file, the device ("cpu" or "cuda") and the language; the answer is JSON with "text".
 The device is the user's choice per dictation; nothing switches between them automatically.
 The engine and its quality are the service's own settings (it keeps one model per device and
@@ -51,7 +51,7 @@ class ServiceStatus:
 
 
 def service_status(config: DictationConfig) -> ServiceStatus | None:
-    """The service's settings (whisper-stt GET /status); None when no service is configured or it
+    """The service's settings (STT-Suite GET /status); None when no service is configured or it
     does not answer right now."""
     if config.whisper_url is None:
         return None

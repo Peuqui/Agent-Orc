@@ -163,7 +163,7 @@ def run_setup() -> None:
         )
 
     whisper_url: str | None = None
-    if ask_yes("Do you run a Whisper service (whisper-stt) for dictation?", False):
+    if ask_yes("Do you run a speech-to-text service (STT-Suite) for dictation?", False):
         whisper_url = ask("Its address", defaults["dictation"]["whisper_url"])
         if not whisper_reachable(whisper_url):
             print(f"Note: {whisper_url} does not answer right now; dictation needs it running.")

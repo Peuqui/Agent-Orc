@@ -123,7 +123,7 @@ that run Agent-Orc can be shown in the same app, through an SSH tunnel ([Several
 **Terminal**
 - A plain input field below the terminal, so phone keyboards, autocorrect and dictation work;
   Enter sends, Shift+Enter starts a new line.
-- Dictation through a local Whisper service ([whisper-stt](https://github.com/Peuqui/whisper-stt),
+- Dictation through a local Whisper service ([STT-Suite](https://github.com/Peuqui/STT-Suite),
   GPU or CPU, engine chosen per device, e.g. Parakeet or Whisper) or the browser's own speech
   recognition.
 - Prompt templates for frequent instructions, one tap into the input field.
@@ -182,7 +182,7 @@ that run Agent-Orc can be shown in the same app, through an SSH tunnel ([Several
 - Node.js 20.19+ or 22.12+ with npm (builds the web app during installation; Ubuntu's own
   `nodejs` package is too old, see below)
 - the agent CLIs you want to use, e.g. [Claude Code](https://docs.claude.com/en/docs/claude-code)
-- optional, for dictation: [whisper-stt](https://github.com/Peuqui/whisper-stt) (local speech
+- optional, for dictation: [STT-Suite](https://github.com/Peuqui/STT-Suite) (local speech
   recognition)
 - optional, for several machines: `ssh` with key login to each of them
 
