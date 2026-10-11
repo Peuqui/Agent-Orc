@@ -92,7 +92,10 @@ einen SSH-Tunnel ([Mehrere Rechner](#mehrere-rechner)).
   Tabellen werden ausgelassen). Die Sprachausgabe ist eine Liste von Engines: mit einem Abschnitt
   `announce:` in der Konfiguration lässt sich der Hörabsatz auch über
   [AIfred](https://github.com/Peuqui/AIfred-Intelligence) auf einem Echo Dot ansagen, im Raum, den
-  du in den Einstellungen wählst. „Neue vorlesen (n)“ wird grau, wenn nichts Neues da ist, wie
+  du in den Einstellungen wählst. Mit einem Abschnitt `tts_suite:` spricht ein
+  [TTS-Suite](https://github.com/Peuqui/TTS-Suite)-Dienst auf dem Server (er wählt Engine und Stimme aus
+  seiner Liste, auch eine Cloud-Engine, und das erste Stück läuft schon, während der Rest noch entsteht);
+  der Browser spielt, was er schickt, und das Token bleibt auf dem Server. „Neue vorlesen (n)“ wird grau, wenn nichts Neues da ist, wie
   das Häkchen daneben.
 - Jeder Codeblock in den Antworten, in Notizen und in der Markdown-Vorschau hat am rechten Rand
   einen Kopieren-Knopf, über dem Text des Blocks; er bleibt dort stehen, wenn der Block seitlich

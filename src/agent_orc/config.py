@@ -158,6 +158,19 @@ class AnnounceConfig(StrictModel):
     label: str
 
 
+class TtsSuiteConfig(StrictModel):
+    """Answers read aloud by a TTS-Suite service (see speech_service.py)."""
+
+    # The service's address, e.g. http://127.0.0.1:5090
+    url: str
+    # A file in the config directory holding the bearer token; only needed when the service wants
+    # one for speaking (it does when it listens on a network). Readable by the user only.
+    token_file: str | None = None
+    timeout_seconds: int
+    # What the speech settings call this output.
+    label: str
+
+
 class VoiceConfig(StrictModel):
     """Speaking to an agent on the Echo Dot: what AIfred hands over after the wake word (see
     voice.py). The spoken lines are here, not in the code."""
@@ -418,6 +431,8 @@ class Config(StrictModel):
     dictation: DictationConfig
     # Without it there is no Echo Dot to read answers on.
     announce: AnnounceConfig | None = None
+    # Without it no TTS-Suite service reads answers aloud (the browser's voices remain).
+    tts_suite: TtsSuiteConfig | None = None
     # Without it nobody can speak to an agent through the Echo; needs "announce" for its answers.
     voice: VoiceConfig | None = None
     # Without it there is no AI-Connect to read along in.

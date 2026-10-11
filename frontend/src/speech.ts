@@ -1,9 +1,10 @@
 // Speech output for answers. An engine speaks one piece of text at a time; the queue and the
 // settings are in useSpeech. The browser's own voices come first; the Echo (through AIfred,
-// see announce.py) joins when Agent-Orc's config has it. A speech service on the server would be
-// one more engine in this list.
+// see announce.py) and a TTS-Suite service (see speech_service.py) join when Agent-Orc's config has
+// them.
 import { ref } from 'vue'
 import { api } from './api'
+import { FrameReader } from './audioFrames'
 import { i18n } from './i18n'
 import { speechChunks } from './speechText'
 
@@ -125,23 +126,105 @@ function echo(label: string, maxChars: number): SpeechEngine {
   }
 }
 
+/** What the service says when it fails after a reading has begun: `{error, detail}`. */
+function frameError(body: Uint8Array): Error {
+  const answer = JSON.parse(new TextDecoder().decode(body)) as { error: string; detail: string }
+  return new Error(`${answer.error}: ${answer.detail}`)
+}
+
+/**
+ * A TTS-Suite service: it chooses the engine, cleans and cuts the text and answers with audio as
+ * it exists. The pieces are decoded and queued one after the other, so the first one starts while
+ * the rest is still being made.
+ */
+function ttsSuite(label: string, voiceChoices: VoiceChoice[]): SpeechEngine {
+  let context: AudioContext | undefined
+  let abort: AbortController | undefined
+  let playing = new Set<AudioBufferSourceNode>()
+
+  function cancel(): void {
+    abort?.abort()
+    abort = undefined
+    for (const source of playing) source.stop()
+    playing = new Set()
+    void context?.resume()
+  }
+
+  async function speak(text: string, options: SpeechOptions): Promise<void> {
+    cancel()
+    const controller = new AbortController()
+    abort = controller
+    const audio = (context ??= new AudioContext())
+    await audio.resume()
+    let lastEnded: Promise<void> = Promise.resolve()
+    try {
+      const response = await api.ttsSpeak(text, options.lang, options.voice, options.rate, controller.signal)
+      const reader = (response.body as ReadableStream<Uint8Array>).getReader()
+      const frames = new FrameReader()
+      let startAt = audio.currentTime
+      for (;;) {
+        const { done, value } = await reader.read()
+        if (done) break
+        for (const { header, body } of frames.push(value)) {
+          if (header.kind === 'error') throw frameError(body)
+          if (header.kind !== 'audio' || header.keepalive || body.length === 0) continue
+          const buffer = await audio.decodeAudioData(body.buffer as ArrayBuffer)
+          const source = audio.createBufferSource()
+          source.buffer = buffer
+          source.connect(audio.destination)
+          startAt = Math.max(startAt, audio.currentTime)
+          source.start(startAt)
+          startAt += buffer.duration
+          playing.add(source)
+          lastEnded = new Promise((resolve) => {
+            source.onended = () => resolve()
+          })
+        }
+      }
+      if (frames.incomplete) throw new Error('the speech service ended in the middle of a piece')
+      await lastEnded
+    } catch (error) {
+      // Cancelling ends the request, which is no failure.
+      if (!controller.signal.aborted) throw error
+    }
+  }
+
+  return {
+    id: 'tts-suite',
+    label,
+    choiceLabel: 'answers.voice',
+    // The service cuts the text by what its engine takes and cleans it.
+    maxChars: Number.POSITIVE_INFINITY,
+    split: (text) => [text],
+    available: () => true,
+    voices: () => Promise.resolve(voiceChoices),
+    speak,
+    cancel,
+    pause: () => void context?.suspend(),
+    resume: () => void context?.resume(),
+  }
+}
+
 /** The engines this device offers. */
-export const speechEngines = ref<SpeechEngine[]>([browserSpeech].filter((engine) => engine.available()))
+const browserEngines = [browserSpeech].filter((engine) => engine.available())
+export const speechEngines = ref<SpeechEngine[]>(browserEngines)
 
 let serverEngines: Promise<void> | undefined
 
-/** Adds the engines Agent-Orc's server offers (the Echo, if configured); asked once. */
+/** Adds the engines Agent-Orc's server offers (the Echo and a TTS-Suite service, if configured);
+ * asked once. A service that does not answer is left out for now and asked again next time. */
 export function loadServerEngines(): Promise<void> {
-  serverEngines ??= api.announce().then(
-    (state) => {
-      if (state.configured) speechEngines.value = [...speechEngines.value, echo(state.label, state.max_chars)]
-    },
-    (error: unknown) => {
-      // AIfred may be down right now: ask again next time.
-      serverEngines = undefined
-      throw error
-    },
-  )
+  serverEngines ??= Promise.allSettled([api.announce(), api.tts()]).then(([echoState, ttsState]) => {
+    const found: SpeechEngine[] = []
+    if (echoState.status === 'fulfilled' && echoState.value.configured) {
+      found.push(echo(echoState.value.label, echoState.value.max_chars))
+    }
+    if (ttsState.status === 'fulfilled' && ttsState.value.configured) {
+      found.push(ttsSuite(ttsState.value.label, ttsState.value.voices))
+    }
+    speechEngines.value = [...browserEngines, ...found]
+    if (echoState.status === 'rejected' || ttsState.status === 'rejected') serverEngines = undefined
+  })
   return serverEngines
 }
 

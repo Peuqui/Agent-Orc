@@ -86,7 +86,10 @@ that run Agent-Orc can be shown in the same app, through an SSH tunnel ([Several
   code and tables are left out). The speech output is a list of engines: with an `announce:`
   section in the config, the paragraph for listening can also be said on an Echo Dot through
   [AIfred](https://github.com/Peuqui/AIfred-Intelligence), in the room chosen in the settings.
-  “Read new (n)” turns grey when nothing is new, like the check mark beside it.
+  With a `tts_suite:` section, a [TTS-Suite](https://github.com/Peuqui/TTS-Suite) service on the
+  server speaks (it picks the engine and the voice from its list, also with a cloud engine, and
+  the first piece plays while the rest is still being made); the browser plays what it sends, and
+  the token stays on the server. “Read new (n)” turns grey when nothing is new, like the check mark beside it.
 - Every code block in the answers, in notes and in the Markdown preview has a copy button at the
   right edge of the block, over its text; it stays there while the block scrolls sideways. One
   tap puts the block into the clipboard, without the line break at its end (pasted into a

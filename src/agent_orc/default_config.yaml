@@ -108,6 +108,19 @@ dictation:
 #   # What the speech settings call this output.
 #   label: Echo
 
+# Answers read aloud by a TTS-Suite service (https://github.com/Peuqui/TTS-Suite): it picks the
+# engine, cleans and cuts the text and sends audio back, which the browser plays. Remove the leading
+# "#" to switch it on; it joins the engines of the speech settings. The browser's own voices
+# need nothing of this.
+# tts_suite:
+#   url: http://127.0.0.1:5090
+#   # Only if the service wants a token for speaking (it does on a network): a file next to this one,
+#   # readable by you only (chmod 600).
+#   # token_file: tts-token
+#   timeout_seconds: 120
+#   # What the speech settings call this output.
+#   label: TTS-Suite
+
 # Speaking to an agent on the Echo Dot ("Hey Orc, ..."): AIfred posts what was said to
 # POST /api/voice with the token below; the Echo asks back which agent it understood and the text
 # is typed in after a spoken yes. Needs "announce". Remove the leading "#" to switch it on.

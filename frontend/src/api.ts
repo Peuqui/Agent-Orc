@@ -413,19 +413,20 @@ export function hostPrefix(host: string | null | undefined): string {
   return host == null ? '' : `hosts/${encodeURIComponent(host)}/`
 }
 
-async function send<T>(
-  method: string,
-  path: string,
-  /** body is sent as JSON, upload (e.g. recorded audio) as it is. `host` asks another machine's
-   * app, `fromRoot` this machine's own whichever machine's page this is. */
-  options: {
-    body?: unknown
-    upload?: Blob
-    query?: Record<string, string>
-    host?: string
-    fromRoot?: boolean
-  } = {},
-): Promise<T> {
+interface SendOptions {
+  body?: unknown
+  upload?: Blob
+  query?: Record<string, string>
+  host?: string
+  fromRoot?: boolean
+  /** Ends the request (an answer that is read as a stream and may be given up). */
+  signal?: AbortSignal
+}
+
+/** The answer of the app to the request, once it is a success; an error answer is an ApiError. The
+ * body is not read yet. Of `options`: body is sent as JSON, upload (e.g. recorded audio) as it is;
+ * `host` asks another machine's app, `fromRoot` this machine's own whichever machine's page this is. */
+async function fetchApi(method: string, path: string, options: SendOptions = {}): Promise<Response> {
   // Relative to the page, so the app also works under a reverse-proxy sub-path (and below
   // /hosts/<name>/, where it is another machine's).
   const base = options.fromRoot ? rootAddress() : document.baseURI
@@ -444,7 +445,7 @@ async function send<T>(
   }
   let response: Response
   try {
-    response = await fetch(url, { method, credentials: 'same-origin', headers, body })
+    response = await fetch(url, { method, credentials: 'same-origin', headers, body, signal: options.signal })
   } catch (error) {
     // fetch only rejects when no HTTP response arrived at all (server down, network gone).
     throw new ApiError(0, NETWORK_ERROR, String(error), null)
@@ -465,6 +466,11 @@ async function send<T>(
     const retryAfter = response.headers.get('Retry-After')
     throw new ApiError(response.status, code, detail, retryAfter === null ? null : Number(retryAfter))
   }
+  return response
+}
+
+async function send<T>(method: string, path: string, options: SendOptions = {}): Promise<T> {
+  const response = await fetchApi(method, path, options)
   return response.status === NO_CONTENT ? (undefined as T) : ((await response.json()) as T)
 }
 
@@ -627,6 +633,15 @@ function createApi(host?: string) {
     peerMessage: (to: string[], content: string) =>
       request<{ sent: { to: string; id: number; online: boolean }[] }>('POST', 'peers/message', { body: { to, content }, fromRoot: true }),
 
+    /** Whether a TTS-Suite service reads answers aloud, what it is called and the voices it has. */
+    tts: () => request<{ configured: boolean; label: string; voices: { id: string; label: string }[] }>('GET', 'tts'),
+    /** The service's frames of audio for the text (see audioFrames.ts), read as they come. */
+    ttsSpeak: (text: string, language: string, voice: string, speed: number, signal: AbortSignal) =>
+      fetchApi(
+        'POST',
+        'tts/speak',
+        { body: { text, language, voice, speed }, host, signal },
+      ),
     announce: () =>
       request<{ configured: boolean; rooms: string[]; max_chars: number; label: string }>('GET', 'announce'),
     /** Has the text said on the Echo of the room ("*": all); returns once it is queued. */

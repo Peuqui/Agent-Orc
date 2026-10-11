@@ -32,7 +32,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from agent_orc import announce as announcing
-from agent_orc import files, peers
+from agent_orc import files, peers, speech_service
 from agent_orc.answers import read_image, read_turns
 from agent_orc.approvals import ApprovalNotFoundError, ApprovalRequest, decide, open_requests
 from agent_orc.attachments import (
@@ -305,6 +305,7 @@ ERROR_STATUS: dict[type[Exception], int] = {
     announcing.UnknownRoomError: status.HTTP_404_NOT_FOUND,
     announcing.TextTooLongError: status.HTTP_413_CONTENT_TOO_LARGE,
     announcing.AnnounceError: status.HTTP_502_BAD_GATEWAY,
+    speech_service.SpeechServiceError: status.HTTP_502_BAD_GATEWAY,
     # Not 401: that would send the page to the login.
     peers.UserTokenRefusedError: status.HTTP_403_FORBIDDEN,
     peers.UserTokenMissingError: status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -468,6 +469,15 @@ class ScheduledPromptRequest(BaseModel):
     text: str
     # When to type it, in seconds since the epoch.
     at: float
+
+
+class TtsSpeakRequest(BaseModel):
+    text: str
+    # The language of the text, as the interface language ("de", "en").
+    language: str
+    # A voice of the service's shared folder; none: its default.
+    voice: str | None = None
+    speed: float | None = None
 
 
 class PeerMessageRequest(BaseModel):
@@ -1734,6 +1744,28 @@ def create_app(
         if config.announce is None:
             raise NotConfiguredError("announce")
         announcing.announce(config.announce, config_dir(), body.room, body.texts, body.speaker)
+
+    @app.get("/api/tts", dependencies=authenticated)
+    def tts_state() -> dict[str, Any]:
+        """Whether a TTS-Suite service reads answers aloud, what it is called and its voices."""
+        settings = config.tts_suite
+        if settings is None:
+            return {"configured": False, "label": "", "voices": []}
+        return {
+            "configured": True,
+            "label": settings.label,
+            "voices": speech_service.voices(settings, config_dir()),
+        }
+
+    @app.post("/api/tts/speak", dependencies=authenticated)
+    def tts_speak(body: TtsSpeakRequest) -> StreamingResponse:
+        """The service's frames of audio for the text, passed on as they come."""
+        if config.tts_suite is None:
+            raise NotConfiguredError("tts_suite")
+        frames = speech_service.speak(
+            config.tts_suite, config_dir(), body.text, body.language, body.voice, body.speed
+        )
+        return StreamingResponse(frames, media_type=speech_service.FRAMES_MEDIA_TYPE)
 
     def require_voice_token(authorization: str | None = Header(default=None)) -> None:
         if config.voice is None:
