@@ -564,12 +564,12 @@ function deleteThis(): void {
             allow="microphone; clipboard-write"
             @load="onFrameLoad(id)"
           />
-          <!-- Divider on each column's right edge, above the iframes (which would swallow it); on
+          <!-- Divider on each column's right edge, above the iframes (which would swallow it), wider for a finger; on
                phones every column fills the screen, so there is nothing to divide. -->
           <div
             v-for="id in showTabs ? workspace.tabs : []"
             :key="`divider-${id}`"
-            class="z-10 w-2 cursor-col-resize touch-none justify-self-end border-r border-slate-700 hover:bg-red-500/30"
+            class="z-10 w-2 cursor-col-resize touch-none justify-self-end border-r border-slate-700 hover:bg-red-500/30 pointer-coarse:w-6 pointer-coarse:bg-slate-700/40"
             :class="{ 'bg-red-500/40': widths.resize.value?.id === id }"
             :style="{ gridColumn: column(id), gridRow: '1 / span 2' }"
             :title="$t('workspace.resize')"
