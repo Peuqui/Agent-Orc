@@ -48,3 +48,26 @@ Stand: `main` = `origin/main`, auf Mini und Aragon eingespielt (maßgeblich ist 
 4. **Reddit-Beitrag:** erst ganz zum Schluss, Entwurf `.agent-orc/reddit-entwurf.txt` auf den neuen Stand bringen (Backends mit einem Befehl, Setup, ZIP, TTS-/STT-Suite).
 5. Echo-Dot-Punkte zurückgestellt; Gespräche-Tab nach Bridge-Neustart nicht überprüfbar (Beobachter-Client gesperrt).
 6. vllm-research darf weitermachen, sobald TTS-Suite-Test und Aufräumen fertig sind (Peuqui hat angeordnet, dass wir ihr das melden).
+
+## Nachtrag 12.10.: Betrieb der TTS-Suite (Auftrag über AIfred) – für Peuqui
+
+Vorbereitet und gepusht, nichts davon eingespielt (kein sudo):
+
+- Repo MiniPCLinux (main, Commit „System-Unit, Polkit, nginx /tts-suite/, Landingpage-Karte und Dienst-Seite“):
+  `systemd/system/tts-suite@.service`, `polkit-1/rules.d/60-tts-suite.rules`, `nginx/snippets/tts-suite.conf`
+  (+ `include` und Icon-Zeile in `sites-available/narnia`), Karte in `landing.html`/`landing-order.json`
+  (beide Kopien), `www-html/tts-suite-icon.svg`, Eintrag `ttssuite` in `ai-service-control.php/.html`
+  (Start/Stop/Restart/Logs, je Engine und Rechner Zustand und VRAM aus `GET /engines`).
+- Umstellung: `sudo ~/Projekte/TTS-Suite/deploy/switch-to-system-unit.sh` (stoppt zuerst die Benutzer-Unit,
+  gleicher Port 5090), danach `nginx -t && sudo systemctl reload nginx` und
+  `sudo ~/MiniPCLinux/system-config/ai-service-control/install.sh`. Das Skript überschreibt die
+  nginx-Site-Datei NICHT, es zeigt den Unterschied zum Repo.
+- Branch `tts-alte-sprachausgabe-entfernen` (MiniPCLinux): entfernt die alte Sprachausgabe-Liste (AIfreds
+  `/tts/*`) – erst anwenden, wenn AIfred umgestellt ist.
+- Geprüft mit einem eigenen nginx auf Port 18090: `/tts-suite`, `/tts-suite/`, `/tts-suite/ui` führen auf
+  `/tts-suite/ui/`, Oberfläche, Skripte und `/tts-suite/engines` kommen unter dem Präfix an.
+- Zugang: Die Site hat `auth_basic` auf Server-Ebene, `tts-suite.conf` schaltet es nicht ab – wie bei
+  `/agent-orc/` verlangt jeder Zugriff die Anmeldung. Dahinter sieht der Dienst Loopback: Vorlesen und Lesen
+  gehen ohne Token, Ändern (Start/Stopp, Konfiguration, Stimmen-Abgleich) verlangt das Token (einmal in der
+  Seite eintragen). Wer die Anmeldung der Site hat, kann also vorlesen lassen (inkl. kostenpflichtigem
+  DashScope, wenn ein Client es so anfragt) – das ist dieselbe Vertrauensgrenze wie bei Agent-Orc.
