@@ -32,7 +32,7 @@ async function load(): Promise<void> {
     catalog.value = rows
     choices.value = chosen
     loaded.value = true
-    const engines = [...new Set(chosen.entries.map((entry) => entry.engine))]
+    const engines = [...new Set(chosen.entries.filter((entry) => entry.offered).map((entry) => entry.engine))]
     await Promise.all(
       engines.map(async (engine) => {
         // Added once they are there: the object is read after the wait, or answers that arrive
@@ -75,7 +75,7 @@ const reorder = useReorder({
   ignore: '[data-no-drag]',
 })
 const drag = reorder.drag
-const nothingOn = computed(() => loaded.value && !choices.value.entries.some((entry) => entry.enabled))
+const nothingOn = computed(() => loaded.value && !choices.value.entries.some((entry) => entry.enabled && entry.offered))
 
 async function save(): Promise<void> {
   try {
@@ -109,10 +109,11 @@ async function save(): Promise<void> {
           @contextmenu.prevent
         >
           <div class="flex items-center justify-between gap-2">
-            <span class="min-w-0 truncate font-medium" :class="entry.enabled ? 'text-slate-200' : 'text-slate-500'">
+            <span class="min-w-0 truncate font-medium" :class="entry.enabled && entry.offered ? 'text-slate-200' : 'text-slate-500'">
               {{ label(entry) }}
             </span>
-            <ToggleSwitch data-no-drag :checked="entry.enabled" @click="entry.enabled = !entry.enabled">
+            <span v-if="!entry.offered" class="shrink-0 text-xs text-amber-400">{{ $t('ttsSettings.notOffered') }}</span>
+            <ToggleSwitch v-else data-no-drag :checked="entry.enabled" @click="entry.enabled = !entry.enabled">
               <span class="sr-only">{{ $t('ttsSettings.on') }}</span>
             </ToggleSwitch>
           </div>

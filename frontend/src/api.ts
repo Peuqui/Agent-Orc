@@ -438,6 +438,8 @@ export interface TtsEntry {
   host: string | null
   unit: TtsUnit
   enabled: boolean
+  /** The service still offers it; one it does not stays in the list but is never sent. */
+  offered: boolean
 }
 
 /** What the user chose of the TTS service: the entries, and one voice per engine. */

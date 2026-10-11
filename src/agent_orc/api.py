@@ -496,6 +496,9 @@ class TtsEntry(BaseModel):
     # How much text the engine is given at once.
     unit: Literal["sentence", "paragraph", "whole"]
     enabled: bool
+    # Whether the service still offers it; one it does not stays in the list but is never sent.
+    # Worked out on every read, never stored.
+    offered: bool = True
 
 
 class TtsChoices(BaseModel):
@@ -1802,13 +1805,17 @@ def create_app(
         places = [(entry.engine, entry.host) for entry in body.entries]
         if len(set(places)) != len(places):
             raise TtsChoiceInvalidError("an engine may be listed once on a machine")
-        write_tts_choices(body.model_dump())
+        write_tts_choices(body.model_dump(exclude={"entries": {"__all__": {"offered"}}}))
 
     @app.post("/api/tts/speak", dependencies=authenticated)
     def tts_speak(body: TtsSpeakRequest) -> StreamingResponse:
         """The service's frames of audio for the text, passed on as they come."""
+        settings = tts_settings()
+        chosen = speech_service.merged_choices(
+            read_tts_choices(), speech_service.catalog(settings, config_dir())
+        )
         frames = speech_service.speak(
-            tts_settings(), config_dir(), body.text, body.language, body.speed, read_tts_choices()
+            settings, config_dir(), body.text, body.language, body.speed, chosen
         )
         return StreamingResponse(frames, media_type=speech_service.FRAMES_MEDIA_TYPE)
 

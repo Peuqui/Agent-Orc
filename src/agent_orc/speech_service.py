@@ -67,11 +67,14 @@ def catalog(config: TtsSuiteConfig, directory: Path) -> list[dict[str, Any]]:
 
 
 def merged_choices(stored: dict[str, Any], rows: list[dict[str, Any]]) -> dict[str, Any]:
-    """What the user chose, with what the catalog has now: an entry the catalog no longer has is
-    dropped; a row it newly has joins at the end, switched OFF (an engine may cost money), in the
-    unit the engine recommends."""
+    """What the user chose, with what the catalog has now: nothing is removed. An entry the catalog
+    no longer has stays, marked `offered: false` (it is never sent); a row it newly has joins at
+    the end, switched OFF (an engine may cost money), in the unit the engine recommends."""
     present = {(row["engine"], row["host"]) for row in rows}
-    kept = [entry for entry in stored["entries"] if (entry["engine"], entry["host"]) in present]
+    kept = [
+        {**entry, "offered": (entry["engine"], entry["host"]) in present}
+        for entry in stored["entries"]
+    ]
     known = {(entry["engine"], entry["host"]) for entry in kept}
     joined = [
         {
@@ -79,13 +82,12 @@ def merged_choices(stored: dict[str, Any], rows: list[dict[str, Any]]) -> dict[s
             "host": row["host"],
             "unit": row["unit_default"],
             "enabled": False,
+            "offered": True,
         }
         for row in rows
         if (row["engine"], row["host"]) not in known
     ]
-    engines = {row["engine"] for row in rows}
-    voices = {engine: voice for engine, voice in stored["voices"].items() if engine in engines}
-    return {"entries": kept + joined, "voices": voices}
+    return {"entries": kept + joined, "voices": stored["voices"]}
 
 
 def voices(config: TtsSuiteConfig, directory: Path, engine: str) -> list[dict[str, str]]:
@@ -104,11 +106,12 @@ def speak(
     speed: float | None,
     chosen: dict[str, Any],
 ) -> Iterator[bytes]:
-    """The frames of the reading, with the entries the user switched on (`chosen`: `entries` in the
-    order of speaking, `voices` per engine). The service answers once the first piece exists, so a
+    """The frames of the reading, with the entries the user switched on and the service offers
+    (`chosen` as merged_choices has it: `entries` in the order of speaking, `voices` per engine).
+    The service answers once the first piece exists, so a
     reading that cannot start raises here, before anything is sent on; later failures are frames."""
     # Without a choice the service refuses (a request names its engines); the user chooses first.
-    on = [entry for entry in chosen["entries"] if entry["enabled"]]
+    on = [entry for entry in chosen["entries"] if entry["enabled"] and entry["offered"]]
     if not on:
         raise NothingSwitchedOnError(
             "no engine of the TTS service is switched on: choose them in the settings"

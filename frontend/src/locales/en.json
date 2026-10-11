@@ -414,13 +414,14 @@
   "ttsSettings": {
     "open": "Engines of the TTS service …",
     "title": "Engines of the TTS service",
-    "hint": "The engines are tried from the top; if one fails, the next one that is on speaks. Drag to change the order (on a phone: hold, then drag), switch on the engines you want, choose how much text each is given at once and a voice per engine. An engine on another machine is its own entry.",
+    "hint": "The engines are tried from the top; if one fails, the next one that is on speaks. Drag to change the order (on a phone: hold, then drag), switch on the engines you want, choose how much text each is given at once and a voice per engine. An engine on another machine is its own entry. Nothing is removed: the list shows everything the service offers; new entries appear at the bottom, switched off.",
     "on": "On",
     "unitLabel": "How much text at once",
     "voiceLabel": "Voice (for this engine on every machine)",
     "unit": { "sentence": "A sentence at a time", "paragraph": "A paragraph at a time", "whole": "The whole text" },
     "loading": "Loading …",
-    "nothingOn": "No engine is on: nothing can be read aloud."
+    "nothingOn": "No engine is on: nothing can be read aloud.",
+    "notOffered": "not offered by the service"
   },
   "models": {
     "freeUntil": "free until {date} ({count} day left | {count} days left)"

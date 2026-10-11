@@ -218,7 +218,7 @@ def test_before_anything_is_chosen_every_catalog_row_is_listed_and_off(
     assert chosen["voices"] == {}
 
 
-def test_the_choice_is_kept_and_follows_what_the_catalog_has(
+def test_the_choice_is_kept_and_nothing_is_removed_when_the_catalog_changes(
     clock: FakeClock, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, service: str
 ) -> None:
     client = make_client(clock, tmp_path, monkeypatch, service)
@@ -231,16 +231,28 @@ def test_the_choice_is_kept_and_follows_what_the_catalog_has(
     )
     chosen = client.get("/api/tts/choices").json()
     assert [
-        (each["engine"], each["host"], each["unit"], each["enabled"]) for each in chosen["entries"]
+        (each["engine"], each["host"], each["unit"], each["enabled"], each["offered"])
+        for each in chosen["entries"]
     ] == [
-        ("piper", None, "paragraph", True),
-        ("edge", None, "sentence", False),
+        ("piper", None, "paragraph", True, True),
+        # No longer in the catalog: stays, marked, with its settings.
+        ("gone", None, "sentence", True, False),
+        ("edge", None, "sentence", False, True),
         # Newly in the catalog: at the end, switched off, in the unit the engine recommends.
-        ("qwen3local", None, "sentence", False),
-        ("qwen3local", "Aragon", "sentence", False),
-        ("dashscope_audio3", None, "whole", False),
+        ("qwen3local", None, "sentence", False, True),
+        ("qwen3local", "Aragon", "sentence", False, True),
+        ("dashscope_audio3", None, "whole", False, True),
     ]
-    assert chosen["voices"] == {"piper": "Thorsten", "edge": "Katja"}
+    assert chosen["voices"] == {"piper": "Thorsten", "gone": "X", "edge": "Katja"}
+
+
+def test_an_entry_the_service_does_not_offer_is_never_sent(
+    clock: FakeClock, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, service: str
+) -> None:
+    client = make_client(clock, tmp_path, monkeypatch, service)
+    choose(client, entry("gone"), entry("piper"), voices={})
+    client.post("/api/tts/speak", json={"text": "Hello.", "language": "en"})
+    assert [each["engine"] for each in FakeSpeechService.heard[0]["engines"]] == ["piper"]
 
 
 def test_an_engine_listed_twice_on_one_machine_is_refused(

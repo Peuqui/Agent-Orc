@@ -414,13 +414,14 @@
   "ttsSettings": {
     "open": "Engines des TTS-Dienstes …",
     "title": "Engines des TTS-Dienstes",
-    "hint": "Die Engines werden von oben nach unten versucht; fällt eine aus, spricht die nächste, die an ist. Ziehen ändert die Reihenfolge (am Handy: halten, dann ziehen), die Engines, die du willst, schaltest du an, und je Engine wählst du, wie viel Text sie auf einmal bekommt, und eine Stimme. Eine Engine auf einem anderen Rechner ist ein eigener Eintrag.",
+    "hint": "Die Engines werden von oben nach unten versucht; fällt eine aus, spricht die nächste, die an ist. Ziehen ändert die Reihenfolge (am Handy: halten, dann ziehen), die Engines, die du willst, schaltest du an, und je Engine wählst du, wie viel Text sie auf einmal bekommt, und eine Stimme. Eine Engine auf einem anderen Rechner ist ein eigener Eintrag. Es wird nichts entfernt: die Liste zeigt alles, was der Dienst anbietet; neue Einträge erscheinen unten und sind aus.",
     "on": "An",
     "unitLabel": "Wie viel Text auf einmal",
     "voiceLabel": "Stimme (für diese Engine auf jedem Rechner)",
     "unit": { "sentence": "Satz für Satz", "paragraph": "Absatz für Absatz", "whole": "Der ganze Text" },
     "loading": "Lädt …",
-    "nothingOn": "Keine Engine ist an: es lässt sich nichts vorlesen."
+    "nothingOn": "Keine Engine ist an: es lässt sich nichts vorlesen.",
+    "notOffered": "vom Dienst nicht angeboten"
   },
   "models": {
     "freeUntil": "frei bis {date} (noch {count} Tag | noch {count} Tage)"
