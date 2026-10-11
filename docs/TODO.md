@@ -21,8 +21,12 @@ Nur was noch aussteht. Erledigtes steht in der Git-Historie.
   - **Arbeitsflächen, Notizen und Gespräche-Tab** gehören je Rechner (jede Instanz hat ihren eigenen Zustand);
     Gespräche zeigt AI-Connect ohnehin für alle.
   - **Läuft der Dienst auf Aragon nur, solange WSL läuft:** ist Windows aus oder WSL beendet, steht Aragon als
-    „nicht erreichbar“ da. `loginctl enable-linger mp` ist gesetzt (10.10.), der Dienst startet mit der WSL. Ob das
-    nach einem Windows-Start ohne SSH-Anmeldung wirklich klappt, ist ungeprüft.
+    „nicht erreichbar“ da. `loginctl enable-linger mp` ist gesetzt (10.10.), der Dienst startet mit der WSL. Geprüft
+    (11.10., nach einem Start der WSL): `agent-orc serve` läuft von selbst, aber `systemctl --user` per SSH meldet
+    „Failed to connect to bus“ (`/run/user/1000/systemd` fehlt; vermutlich bindet WSLg `/run/user/1000` nach dem
+    User-Systemd neu ein). `deploy.sh` kann den Dienst dann nicht neu starten: das Paket ist installiert, der
+    Prozess läuft mit altem Code. Bei reinen Oberflächen-Änderungen schadet das nicht (die Dateien werden von der
+    Platte ausgeliefert), bei Python-Änderungen schon. Offen: Ursache beheben, damit der Neustart per SSH geht.
 
 ## Dateien-Reiter und Oberfläche
 
@@ -32,14 +36,6 @@ Nur was noch aussteht. Erledigtes steht in der Git-Historie.
 
 - **Leere Unterordner:** Beim Ziehen eines Ordners werden sie jetzt mit übertragen. Über „Ordner hochladen“
   (Dateiauswahl des Browsers) nicht: der Browser liefert dort nur Dateien, keine leeren Ordner.
-- **Wackelnde Terminal-Tests unter Last:** Tests, die ein Terminal mit `with websocket_connect` einfach verlassen,
-  schlugen unter CPU-Last mit `CancelledError` fehl (der Test-Client bricht die App beim Verlassen ab, während sie das
-  tmux-Terminal herunterfährt). Behoben für vier Tests, indem der Server das Terminal beendet
-  (`end_from_the_server`); `test_a_terminal_works_through_the_tunnel` war vorher in 23 von 40 Läufen unter Last
-  gescheitert und danach in 0 von 40. Die übrigen drei (Roundtrip/Resize, langer Text, Aufwand ändern) sind nach
-  demselben Muster geändert, aber **noch nicht unter Last geprüft** (der Mini war für eine Stimmaufnahme gesperrt).
-  Nachholen: Suite zweimal unter künstlicher Last fahren, vorher bei `Mini:FreeEchoDot2` und Peuqui nachfragen.
-
 ## AI-Connect
 
 - **Tab „Gespräche“ nach einem Neustart der Bridge:** Mitlesen, Senden als User:Peuqui (Enter) und die Ansicht sind
