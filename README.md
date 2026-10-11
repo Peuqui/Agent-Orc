@@ -218,6 +218,9 @@ agent-orc serve            # http://127.0.0.1:8770
 `deploy/install.sh` links the `agent-orc` command into `~/.local/bin`, which must be on your
 `PATH`.
 
+Instead of cloning, the ZIP of the repository does as well (GitHub: Code, Download ZIP):
+`unzip Agent-Orc-main.zip && cd Agent-Orc-main && deploy/install.sh`, then the same steps.
+
 `agent-orc setup` checks that `tmux` and `git` are there and which agent CLIs it finds, then
 asks for:
 
