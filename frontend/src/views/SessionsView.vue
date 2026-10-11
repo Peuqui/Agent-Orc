@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import type { HostStatus } from '../api'
 import HostSessions from '../components/HostSessions.vue'
 import QuotaPanel from '../components/QuotaPanel.vue'
 import { useHosts } from '../composables/useHosts'
@@ -14,8 +15,8 @@ keepFresh()
 
 // `host` is what the agents are asked of: null for this machine's own.
 const machines = computed(() => [
-  { name: state.value?.self ?? '', host: null, online: true },
-  ...(state.value?.hosts ?? []).map((other) => ({ name: other.name, host: other.name, online: other.online })),
+  { name: state.value?.self ?? '', host: null, state: 'online' as HostStatus },
+  ...(state.value?.hosts ?? []).map((other) => ({ name: other.name, host: other.name, state: other.state })),
 ])
 
 // The views' font size scales what this page shows (see useViewZoom).
@@ -37,13 +38,13 @@ const { zoomStyle } = useViewZoom(zoomed)
         />
         <div class="mb-3 flex items-center gap-2">
           <h2 class="text-sm font-semibold text-amber-400">{{ machine.name }}</h2>
-          <span class="text-xs" :class="machine.online ? 'text-emerald-400' : 'text-slate-500'">
-            ● {{ machine.online ? $t('hosts.online') : $t('hosts.offlineShort') }}
+          <span class="text-xs" :class="machine.state === 'online' ? 'text-emerald-400' : 'text-slate-500'">
+            ● {{ $t(`hosts.short.${machine.state}`) }}
           </span>
         </div>
       </template>
-      <HostSessions v-if="machine.online" :host="machine.host" />
-      <p v-else class="card p-4 text-sm text-slate-400">{{ $t('hosts.unreachable') }}</p>
+      <HostSessions v-if="machine.state === 'online'" :host="machine.host" />
+      <p v-else class="card p-4 text-sm text-slate-400">{{ $t(`hosts.reason.${machine.state}`) }}</p>
     </section>
   </section>
 </template>

@@ -2495,10 +2495,10 @@ def mini(
 def test_the_hosts_and_whether_they_answer(mini: TestClient) -> None:
     listed = mini.get("/api/hosts").json()
     assert listed["self"] == socket.gethostname()
-    assert listed["hosts"] == [
-        {"name": "Aragon", "online": True},
-        {"name": "Gone", "online": False},
-    ]
+    states = {host["name"]: host["state"] for host in listed["hosts"]}
+    assert states["Aragon"] == "online"
+    # Nothing answers there: which of the other states is for the tests of hosts.py (it asks ssh).
+    assert states["Gone"] in {"service_off", "ssh_down", "off"}
 
 
 def test_another_machines_app_is_handed_on_through_this_ones_login(mini: TestClient) -> None:

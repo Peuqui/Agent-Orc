@@ -898,8 +898,8 @@ def create_app(
 
     # The other machines: a tunnel to each (run in the background) and the socket it ends in.
     host_links = {
-        name: HostLink(name, state_dir() / "run" / f"host-{name}.sock")
-        for name in config.hosts or {}
+        name: HostLink(name, state_dir() / "run" / f"host-{name}.sock", host)
+        for name, host in (config.hosts or {}).items()
     }
 
     @asynccontextmanager
@@ -2010,13 +2010,15 @@ def create_app(
 
     @app.get("/api/hosts", dependencies=authenticated)
     async def list_hosts() -> dict[str, Any]:
-        """This machine's name and the other machines, with whether each one answers."""
+        """This machine's name and the other machines with their state (hosts.HostState). They are
+        asked at the same time, so a machine that is off costs the short time-out only once."""
         links = host_links.values()
-        online = await asyncio.gather(*(link.is_online() for link in links))
+        states = await asyncio.gather(*(link.state() for link in links))
         return {
             "self": socket.gethostname(),
             "hosts": [
-                {"name": link.name, "online": up} for link, up in zip(links, online, strict=True)
+                {"name": link.name, "state": state}
+                for link, state in zip(links, states, strict=True)
             ],
         }
 

@@ -342,10 +342,14 @@ export interface ProjectConversations {
   conversations: CleanupConversation[]
 }
 
+/** What another machine is like: its Agent-Orc answers; the machine is there but its Agent-Orc does not;
+ * the machine is there but nothing listens on its SSH port; or it is not there at all. */
+export type HostStatus = 'online' | 'service_off' | 'ssh_down' | 'off'
+
 export interface HostsState {
   /** This machine's name. */
   self: string
-  hosts: { name: string; online: boolean }[]
+  hosts: { name: string; state: HostStatus }[]
 }
 
 export interface CleanupConversation extends Conversation {

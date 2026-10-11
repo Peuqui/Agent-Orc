@@ -44,8 +44,8 @@ const choices = computed(() => [
   { name: own.value, label: own.value, up: true },
   ...(state.value?.hosts ?? []).map((host) => ({
     name: host.name,
-    label: host.online ? host.name : t('hosts.offline', { name: host.name }),
-    up: host.online,
+    label: host.state === 'online' ? host.name : `${host.name} (${t(`hosts.short.${host.state}`)})`,
+    up: host.state === 'online',
   })),
 ])
 

@@ -7,12 +7,15 @@ terminals) is then reachable through this one's login, which is the only one the
 """
 
 import asyncio
+import errno
 import logging
 import os
 import signal
+import socket
 import time
 from collections.abc import AsyncIterator, Iterable
 from pathlib import Path
+from typing import Literal
 from urllib.parse import urlsplit
 
 import aiohttp
@@ -38,6 +41,19 @@ TUNNEL_SETUP_SECONDS = 20.0
 TUNNEL_SETUP_POLL_SECONDS = 0.2
 CONNECT_TIMEOUT_SECONDS = 5
 ONLINE_CHECK_SECONDS = 3
+# A machine that does not answer within this time is taken as off (one that is there refuses or
+# answers at once).
+PROBE_SECONDS = 0.5
+# Errors of a connection that say there is no way to the machine at all (not that it refuses).
+UNREACHABLE_ERRNOS = frozenset(
+    {errno.EHOSTUNREACH, errno.ENETUNREACH, errno.ENETDOWN, errno.EHOSTDOWN}
+)
+
+# What one machine is like, from this one: its Agent-Orc answers; the machine is there and takes SSH
+# connections but its Agent-Orc does not answer; the machine is there but nothing listens on its SSH
+# port (a WSL that is not running); or the machine is not there at all (off, no network).
+HostState = Literal["online", "service_off", "ssh_down", "off"]
+Connection = Literal["open", "refused", "off"]
 WS_CLOSE_UNREACHABLE = 1011
 # Close codes that only say how a connection ended and must not be sent.
 WS_CLOSE_RESERVED = {1005, 1006, 1015}
@@ -158,12 +174,60 @@ async def keep_tunnel_open(name: str, local_socket: Path, config: HostConfig) ->
         delay = min(delay * 2, RECONNECT_LAST_SECONDS)
 
 
+def connection_result(error: BaseException) -> Literal["refused", "off"]:
+    """What a failed connection says about the machine, whatever a library wrapped it in (the
+    chain of causes is followed): refused or reset means the machine is there and nothing listens;
+    no answer in time, no route or no name means it is not there. Nothing needs a `ping` program."""
+    seen: set[int] = set()
+    current: BaseException | None = error
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        if isinstance(current, ConnectionRefusedError | ConnectionResetError):
+            return "refused"
+        if isinstance(current, TimeoutError | socket.gaierror):
+            return "off"
+        if isinstance(current, OSError) and current.errno in UNREACHABLE_ERRNOS:
+            return "off"
+        current = current.__cause__ or current.__context__
+    return "off"
+
+
+async def probe(address: str, port: int) -> Connection:
+    """Whether a connection to the address is taken (`open`), refused (`refused`) or goes nowhere
+    (`off`), within a short time."""
+    try:
+        _, writer = await asyncio.wait_for(asyncio.open_connection(address, port), PROBE_SECONDS)
+    except (OSError, TimeoutError) as error:
+        return connection_result(error)
+    writer.close()
+    return "open"
+
+
+async def ssh_address(config: HostConfig) -> tuple[str, int]:
+    """Where `ssh` would connect for this machine (`ssh -G` resolves an alias of ~/.ssh/config)."""
+    process = await asyncio.create_subprocess_exec(
+        "ssh",
+        "-G",
+        *config.ssh,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.DEVNULL,
+    )
+    output, _ = await process.communicate()
+    settings: dict[str, str] = {}
+    for line in output.decode(errors="replace").splitlines():
+        key, _, value = line.partition(" ")
+        settings.setdefault(key, value)  # the first of a repeated setting counts, as in ssh
+    return settings["hostname"], int(settings["port"])
+
+
 class HostLink:
     """The way to one machine's Agent-Orc: HTTP over the local end of its tunnel."""
 
-    def __init__(self, name: str, local_socket: Path) -> None:
+    def __init__(self, name: str, local_socket: Path, config: HostConfig) -> None:
         self.name = name
         self.local_socket = local_socket
+        self.config = config
+        self._address: tuple[str, int] | None = None
         self._session: aiohttp.ClientSession | None = None
 
     def session(self) -> aiohttp.ClientSession:
@@ -185,6 +249,20 @@ class HostLink:
                 return response.status == 200
         except (aiohttp.ClientError, OSError, TimeoutError):
             return False
+
+    async def state(self) -> HostState:
+        """Whether its Agent-Orc answers; if not, why the machine is out of reach."""
+        if await self.is_online():
+            return "online"
+        if self._address is None:
+            self._address = await ssh_address(self.config)
+        match await probe(*self._address):
+            case "open":
+                return "service_off"
+            case "refused":
+                return "ssh_down"
+            case _:
+                return "off"
 
     async def close(self) -> None:
         if self._session is not None:

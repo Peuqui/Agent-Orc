@@ -1,4 +1,6 @@
 import asyncio
+import errno
+import socket
 import subprocess
 import time
 from pathlib import Path
@@ -8,7 +10,14 @@ from pydantic import ValidationError
 
 from agent_orc import hosts
 from agent_orc.config import HostConfig, default_config_text, parse_config
-from agent_orc.hosts import _relative_location, tunnel_command
+from agent_orc.hosts import (
+    HostLink,
+    _relative_location,
+    connection_result,
+    probe,
+    ssh_address,
+    tunnel_command,
+)
 
 
 def test_the_tunnel_forwards_the_other_machines_socket_to_a_local_one() -> None:
@@ -126,3 +135,92 @@ def test_hosts_are_named_for_an_address() -> None:
     assert config.hosts["Aragon"].ssh == ["-p", "2222", "mp@10.0.0.2"]
     with pytest.raises(ValidationError, match="letters, digits"):
         parse_config(hosts_section('  "a/b":\n    ssh: [x]\n    socket: /s\n'))
+
+
+class Wrapped(Exception):  # noqa: N818
+    """A library's own error that carries the real one as its cause."""
+
+
+def caused_by(error: BaseException) -> Wrapped:
+    wrapped = Wrapped("request failed")
+    wrapped.__cause__ = error
+    return wrapped
+
+
+@pytest.mark.parametrize(
+    ("error", "result"),
+    [
+        (ConnectionRefusedError(), "refused"),
+        (ConnectionResetError(), "refused"),
+        (TimeoutError(), "off"),
+        (socket.gaierror(socket.EAI_NONAME, "no such name"), "off"),
+        (OSError(errno.EHOSTUNREACH, "no route to host"), "off"),
+        (OSError(errno.ENETUNREACH, "network is unreachable"), "off"),
+        (OSError(errno.ENETDOWN, "network is down"), "off"),
+        (caused_by(ConnectionRefusedError()), "refused"),
+        (caused_by(caused_by(OSError(errno.EHOSTUNREACH, "no route"))), "off"),
+        (Wrapped("no cause at all"), "off"),
+    ],
+)
+def test_a_failed_connection_says_whether_the_machine_is_there(
+    error: BaseException, result: str
+) -> None:
+    assert connection_result(error) == result
+
+
+def test_a_context_is_followed_like_a_cause() -> None:
+    try:
+        try:
+            raise ConnectionRefusedError
+        except ConnectionRefusedError:
+            raise Wrapped("while handling") from None
+    except Wrapped as error:
+        assert connection_result(error) == "refused"
+
+
+def test_probing_tells_open_refused_and_no_answer(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def hang_up(_reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+        writer.close()
+
+    async def listening() -> tuple[str, str, str]:
+        server = await asyncio.start_server(hang_up, "127.0.0.1", 0)
+        port = server.sockets[0].getsockname()[1]
+        async with server:
+            taken = await probe("127.0.0.1", port)
+        refused = await probe("127.0.0.1", port)  # nobody listens any more
+        monkeypatch.setattr(asyncio, "open_connection", never_answers)
+        silent = await probe("10.255.255.1", 22)
+        return taken, refused, silent
+
+    assert asyncio.run(listening()) == ("open", "refused", "off")
+
+
+async def never_answers(*_arguments: object) -> None:
+    await asyncio.sleep(10)
+
+
+def test_the_address_of_a_machine_is_what_ssh_would_connect_to() -> None:
+    config = HostConfig(ssh=["-p", "2222", "-o", "HostName=10.0.0.2", "mp@somewhere"], socket="x")
+    assert asyncio.run(ssh_address(config)) == ("10.0.0.2", 2222)
+
+
+def test_a_machine_is_in_the_state_its_agent_orc_and_its_port_say(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    link = HostLink("Aragon", Path("/nonexistent/host.sock"), HostConfig(ssh=["x"], socket="x"))
+
+    async def offline() -> bool:
+        return False
+
+    async def address(_config: HostConfig) -> tuple[str, int]:
+        return "10.0.0.2", 2222
+
+    monkeypatch.setattr(link, "is_online", offline)
+    monkeypatch.setattr("agent_orc.hosts.ssh_address", address)
+    for connection, state in (("open", "service_off"), ("refused", "ssh_down"), ("off", "off")):
+
+        async def answers(_address: str, _port: int, result: str = connection) -> str:
+            return result
+
+        monkeypatch.setattr("agent_orc.hosts.probe", answers)
+        assert asyncio.run(link.state()) == state

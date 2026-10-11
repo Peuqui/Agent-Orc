@@ -34,7 +34,7 @@ const shown = ref(ALL)
 async function load(): Promise<void> {
   await loadHosts()
   const state = hosts.value!
-  const machines = [{ name: state.self, host: undefined }, ...state.hosts.filter((host) => host.online).map((host) => ({ name: host.name, host: host.name }))]
+  const machines = [{ name: state.self, host: undefined }, ...state.hosts.filter((host) => host.state === 'online').map((host) => ({ name: host.name, host: host.name }))]
   const perMachine = await Promise.all(
     machines.map(async ({ name, host }) => (await api.consumption(host)).map((row) => ({ ...row, machine: name }))),
   )
@@ -44,7 +44,7 @@ async function load(): Promise<void> {
 load().catch(toast.error)
 
 const machines = computed(() => [...new Set((loaded.value ?? []).map((row) => row.machine))])
-const unreachable = computed(() => (hosts.value?.hosts ?? []).filter((host) => !host.online).map((host) => host.name))
+const unreachable = computed(() => (hosts.value?.hosts ?? []).filter((host) => host.state !== 'online').map((host) => host.name))
 const rows = computed(() => (loaded.value ?? []).filter((row) => shown.value === ALL || row.machine === shown.value))
 // Several machines in the sums: the project and machine tables tell them apart.
 const several = computed(() => shown.value === ALL && machines.value.length > 1)

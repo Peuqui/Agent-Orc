@@ -750,9 +750,11 @@
   },
   "hosts": {
     "machine": "Rechner",
-    "offline": "{name} (nicht erreichbar)",
-    "online": "erreichbar",
-    "offlineShort": "nicht erreichbar",
-    "unreachable": "Dieser Rechner antwortet gerade nicht. Der Tunnel wird neu aufgebaut."
+    "short": { "online": "erreichbar", "service_off": "Agent-Orc antwortet nicht", "ssh_down": "SSH ist aus", "off": "nicht erreichbar" },
+    "reason": {
+      "service_off": "Der Rechner ist da, aber sein Agent-Orc antwortet gerade nicht. Der Tunnel wird neu aufgebaut.",
+      "ssh_down": "Der Rechner ist da, aber auf seinem SSH-Port lauscht nichts (läuft die WSL?).",
+      "off": "Der Rechner antwortet nicht: Er ist aus oder nicht im Netz."
+    }
   }
 }
