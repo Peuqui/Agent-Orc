@@ -130,14 +130,17 @@ const TOP_ROOM_PX = 12
 /** Scrolls down until the oldest unread answer meets the upper edge, or to the end if everything
  * from there on fits the screen first: new answers below it come into view without pushing it out of
  * the top, and a long one starts at its upper edge so reading can begin at once. With nothing unread
- * the newest answer takes its place. Never scrolls back up. */
+ * (everything read already) it goes to the end. Never scrolls back up. */
 function showUnread(): void {
   const scroller = box.value
   if (!scroller) return
-  const articles = [...scroller.querySelectorAll<HTMLElement>('article')]
-  const anchor = articles.find((article) => article.classList.contains('border-l-red-500')) ?? articles.at(-1)
   const end = scroller.scrollHeight - scroller.clientHeight
-  const above = anchor ? anchor.getBoundingClientRect().top - scroller.getBoundingClientRect().top : end
+  const unreadFirst = scroller.querySelector<HTMLElement>('article.border-l-red-500')
+  if (unreadFirst === null) {
+    scroller.scrollTo({ top: end })
+    return
+  }
+  const above = unreadFirst.getBoundingClientRect().top - scroller.getBoundingClientRect().top
   scroller.scrollTo({ top: Math.max(scroller.scrollTop, Math.min(end, scroller.scrollTop + above - TOP_ROOM_PX)) })
 }
 
