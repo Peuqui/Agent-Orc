@@ -32,7 +32,9 @@ def write_atomically(target: Path, text: str) -> Path:
     # Write to a temporary file and rename, so readers never see a half-written file. The
     # temporary file is the writer's own: two requests storing at once would otherwise write into
     # the same one and leave a mixture of both texts behind.
-    descriptor, temporary_name = tempfile.mkstemp(dir=target.parent, prefix=f"{target.name}.", suffix=".tmp")
+    descriptor, temporary_name = tempfile.mkstemp(
+        dir=target.parent, prefix=f"{target.name}.", suffix=".tmp"
+    )
     temporary = Path(temporary_name)
     with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
         handle.write(text)
