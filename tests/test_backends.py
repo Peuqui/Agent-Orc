@@ -184,8 +184,11 @@ def test_claude_code_is_pointed_at_the_backend_and_every_alias_at_the_model() ->
         background_model="Qwen-Flash-1",
         api_timeout_ms=600000,
     )
-    environment = claude_environment(config, "http://one", "Qwen-27B-vllm", "secret", 262144)
+    environment = claude_environment(
+        "local", config, "http://one", "Qwen-27B-vllm", "secret", 262144
+    )
     assert environment == {
+        "AGENT_ORC_BACKEND": "local",
         "AGENT_ORC_BACKEND_URL": "http://one",
         "AGENT_ORC_BACKEND_MODEL": "Qwen-27B-vllm",
         "ANTHROPIC_BASE_URL": "http://one/apps/anthropic",
@@ -201,7 +204,7 @@ def test_claude_code_is_pointed_at_the_backend_and_every_alias_at_the_model() ->
 
 def test_without_a_background_model_the_chosen_one_does_those_requests() -> None:
     environment = claude_environment(
-        backend(key_variable="ANTHROPIC_API_KEY"), "http://one", "Plain-model", "k", None
+        "local", backend(key_variable="ANTHROPIC_API_KEY"), "http://one", "Plain-model", "k", None
     )
     assert environment["ANTHROPIC_DEFAULT_HAIKU_MODEL"] == "Plain-model"
     assert "ANTHROPIC_API_KEY" in environment
@@ -217,7 +220,13 @@ def listing_fetch(*extra: tuple[str, Any]) -> FakeServer:
 
 def test_the_start_runs_claude_on_the_model_with_the_translated_effort() -> None:
     launch = prepare_launch(
-        backend(), "Qwen-27B-vllm", "high", ["--settings", "s.json"], TODAY, listing_fetch()
+        "local",
+        backend(),
+        "Qwen-27B-vllm",
+        "high",
+        ["--settings", "s.json"],
+        TODAY,
+        listing_fetch(),
     )
     assert launch.command == [
         "claude",
@@ -237,19 +246,19 @@ def test_the_context_length_the_server_reports_is_handed_to_claude_code() -> Non
     fetch = listing_fetch(
         ("http://one/upstream/Qwen-27B-vllm/v1/models", {"data": [{"max_model_len": 131072}]})
     )
-    launch = prepare_launch(config, "Qwen-27B-vllm", None, [], TODAY, fetch)
+    launch = prepare_launch("local", config, "Qwen-27B-vllm", None, [], TODAY, fetch)
     assert launch.environment["CLAUDE_CODE_MAX_CONTEXT_TOKENS"] == "131072"
 
 
 def test_a_server_that_does_not_report_the_context_length_is_not_an_error() -> None:
     config = backend(context_path="/upstream/{model}/v1/models")
-    launch = prepare_launch(config, "Qwen-27B-vllm", None, [], TODAY, listing_fetch())
+    launch = prepare_launch("local", config, "Qwen-27B-vllm", None, [], TODAY, listing_fetch())
     assert "CLAUDE_CODE_MAX_CONTEXT_TOKENS" not in launch.environment
 
 
 def test_a_model_that_is_not_on_offer_is_refused() -> None:
     with pytest.raises(BackendError, match="not on offer"):
-        prepare_launch(backend(), "Qwen-Flash-1", None, [], TODAY, listing_fetch())
+        prepare_launch("local", backend(), "Qwen-Flash-1", None, [], TODAY, listing_fetch())
 
 
 def test_the_command_before_the_start_gets_the_address_and_the_model() -> None:
@@ -260,7 +269,7 @@ def test_the_command_before_the_start_gets_the_address_and_the_model() -> None:
         return None
 
     config = backend(before_start=["free-gpus", "{base_url}", "{model}"])
-    prepare_launch(config, "Qwen-27B-vllm", None, [], TODAY, listing_fetch(), run_hook)
+    prepare_launch("local", config, "Qwen-27B-vllm", None, [], TODAY, listing_fetch(), run_hook)
     assert ran == [["free-gpus", "http://one", "Qwen-27B-vllm"]]
 
 
@@ -269,7 +278,14 @@ def test_a_failing_command_before_the_start_is_reported_and_the_start_goes_on(
 ) -> None:
     config = backend(before_start=["free-gpus"])
     launch = prepare_launch(
-        config, "Qwen-27B-vllm", None, [], TODAY, listing_fetch(), lambda command: "it failed"
+        "local",
+        config,
+        "Qwen-27B-vllm",
+        None,
+        [],
+        TODAY,
+        listing_fetch(),
+        lambda command: "it failed",
     )
     assert launch.command[:3] == ["claude", "--model", "Qwen-27B-vllm"]
     assert "warning: it failed" in capsys.readouterr().err

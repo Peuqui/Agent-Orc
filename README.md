@@ -367,7 +367,8 @@ takes (a wanted level it lacks becomes the next higher one it has); `free_until`
 once its free quota has ended. The key comes from exactly one of `key`, `key_file` (readable for
 you alone, `chmod 600`) or `key_env`. Where the server reports it (vLLM: `max_model_len`), the
 context length is handed to Claude Code, which would otherwise assume 200k. Hooks of the session
-find the address and the model in `AGENT_ORC_BACKEND_URL` and `AGENT_ORC_BACKEND_MODEL`; a command
+find the backend's name, its address and the model in `AGENT_ORC_BACKEND`,
+`AGENT_ORC_BACKEND_URL` and `AGENT_ORC_BACKEND_MODEL`; a command
 `before_start` runs once before the start (`{base_url}` and `{model}` filled in).
 
 ```yaml

@@ -28,7 +28,8 @@ LEVELS = ("low", "medium", "high", "xhigh", "max")
 DEFAULT_LEVEL = "high"
 # The effort a profile hands over to the start (AgentProfile.env: {effort}).
 EFFORT_VARIABLE = "AGENT_ORC_EFFORT"
-# What a start tells the hooks of its session: where the backend is and which model runs.
+# What a start tells the hooks of its session: which backend, where it is and which model runs.
+BACKEND_VARIABLE = "AGENT_ORC_BACKEND"
 BASE_URL_VARIABLE = "AGENT_ORC_BACKEND_URL"
 MODEL_VARIABLE = "AGENT_ORC_BACKEND_MODEL"
 # How long an address gets to answer before the next one is tried.
@@ -155,7 +156,7 @@ def context_length(
 
 
 def claude_environment(
-    backend: BackendConfig, base_url: str, model: str, key: str, context: int | None
+    name: str, backend: BackendConfig, base_url: str, model: str, key: str, context: int | None
 ) -> dict[str, str]:
     """What Claude Code needs to talk to the backend. It sends Anthropic's model names for
     background requests and aliases (sonnet, opus, subagents), which the backend does not know:
@@ -163,6 +164,7 @@ def claude_environment(
     environment = {
         # For hooks of the session (Claude Code hands its environment on to them), e.g. one that
         # frees the graphics cards before a model is loaded.
+        BACKEND_VARIABLE: name,
         BASE_URL_VARIABLE: base_url,
         MODEL_VARIABLE: model,
         "ANTHROPIC_BASE_URL": base_url + backend.anthropic_path,
@@ -213,6 +215,7 @@ def levels_of(backend: BackendConfig, model: str) -> list[str]:
 
 
 def prepare_launch(
+    name: str,
     backend: BackendConfig,
     model: str,
     wanted_level: str | None,
@@ -245,7 +248,8 @@ def prepare_launch(
         *level_arguments(entry_of(backend, model), wanted_level),
     ]
     return Launch(
-        arguments, {**os.environ, **claude_environment(backend, base_url, model, key, context)}
+        arguments,
+        {**os.environ, **claude_environment(name, backend, base_url, model, key, context)},
     )
 
 

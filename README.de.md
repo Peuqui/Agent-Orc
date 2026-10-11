@@ -389,8 +389,8 @@ Denkstufen eines Modells (eine gewünschte, die es nicht kennt, wird zur nächst
 kennt); `free_until` blendet ein Modell aus, sobald sein Gratis-Kontingent endet. Der Schlüssel
 kommt aus genau einem von `key`, `key_file` (nur für dich lesbar, `chmod 600`) oder `key_env`. Wo
 der Server sie meldet (vLLM: `max_model_len`), wird die Kontextlänge an Claude Code übergeben, das
-sonst 200k annähme. Hooks der Sitzung finden die Adresse und das Modell in
-`AGENT_ORC_BACKEND_URL` und `AGENT_ORC_BACKEND_MODEL`; ein Befehl `before_start` läuft einmal vor
+sonst 200k annähme. Hooks der Sitzung finden den Namen des Backends, seine Adresse und das
+Modell in `AGENT_ORC_BACKEND`, `AGENT_ORC_BACKEND_URL` und `AGENT_ORC_BACKEND_MODEL`; ein Befehl `before_start` läuft einmal vor
 dem Start (`{base_url}` und `{model}` eingesetzt).
 
 ```yaml

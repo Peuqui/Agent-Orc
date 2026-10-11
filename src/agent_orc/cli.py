@@ -233,6 +233,7 @@ def run_backend(arguments: list[str]) -> None:
                     raise BackendError("name a model: this is not a terminal to choose in")
                 model = named or choose_model(models_lines(backend, date.today()))
                 launch = prepare_launch(
+                    name,
                     backend,
                     model,
                     wanted,
