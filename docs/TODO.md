@@ -34,6 +34,15 @@ Nur was noch aussteht. Erledigtes steht in der Git-Historie.
     läuft, ein einziges `sleep infinity`). Hinweis: Ein Doppelklick auf das VBS bei laufender WSL startet ein weiteres
     `sleep infinity` (harmlos).
 
+## Agenten beenden
+
+- **Sanft beenden, in der Praxis noch nicht gesehen** (11.10.): Beenden und Neustart schicken zuerst den `exit_command` des Profils
+  (Claude: `/exit`, in der Konfiguration beider Rechner eingetragen, `terminal.exit_wait_seconds` = 5) und beenden erst danach hart.
+  Getestet nur mit Stand-in-Agenten (3 Tests). Nicht geprüft: dass ein echter Claude-Code-Agent auf `/exit` hin in unter 5 s endet
+  und seinen Eintrag in der Claude-App („Letzte Elemente“) abmeldet, statt ihn als Offline-Eintrag stehen zu lassen. Prüfen: einen
+  Agenten mit „Beenden“ stoppen und die Liste in der App ansehen. Ein Ende von außen (Rechner oder WSL aus, `wsl --shutdown`)
+  bleibt hart; die Einträge dann von Hand archivieren.
+
 ## Dateien-Reiter und Oberfläche
 
 - **Nicht geprüft:** der Dateien-Reiter mit Auswahl und zwei Ansichten auf dem Handy und ein Upload über
