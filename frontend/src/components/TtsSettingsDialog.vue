@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { api, type TtsCatalogRow, type TtsChoices, type TtsEntry, type TtsHost, type TtsUnit } from '../api'
+import { api, type TtsCatalogRow, type TtsChoices, type TtsEntry, type TtsUnit } from '../api'
 import { moveInList, useReorder } from '../composables/useReorder'
 import { useToast } from '../composables/useToast'
 import BaseDialog from './BaseDialog.vue'
@@ -17,7 +17,7 @@ const toast = useToast()
 const { t, locale } = useI18n()
 
 const UNITS: TtsUnit[] = ['sentence', 'paragraph', 'whole']
-const choices = ref<TtsChoices>({ entries: [], hosts: [], voices: {}, paragraph_pause_ms: 0, prefer_loaded: false })
+const choices = ref<TtsChoices>({ entries: [], voices: {}, paragraph_pause_ms: 0, prefer_loaded: false })
 const catalog = ref<TtsCatalogRow[]>([])
 // The voices of each engine, asked when the window opens; an engine without any has no choice.
 const voices = ref<Record<string, { id: string; label: string }[]>>({})
@@ -49,11 +49,6 @@ async function load(): Promise<void> {
 }
 void load()
 
-const hostIsOn = (host: string | null): boolean =>
-  choices.value.hosts.some((each) => each.host === host && each.enabled && each.offered)
-
-const hostName = (each: TtsHost): string => each.host ?? t('ttsSettings.ownMachine')
-
 function label(entry: TtsEntry): string {
   const row = catalog.value.find((candidate) => placeOf(candidate) === placeOf(entry))
   const name = row?.label[locale.value] ?? row?.label.en ?? entry.engine
@@ -80,7 +75,7 @@ const reorder = useReorder({
   ignore: '[data-no-drag]',
 })
 const drag = reorder.drag
-const nothingOn = computed(() => loaded.value && !choices.value.entries.some((entry) => entry.enabled && entry.offered && hostIsOn(entry.host)))
+const nothingOn = computed(() => loaded.value && !choices.value.entries.some((entry) => entry.enabled && entry.offered))
 
 async function save(): Promise<void> {
   try {
@@ -107,17 +102,6 @@ async function save(): Promise<void> {
         <input v-model.number="choices.paragraph_pause_ms" type="number" min="0" step="50" class="input w-24 text-right text-sm" />
       </label>
       <ul class="flex flex-col gap-1">
-        <li v-for="each in choices.hosts" :key="each.host ?? ''" class="flex items-center justify-between gap-2 rounded-lg border border-slate-700 p-2">
-          <span class="min-w-0 truncate font-medium" :class="each.enabled && each.offered ? 'text-slate-200' : 'text-slate-500'">
-            {{ hostName(each) }}
-          </span>
-          <span v-if="!each.offered" class="shrink-0 text-xs text-amber-400">{{ $t('ttsSettings.notOffered') }}</span>
-          <ToggleSwitch v-else :checked="each.enabled" @click="each.enabled = !each.enabled">
-            <span class="sr-only">{{ $t('ttsSettings.hostOn') }}</span>
-          </ToggleSwitch>
-        </li>
-      </ul>
-      <ul class="flex flex-col gap-1">
         <li
           v-for="entry in choices.entries"
           :key="placeOf(entry)"
@@ -135,11 +119,10 @@ async function save(): Promise<void> {
           @contextmenu.prevent
         >
           <div class="flex items-center justify-between gap-2">
-            <span class="min-w-0 truncate font-medium" :class="entry.enabled && entry.offered && hostIsOn(entry.host) ? 'text-slate-200' : 'text-slate-500'">
+            <span class="min-w-0 truncate font-medium" :class="entry.enabled && entry.offered ? 'text-slate-200' : 'text-slate-500'">
               {{ label(entry) }}
             </span>
             <span v-if="!entry.offered" class="shrink-0 text-xs text-amber-400">{{ $t('ttsSettings.notOffered') }}</span>
-            <span v-else-if="!hostIsOn(entry.host)" class="shrink-0 text-xs text-slate-500">{{ $t('ttsSettings.hostOff') }}</span>
             <ToggleSwitch v-else data-no-drag :checked="entry.enabled" @click="entry.enabled = !entry.enabled">
               <span class="sr-only">{{ $t('ttsSettings.on') }}</span>
             </ToggleSwitch>
