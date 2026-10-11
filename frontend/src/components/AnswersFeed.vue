@@ -145,6 +145,7 @@ function showNewest(): void {
 let newestSeen: string | undefined
 
 async function load(): Promise<void> {
+  const hadUnread = unread.value.length > 0
   const bottomBefore = box.value ? box.value.scrollHeight - box.value.scrollTop - box.value.clientHeight < 80 : true
   try {
     ;[turns.value, spoken.value] = await Promise.all([api.answers(props.sessionId, props.turns), api.spoken(props.sessionId)])
@@ -155,7 +156,9 @@ async function load(): Promise<void> {
   const first = !loaded.value
   loaded.value = true
   // Following the newest answers, unless the reader has scrolled up.
-  if (first || bottomBefore) {
+  // Unread answers already wait: what arrives now is only appended below them, so the reader keeps
+  // the place at the oldest unread one and scrolls down through them.
+  if (first || (bottomBefore && !hadUnread)) {
     await nextTick()
     const newest = everyText.value.at(-1)?.id
     // A new answer is shown from its start if it is long; otherwise the list only follows what grows
