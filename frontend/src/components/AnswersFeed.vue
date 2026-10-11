@@ -144,7 +144,7 @@ function showUnread(): void {
   scroller.scrollTo({ top: Math.max(scroller.scrollTop, Math.min(end, scroller.scrollTop + above - TOP_ROOM_PX)) })
 }
 
-// The newest answer at the last look: a different one is a new answer.
+// The last item of the feed at the last look: a different one is something new.
 let newestSeen: string | undefined
 
 async function load(): Promise<void> {
@@ -157,7 +157,9 @@ async function load(): Promise<void> {
   }
   const first = !loaded.value
   loaded.value = true
-  const newest = everyText.value.at(-1)?.id
+  // Whatever is last in the feed: an answer, but also the request the user has just made.
+  const lastEntry = shown.value.at(-1)
+  const newest = lastEntry && `${lastEntry.turn.id}/${lastEntry.items.at(-1)?.id}`
   const arrived = newest !== newestSeen
   newestSeen = newest
   // Only a new answer moves the list, and only for a reader at the bottom: whoever has scrolled up to
