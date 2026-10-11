@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { api, rawFileUrl, type FileEntry } from '../api'
 import AppIcon from '../components/AppIcon.vue'
+import DropdownMenu from '../components/DropdownMenu.vue'
 import BaseDialog from '../components/BaseDialog.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
 import ConversationCleanup from '../components/ConversationCleanup.vue'
@@ -84,6 +85,7 @@ const selected = computed(() => selections.value[activeView.value] ?? [])
 // and not the trash and the cleanup of conversations, which belong to the page of its own;
 // files are trashed from the selection or the menu there.
 const inColumn = COLUMN_TAB !== null
+const uploadMenuOpen = ref(false)
 const trashPanel = ref<InstanceType<typeof TrashPanel>>()
 
 async function reloadAll(): Promise<void> {
@@ -221,16 +223,30 @@ function onAgentStarted(): void {
       </div>
 
       <!-- They act on the view last clicked (the one marked when there are two). -->
-      <div class="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
+      <div class="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
         <button class="btn-secondary" @click="dialog = { kind: 'newFolder' }">
           <AppIcon name="plus" />{{ $t('files.newFolder') }}
         </button>
-        <button class="btn-secondary" :disabled="panes[activeView]?.uploading" @click="panes[activeView]?.pickFiles()">
-          <AppIcon name="upload" />{{ $t('files.upload') }}
-        </button>
-        <button class="btn-secondary" :disabled="panes[activeView]?.uploading" @click="panes[activeView]?.pickFolder()">
-          <AppIcon name="upload" />{{ $t('files.uploadFolder') }}
-        </button>
+        <!-- One button for both: a file input takes files or a folder, never both. -->
+        <DropdownMenu v-model:open="uploadMenuOpen" panel-class="flex w-56 flex-col p-1">
+          <template #trigger="{ toggle }">
+            <button class="btn-secondary w-full" :disabled="panes[activeView]?.uploading" @click="toggle">
+              <AppIcon name="upload" />{{ $t('files.upload') }}<AppIcon name="chevron" class="size-4" />
+            </button>
+          </template>
+          <button
+            class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-slate-200 hover:bg-slate-700"
+            @click="((uploadMenuOpen = false), panes[activeView]?.pickFiles())"
+          >
+            <AppIcon name="file" />{{ $t('files.chooseFiles') }}
+          </button>
+          <button
+            class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-slate-200 hover:bg-slate-700"
+            @click="((uploadMenuOpen = false), panes[activeView]?.pickFolder())"
+          >
+            <AppIcon name="folder" />{{ $t('files.chooseFolder') }}
+          </button>
+        </DropdownMenu>
         <button v-if="!inColumn" class="btn-secondary" :class="dual ? '!text-amber-300' : ''" :aria-pressed="dual" @click="toggleDual">
           <AppIcon name="workspace" />{{ $t(dual ? 'files.oneView' : 'files.twoViews') }}
         </button>

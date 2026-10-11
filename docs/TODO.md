@@ -40,8 +40,8 @@ Nur was noch aussteht. Erledigtes steht in der Git-Historie.
   `/hosts/Aragon/` mit mehreren GB (der Proxy reicht in Stücken durch). Geprüft (11.10.): Ordner aus dem
   Dateimanager des Betriebssystems ziehen, mehrere hundert MB in vielen Dateien.
 
-- **Leere Unterordner:** Beim Ziehen eines Ordners werden sie jetzt mit übertragen. Über „Ordner hochladen“
-  (Dateiauswahl des Browsers) nicht: der Browser liefert dort nur Dateien, keine leeren Ordner.
+- **Leere Unterordner:** Beim Ziehen eines Ordners werden sie jetzt mit übertragen. Über „Hochladen“, „Ordner
+  auswählen“ (Dateiauswahl des Browsers) nicht: der Browser liefert dort nur Dateien, keine leeren Ordner.
 - **Tastatur im normalen Terminal am Handy** (11.10.): Der Tastaturknopf öffnet die Tastatur für das Terminal selbst; Schreiben,
   Verlauf (Pfeil hoch) und Gboard-Diktat gehen direkt. Bekannt: Tippt man einen **Wortvorschlag** der Gboard-Leiste an, entstehen
   doppelte Zeichen und Worte (die Tastatur ersetzt das eben geschriebene Wort, xterm.js sieht Löschen und Einfügen); ohne die
