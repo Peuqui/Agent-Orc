@@ -124,6 +124,26 @@ function readUnread(): void {
 
 
 
+// The room kept above an answer that is read from its top: the padding of the list.
+const TOP_ROOM_PX = 12
+
+/** Brings the newest answer into view the way it is read best: one that fits the screen ends at its
+ * lower edge, one that is taller starts at its upper edge, so reading can begin at once. */
+function showNewest(): void {
+  const scroller = box.value
+  if (!scroller) return
+  const newest = [...scroller.querySelectorAll<HTMLElement>('article')].at(-1)
+  if (newest === undefined || newest.offsetHeight <= scroller.clientHeight) {
+    scroller.scrollTo({ top: scroller.scrollHeight })
+    return
+  }
+  const above = newest.getBoundingClientRect().top - scroller.getBoundingClientRect().top
+  scroller.scrollTo({ top: scroller.scrollTop + above - TOP_ROOM_PX })
+}
+
+// The newest answer at the last look: a different one is a new answer.
+let newestSeen: string | undefined
+
 async function load(): Promise<void> {
   const bottomBefore = box.value ? box.value.scrollHeight - box.value.scrollTop - box.value.clientHeight < 80 : true
   try {
@@ -137,7 +157,12 @@ async function load(): Promise<void> {
   // Following the newest answers, unless the reader has scrolled up.
   if (first || bottomBefore) {
     await nextTick()
-    box.value?.scrollTo({ top: box.value.scrollHeight })
+    const newest = everyText.value.at(-1)?.id
+    // A new answer is shown from its start if it is long; otherwise the list only follows what grows
+    // at its end (a long answer that is being read is not pulled back to its start).
+    if (first || newest !== newestSeen) showNewest()
+    else box.value?.scrollTo({ top: box.value.scrollHeight })
+    newestSeen = newest
   }
 }
 
