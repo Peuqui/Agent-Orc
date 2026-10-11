@@ -1,0 +1,37 @@
+# A minimal llama-swap configuration for Agent-Orc's `local` backend (see "Other backends" in the
+# README). llama-swap puts several local models behind one address and loads each when a request
+# names it; it speaks OpenAI's and Anthropic's API, which Claude Code needs.
+#
+#   llama-swap --config llama-swap.example.yaml --listen 127.0.0.1:11435
+#
+# Replace the paths and the model; then the matching Agent-Orc side is
+#
+#   backends:
+#     local:
+#       label: Local models
+#       base_urls: [http://127.0.0.1:11435]
+#       key_variable: ANTHROPIC_API_KEY
+#       key: no-key                    # a local server takes any key
+#       models:
+#         my-model: {}                 # name as below; add `levels: [low, medium, high]` if its
+#                                      # chat template takes reasoning levels
+healthCheckTimeout: 600   # seconds a model may take to load before it counts as failed
+
+models:
+  my-model:
+    # ${PORT} is chosen by llama-swap. Claude Code needs a model that follows tool calls and
+    # a long context: set --ctx-size to what the model and your memory allow (Claude Code
+    # assumes 200k unless Agent-Orc is told otherwise).
+    cmd: >
+      /path/to/llama-server --port ${PORT}
+      --model /path/to/my-model.gguf
+      --ctx-size 65536 --jinja -ngl 99
+    ttl: 900              # seconds idle until the model is unloaded again
+
+# Models that must not be loaded together (they would fill the same card) go into an exclusive
+# group: loading one unloads the others. Agents on different models of it push each other out.
+# groups:
+#   main:
+#     exclusive: true
+#     swap: true
+#     members: [my-model, another-model]

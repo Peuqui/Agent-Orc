@@ -384,6 +384,11 @@ backends:
       qwen3.8-flash: {levels: [low, medium, xhigh]}
 ```
 
+For local models, [llama-swap](https://github.com/mostlygeek/llama-swap) works: it serves several
+models behind one address, loads each on request and offers Anthropic's API.
+[`docs/backends/llama-swap.example.yaml`](docs/backends/llama-swap.example.yaml) is a minimal
+configuration with the matching `backends` entry.
+
 ## Tests
 
 ```bash
