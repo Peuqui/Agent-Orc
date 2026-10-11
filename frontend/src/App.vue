@@ -8,6 +8,7 @@ import BottomNav from './components/BottomNav.vue'
 import AppIcon from './components/AppIcon.vue'
 import ToastList from './components/ToastList.vue'
 import UpdateBanner from './components/UpdateBanner.vue'
+import { COLUMN_TAB } from './device'
 import { useCodeCopy } from './composables/useCodeCopy'
 import { useSessions } from './composables/useSessions'
 import { useToast } from './composables/useToast'
@@ -21,7 +22,7 @@ const router = useRouter()
 // A column of the workspace shows its agent's terminal in an iframe; pages opened from there
 // (the project folder) get no app header or navigation, which would lead to a workspace inside
 // the column, but a way back to the column's terminal.
-const columnTab = window.self === window.top ? null : window.frameElement?.getAttribute('data-tab')
+const columnTab = COLUMN_TAB
 
 function backToTerminal(): void {
   if (columnTab) void router.push({ path: `/terminal/${encodeURIComponent(columnTab)}`, query: { embedded: null } })

@@ -11,6 +11,10 @@ export const PHONE_WIDTH = (window.top ?? window).matchMedia('(max-width: 767px)
 // 600 CSS pixels wide), not phones (about 440, measured on a Realme GT Neo2 at 1080 px).
 export const TABS_WIDTH = (window.top ?? window).matchMedia('(min-width: 520px)')
 
+// The tab of the workspace column this page is shown in (a column is its agent's page in an iframe
+// of the workspace), null on a page of its own. A page opened from a column stays in it.
+export const COLUMN_TAB = window.self === window.top ? null : (window.frameElement?.getAttribute('data-tab') ?? null)
+
 // Track width in pixels of the jog (scroll strip) at the right edge of a terminal or an answers
 // list. A finger needs about 40 px, a mouse less; kept a little under that, as the grip is
 // touched on the whole track. Things laid over the list keep clear of it.

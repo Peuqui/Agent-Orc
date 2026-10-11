@@ -7,6 +7,7 @@ import AppIcon from '../components/AppIcon.vue'
 import BaseDialog from '../components/BaseDialog.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
 import ConversationCleanup from '../components/ConversationCleanup.vue'
+import { COLUMN_TAB } from '../device'
 import FilePane from '../components/FilePane.vue'
 import InputDialog from '../components/InputDialog.vue'
 import StartAgentDialog from '../components/StartAgentDialog.vue'
@@ -79,6 +80,10 @@ function toggleDual(): void {
 const panes = ref<(InstanceType<typeof FilePane> | null)[]>([])
 const selections = ref<FileEntry[][]>([[], []])
 const selected = computed(() => selections.value[activeView.value] ?? [])
+// In a column of a workspace (opened from an answer or the terminal) the page shows the folder
+// and not the trash and the cleanup of conversations, which belong to the page of its own;
+// files are trashed from the selection or the menu there.
+const inColumn = COLUMN_TAB !== null
 const trashPanel = ref<InstanceType<typeof TrashPanel>>()
 
 async function reloadAll(): Promise<void> {
@@ -190,7 +195,7 @@ function onAgentStarted(): void {
 
 <template>
   <!-- The files, and the trash beside them (below on a phone): a file dragged onto the trash is trashed. -->
-  <section class="md:grid md:grid-cols-[minmax(0,1fr)_20rem] md:items-start md:gap-4">
+  <section :class="inColumn ? '' : 'md:grid md:grid-cols-[minmax(0,1fr)_20rem] md:items-start md:gap-4'">
     <div ref="zoomed" class="min-w-0" :style="zoomStyle">
       <div
         class="mb-3 flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm"
@@ -226,7 +231,7 @@ function onAgentStarted(): void {
         <button class="btn-secondary" :disabled="panes[activeView]?.uploading" @click="panes[activeView]?.pickFolder()">
           <AppIcon name="upload" />{{ $t('files.uploadFolder') }}
         </button>
-        <button class="btn-secondary" :class="dual ? '!text-amber-300' : ''" :aria-pressed="dual" @click="toggleDual">
+        <button v-if="!inColumn" class="btn-secondary" :class="dual ? '!text-amber-300' : ''" :aria-pressed="dual" @click="toggleDual">
           <AppIcon name="workspace" />{{ $t(dual ? 'files.oneView' : 'files.twoViews') }}
         </button>
         <button class="btn-primary col-span-2 sm:col-span-1" @click="dialog = { kind: 'agent', path: activePath }">
@@ -306,7 +311,7 @@ function onAgentStarted(): void {
       </div>
     </div>
 
-    <aside class="mt-4 md:mt-0">
+    <aside v-if="!inColumn" class="mt-4 md:mt-0">
       <TrashPanel ref="trashPanel" @trash="trashPaths" @restored="reloadAll" />
       <ConversationCleanup />
     </aside>
