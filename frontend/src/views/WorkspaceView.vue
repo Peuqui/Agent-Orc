@@ -517,7 +517,10 @@ function deleteThis(): void {
         :class="{ 'snap-x snap-mandatory': widths.resize.value === null, '[scrollbar-width:none]': phone }"
         style="container-type: inline-size"
       >
-        <div class="grid h-full grid-rows-[auto_minmax(0,1fr)]" :style="widths.gridStyle.value">
+        <div
+          class="grid h-full grid-rows-[auto_minmax(0,1fr)] [--divider-width:0.5rem] pointer-coarse:[--divider-width:1.5rem]"
+          :style="widths.gridStyle.value"
+        >
           <div
             v-for="id in showTabs ? workspace.tabs : []"
             :key="`head-${id}`"
@@ -559,17 +562,19 @@ function deleteThis(): void {
             :data-active="workspace.active === id"
             :src="frameUrl(id)"
             :title="tabName(id)"
-            class="h-full w-full snap-start bg-slate-900"
+            class="h-full snap-start bg-slate-900"
+            :class="showTabs ? 'w-[calc(100%-var(--divider-width))]' : 'w-full'"
             :style="{ gridColumn: column(id), gridRow: '2' }"
             allow="microphone; clipboard-write"
             @load="onFrameLoad(id)"
           />
-          <!-- Divider on each column's right edge, above the iframes (which would swallow it), wider for a finger; on
+          <!-- Divider on each column's right edge, in room the iframes leave free (they are that much
+               narrower), so it does not cover the jog at their right edge; wider for a finger. On
                phones every column fills the screen, so there is nothing to divide. -->
           <div
             v-for="id in showTabs ? workspace.tabs : []"
             :key="`divider-${id}`"
-            class="z-10 w-2 cursor-col-resize touch-none justify-self-end border-r border-slate-700 hover:bg-red-500/30 pointer-coarse:w-6 pointer-coarse:bg-slate-700/40"
+            class="z-10 w-(--divider-width) cursor-col-resize touch-none justify-self-end border-r border-slate-700 hover:bg-red-500/30 pointer-coarse:bg-slate-700/40"
             :class="{ 'bg-red-500/40': widths.resize.value?.id === id }"
             :style="{ gridColumn: column(id), gridRow: '1 / span 2' }"
             :title="$t('workspace.resize')"
