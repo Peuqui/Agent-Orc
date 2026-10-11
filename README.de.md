@@ -241,6 +241,10 @@ fragt dann nach:
   HTTPS läuft oder für einen ersten lokalen Test über einfaches HTTP,
 - einem Whisper-Dienst fürs Diktat, falls du einen betreibst (es prüft, ob er antwortet); ohne
   ihn nutzt das Mikrofon die Spracherkennung des Browsers (Chrome),
+- ob Claude Code mit lokalen Modellen (llama-swap, vLLM) oder mit Qwen bei Alibabas DashScope laufen
+  soll (siehe [Andere Backends](#andere-backends)): Adresse des Servers und, bei DashScope, der
+  API-Schlüssel, der in eine Datei nur für dich lesbar kommt; die Modelle, die der Server auflistet,
+  landen in der Config,
 - deiner E-Mail-Adresse für die Push-Dienste, die Benachrichtigungen zustellen (optional),
 - dem Passwort für die Web-App.
 
@@ -377,13 +381,13 @@ agent-orc backend levels <Backend> <Modell>    die Denkstufen, die ein Modell an
 agent-orc backend run <Backend> [<Modell>] ... Claude Code darauf (weitere Argumente gehen an Claude)
 ```
 
-Ein Backend steht im Abschnitt `backends` der Config, ein Profil benutzt es (die Standard-Config
-enthält beides als auskommentierte Beispiele). Der Server muss Anthropics Messages-API unter
+Ein Backend steht im Abschnitt `backends` der Config, ein Profil `claude-<Backend>` benutzt es;
+`agent-orc setup` schreibt beides, wenn du ein Backend möchtest. Der Server muss Anthropics Messages-API unter
 `anthropic_path` anbieten und seine Modelle unter `models_path` auflisten. Angeboten werden nur
 die in der Config genannten Modelle; ein Name darf ein Shell-Muster sein. `levels` nennt die
 Denkstufen eines Modells (eine gewünschte, die es nicht kennt, wird zur nächsthöheren, die es
 kennt); `free_until` blendet ein Modell aus, sobald sein Gratis-Kontingent endet. Der Schlüssel
-kommt aus genau einem von `key`, `key_file` (nur für Sie lesbar, `chmod 600`) oder `key_env`. Wo
+kommt aus genau einem von `key`, `key_file` (nur für dich lesbar, `chmod 600`) oder `key_env`. Wo
 der Server sie meldet (vLLM: `max_model_len`), wird die Kontextlänge an Claude Code übergeben, das
 sonst 200k annähme.
 

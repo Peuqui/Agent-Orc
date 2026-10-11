@@ -1,0 +1,29 @@
+# The kinds of backend `agent-orc setup` can set up for Claude Code (see "Other backends" in the
+# README). Per kind: the question's default address, what goes into the `backends` entry, and the
+# profile that starts Claude Code on it (its commands are claude_backend_profile.yaml).
+local:
+  label: Local models (llama-swap, vLLM)
+  address: http://127.0.0.1:11435
+  backend:
+    label: Local models
+    key_variable: ANTHROPIC_API_KEY
+    key: no-key   # a local server takes any key
+    context_path: /upstream/{model}/v1/models
+    api_timeout_ms: 600000
+  profile:
+    label: Claude (local)
+    hint: Stop other users of the GPUs first, or the models push each other out.
+dashscope:
+  label: Qwen on Alibaba's DashScope
+  address: https://dashscope-intl.aliyuncs.com
+  backend:
+    label: Qwen (DashScope)
+    # Where the key is kept: asked for once, readable for the user alone.
+    key_file: ~/.config/agent-orc/dashscope.key
+    anthropic_path: /apps/anthropic
+    models_path: /compatible-mode/v1/models
+    # The server lists every model it has; only these are offered (name or shell pattern).
+    models:
+      "qwen*": {}
+  profile:
+    label: Claude (Qwen)

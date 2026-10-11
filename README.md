@@ -227,6 +227,9 @@ asks for:
   HTTPS or on plain HTTP for a first local test,
 - a Whisper service for dictation, if you run one (it checks that it answers); without one
   the microphone uses the browser's own speech recognition (Chrome),
+- whether to run Claude Code on local models (llama-swap, vLLM) or on Qwen at Alibaba's DashScope
+  (see [Other backends](#other-backends)): the server's address and, for DashScope, the API key,
+  which goes into a file only you can read; the models the server lists end up in the config,
 - your e-mail address for the push services that deliver notifications (optional),
 - the password for the web app.
 
@@ -356,8 +359,8 @@ agent-orc backend levels <backend> <model>     the reasoning levels a model take
 agent-orc backend run <backend> [<model>] ...  Claude Code on it (more arguments go to Claude)
 ```
 
-A backend is described in the `backends` section of the config, and a profile uses it (the
-default config holds both as commented examples). The server must offer Anthropic's Messages API
+A backend is described in the `backends` section of the config, and a profile `claude-<backend>`
+uses it; `agent-orc setup` writes both when you ask for a backend. The server must offer Anthropic's Messages API
 below `anthropic_path` and list its models below `models_path`. Only the models named in the
 config are offered; a name may be a shell pattern. `levels` lists the reasoning levels a model
 takes (a wanted level it lacks becomes the next higher one it has); `free_until` hides a model

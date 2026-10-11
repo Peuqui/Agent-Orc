@@ -1,0 +1,24 @@
+  @profile@:
+    label: @label@
+    hint: @hint@
+    models: [agent-orc, backend, models, @backend@]
+    # Typed into an idle agent to empty or shrink its context without a restart (menu items).
+    clear_command: /clear
+    compact_command: /compact
+    start: [agent-orc, backend, run, @backend@, "{model}", --settings, "{settings}"]
+    resume: [agent-orc, backend, run, @backend@, "{model}", --settings, "{settings}", --continue]
+    conversations:
+      source: claude
+      resume: [agent-orc, backend, run, @backend@, "{model}", --settings, "{settings}", --resume, "{conversation}"]
+    settings: *claude_settings
+    env: {AGENT_ORC_EFFORT: "{effort}", AI_CONNECT_PEER_SUFFIX: "{suffix}"}
+    trust: claude
+    effort:
+      levels: [low, medium, high, xhigh, max]
+      default: high
+      # The levels the chosen model takes (from `backends`); nothing: no slider, its own default.
+      levels_command: [agent-orc, backend, levels, @backend@, "{model}"]
+      live:
+        command: /effort {level}
+        ultracode_command: /effort ultracode {state}
+        protected_file: ~/.claude/settings.json
