@@ -518,7 +518,7 @@ function deleteThis(): void {
         style="container-type: inline-size"
       >
         <div
-          class="grid h-full grid-rows-[auto_minmax(0,1fr)] [--divider-width:0.5rem] pointer-coarse:[--divider-width:1.5rem]"
+          class="grid h-full grid-rows-[auto_minmax(0,1fr)] [--divider-width:0.5rem] pointer-coarse:[--divider-width:1.125rem]"
           :style="widths.gridStyle.value"
         >
           <div
