@@ -442,7 +442,7 @@ function deleteThis(): void {
           @reset="widths.resetWidths"
         />
         <button
-          v-if="speech.available.value && tabsInHeader"
+          v-if="speech.available.value"
           class="btn-icon relative"
           :class="speechAutoRead ? '!text-amber-300 ring-1 ring-amber-500' : ''"
           :aria-pressed="speechAutoRead"
@@ -469,7 +469,6 @@ function deleteThis(): void {
           <AppIcon :name="speech.playing.value !== null ? 'stop' : 'speaker'" />
         </button>
         <button
-          v-if="tabsInHeader"
           class="btn-icon"
           :aria-label="$t('workspace.fullscreen')"
           :title="$t('workspace.fullscreen')"
@@ -477,34 +476,13 @@ function deleteThis(): void {
         >
           <AppIcon name="expand" />
         </button>
-        <!-- Without room for these buttons (a phone): the rarely used ones behind one. -->
-        <DropdownMenu v-else v-model:open="moreOpen" right panel-class="flex w-64 flex-col p-1">
+        <!-- Where the room is short (a phone): what is needed rarely sits behind this button. -->
+        <DropdownMenu v-if="!tabsInHeader" v-model:open="moreOpen" right panel-class="flex w-64 flex-col p-1">
           <template #trigger="{ toggle }">
-            <button
-              class="btn-icon"
-              :class="speechAutoRead ? '!text-amber-300 ring-1 ring-amber-500' : ''"
-              :aria-label="$t('workspace.more')"
-              :title="$t('workspace.more')"
-              @click="toggle"
-            >
+            <button class="btn-icon" :aria-label="$t('workspace.more')" :title="$t('workspace.more')" @click="toggle">
               <AppIcon name="more" />
             </button>
           </template>
-          <button
-            v-if="speech.available.value"
-            class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-slate-700"
-            :class="speechAutoRead ? 'text-amber-300' : 'text-slate-300'"
-            :aria-pressed="speechAutoRead"
-            @click="((moreOpen = false), (speechAutoRead = !speechAutoRead))"
-          >
-            <AppIcon name="speaker" />{{ $t('answers.autoRead') }}
-          </button>
-          <button
-            class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-slate-300 hover:bg-slate-700"
-            @click="((moreOpen = false), (fullscreen = true))"
-          >
-            <AppIcon name="expand" />{{ $t('workspace.fullscreen') }}
-          </button>
           <button
             class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-slate-300 hover:bg-slate-700"
             @click="((moreOpen = false), (helpOpen = true))"
