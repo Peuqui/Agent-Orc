@@ -1,6 +1,8 @@
 import { onBeforeUnmount, onMounted, onUpdated, type Ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { api, type ExistingPath } from '../api'
+import type { ExistingPath } from '../api'
+import { existingPaths } from '../existingPaths'
+import { MISSING_TTL_MS } from '../pathLookup'
 import { pathOfCode } from '../filePaths'
 import { openExistingPath } from './useFileLinks'
 
@@ -11,6 +13,9 @@ const FILE_ATTRIBUTE = 'data-file-path'
 const KIND_ATTRIBUTE = 'data-file-kind'
 const LINE_ATTRIBUTE = 'data-file-line'
 const CHECKED_ATTRIBUTE = 'data-file-checked'
+// A path that does not exist yet (the agent names a file before it has written it) is looked at
+// again this often, this many times after each change of the answers; then it is left alone.
+const RECHECK_ROUNDS = 12
 
 /**
  * Makes the files and folders an agent names in its answers clickable, as in its terminal (see
@@ -21,8 +26,8 @@ const CHECKED_ATTRIBUTE = 'data-file-checked'
  */
 export function useAnswerFileLinks(root: Ref<HTMLElement | undefined>, folder: () => string | undefined): void {
   const router = useRouter()
-  // What the server said about a path, per folder: asked once, not at every change.
-  const known = new Map<string, ExistingPath | null>()
+  let recheck: number | undefined
+  let rounds = 0
 
   async function mark(): Promise<void> {
     const base = folder()
@@ -30,27 +35,33 @@ export function useAnswerFileLinks(root: Ref<HTMLElement | undefined>, folder: (
     if (base === undefined || element === undefined) return
     const unchecked = [...element.querySelectorAll<HTMLElement>(`.markdown :not(pre) > code:not([${CHECKED_ATTRIBUTE}])`)]
     const mentions = unchecked.map((code) => ({ code, path: pathOfCode(code.textContent ?? '') }))
-    const unasked = [
-      ...new Set(mentions.flatMap(({ path }) => (path && !known.has(`${base}\n${path.text}`) ? [path.text] : []))),
-    ]
-    if (unasked.length) {
-      try {
-        const found = await api.existingPaths(base, unasked)
-        for (const text of unasked) known.set(`${base}\n${text}`, found[text] ?? null)
-      } catch (error) {
-        // No links this time (e.g. the login expired); the next change asks again.
-        console.error('looking up file links failed', error)
-        return
-      }
+    let found: Record<string, ExistingPath>
+    try {
+      found = await existingPaths(base, mentions.flatMap(({ path }) => (path ? [path.text] : [])))
+    } catch (error) {
+      // No links this time (e.g. the login expired); the next change asks again.
+      console.error('looking up file links failed', error)
+      return
     }
+    let missing = 0
     for (const { code, path } of mentions) {
+      const target = path === null ? undefined : found[path.text]
+      // Code that is no path is done with; a path that is not there yet is looked at again.
+      if (path === null || target === undefined) {
+        if (path === null) code.setAttribute(CHECKED_ATTRIBUTE, '')
+        else missing++
+        continue
+      }
       code.setAttribute(CHECKED_ATTRIBUTE, '')
-      const target = path === null ? null : known.get(`${base}\n${path.text}`)
-      if (path === null || !target) continue
       code.classList.add(FILE_LINK_CLASS)
       code.setAttribute(FILE_ATTRIBUTE, target.path)
       code.setAttribute(KIND_ATTRIBUTE, target.kind)
       if (path.line !== null) code.setAttribute(LINE_ATTRIBUTE, String(path.line))
+    }
+    window.clearTimeout(recheck)
+    if (missing > 0 && rounds < RECHECK_ROUNDS) {
+      rounds++
+      recheck = window.setTimeout(() => void mark(), MISSING_TTL_MS)
     }
   }
 
@@ -68,6 +79,12 @@ export function useAnswerFileLinks(root: Ref<HTMLElement | undefined>, folder: (
     root.value?.addEventListener('click', onClick)
     void mark()
   })
-  onUpdated(() => void mark())
-  onBeforeUnmount(() => root.value?.removeEventListener('click', onClick))
+  onUpdated(() => {
+    rounds = 0
+    void mark()
+  })
+  onBeforeUnmount(() => {
+    window.clearTimeout(recheck)
+    root.value?.removeEventListener('click', onClick)
+  })
 }

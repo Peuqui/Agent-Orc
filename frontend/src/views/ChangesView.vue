@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ApiError, api, type ExistingPath, type FileChange } from '../api'
+import { existingPaths } from '../existingPaths'
 import AppIcon from '../components/AppIcon.vue'
 import { openExistingPath } from '../composables/useFileLinks'
 import { useSessions } from '../composables/useSessions'
@@ -37,7 +38,7 @@ watch(
   async ([changed, base]) => {
     if (changed === null || base === undefined) return
     try {
-      existing.value = await api.existingPaths(base, changed.map((file) => file.path))
+      existing.value = await existingPaths(base, changed.map((file) => file.path))
     } catch (error) {
       toast.error(error)
     }
