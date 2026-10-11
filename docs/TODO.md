@@ -36,9 +36,10 @@ Nur was noch aussteht. Erledigtes steht in der Git-Historie.
 
 ## Dateien-Reiter und Oberfläche
 
-- **Nicht geprüft:** der Dateien-Reiter mit Auswahl und zwei Ansichten auf dem Handy und ein Upload über
-  `/hosts/Aragon/` mit mehreren GB (der Proxy reicht in Stücken durch). Geprüft (11.10.): Ordner aus dem
-  Dateimanager des Betriebssystems ziehen, mehrere hundert MB in vielen Dateien.
+- **Nicht geprüft:** der Dateien-Reiter mit Auswahl und zwei Ansichten auf dem Handy. Geprüft (11.10.): Ordner aus dem
+  Dateimanager des Betriebssystems ziehen, mehrere hundert MB in vielen Dateien; ein Upload von 3 GiB (eine Datei) über
+  `/hosts/Aragon/` mit Test-Instanzen auf beiden Rechnern (Mini, SSH-Tunnel, Aragon): 37 s (88 MB/s), SHA-256 gleich,
+  der Speicher beider Prozesse blieb bei etwa 79 und 77 MB (der Proxy und der Upload reichen in Stücken durch).
 
 - **Leere Unterordner:** Beim Ziehen eines Ordners werden sie jetzt mit übertragen. Über „Hochladen“, „Ordner
   auswählen“ (Dateiauswahl des Browsers) nicht: der Browser liefert dort nur Dateien, keine leeren Ordner.
@@ -46,7 +47,7 @@ Nur was noch aussteht. Erledigtes steht in der Git-Historie.
   Verlauf (Pfeil hoch) und Gboard-Diktat gehen direkt. Bekannt: Tippt man einen **Wortvorschlag** der Gboard-Leiste an, entstehen
   doppelte Zeichen und Worte (die Tastatur ersetzt das eben geschriebene Wort, xterm.js sieht Löschen und Einfügen); ohne die
   Vorschläge anzutippen läuft alles. Von der Seite aus nicht abschaltbar (xterm setzt `autocorrect`, `autocapitalize` und
-  `spellcheck` schon aus). Offen: ob ein Hinweis in der Hilfe reicht.
+  `spellcheck` schon aus). Der Hinweis steht in der Hilfe (Terminal).
 
 ## AI-Connect
 

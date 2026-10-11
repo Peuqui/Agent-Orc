@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import HostSessions from '../components/HostSessions.vue'
 import QuotaPanel from '../components/QuotaPanel.vue'
 import { useHosts } from '../composables/useHosts'
 import { useToast } from '../composables/useToast'
+import { useViewZoom } from '../composables/useViewZoom'
 
 // The agents of all machines, this one's own first and each other machine below, set apart.
 const { state, loadHosts, keepFresh } = useHosts()
@@ -16,10 +17,14 @@ const machines = computed(() => [
   { name: state.value?.self ?? '', host: null, online: true },
   ...(state.value?.hosts ?? []).map((other) => ({ name: other.name, host: other.name, online: other.online })),
 ])
+
+// The views' font size scales what this page shows (see useViewZoom).
+const zoomed = ref<HTMLElement>()
+const { zoomStyle } = useViewZoom(zoomed)
 </script>
 
 <template>
-  <section>
+  <section ref="zoomed" :style="zoomStyle">
     <!-- One for the account, whichever machine's agents are listed. -->
     <QuotaPanel class="mb-4" />
     <section v-for="(machine, index) in machines" :id="`host-${machine.name}`" :key="machine.name">
