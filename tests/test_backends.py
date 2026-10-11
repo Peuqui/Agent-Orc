@@ -26,6 +26,7 @@ from agent_orc.backends import (
     offered,
     prepare_launch,
     reachable_base_url,
+    readable_note,
     resolve_key,
     split_effort,
     translate_level,
@@ -99,11 +100,16 @@ def test_only_configured_models_are_offered_and_not_after_their_quota() -> None:
     assert "Qwen-Flash-1" not in offered(listed, backend(), date(2026, 11, 25))
 
 
-def test_the_note_says_how_long_a_model_is_free() -> None:
-    entry = BackendModelConfig(free_until=date(2026, 11, 24))
-    assert free_note(entry, TODAY) == "free until 2026-11-24 (44 days left)"
-    assert free_note(entry, date(2026, 11, 23)) == "free until 2026-11-24 (1 day left)"
-    assert free_note(BackendModelConfig(), TODAY) == ""
+def test_the_note_is_the_last_day_the_interface_words_in_its_own_language() -> None:
+    assert free_note(BackendModelConfig(free_until=date(2026, 11, 24))) == "free_until=2026-11-24"
+    assert free_note(BackendModelConfig()) == ""
+
+
+def test_the_terminal_words_the_note_in_english() -> None:
+    note = "free_until=2026-11-24"
+    assert readable_note(note, TODAY) == "free until 2026-11-24 (44 days left)"
+    assert readable_note(note, date(2026, 11, 23)) == "free until 2026-11-24 (1 day left)"
+    assert readable_note("free until Friday", TODAY) == "free until Friday"
 
 
 def test_the_key_is_exactly_one_of_a_value_a_file_and_a_variable() -> None:
@@ -151,7 +157,7 @@ def test_the_models_to_choose_from_carry_their_note() -> None:
     )
     assert models_lines(backend(), TODAY, fetch) == [
         "Qwen-27B-vllm",
-        "Qwen-Flash-1\tfree until 2026-11-24 (44 days left)",
+        "Qwen-Flash-1\tfree_until=2026-11-24",
     ]
 
 
@@ -294,11 +300,11 @@ def test_a_failing_command_before_the_start_is_reported_and_the_start_goes_on(
 
 
 def test_the_model_is_chosen_by_number_or_name() -> None:
-    models = ["Plain-model", "Qwen-Flash-1\tfree until 2026-11-24 (44 days left)"]
-    assert choose_model(models, lambda prompt: "2") == "Qwen-Flash-1"
-    assert choose_model(models, lambda prompt: "Plain-model") == "Plain-model"
+    models = ["Plain-model", "Qwen-Flash-1\tfree_until=2026-11-24"]
+    assert choose_model(models, TODAY, lambda prompt: "2") == "Qwen-Flash-1"
+    assert choose_model(models, TODAY, lambda prompt: "Plain-model") == "Plain-model"
     with pytest.raises(BackendError, match="no such model"):
-        choose_model(models, lambda prompt: "9")
+        choose_model(models, TODAY, lambda prompt: "9")
 
 
 class ModelsHandler(BaseHTTPRequestHandler):
@@ -421,7 +427,7 @@ def test_a_broken_answer_of_a_server_is_no_answer() -> None:
 
 def test_choosing_among_no_model_says_so() -> None:
     with pytest.raises(BackendError, match="offers no model"):
-        choose_model([])
+        choose_model([], TODAY)
 
 
 def test_an_empty_model_name_is_refused(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

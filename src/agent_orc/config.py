@@ -327,7 +327,8 @@ class AgentProfile(StrictModel):
     # A plain terminal, no agent: it may run in a folder next to that folder's agent.
     terminal: bool = False
     # Prints the models to choose from at start, one per line; the choice fills {model}. A tab
-    # may follow the name, then a note shown beside it (e.g. until when the model is free).
+    # may follow the name, then a note shown beside it; the note `free_until=<YYYY-MM-DD>` is the
+    # last day the model is free, which the interface words in its own language.
     models: list[str] | None = None
     # Without it, a running agent is restarted (resumed) to take another model.
     model_live: LiveModelConfig | None = None

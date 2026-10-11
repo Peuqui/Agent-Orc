@@ -411,6 +411,9 @@
       }
     ]
   },
+  "models": {
+    "freeUntil": "free until {date} ({count} day left | {count} days left)"
+  },
   "permission": {
     "label": "Start",
     "title": "Permission mode the agent starts in: Ask (before edits and commands), Edit (file edits without asking), Auto (Claude decides what is safe), Plan (plans only). Applies from the next start; inside the agent Shift+Tab switches it.",

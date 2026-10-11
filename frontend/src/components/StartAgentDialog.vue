@@ -2,7 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { api, type Conversation, type ConversationHit, type ModelChoice, type Reasoning } from '../api'
-import { modelOptions, preferredModel, rememberModel } from '../composables/useModelChoice'
+import { modelOptions, preferredModel, rememberModel, useModelNote } from '../composables/useModelChoice'
 import { useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
 import { nearestLevel } from '../effort'
@@ -81,6 +81,7 @@ function marked(excerpt: string): [string, string, string] {
 }
 const MILLISECONDS_PER_SECOND = 1000
 const { locale, t } = useI18n()
+const modelNote = useModelNote()
 
 const profile = computed(() => profiles.value.find((candidate) => candidate.name === selected.value))
 // Profiles with a choice of models (e.g. the local ones): the list, the choice, its levels.
@@ -204,7 +205,7 @@ async function start(resume: boolean, conversation: string | null = null): Promi
     </p>
     <label v-if="profile?.models" class="mb-5 flex flex-col gap-1 text-sm text-slate-400">
       {{ $t('agent.model') }}
-      <SelectMenu v-model="model" :options="modelOptions(models)" button-class="input text-sm text-slate-200" />
+      <SelectMenu v-model="model" :options="modelOptions(models, modelNote)" button-class="input text-sm text-slate-200" />
     </label>
     <ReasoningControl
       v-if="effortLevels.length"

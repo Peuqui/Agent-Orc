@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { type AgentChoice, type ModelChoice, type Reasoning } from '../api'
 import { nearestLevel } from '../effort'
-import { modelOptions, preferredModel, rememberModel } from '../composables/useModelChoice'
+import { modelOptions, preferredModel, rememberModel, useModelNote } from '../composables/useModelChoice'
 import { useSessions } from '../composables/useSessions'
 import { useApi } from '../composables/useHostContext'
 import { useToast } from '../composables/useToast'
@@ -26,6 +26,7 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{ choose: [choice: AgentChoice]; close: [] }>()
 const toast = useToast()
+const modelNote = useModelNote()
 const api = useApi()
 const { profiles } = useSessions()
 const chosenProfile = ref(props.profile)
@@ -138,7 +139,7 @@ function confirm(): void {
     </p>
     <label v-if="offersModels" class="mb-5 flex flex-col gap-1 text-sm text-slate-400">
       {{ $t('agent.model') }}
-      <SelectMenu v-model="model" :options="modelOptions(models)" button-class="input text-sm text-slate-200" />
+      <SelectMenu v-model="model" :options="modelOptions(models, modelNote)" button-class="input text-sm text-slate-200" />
     </label>
     <ReasoningControl v-if="asksEffort" v-model="reasoning" :levels="levels" :ultracode-offered="false" class="mb-5" />
     <div class="flex justify-end gap-2">

@@ -411,6 +411,9 @@
       }
     ]
   },
+  "models": {
+    "freeUntil": "frei bis {date} (noch {count} Tag | noch {count} Tage)"
+  },
   "permission": {
     "label": "Start",
     "title": "Freigabe-Modus, in dem der Agent startet: Fragen (vor Änderungen und Befehlen), Bearbeiten (Dateiänderungen ohne Nachfrage), Auto (Claude entscheidet, was sicher ist), Planen (nur planen). Gilt ab dem nächsten Start; im Agenten wechselt Shift+Tab.",

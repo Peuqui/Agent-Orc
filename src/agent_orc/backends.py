@@ -44,6 +44,8 @@ CONTEXT_SECONDS = 900
 LISTING_SECONDS = 30
 
 Fetch = Callable[[str, str | None, float], Any]
+# A model's note that is the last day of its free quota (the user interface words it).
+FREE_UNTIL_PREFIX = "free_until="
 # What a request to a server can raise: no answer, an answer that is no JSON, a broken one.
 FETCH_ERRORS = (OSError, ValueError, http.client.HTTPException)
 
@@ -88,12 +90,20 @@ def entry_of(backend: BackendConfig, model: str) -> BackendModelConfig | None:
     )
 
 
-def free_note(entry: BackendModelConfig, today: date) -> str:
-    """How long a model is free to use, for the choice; empty for one without an end."""
-    if entry.free_until is None:
-        return ""
-    days = (entry.free_until - today).days
-    return f"free until {entry.free_until.isoformat()} ({days} day{'' if days == 1 else 's'} left)"
+def free_note(entry: BackendModelConfig) -> str:
+    """The note of a model whose quota is free for a while: the last day, which the user
+    interface words in its own language (the note is `free_until=<date>`); empty for one without an
+    end."""
+    return "" if entry.free_until is None else f"{FREE_UNTIL_PREFIX}{entry.free_until.isoformat()}"
+
+
+def readable_note(note: str, today: date) -> str:
+    """A note worded for the terminal: the free quota as "free until <date> (n days left)"."""
+    if not note.startswith(FREE_UNTIL_PREFIX):
+        return note
+    until = date.fromisoformat(note.removeprefix(FREE_UNTIL_PREFIX))
+    days = (until - today).days
+    return f"free until {until.isoformat()} ({days} day{'' if days == 1 else 's'} left)"
 
 
 def offered(listed: Sequence[str], backend: BackendConfig, today: date) -> list[str]:
@@ -205,12 +215,12 @@ def backend_named(config: Config, name: str) -> BackendConfig:
 
 
 def models_lines(backend: BackendConfig, today: date, fetch: Fetch = fetch_json) -> list[str]:
-    """The models to choose from, one line each; after a tab a note (how long it is free)."""
+    """The models to choose from, one line each; after a tab a note (until when it is free)."""
     key = resolve_key(backend)
     base_url = reachable_base_url(backend, key, fetch)
     lines = []
     for name in offered(listed_models(backend, base_url, key, fetch), backend, today):
-        note = free_note(entry_of(backend, name) or BackendModelConfig(), today)
+        note = free_note(entry_of(backend, name) or BackendModelConfig())
         lines.append(f"{name}\t{note}" if note else name)
     return lines
 
@@ -294,12 +304,14 @@ def split_effort(
     return wanted, rest
 
 
-def choose_model(models: list[str], ask: Callable[[str], str] = input) -> str:
+def choose_model(models: list[str], today: date, ask: Callable[[str], str] = input) -> str:
     """The model by number or name, asked for on the terminal."""
     if not models:
         raise BackendError("the backend offers no model to choose")
     for number, line in enumerate(models, start=1):
-        print(f"  {number:2d}) {line.replace(chr(9), '  ')}", file=sys.stderr)
+        name, _, note = line.partition("\t")
+        shown = f"{name}  {readable_note(note, today)}" if note else name
+        print(f"  {number:2d}) {shown}", file=sys.stderr)
     answer = ask(f"Model [1-{len(models)}]: ").strip()
     names = [line.split("\t")[0] for line in models]
     if answer.isdigit() and 1 <= int(answer) <= len(names):

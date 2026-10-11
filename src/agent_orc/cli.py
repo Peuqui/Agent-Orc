@@ -233,7 +233,7 @@ def run_backend(arguments: list[str]) -> None:
                 )
                 if named is None and not sys.stdin.isatty():
                     raise BackendError("name a model: this is not a terminal to choose in")
-                model = named or choose_model(models_lines(backend, date.today()))
+                model = named or choose_model(models_lines(backend, date.today()), date.today())
                 launch = prepare_launch(
                     name,
                     backend,
