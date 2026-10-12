@@ -321,7 +321,7 @@ function onViewClick(event: MouseEvent): void {
 }
 
 // Dictation (Whisper or the browser) writes at the cursor of the text, as if typed there.
-const dictation = reactive(useDictation('notes', insertDictated, toast.error))
+const dictation = reactive(useDictation(insertDictated, toast.error))
 
 async function insertDictated(dictated: string): Promise<void> {
   const note = selected.value

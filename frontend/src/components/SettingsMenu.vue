@@ -20,11 +20,12 @@ import HandoverSettings from './HandoverSettings.vue'
 import KeysEditor from './KeysEditor.vue'
 import PushSettings from './PushSettings.vue'
 import SpeechSettings from './SpeechSettings.vue'
+import ToggleSwitch from './ToggleSwitch.vue'
 import TtsSettingsDialog from './TtsSettingsDialog.vue'
 import { reloadToNewVersion } from '../update'
 
 // Settings of this device; more entries join here as they become adjustable.
-const { scrollLines, lineHeight, fontSize, stepFontSize, viewFontSize, stepViewFontSize, terminalFont } = useSettings()
+const { scrollLines, lineHeight, fontSize, stepFontSize, viewFontSize, stepViewFontSize, terminalFont, dictationDevice, dictationSendsAtOnce } = useSettings()
 const toast = useToast()
 const open = ref(false)
 // The extra-keys editor stays open after the menu has closed.
@@ -121,6 +122,28 @@ function changeScrollLines(delta: number): void {
           {{ $t('settings.dictationServiceLine', service) }}
         </p>
         <p class="mt-1 text-xs text-slate-500">{{ $t('settings.dictationServiceHint') }}</p>
+      </div>
+      <!-- The dictation: where Whisper transcribes (CPU or GPU) and whether it goes to the agent at once; for this device. -->
+      <div class="mt-3 border-t border-slate-700 pt-3 text-sm text-slate-300">
+        <div v-if="service" class="flex items-center justify-between gap-2">
+          <span>{{ $t('settings.dictationDevice') }}</span>
+          <div class="flex overflow-hidden rounded-md border border-slate-600 text-xs">
+            <button
+              v-for="choice in (['cpu', 'cuda'] as const)"
+              :key="choice"
+              class="px-2 py-1"
+              :class="dictationDevice === choice ? 'bg-slate-600 text-slate-100' : 'text-slate-400'"
+              @click="dictationDevice = choice"
+            >
+              {{ choice === 'cuda' ? 'GPU' : 'CPU' }}
+            </button>
+          </div>
+        </div>
+        <p v-if="service" class="mt-1 text-xs text-slate-500">{{ $t('settings.dictationDeviceHint') }}</p>
+        <ToggleSwitch class="mt-2 h-7 text-slate-300" :checked="dictationSendsAtOnce" @click="dictationSendsAtOnce = !dictationSendsAtOnce">
+          {{ $t('settings.dictationSendsAtOnce') }}
+        </ToggleSwitch>
+        <p class="mt-1 text-xs text-slate-500">{{ $t('settings.dictationSendsAtOnceHint') }}</p>
       </div>
       <button
         class="btn-secondary btn-small mt-3 w-full justify-center"

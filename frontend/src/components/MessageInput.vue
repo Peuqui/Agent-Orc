@@ -29,7 +29,7 @@ watch(text, (current) => {
 const field = ref<HTMLTextAreaElement>()
 
 const { dictationSendsAtOnce } = useSettings()
-const dictation = reactive(useDictation(props.sessionId, async (dictated) => {
+const dictation = reactive(useDictation(async (dictated) => {
   text.value = text.value ? `${text.value} ${dictated}` : dictated
   // Longer than the field is high: the end, where the new words are, stays in view.
   await nextTick()

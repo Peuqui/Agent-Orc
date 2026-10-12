@@ -1,12 +1,11 @@
 import { computed, ref, type UnwrapNestedRefs } from 'vue'
-import { api, type DictationDevice } from '../api'
+import { api } from '../api'
+import { useSettings } from './useSettings'
 import { START_BEEP, STOP_BEEP, playBeep } from '../sounds'
 
 // Recording formats the Whisper service is fed with (agent_orc.dictation.AUDIO_SUFFIXES),
 // best first: Chrome records WebM, Firefox Ogg, Safari MP4.
 const RECORDING_TYPES = ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus', 'audio/mp4']
-// The device is remembered per agent: the CPU unless the GPU was chosen on purpose there.
-const DEVICE_KEY = 'agent-orc-dictation-device:'
 
 /** The parts of the Web Speech API used here; TypeScript's DOM types do not include it. */
 interface SpeechRecognitionLike {
@@ -39,12 +38,12 @@ export type DictationState = 'idle' | 'recording' | 'transcribing' | 'listening'
  */
 
 export function useDictation(
-  sessionId: string,
   onText: (text: string) => void,
   onError: (error: unknown) => void,
 ) {
   const state = ref<DictationState>('idle')
-  const device = ref<DictationDevice>(localStorage.getItem(DEVICE_KEY + sessionId) === 'cuda' ? 'cuda' : 'cpu')
+  // Where Whisper transcribes: one setting of this device (in the settings menu), the same for every agent.
+  const { dictationDevice: device } = useSettings()
   // Unknown until the server's settings have arrived.
   const whisper = ref<boolean | null>(null)
   const language = ref('')
@@ -69,11 +68,6 @@ export function useDictation(
       language.value = settings.language
     })
     .catch(onError)
-
-  function toggleDevice(): void {
-    device.value = device.value === 'cuda' ? 'cpu' : 'cuda'
-    localStorage.setItem(DEVICE_KEY + sessionId, device.value)
-  }
 
   async function startRecording(): Promise<void> {
     const mimeType = RECORDING_TYPES.find((type) => MediaRecorder.isTypeSupported(type))
@@ -159,7 +153,6 @@ export function useDictation(
     browserFallback,
     failedAudio,
     retry,
-    toggleDevice,
     toggleMicrophone,
     toggleBrowser,
   }

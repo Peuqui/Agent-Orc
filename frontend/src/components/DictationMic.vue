@@ -1,14 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { Dictation } from '../composables/useDictation'
-import { useSettings } from '../composables/useSettings'
+import { TOUCH_FIRST } from '../device'
 import AppIcon from './AppIcon.vue'
 
-// The microphone with the device switch (GPU or CPU) in front of it: the one used most is the
-// easiest to hit. Without Whisper the microphone itself listens through the browser. Right before
-// it the switch whether a dictation goes to the agent at once (where one decides it, while dictating).
+// The microphone, large where it is pressed with a finger. Where Whisper listens (CPU or GPU) and whether a
+// dictation goes to the agent at once are set in the settings menu; only the GPU is shown here, as a small
+// mark, since it is the exception. Without Whisper the microphone listens through the browser.
 const props = defineProps<{ dictation: Dictation }>()
-const { dictationSendsAtOnce } = useSettings()
 const active = computed(
   () =>
     props.dictation.state === 'recording' ||
@@ -19,42 +18,28 @@ const busy = computed(
     props.dictation.state === 'transcribing' ||
     (props.dictation.whisper === true && props.dictation.state === 'listening'),
 )
+const onGpu = computed(() => props.dictation.whisper === true && props.dictation.device === 'cuda')
 </script>
 
 <template>
-  <template v-if="dictation.microphone">
-    <button
-      v-if="dictation.whisper"
-      type="button"
-      class="mb-2 ml-0.5 h-6 rounded border border-slate-600 px-1 text-[0.6rem] font-semibold tracking-wide text-slate-300 hover:border-slate-400"
-      :title="$t('dictation.device')"
-      :disabled="dictation.state !== 'idle'"
-      @click="dictation.toggleDevice"
-    >
-      {{ dictation.device === 'cuda' ? 'GPU' : 'CPU' }}
-    </button>
+  <span v-if="dictation.microphone" class="relative flex">
     <button
       type="button"
-      role="switch"
-      class="-mr-1 mb-2 h-6 rounded px-0.5 text-sm"
-      :class="dictationSendsAtOnce ? '' : 'opacity-50 grayscale'"
-      :aria-checked="dictationSendsAtOnce"
-      :aria-label="$t(dictationSendsAtOnce ? 'dictation.sendsAtOnceOn' : 'dictation.sendsAtOnceOff')"
-      :title="$t(dictationSendsAtOnce ? 'dictation.sendsAtOnceOn' : 'dictation.sendsAtOnceOff')"
-      @click="dictationSendsAtOnce = !dictationSendsAtOnce"
-    >
-      ⚡
-    </button>
-    <button
-      type="button"
-      class="btn-icon size-11"
-      :class="[active ? 'animate-pulse text-red-500' : 'text-amber-300', { 'opacity-50': busy }]"
+      class="btn-icon"
+      :class="[TOUCH_FIRST.matches ? 'size-14' : 'size-11', active ? 'animate-pulse text-red-500' : 'text-amber-300', { 'opacity-50': busy }]"
       :disabled="busy"
       :aria-label="active ? $t('dictation.stop') : $t('dictation.start')"
       :title="active ? $t('dictation.stop') : $t('dictation.start')"
       @click="dictation.toggleMicrophone"
     >
-      <AppIcon name="mic" class="size-6" />
+      <AppIcon name="mic" :class="TOUCH_FIRST.matches ? 'size-8' : 'size-6'" />
     </button>
-  </template>
+    <span
+      v-if="onGpu"
+      class="pointer-events-none absolute -top-0.5 -right-0.5 rounded bg-amber-500 px-1 text-[0.55rem] leading-4 font-bold text-slate-900"
+      :title="$t('settings.dictationDeviceGpu')"
+    >
+      GPU
+    </span>
+  </span>
 </template>

@@ -208,11 +208,8 @@
     "UserTokenMissingError": "AI-Connect hat noch kein User-Token. Erzeuge es im Terminal mit installer.py user-token und starte die Bridge neu."
   },
   "dictation": {
-    "sendsAtOnceOn": "Direkt senden an: Die Aufnahme geht nach dem Erkennen gleich an den Agenten, ohne Druck auf Senden; ein Entwurf im Feld geht mit. Gilt für dieses Gerät.",
-    "sendsAtOnceOff": "Direkt senden aus: Die Aufnahme landet im Feld, abgeschickt wird mit Senden. Antippen schaltet um (für dieses Gerät).",
     "start": "Diktat starten",
     "stop": "Diktat beenden",
-    "device": "Whisper auf GPU (sofort) oder CPU (langsamer, immer verfügbar)",
     "transcribing": "Wird transkribiert …",
     "browser": "Browser",
     "browserHint": "Whisper ging nicht: Spracherkennung des Browsers nutzen (Chrome schickt das Audio an Google)",
@@ -280,7 +277,12 @@
     "dictationServiceHint": "Die Spracherkennung stellt der Whisper-Dienst selbst ein (Engine, Qualität, Modell). Hier siehst du nur, was er verwendet. Gewählt wird pro Aufnahme nur GPU oder CPU.",
     "keys": "Sondertasten anpassen …",
     "reload": "App neu laden",
-    "reloadHint": "Holt die neueste Version, falls sie nicht von selbst kam (die Vollbild-Seiten lassen sich nicht herunterziehen)."
+    "reloadHint": "Holt die neueste Version, falls sie nicht von selbst kam (die Vollbild-Seiten lassen sich nicht herunterziehen).",
+    "dictationDevice": "Diktat läuft auf",
+    "dictationDeviceHint": "GPU: sofort, wenn frei; CPU: langsamer, immer verfügbar. Gilt für dieses Gerät und alle Agenten.",
+    "dictationDeviceGpu": "Das Diktat läuft auf der GPU",
+    "dictationSendsAtOnce": "Diktat sofort senden",
+    "dictationSendsAtOnceHint": "Die Aufnahme geht nach dem Erkennen gleich an den Agenten, ohne Druck auf Senden; ein Entwurf im Feld geht mit. Gilt für dieses Gerät."
   },
   "attach": {
     "title": "Foto, Screenshot oder Datei anhängen",

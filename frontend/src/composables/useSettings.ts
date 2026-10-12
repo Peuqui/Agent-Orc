@@ -1,4 +1,5 @@
 import { type Ref, ref, watch } from 'vue'
+import type { DictationDevice } from '../api'
 import { DEFAULT_MAX_SPOKEN_CHARS } from '../speechText'
 
 // Settings of this device (a phone scrolls and reads differently than a desktop), kept in the
@@ -78,6 +79,9 @@ const terminalFont = setting<TerminalFont>(
 /** A dictation goes to the agent as soon as it is transcribed, without pressing send. */
 const dictationSendsAtOnce = setting('agent-orc-dictation-sends-at-once', false, (stored) => stored === 'true')
 
+/** Where Whisper transcribes the dictations of this device, for every agent: the CPU unless the GPU was chosen on purpose. */
+const dictationDevice = setting<DictationDevice>('agent-orc-dictation-device', 'cpu', (stored) => (stored === 'cuda' ? 'cuda' : 'cpu'))
+
 /** What a terminal shows: the terminal itself, or the agent's answers in short (AnswersFeed). */
 export type TerminalView = 'terminal' | 'answers'
 /** What this agent's terminal shows; each agent has its own. The answers are what it shows first, the terminal itself is one tap away. */
@@ -150,6 +154,7 @@ export function useSettings() {
     stepViewFontSize,
     terminalFont,
     dictationSendsAtOnce,
+    dictationDevice,
     extraKeysUnfolded,
     extraKeysVersion,
     speechEngine,
