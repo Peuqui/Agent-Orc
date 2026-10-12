@@ -116,8 +116,8 @@ async function save(): Promise<void> {
 </script>
 
 <template>
-  <BaseDialog :title="$t('ttsSettings.title')" @close="emit('close')">
-    <div class="flex max-h-[65dvh] flex-col gap-3 overflow-y-auto text-sm">
+  <BaseDialog :title="$t('ttsSettings.title')" tall @close="emit('close')">
+    <div class="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto text-sm">
       <p class="text-xs text-slate-500">{{ $t('ttsSettings.hint') }}</p>
       <div class="flex items-center justify-between gap-2" :title="$t('ttsSettings.preferLoadedHint')">
         <span>{{ $t('ttsSettings.preferLoaded') }}</span>
@@ -203,7 +203,7 @@ async function save(): Promise<void> {
       <p v-if="!loaded" class="text-xs text-slate-500">{{ $t('ttsSettings.loading') }}</p>
       <p v-if="nothingOn" class="text-xs text-amber-400">{{ $t('ttsSettings.nothingOn') }}</p>
     </div>
-    <div class="mt-4 flex gap-2">
+    <div class="mt-4 flex shrink-0 gap-2">
       <button class="btn-primary flex-1" :disabled="!loaded" @click="save">{{ $t('common.save') }}</button>
       <button class="btn" @click="emit('close')">{{ $t('common.cancel') }}</button>
     </div>

@@ -4,12 +4,14 @@ import { triggerRect } from '../trigger'
 
 // Opens right beside the control that opened it: below, or above where there is no room
 // below. Without one (none pressed) it is centred, a sheet from the bottom on phones.
-defineProps<{ title: string }>()
+// `tall`, for a dialog with a long list: always centred, as high as the screen; the list scrolls
+// (the one thing that does) between the title and the buttons.
+const props = defineProps<{ title: string; tall?: boolean }>()
 const emit = defineEmits<{ close: [] }>()
 
 const MARGIN = 8
 const card = ref<HTMLElement>()
-const anchor = triggerRect()
+const anchor = props.tall ? null : triggerRect()
 const place = ref<{ left: string; top: string } | null>(null)
 
 function placeBesideAnchor(): void {
@@ -43,7 +45,7 @@ onBeforeUnmount(() => resizes.disconnect())
     <div
       class="fixed inset-0 z-40 flex justify-center bg-black/60"
       data-modal
-      :class="anchor ? '' : 'items-end sm:items-center'"
+      :class="anchor ? '' : tall ? 'items-center' : 'items-end sm:items-center'"
       @click.self="emit('close')"
       @keydown.esc="emit('close')"
     >
@@ -53,14 +55,17 @@ onBeforeUnmount(() => resizes.disconnect())
         :class="
           anchor
             ? 'fixed max-h-[calc(100dvh-1rem)] w-[min(28rem,calc(100vw-1rem))] overflow-y-auto'
-            : 'w-full max-w-md rounded-b-none sm:rounded-b-xl'
+            : tall
+              ? 'flex h-[calc(100dvh-1rem)] w-[min(36rem,calc(100vw-1rem))] flex-col'
+              : 'w-full max-w-md rounded-b-none sm:rounded-b-xl'
         "
         :style="anchor ? (place ?? { visibility: 'hidden' }) : undefined"
         role="dialog"
         :aria-label="title"
       >
-        <h2 class="mb-4 text-lg font-semibold text-slate-100">{{ title }}</h2>
-        <slot />
+        <h2 class="mb-4 shrink-0 text-lg font-semibold text-slate-100">{{ title }}</h2>
+        <!-- With `tall` the content fills what is left of the card, so that its own list can scroll. -->
+        <div :class="tall ? 'flex min-h-0 flex-1 flex-col' : ''"><slot /></div>
       </div>
     </div>
   </Teleport>
