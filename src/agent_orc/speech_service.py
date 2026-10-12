@@ -18,6 +18,8 @@ from agent_orc.config import TtsSuiteConfig
 
 FRAMES_MEDIA_TYPE = "application/x-tts-frames"
 CHUNK_BYTES = 16384
+# Not `Authorization`: a login in front of the TTS-Suite would take that header.
+TOKEN_HEADER = "X-TTS-Suite-Token"
 
 
 class SpeechServiceError(RuntimeError):
@@ -34,7 +36,7 @@ def _request(
     headers = {"Content-Type": "application/json"}
     if config.token_file is not None:
         token = (directory / config.token_file).read_text(encoding="utf-8").strip()
-        headers["Authorization"] = f"Bearer {token}"
+        headers[TOKEN_HEADER] = token
     return urllib.request.Request(
         f"{config.url.rstrip('/')}{path}",
         data=None if body is None else json.dumps(body).encode(),

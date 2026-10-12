@@ -79,7 +79,7 @@ class FakeSpeechService(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self) -> None:
-        FakeSpeechService.asked_with.append(self.headers.get("Authorization"))
+        FakeSpeechService.asked_with.append(self.headers.get("X-TTS-Suite-Token"))
         if self.path == "/engines":
             self._answer(200, json.dumps(ENGINES).encode(), "application/json")
             return
@@ -89,7 +89,7 @@ class FakeSpeechService(BaseHTTPRequestHandler):
         self._answer(200, json.dumps(voices).encode(), "application/json")
 
     def do_POST(self) -> None:
-        FakeSpeechService.asked_with.append(self.headers.get("Authorization"))
+        FakeSpeechService.asked_with.append(self.headers.get("X-TTS-Suite-Token"))
         body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
         FakeSpeechService.heard.append(body)
         if body["text"] == "fail":
@@ -389,7 +389,7 @@ def test_the_token_goes_to_the_service_only_when_configured(
     other = tmp_path / "other"
     other.mkdir()
     make_client(clock, other, monkeypatch, service, token_file="tts-token").get("/api/tts/catalog")
-    assert FakeSpeechService.asked_with == [f"Bearer {TOKEN}"]
+    assert FakeSpeechService.asked_with == [TOKEN]
 
 
 def test_a_loaded_gpu_engine_goes_first_only_when_asked_for_and_only_if_switched_on(
