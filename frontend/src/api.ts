@@ -145,6 +145,8 @@ export interface DictationService {
   /** Whether a model sits in the memory of that device right now (the GPU worker ends itself when idle). */
   gpu_loaded: boolean
   cpu_loaded: boolean
+  /** Seconds until the idle GPU worker ends itself; null when the service never unloads it. */
+  gpu_ttl_remaining_seconds: number | null
 }
 
 /** A request spoken to the agent on the Echo and sent on (its time is when it was sent). */

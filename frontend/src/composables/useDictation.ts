@@ -1,4 +1,4 @@
-import { computed, ref, type UnwrapNestedRefs } from 'vue'
+import { computed, onScopeDispose, ref, type UnwrapNestedRefs } from 'vue'
 import { api } from '../api'
 import { useSettings } from './useSettings'
 import { START_BEEP, STOP_BEEP, playBeep } from '../sounds'
@@ -47,8 +47,12 @@ export function useDictation(
   // Unknown until the server's settings have arrived.
   const stt = ref<boolean | null>(null)
   // Whether the service has a model on the GPU: asked at the start and after every dictation, which is
-  // what loads it (with "auto" the service decides where a dictation runs) or finds it gone.
+  // what loads it (with "auto" the service decides where a dictation runs) or finds it gone. The idle
+  // GPU worker ends itself after a time the service reports, so it is asked again when that is over: the
+  // answer says whether someone else used the GPU meanwhile (the time starts anew) or the model is gone.
   const gpuLoaded = ref(false)
+  let unloadCheck: ReturnType<typeof setTimeout> | undefined
+  onScopeDispose(() => clearTimeout(unloadCheck))
   const language = ref('')
   const sttFailed = ref(false)
   // Kept when the STT-Suite failed, so the dictation is not lost: it can be sent again, e.g. on the CPU.
@@ -71,6 +75,11 @@ export function useDictation(
         stt.value = settings.stt
         language.value = settings.language
         gpuLoaded.value = settings.service?.gpu_loaded ?? false
+        clearTimeout(unloadCheck)
+        const remaining = settings.service?.gpu_ttl_remaining_seconds
+        if (gpuLoaded.value && remaining != null) {
+          unloadCheck = setTimeout(() => void refreshService(), (remaining + 1) * 1000)
+        }
       })
       .catch(onError)
   }

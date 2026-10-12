@@ -1206,6 +1206,7 @@ def test_dictation(config: Config, clock: FakeClock, fake_stt: FakeStt) -> None:
             "cpu": "parakeet int8",
             "gpu_loaded": False,
             "cpu_loaded": True,
+            "gpu_ttl_remaining_seconds": 1794,
         },
     }
     assert dictate("cpu").json() == {"text": "Hallo Welt", "device": "cpu"}
