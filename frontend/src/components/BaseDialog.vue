@@ -67,7 +67,7 @@ onBeforeUnmount(() => resizes.disconnect())
         role="dialog"
         :aria-label="title"
       >
-        <h2 class="mb-4 shrink-0 text-lg font-semibold text-slate-100">{{ title }}</h2>
+        <h2 class="mb-4 shrink-0 text-lg font-semibold text-amber-400">{{ title }}</h2>
         <!-- With `tall` the content fills what is left of the card, so that its own list can scroll. -->
         <div :class="tall ? 'flex min-h-0 flex-1 flex-col' : ''"><slot /></div>
       </div>
