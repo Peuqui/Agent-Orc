@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Dictation } from '../composables/useDictation'
 
-// After Whisper failed: the same recording once more, or the browser's own recognition.
+// After the STT-Suite failed: the same recording once more, or the browser's own recognition.
 defineProps<{ dictation: Dictation }>()
 </script>
 

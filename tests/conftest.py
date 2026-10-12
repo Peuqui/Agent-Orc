@@ -40,7 +40,7 @@ def socket_name(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[str
     subprocess.run(["tmux", "-L", name, "kill-server"], capture_output=True)
 
 
-class FakeWhisper:
+class FakeStt:
     """A stand-in for the STT-Suite service: records requests, answers as configured."""
 
     def __init__(self) -> None:
@@ -51,8 +51,8 @@ class FakeWhisper:
 
 
 @pytest.fixture
-def fake_whisper() -> Iterator[FakeWhisper]:
-    fake = FakeWhisper()
+def fake_stt() -> Iterator[FakeStt]:
+    fake = FakeStt()
 
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self) -> None:

@@ -3,7 +3,7 @@ import { api } from '../api'
 import { useSettings } from './useSettings'
 import { START_BEEP, STOP_BEEP, playBeep } from '../sounds'
 
-// Recording formats the Whisper service is fed with (agent_orc.dictation.AUDIO_SUFFIXES),
+// Recording formats the STT-Suite is fed with (agent_orc.dictation.AUDIO_SUFFIXES),
 // best first: Chrome records WebM, Firefox Ogg, Safari MP4.
 const RECORDING_TYPES = ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus', 'audio/mp4']
 
@@ -31,9 +31,9 @@ const BrowserRecognition = speechWindow.SpeechRecognition ?? speechWindow.webkit
 export type DictationState = 'idle' | 'recording' | 'transcribing' | 'listening'
 
 /**
- * Speech input. With a Whisper service the browser records and Whisper transcribes on the
- * device the user picked; the browser's own recognition is then only offered after Whisper
- * failed, as a separate button pressed deliberately. Without a Whisper service the microphone
+ * Speech input. With an STT-Suite service the browser records and the service transcribes on the
+ * device the user picked; the browser's own recognition is then only offered after the service
+ * failed, as a separate button pressed deliberately. Without an STT-Suite service the microphone
  * uses the browser's recognition directly.
  */
 
@@ -42,29 +42,29 @@ export function useDictation(
   onError: (error: unknown) => void,
 ) {
   const state = ref<DictationState>('idle')
-  // Where Whisper transcribes: one setting of this device (in the settings menu), the same for every agent.
+  // Where the STT-Suite transcribes: one setting of this device (in the settings menu), the same for every agent.
   const { dictationDevice: device } = useSettings()
   // Unknown until the server's settings have arrived.
-  const whisper = ref<boolean | null>(null)
+  const stt = ref<boolean | null>(null)
   const language = ref('')
-  const whisperFailed = ref(false)
-  // Kept when Whisper failed, so the dictation is not lost: it can be sent again, e.g. on the CPU.
+  const sttFailed = ref(false)
+  // Kept when the STT-Suite failed, so the dictation is not lost: it can be sent again, e.g. on the CPU.
   const failedAudio = ref<Blob | null>(null)
   let recorder: MediaRecorder | null = null
   let recognition: SpeechRecognitionLike | null = null
 
   const hasBrowserRecognition = BrowserRecognition !== undefined
   const microphone = computed(
-    () => whisper.value === true || (whisper.value === false && hasBrowserRecognition),
+    () => stt.value === true || (stt.value === false && hasBrowserRecognition),
   )
   const browserFallback = computed(
-    () => whisper.value === true && whisperFailed.value && hasBrowserRecognition,
+    () => stt.value === true && sttFailed.value && hasBrowserRecognition,
   )
 
   api
     .dictationSettings()
     .then((settings) => {
-      whisper.value = settings.whisper
+      stt.value = settings.stt
       language.value = settings.language
     })
     .catch(onError)
@@ -91,10 +91,10 @@ export function useDictation(
     failedAudio.value = null
     try {
       const { text } = await api.dictate(audio, device.value)
-      whisperFailed.value = false
+      sttFailed.value = false
       if (text) onText(text)
     } catch (error) {
-      whisperFailed.value = true
+      sttFailed.value = true
       failedAudio.value = audio
       onError(error)
     } finally {
@@ -136,9 +136,9 @@ export function useDictation(
     else if (state.value === 'idle') startListening()
   }
 
-  /** Microphone button: Whisper when there is a service, else the browser's recognition. */
+  /** Microphone button: the STT-Suite when there is a service, else the browser's recognition. */
   function toggleMicrophone(): void {
-    if (whisper.value === false) toggleBrowser()
+    if (stt.value === false) toggleBrowser()
     else if (state.value === 'recording') {
       playBeep(STOP_BEEP)
       recorder?.stop()
@@ -148,7 +148,7 @@ export function useDictation(
   return {
     state,
     device,
-    whisper,
+    stt,
     microphone,
     browserFallback,
     failedAudio,

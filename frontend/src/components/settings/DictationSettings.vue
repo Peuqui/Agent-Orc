@@ -5,11 +5,11 @@ import { useSettings } from '../../composables/useSettings'
 import { useToast } from '../../composables/useToast'
 import ToggleSwitch from '../ToggleSwitch.vue'
 
-// The dictation. What the Whisper service uses is the service's own business and only shown; where it
+// The dictation. What the STT-Suite uses is its own business and only shown; where it
 // transcribes (CPU or GPU) and whether a dictation goes to the agent at once are the same on every device.
 const { dictationDevice, dictationSendsAtOnce } = useSettings()
 const toast = useToast()
-// What the Whisper service transcribes with; asked when the window opens.
+// What the STT-Suite transcribes with; asked when the window opens.
 const service = ref<DictationService | null>(null)
 onMounted(async () => {
   try {
@@ -29,7 +29,7 @@ onMounted(async () => {
       </p>
       <p class="mt-1 text-xs text-slate-500">{{ $t('settings.dictationServiceHint') }}</p>
     </div>
-    <!-- The dictation: where Whisper transcribes (CPU or GPU) and whether it goes to the agent at once; for this device. -->
+    <!-- The dictation: where the STT-Suite transcribes (CPU or GPU) and whether it goes to the agent at once; for this device. -->
     <div class="mt-4 border-t border-slate-700 pt-3 text-sm text-slate-300">
       <div v-if="service" class="flex items-center justify-between gap-2">
         <span>{{ $t('settings.dictationDevice') }}</span>

@@ -134,14 +134,13 @@ einen SSH-Tunnel ([Mehrere Rechner](#mehrere-rechner)).
 - Fotos, Screenshots und Dateien an eine Notiz hängen; sie liegen auf dem Server und werden beim
   Senden an einen Agenten in dessen Ordner kopiert. Bilder erscheinen als Vorschau, PDFs mit der
   ersten Seite (auf Wunsch alle, gezeichnet von [pdf.js](https://mozilla.github.io/pdf.js/)).
-- Per Diktat (Whisper) schreiben, eine Notiz kopieren oder ins Eingabefeld eines oder mehrerer Agenten legen (auf Wunsch abgeschickt).
+- Per Diktat (STT-Suite) schreiben, eine Notiz kopieren oder ins Eingabefeld eines oder mehrerer Agenten legen (auf Wunsch abgeschickt).
 
 **Terminal**
 - Ein normales Eingabefeld unter dem Terminal, damit Handytastatur, Autokorrektur und Diktat
   funktionieren; Enter sendet, Shift+Enter macht eine neue Zeile.
-- Diktat über einen lokalen Whisper-Dienst ([STT-Suite](https://github.com/Peuqui/STT-Suite),
-  GPU oder CPU, Engine pro Gerät wählbar, z. B. Parakeet oder Whisper) oder die
-  Spracherkennung des Browsers.
+- Diktat über eine lokale [STT-Suite](https://github.com/Peuqui/STT-Suite) (GPU oder CPU,
+  Engine pro Gerät wählbar, z. B. Parakeet oder Whisper) oder die Spracherkennung des Browsers.
 - Prompt-Vorlagen für häufige Anweisungen, mit einem Tipp im Eingabefeld.
 - Foto, Screenshot (aus der Galerie, am Rechner direkt vom Bildschirm oder einfach mit Strg+V
   eingefügt) oder Datei anhängen: Sie landen im Projektordner, erscheinen als kleine Vorschau
@@ -249,7 +248,7 @@ fragt dann nach:
 - ob ein anderes Agent-Orc diesen Rechner über SSH steuert (dann lauscht er auf einem Socket und
   verlangt kein Passwort, siehe [Mehrere Rechner](#mehrere-rechner)); wenn nicht, ob er hinter
   HTTPS läuft oder für einen ersten lokalen Test über einfaches HTTP,
-- einem Whisper-Dienst fürs Diktat, falls du einen betreibst (es prüft, ob er antwortet); ohne
+- einer STT-Suite fürs Diktat, falls du einen betreibst (es prüft, ob er antwortet); ohne
   ihn nutzt das Mikrofon die Spracherkennung des Browsers (Chrome),
 - ob Claude Code mit lokalen Modellen (llama-swap, vLLM) oder mit Qwen bei Alibabas DashScope laufen
   soll (siehe [Andere Backends](#andere-backends)): Adresse des Servers und, bei DashScope, der
@@ -273,6 +272,9 @@ git pull && deploy/install.sh
 Das Skript installiert nur committeten Code und startet einen laufenden Dienst
 `agent-orc@<user>` neu; dafür braucht der Benutzer das Recht, ihn neu zu starten (z. B. per
 polkit-Regel), sonst den Dienst selbst neu starten. Laufende Agenten überstehen den Neustart.
+
+
+**Von vor dem 13. Oktober 2026:** Die Einstellung `dictation.whisper_url` in `config.yaml` heißt jetzt `dictation.stt_url` (der Dienst ist die STT-Suite); benenne sie um, sonst wird die Konfiguration abgelehnt.
 
 ### Als Dienst
 

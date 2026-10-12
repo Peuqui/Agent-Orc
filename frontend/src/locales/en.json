@@ -197,9 +197,9 @@
     "TrashEntryNotFoundError": "This entry is no longer in the trash.",
     "http401": "Wrong password.",
     "http429": "Too many failed attempts. Please wait {minutes} minutes.",
-    "GpuUnavailableError": "No GPU has room for Whisper right now. Switch to CPU.",
-    "DictationServiceError": "Whisper is not responding.",
-    "UnsupportedAudioError": "Whisper cannot process this audio format.",
+    "GpuUnavailableError": "No GPU has room for speech recognition right now. Switch to CPU.",
+    "DictationServiceError": "The STT-Suite is not responding.",
+    "UnsupportedAudioError": "The STT-Suite cannot process this audio format.",
     "UserTokenRefusedError": "The bridge does not know AI-Connect's user token. Create a new one (installer.py user-token) and restart the bridge.",
     "HostUnreachableError": "The machine does not answer (tunnel, or Agent-Orc there).",
     "UnknownHostError": "No such machine.",
@@ -212,10 +212,10 @@
     "stop": "Stop dictation",
     "transcribing": "Transcribing …",
     "browser": "Browser",
-    "browserHint": "Whisper failed: use the browser's speech recognition (Chrome sends the audio to Google)",
+    "browserHint": "The STT-Suite failed: use the browser's speech recognition (Chrome sends the audio to Google)",
     "browserStop": "Stop",
     "retry": "Retry",
-    "retryHint": "Send the last recording to Whisper again (switch to CPU first if needed)"
+    "retryHint": "Send the last recording to the STT-Suite again (switch to CPU first if needed)"
   },
   "quota": {
     "title": "{agent} usage:",
@@ -274,7 +274,7 @@
     "viewFontSizeHint": "Answers, notes, conversations, files, consumption and the editor, not the terminal. All sizes in them scale along. For this device.",
     "dictationService": "Dictation service",
     "dictationServiceLine": "GPU {gpu} · CPU {cpu}",
-    "dictationServiceHint": "The Whisper service sets its speech recognition itself (engine, quality, model). Here you only see what it uses. Per recording you choose only GPU or CPU.",
+    "dictationServiceHint": "The STT-Suite sets its speech recognition itself (engine, quality, model). Here you only see what it uses. Per recording you choose only GPU or CPU.",
     "keys": "Arrange extra keys …",
     "reload": "Reload the app",
     "reloadHint": "Fetches the newest version if it did not come by itself (the full-screen pages cannot be pulled down).",
@@ -366,7 +366,7 @@
         "items": [
           "Notebooks as tabs: “+” creates one, the pencil renames it, the bin deletes it with its notes. They live on the server, every device shows the same.",
           "A notebook has loose notes and folders (folder icon next to the search; one level). The search covers titles and text. A note moves into a folder with the “No folder” field.",
-          "A note is Markdown. The bar (B, I, H, •, </>, link) writes the characters around the selection or into the line; the view shows the result, line breaks are kept. On computers and tablets the text and the view sit side by side, on phones “View/Edit” switches. A note without text opens for writing. The microphone right of the bar dictates at the cursor (Whisper on GPU or CPU, as in the terminal). The paperclip in the bar attaches a photo, picture, screenshot or any file (PDF too); pictures can also be pasted with Ctrl+V. The file lives on the server and is linked in the text at the cursor: pictures show as a preview in the view, a click opens them in a new tab, other files are a link. Sent to an agent, they are copied into its project folder and put in as “{'@'}path”. PDFs show a preview of the first page below the text; “All pages” unfolds the whole PDF, “Open in a new tab” uses the browser’s viewer.",
+          "A note is Markdown. The bar (B, I, H, •, </>, link) writes the characters around the selection or into the line; the view shows the result, line breaks are kept. On computers and tablets the text and the view sit side by side, on phones “View/Edit” switches. A note without text opens for writing. The microphone right of the bar dictates at the cursor (STT-Suite on GPU or CPU, as in the terminal). The paperclip in the bar attaches a photo, picture, screenshot or any file (PDF too); pictures can also be pasted with Ctrl+V. The file lives on the server and is linked in the text at the cursor: pictures show as a preview in the view, a click opens them in a new tab, other files are a link. Sent to an agent, they are copied into its project folder and put in as “{'@'}path”. PDFs show a preview of the first page below the text; “All pages” unfolds the whole PDF, “Open in a new tab” uses the browser’s viewer.",
           "“Copy” puts the text on the clipboard. “To agent” inserts it into the input of the chosen agents; with “Submit” it is sent at the same time, otherwise you send it in the terminal yourself.",
           "If the same notebook is edited on two devices at once, the state saved last wins; a device with edits of its own on the way does not take over others’."
         ]
@@ -387,7 +387,7 @@
         "title": "Terminal",
         "items": [
           "Input field at the bottom: Enter sends, Shift+Enter starts a new line.",
-          "Microphone: dictation through Whisper; the GPU is done at once, the CPU is slower but always there. If it fails, “Retry” sends the same recording again.",
+          "Microphone: dictation through the STT-Suite; the GPU is done at once, the CPU is slower but always there. If it fails, “Retry” sends the same recording again.",
           "Paperclip: take a photo, pick a picture or screenshot from the gallery, capture the screen (desktop) or attach a file – it lands in the project folder and it shows as a small preview above the input field (× removes it) and goes to the agent with the next message. A screenshot from the clipboard can also simply be pasted into the input field (Ctrl+V).",
           "Grip on the right (jog): pull up or down to scroll, the further the faster. Mouse wheel and swiping scroll as well.",
           "Font size: two per device, in pixels, in the ☰ menu (also in the head of the workspace): one for all terminals, one for all views (answers, notes, conversations, files, consumption, editor). The ⋮ menu of the terminal bar has the views (on a phone: Terminal in this folder, Project folder, Changes, As text for selecting and copying; on a computer they are icons next to it) and, where an agent runs, its controls: Schedule a prompt, Change model, Clear and Compact context, Restart and, set apart, Stop.",

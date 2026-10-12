@@ -35,8 +35,8 @@ from agent_orc.config import (
 # Programs looked for on the PATH: required ones, and the agent CLIs a profile may start.
 REQUIRED_PROGRAMS = ("tmux", "git")
 AGENT_PROGRAMS = ("claude", "codex", "aider")
-WHISPER_HEALTH_PATH = "/health"
-WHISPER_CHECK_SECONDS = 5
+STT_HEALTH_PATH = "/health"
+STT_CHECK_SECONDS = 5
 # Where a machine controlled by another Agent-Orc listens; the folder is the user's alone.
 DEFAULT_SOCKET = "~/.local/state/agent-orc/run/agent-orc.sock"
 # The kinds of backend that can be set up, and the profile that starts Claude Code on one.
@@ -50,8 +50,8 @@ class SetupAnswers:
     base_dir: str
     # False: plain HTTP for a first local test; True behind HTTPS. Unused with a socket.
     behind_https: bool
-    # None: no Whisper service, the browser's own speech recognition listens.
-    whisper_url: str | None
+    # None: no STT-Suite service, the browser's own speech recognition listens.
+    stt_url: str | None
     # None: the default placeholder stays.
     push_contact: str | None
     # A socket to listen on instead of a port (another Agent-Orc controls this machine through
@@ -151,16 +151,16 @@ def configured_text(answers: SetupAnswers) -> str:
         text = listen_on_socket(text, answers.socket)
     else:
         text = set_value(text, "server", "cookie_secure", answers.behind_https)
-    text = set_value(text, "dictation", "whisper_url", answers.whisper_url)
+    text = set_value(text, "dictation", "stt_url", answers.stt_url)
     if answers.push_contact is not None:
         text = set_value(text, "push", "contact", answers.push_contact)
     return with_backends(text, answers.backends)
 
 
-def whisper_reachable(url: str) -> bool:
+def stt_reachable(url: str) -> bool:
     try:
         with urllib.request.urlopen(
-            url.rstrip("/") + WHISPER_HEALTH_PATH, timeout=WHISPER_CHECK_SECONDS
+            url.rstrip("/") + STT_HEALTH_PATH, timeout=STT_CHECK_SECONDS
         ):
             return True
     except (urllib.error.URLError, OSError):
@@ -267,11 +267,11 @@ def run_setup() -> None:
             False,
         )
 
-    whisper_url: str | None = None
+    stt_url: str | None = None
     if ask_yes("Do you run a speech-to-text service (STT-Suite) for dictation?", False):
-        whisper_url = ask("Its address", defaults["dictation"]["whisper_url"])
-        if not whisper_reachable(whisper_url):
-            print(f"Note: {whisper_url} does not answer right now; dictation needs it running.")
+        stt_url = ask("Its address", defaults["dictation"]["stt_url"])
+        if not stt_reachable(stt_url):
+            print(f"Note: {stt_url} does not answer right now; dictation needs it running.")
 
     backends = {}
     for kind, preset in backend_presets().items():
@@ -284,7 +284,7 @@ def run_setup() -> None:
 
     password = ask_password() if socket is None else None
 
-    answers = SetupAnswers(base_dir, behind_https, whisper_url, push_contact, socket, backends)
+    answers = SetupAnswers(base_dir, behind_https, stt_url, push_contact, socket, backends)
     directory.mkdir(parents=True, exist_ok=True)
     config_path.write_text(configured_text(answers), encoding="utf-8")
     # Written config must be valid, or the first `agent-orc serve` would fail.

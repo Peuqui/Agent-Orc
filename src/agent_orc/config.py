@@ -135,10 +135,10 @@ class PushConfig(StrictModel):
 
 
 class DictationConfig(StrictModel):
-    """Speech input, transcribed by a Whisper service (see dictation.py)."""
+    """Speech input, transcribed by an STT-Suite service (see dictation.py)."""
 
-    # Without a Whisper service the browser's own speech recognition is used, where it has one.
-    whisper_url: str | None
+    # Without an STT-Suite service the browser's own speech recognition is used, where it has one.
+    stt_url: str | None
     language: str
     timeout_seconds: int
 

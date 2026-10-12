@@ -21,8 +21,8 @@ from agent_orc.setup import (
 
 def test_set_value_changes_only_that_key_and_keeps_the_comments() -> None:
     text = default_config_text()
-    changed = set_value(text, "dictation", "whisper_url", None)
-    assert yaml.safe_load(changed)["dictation"]["whisper_url"] is None
+    changed = set_value(text, "dictation", "stt_url", None)
+    assert yaml.safe_load(changed)["dictation"]["stt_url"] is None
     assert changed.count("#") == text.count("#")
     assert len(changed.splitlines()) == len(text.splitlines())
 
@@ -38,13 +38,13 @@ def test_answers_make_a_valid_config() -> None:
     answers = SetupAnswers(
         base_dir="~/code",
         behind_https=False,
-        whisper_url=None,
+        stt_url=None,
         push_contact="mailto:friend@example.org",
     )
     config = Config.model_validate(yaml.safe_load(configured_text(answers)))
     assert config.files.base_dir == Path("~/code").expanduser()
     assert config.server.cookie_secure is False
-    assert config.dictation.whisper_url is None
+    assert config.dictation.stt_url is None
     assert config.push.contact == "mailto:friend@example.org"
 
 
@@ -63,7 +63,7 @@ def test_setup_asks_checks_and_writes_config_and_password(
     monkeypatch.setattr("builtins.input", lambda _prompt: next(typed))
     passwords = answers_from(["secret-1", "secret-1"])
     monkeypatch.setattr("agent_orc.setup.getpass.getpass", lambda _prompt: next(passwords))
-    monkeypatch.setattr("agent_orc.setup.WHISPER_CHECK_SECONDS", 0.2)
+    monkeypatch.setattr("agent_orc.setup.STT_CHECK_SECONDS", 0.2)
 
     run_setup()
 
@@ -72,7 +72,7 @@ def test_setup_asks_checks_and_writes_config_and_password(
     assert projects.is_dir()
     assert config.files.base_dir == projects
     assert config.server.cookie_secure is False
-    assert config.dictation.whisper_url == "http://127.0.0.1:9"
+    assert config.dictation.stt_url == "http://127.0.0.1:9"
     assert config.push.contact == "mailto:me@example.org"
     assert verify_password(
         "secret-1", load_credentials(directory / "credentials.json").password_hash
@@ -96,7 +96,7 @@ def test_setup_for_a_machine_another_agent_orc_controls_needs_no_password(
 ) -> None:
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
     socket = tmp_path / "run" / "orc.sock"
-    # Folder exists, controlled through SSH: yes, the socket, no Whisper, no backends, no e-mail.
+    # Folder exists, controlled through SSH: yes, the socket, no STT-Suite, no backends, no e-mail.
     typed = answers_from([str(tmp_path), "y", str(socket), "n", "n", "n", ""])
     monkeypatch.setattr("builtins.input", lambda _prompt: next(typed))
     monkeypatch.setattr(

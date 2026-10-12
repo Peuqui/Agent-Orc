@@ -37,7 +37,7 @@ from agent_orc.schedule import mark_limited, read_scheduled
 from agent_orc.sessions import SESSION_ENV
 from agent_orc.state import state_dir
 from agent_orc.terminal import WS_CLOSE_SERVICE_RESTART, attach_environment
-from tests.conftest import Device, FakeClock, FakePushService, FakeWhisper
+from tests.conftest import Device, FakeClock, FakePushService, FakeStt
 
 PASSWORD = "richtig-langes-passwort"
 
@@ -1179,8 +1179,8 @@ def test_session_text_for_copying(client: TestClient, home: Path) -> None:
     assert client.get("/api/sessions/unknown/text").status_code == 404
 
 
-def test_dictation(config: Config, clock: FakeClock, fake_whisper: FakeWhisper) -> None:
-    dictation = DictationConfig(whisper_url=fake_whisper.url, language="de", timeout_seconds=5)
+def test_dictation(config: Config, clock: FakeClock, fake_stt: FakeStt) -> None:
+    dictation = DictationConfig(stt_url=fake_stt.url, language="de", timeout_seconds=5)
     app = create_app(
         config.model_copy(update={"dictation": dictation}),
         new_credentials(PASSWORD),
@@ -1200,13 +1200,13 @@ def test_dictation(config: Config, clock: FakeClock, fake_whisper: FakeWhisper) 
     client.post("/api/login", json={"password": PASSWORD})
     assert client.get("/api/dictation").json() == {
         "language": "de",
-        "whisper": True,
+        "stt": True,
         "service": {"gpu": "whisper large-v3", "cpu": "parakeet int8"},
     }
     assert dictate("cpu").json() == {"text": "Hallo Welt"}
     assert dictate("tpu").status_code == 422
-    fake_whisper.status = 503
-    fake_whisper.answer = {"error": "no GPU with enough VRAM"}
+    fake_stt.status = 503
+    fake_stt.answer = {"error": "no GPU with enough VRAM"}
     full = dictate("cuda")
     assert full.status_code == 503
     assert full.json()["error"] == "GpuUnavailableError"

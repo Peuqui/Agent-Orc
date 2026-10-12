@@ -81,7 +81,7 @@ const terminalFont = setting<TerminalFont>(
 /** A dictation goes to the agent as soon as it is transcribed, without pressing send. */
 const dictationSendsAtOnce = sharedSetting('dictation_sends_at_once')
 
-/** Where Whisper transcribes the dictations, for every agent and device: the CPU unless the GPU was chosen on purpose. */
+/** Where the STT-Suite transcribes the dictations, for every agent and device: the CPU unless the GPU was chosen on purpose. */
 const dictationDevice = sharedSetting('dictation_device')
 
 /** What a terminal shows: the terminal itself, or the agent's answers in short (AnswersFeed). */

@@ -124,14 +124,13 @@ that run Agent-Orc can be shown in the same app, through an SSH tunnel ([Several
 - Attach photos, screenshots and files to a note; they are stored on the server and copied into
   an agent's folder when the note is sent to it. Pictures show as thumbnails, PDFs with a preview
   of the first page (all pages on request, drawn by [pdf.js](https://mozilla.github.io/pdf.js/)).
-- Dictate into a note (Whisper), copy it, or put it into the input of one or more agents (optionally submitted).
+- Dictate into a note (STT-Suite), copy it, or put it into the input of one or more agents (optionally submitted).
 
 **Terminal**
 - A plain input field below the terminal, so phone keyboards, autocorrect and dictation work;
   Enter sends, Shift+Enter starts a new line.
-- Dictation through a local Whisper service ([STT-Suite](https://github.com/Peuqui/STT-Suite),
-  GPU or CPU, engine chosen per device, e.g. Parakeet or Whisper) or the browser's own speech
-  recognition.
+- Dictation through a local [STT-Suite](https://github.com/Peuqui/STT-Suite) service (GPU or CPU,
+  engine chosen per device, e.g. Parakeet or Whisper) or the browser's own speech recognition.
 - Prompt templates for frequent instructions, one tap into the input field.
 - Attach a photo, a screenshot (from the gallery, captured from the screen on the desktop, or
   simply pasted with Ctrl+V) or a file: it lands in the project folder, shows as a small preview
@@ -236,7 +235,7 @@ asks for:
 - whether another Agent-Orc controls this machine through SSH (then it listens on a socket and
   asks for no password, see [Several machines](#several-machines)); if not, whether it runs behind
   HTTPS or on plain HTTP for a first local test,
-- a Whisper service for dictation, if you run one (it checks that it answers); without one
+- an STT-Suite service for dictation, if you run one (it checks that it answers); without one
   the microphone uses the browser's own speech recognition (Chrome),
 - whether to run Claude Code on local models (llama-swap, vLLM) or on Qwen at Alibaba's DashScope
   (see [Other backends](#other-backends)): the server's address and, for DashScope, the API key,
@@ -258,6 +257,9 @@ git pull && deploy/install.sh
 The script installs only committed code and restarts a running `agent-orc@<user>` service;
 for that the user needs the right to restart it (e.g. a polkit rule), otherwise restart it
 yourself. Running agents keep running across the restart.
+
+
+**From before 13 October 2026:** the setting `dictation.whisper_url` in `config.yaml` is now `dictation.stt_url` (the service is the STT-Suite); rename it, or the config is refused.
 
 ### As a service
 

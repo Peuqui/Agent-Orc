@@ -138,7 +138,7 @@ export interface Turn {
   interjections: Interjection[]
 }
 
-/** What the Whisper service uses per device: its engine and the model, like "parakeet fp32". */
+/** What the STT-Suite uses per device: its engine and the model, like "parakeet fp32". */
 export interface DictationService {
   gpu: string
   cpu: string
@@ -268,7 +268,7 @@ export interface Reasoning {
   ultracode: boolean
 }
 
-/** Where Whisper transcribes: the GPU is near instant, the CPU slower but always there. */
+/** Where the STT-Suite transcribes: the GPU is near instant, the CPU slower but always there. */
 export type DictationDevice = 'cuda' | 'cpu'
 
 /** Several agents side by side, as the workspace page arranges them. */
@@ -768,9 +768,9 @@ function createApi(host?: string) {
         query: { name: file.name },
       }),
 
-    /** service: what the Whisper service transcribes with, null while it does not answer. */
+    /** service: what the STT-Suite transcribes with, null while it does not answer. */
     dictationSettings: () =>
-      request<{ language: string; whisper: boolean; service: DictationService | null }>('GET', 'dictation'),
+      request<{ language: string; stt: boolean; service: DictationService | null }>('GET', 'dictation'),
     /** Transcribe recorded speech on the chosen device; never switches device by itself. */
     dictate: (audio: Blob, device: DictationDevice) =>
       request<{ text: string }>('POST', 'dictation', { upload: audio, query: { device } }),

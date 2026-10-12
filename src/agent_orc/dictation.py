@@ -1,4 +1,4 @@
-"""Dictation: audio recorded in the browser, transcribed by a Whisper service.
+"""Dictation: audio recorded in the browser, transcribed by an STT-Suite service.
 
 Speaks the API of the STT-Suite service: POST /transcribe with a multipart form holding the
 audio file, the device ("cpu" or "cuda") and the language; the answer is JSON with "text".
@@ -18,7 +18,7 @@ from agent_orc.config import DictationConfig
 
 Device = Literal["cpu", "cuda"]
 
-# Whisper decodes by content; the file name only needs a fitting suffix.
+# The service decodes by content; the file name only needs a fitting suffix.
 AUDIO_SUFFIXES = {"audio/webm": ".webm", "audio/ogg": ".ogg", "audio/mp4": ".m4a"}
 SERVICE_UNAVAILABLE = 503
 
@@ -32,7 +32,7 @@ class GpuUnavailableError(RuntimeError):
 
 
 class DictationServiceError(RuntimeError):
-    """The Whisper service cannot be reached or failed."""
+    """The STT-Suite service cannot be reached or failed."""
 
 
 # How long a look at the service's settings may take; the settings menu waits for it.
@@ -51,11 +51,11 @@ class ServiceStatus:
 def service_status(config: DictationConfig) -> ServiceStatus | None:
     """The service's settings (STT-Suite GET /status); None when no service is configured or it
     does not answer right now."""
-    if config.whisper_url is None:
+    if config.stt_url is None:
         return None
     try:
         with urllib.request.urlopen(
-            f"{config.whisper_url}/status", timeout=STATUS_TIMEOUT_SECONDS
+            f"{config.stt_url}/status", timeout=STATUS_TIMEOUT_SECONDS
         ) as response:
             status = json.load(response)
     except (urllib.error.URLError, TimeoutError):
@@ -71,8 +71,8 @@ def _configured(status: dict[str, str], device: Literal["gpu", "cpu"]) -> str:
 
 
 def transcribe(audio: bytes, content_type: str, device: Device, config: DictationConfig) -> str:
-    if config.whisper_url is None:
-        raise DictationServiceError("no Whisper service configured")
+    if config.stt_url is None:
+        raise DictationServiceError("no STT-Suite service configured")
     media_type = content_type.split(";")[0].strip()
     if media_type not in AUDIO_SUFFIXES:
         raise UnsupportedAudioError(content_type)
@@ -80,7 +80,7 @@ def transcribe(audio: bytes, content_type: str, device: Device, config: Dictatio
     fields = {"device": device, "language": config.language}
     body = _multipart(boundary, fields, f"dictation{AUDIO_SUFFIXES[media_type]}", media_type, audio)
     request = urllib.request.Request(
-        f"{config.whisper_url}/transcribe",
+        f"{config.stt_url}/transcribe",
         data=body,
         headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
     )

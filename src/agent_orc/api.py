@@ -1319,7 +1319,7 @@ def create_app(
         # The browser's own speech recognition listens in the same language.
         return {
             "language": config.dictation.language,
-            "whisper": config.dictation.whisper_url is not None,
+            "stt": config.dictation.stt_url is not None,
             # Shown in the settings; None while the service does not answer.
             "service": asdict(status) if (status := service_status(config.dictation)) else None,
         }
@@ -1329,7 +1329,7 @@ def create_app(
         """Transcribe the recorded audio in the request body."""
         audio = await request.body()
         content_type = request.headers.get("content-type", "")
-        # The Whisper call blocks for seconds, on the CPU even longer.
+        # The call to the STT-Suite blocks for seconds, on the CPU even longer.
         text = await asyncio.to_thread(transcribe, audio, content_type, device, config.dictation)
         return {"text": text}
 

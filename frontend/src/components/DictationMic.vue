@@ -4,21 +4,21 @@ import type { Dictation } from '../composables/useDictation'
 import { TOUCH_FIRST } from '../device'
 import AppIcon from './AppIcon.vue'
 
-// The microphone, large where it is pressed with a finger. Where Whisper listens (CPU or GPU) and whether a
+// The microphone, large where it is pressed with a finger. Where the STT-Suite listens (CPU or GPU) and whether a
 // dictation goes to the agent at once are set in the settings menu; only the GPU is shown here, as a small
-// mark, since it is the exception. Without Whisper the microphone listens through the browser.
+// mark, since it is the exception. Without it the microphone listens through the browser.
 const props = defineProps<{ dictation: Dictation }>()
 const active = computed(
   () =>
     props.dictation.state === 'recording' ||
-    (props.dictation.whisper === false && props.dictation.state === 'listening'),
+    (props.dictation.stt === false && props.dictation.state === 'listening'),
 )
 const busy = computed(
   () =>
     props.dictation.state === 'transcribing' ||
-    (props.dictation.whisper === true && props.dictation.state === 'listening'),
+    (props.dictation.stt === true && props.dictation.state === 'listening'),
 )
-const onGpu = computed(() => props.dictation.whisper === true && props.dictation.device === 'cuda')
+const onGpu = computed(() => props.dictation.stt === true && props.dictation.device === 'cuda')
 </script>
 
 <template>

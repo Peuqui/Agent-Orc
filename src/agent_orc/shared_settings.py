@@ -13,7 +13,7 @@ class SharedSettingsInvalidError(ValueError):
 
 
 class SharedSettings(BaseModel):
-    # Where Whisper transcribes a dictation: the CPU unless the GPU is chosen on purpose.
+    # Where the STT-Suite transcribes a dictation: the CPU unless the GPU is chosen on purpose.
     dictation_device: Literal["cpu", "cuda"] = "cpu"
     # A dictation goes to the agent as soon as it is transcribed, without pressing send.
     dictation_sends_at_once: bool = False
