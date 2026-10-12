@@ -310,7 +310,7 @@ function jog(lines: number): void {
             class="card flex flex-col gap-2 p-3"
             :class="[
               isUnread(item, seenBefore, seenIds) ? 'border-l-4 border-l-red-500 pl-[calc(0.75rem-3px)]' : '',
-              speech.playing.value === item.id ? 'ring-1 ring-amber-500/40 bg-slate-800/70' : '',
+              speech.playing.value === item.id ? 'ring-1 ring-amber-500 bg-slate-800/70' : '',
             ]"
             :title="isUnread(item, seenBefore, seenIds) ? $t('answers.clickToMark') : undefined"
             @click="markUpTo($event, item)"
