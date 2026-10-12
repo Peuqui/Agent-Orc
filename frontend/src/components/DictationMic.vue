@@ -36,7 +36,7 @@ const onGpu = computed(() => props.dictation.whisper === true && props.dictation
     </button>
     <span
       v-if="onGpu"
-      class="pointer-events-none absolute -top-0.5 -right-0.5 rounded bg-amber-500 px-1 text-[0.55rem] leading-4 font-bold text-slate-900"
+      class="pointer-events-none absolute -top-0.5 -right-0.5 rounded border border-amber-500 px-1 text-[0.55rem] leading-3.5 font-semibold text-amber-300"
       :title="$t('settings.dictationDeviceGpu')"
     >
       GPU
