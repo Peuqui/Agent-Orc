@@ -127,6 +127,11 @@ function readUnread(): void {
 // The room kept above an answer that is read from its top: the padding of the list.
 const TOP_ROOM_PX = 12
 
+function scrollToEnd(): void {
+  const scroller = box.value
+  if (scroller) scroller.scrollTo({ top: scroller.scrollHeight - scroller.clientHeight })
+}
+
 /** Scrolls down until the oldest unread answer meets the upper edge, or to the end if everything
  * from there on fits the screen first: new answers below it come into view without pushing it out of
  * the top, and a long one starts at its upper edge so reading can begin at once. With nothing unread
@@ -159,9 +164,18 @@ async function load(): Promise<void> {
   loaded.value = true
   // Whatever is last in the feed: an answer, but also the request the user has just made.
   const lastEntry = shown.value.at(-1)
-  const newest = lastEntry && `${lastEntry.turn.id}/${lastEntry.items.at(-1)?.id}`
+  const lastItem = lastEntry?.items.at(-1)
+  const newest = lastEntry && `${lastEntry.turn.id}/${lastItem?.id}`
   const arrived = newest !== newestSeen
   newestSeen = newest
+  // What the user has just sent (a request, or something typed in between) is always brought into view,
+  // wherever the list stood: the reader asked for it.
+  const sentByUser = lastEntry !== undefined && (lastItem === undefined || lastItem.kind === 'user')
+  if (!first && arrived && sentByUser) {
+    await nextTick()
+    scrollToEnd()
+    return
+  }
   // Only a new answer moves the list, and only for a reader at the bottom: whoever has scrolled up to
   // read keeps the place, and marking answers as read moves nothing.
   if (first || (arrived && bottomBefore)) {
