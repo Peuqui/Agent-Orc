@@ -13,7 +13,7 @@ import AppSettings from './settings/AppSettings.vue'
 import DictationSettings from './settings/DictationSettings.vue'
 import DisplaySettings from './settings/DisplaySettings.vue'
 
-// The menu is a short list; each entry opens a window of its own, in the middle of the screen. What a
+// The menu is a short list; each entry opens a window of its own, right below the menu button. What a
 // window holds is set at once, there is no button to save it (the project folder, which asks for a
 // password, has its own).
 const SECTIONS = [
@@ -29,12 +29,16 @@ type SectionId = (typeof SECTIONS)[number]['id']
 
 const open = ref(false)
 const section = ref<SectionId | null>(null)
+// Where the menu button is: the windows open beside it, whichever entry was pressed.
+const menuButton = ref<HTMLElement>()
+const near = ref<DOMRect | null>(null)
 // The windows that open from inside another one (the extra keys, the engines of the TTS service) take its
 // place: the section closes.
 const editingKeys = ref(false)
 const editingTts = ref(false)
 
 function choose(id: SectionId): void {
+  near.value = menuButton.value?.getBoundingClientRect() ?? null
   section.value = id
   open.value = false
 }
@@ -53,7 +57,7 @@ function openTts(): void {
 <template>
   <DropdownMenu v-model:open="open" right panel-class="w-60 overscroll-contain p-2">
     <template #trigger="{ toggle }">
-      <button class="btn-icon" :title="$t('settings.title')" :aria-label="$t('settings.title')" @click="toggle">
+      <button ref="menuButton" class="btn-icon" :title="$t('settings.title')" :aria-label="$t('settings.title')" @click="toggle">
         <AppIcon name="menu" />
       </button>
     </template>
@@ -69,7 +73,7 @@ function openTts(): void {
       </button>
     </div>
     <template #extra>
-      <BaseDialog v-if="section" centered :title="$t(`settings.sections.${section}`)" @close="section = null">
+      <BaseDialog v-if="section" :near="near" :title="$t(`settings.sections.${section}`)" @close="section = null">
         <DisplaySettings v-if="section === 'display'" @keys="openKeys" />
         <DictationSettings v-else-if="section === 'dictation'" />
         <SpeechSettings v-else-if="section === 'speech'" @configure="openTts" />

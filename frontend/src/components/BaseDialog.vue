@@ -6,14 +6,14 @@ import { triggerRect } from '../trigger'
 // below. Without one (none pressed) it is centred, a sheet from the bottom on phones.
 // `tall`, for a dialog with a long list: always centred, as high as the screen; the list scrolls
 // (the one thing that does) between the title and the buttons.
-// `centered`, for a window of settings: always in the middle of the screen, as high as its content (it
-// scrolls when that is more than the screen).
-const props = defineProps<{ title: string; tall?: boolean; centered?: boolean }>()
+// `near`, the place of a control the dialog belongs to (the menu button of the settings): it opens beside that
+// one instead of beside what was pressed last.
+const props = defineProps<{ title: string; tall?: boolean; near?: DOMRect | null }>()
 const emit = defineEmits<{ close: [] }>()
 
 const MARGIN = 8
 const card = ref<HTMLElement>()
-const anchor = props.tall || props.centered ? null : triggerRect()
+const anchor = props.tall ? null : (props.near ?? triggerRect())
 const place = ref<{ left: string; top: string } | null>(null)
 
 function placeBesideAnchor(): void {
@@ -47,7 +47,7 @@ onBeforeUnmount(() => resizes.disconnect())
     <div
       class="fixed inset-0 z-40 flex justify-center bg-black/60"
       data-modal
-      :class="anchor ? '' : tall || centered ? 'items-center' : 'items-end sm:items-center'"
+      :class="anchor ? '' : tall ? 'items-center' : 'items-end sm:items-center'"
       @click.self="emit('close')"
       @keydown.esc="emit('close')"
     >
@@ -59,9 +59,7 @@ onBeforeUnmount(() => resizes.disconnect())
             ? 'fixed max-h-[calc(100dvh-1rem)] w-[min(28rem,calc(100vw-1rem))] overflow-y-auto'
             : tall
               ? 'flex h-[calc(100dvh-1rem)] w-[min(36rem,calc(100vw-1rem))] flex-col'
-              : centered
-                ? 'max-h-[calc(100dvh-1rem)] w-[min(30rem,calc(100vw-1rem))] overflow-y-auto'
-                : 'w-full max-w-md rounded-b-none sm:rounded-b-xl'
+              : 'w-full max-w-md rounded-b-none sm:rounded-b-xl'
         "
         :style="anchor ? (place ?? { visibility: 'hidden' }) : undefined"
         role="dialog"
