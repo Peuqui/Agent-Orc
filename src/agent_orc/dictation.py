@@ -58,7 +58,7 @@ class ServiceStatus:
     gpu_loaded: bool
     cpu_loaded: bool
     # Seconds until the idle GPU worker ends itself; None when the service never unloads it.
-    gpu_ttl_remaining_seconds: int | None
+    gpu_ttl_remaining_seconds: float | None
 
 
 def service_status(config: DictationConfig) -> ServiceStatus | None:
