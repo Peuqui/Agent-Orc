@@ -707,6 +707,7 @@
     "skipped": "Hier folgt ein Codeblock oder eine Tabelle, ausgelassen",
     "maxChars": "Ohne Hörabsatz höchstens so viele Zeichen vorlesen",
     "speechTitle": "Vorlesen",
+    "newBelow": "{count} neu",
     "announceName": "Namen des Agenten vorab sagen",
     "more": "mehr",
     "less": "weniger",

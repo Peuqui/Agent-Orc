@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { api, type AnswerText, type Interjection, type SpokenRequest, type Turn } from '../api'
 import { isUnread, shownTexts, spokenAs, uploadMentions } from '../answers'
@@ -7,6 +7,7 @@ import { summaryOf } from '../speechText'
 import { markSeen, seenUntil } from '../composables/useAnswerSeen'
 import { useAnswerFileLinks } from '../composables/useAnswerFileLinks'
 import { useAnswersAll } from '../composables/useSettings'
+import { useFeedScroll } from '../composables/useFeedScroll'
 import { useViewZoom } from '../composables/useViewZoom'
 import { sessionName, useSessions } from '../composables/useSessions'
 import { type Speakable, useSpeech } from '../composables/useSpeech'
@@ -124,36 +125,17 @@ function readUnread(): void {
 
 
 
-// The room kept above an answer that is read from its top: the padding of the list.
-const TOP_ROOM_PX = 12
+// Where the list goes when something comes in (the rules are in feedScroll.ts).
+const { following, newBelow, place, onScroll, takenByHand, showNewBelow, followSpeech } = useFeedScroll(
+  box,
+  props.sessionId,
+  () => unread.value[0]?.id,
+)
 
-function scrollToEnd(): void {
-  const scroller = box.value
-  if (scroller) scroller.scrollTo({ top: scroller.scrollHeight - scroller.clientHeight })
-}
-
-/** Scrolls down until the oldest unread answer meets the upper edge, or to the end if everything
- * from there on fits the screen first: new answers below it come into view without pushing it out of
- * the top, and a long one starts at its upper edge so reading can begin at once. With nothing unread
- * (everything read already) it goes to the end. Never scrolls back up. */
-function showUnread(): void {
-  const scroller = box.value
-  if (!scroller) return
-  const end = scroller.scrollHeight - scroller.clientHeight
-  const unreadFirst = scroller.querySelector<HTMLElement>('article.border-l-red-500')
-  if (unreadFirst === null) {
-    scroller.scrollTo({ top: end })
-    return
-  }
-  const above = unreadFirst.getBoundingClientRect().top - scroller.getBoundingClientRect().top
-  scroller.scrollTo({ top: Math.max(scroller.scrollTop, Math.min(end, scroller.scrollTop + above - TOP_ROOM_PX)) })
-}
-
-// The last item of the feed at the last look: a different one is something new.
-let newestSeen: string | undefined
+// Every message of the feed at the last look: what is not in it is new.
+let known: Set<string> | null = null
 
 async function load(): Promise<void> {
-  const bottomBefore = box.value ? box.value.scrollHeight - box.value.scrollTop - box.value.clientHeight < 80 : true
   try {
     ;[turns.value, spoken.value] = await Promise.all([api.answers(props.sessionId, props.turns), api.spoken(props.sessionId)])
   } catch (error) {
@@ -162,27 +144,28 @@ async function load(): Promise<void> {
   }
   const first = !loaded.value
   loaded.value = true
-  // Whatever is last in the feed: an answer, but also the request the user has just made.
-  const lastEntry = shown.value.at(-1)
-  const lastItem = lastEntry?.items.at(-1)
-  const newest = lastEntry && `${lastEntry.turn.id}/${lastItem?.id}`
-  const arrived = newest !== newestSeen
-  newestSeen = newest
-  // What the user has just sent (a request, or something typed in between) is always brought into view,
-  // wherever the list stood: the reader asked for it.
-  const sentByUser = lastEntry !== undefined && (lastItem === undefined || lastItem.kind === 'user')
-  if (!first && arrived && sentByUser) {
-    await nextTick()
-    scrollToEnd()
-    return
-  }
-  // Only a new answer moves the list, and only for a reader at the bottom: whoever has scrolled up to
-  // read keeps the place, and marking answers as read moves nothing.
-  if (first || (arrived && bottomBefore)) {
-    await nextTick()
-    showUnread()
-  }
+  // A request is the reader's own, and so is what the reader typed in between; the rest are the agent's answers.
+  const messages = shown.value.flatMap((entry) => [
+    { id: entry.turn.id, own: true },
+    ...entry.items.map((item) => ({ id: item.id, own: item.kind === 'user' })),
+  ])
+  const fresh = known === null ? [] : messages.filter((message) => !known?.has(message.id))
+  known = new Set(messages.map((message) => message.id))
+  // The request and its answer can come in together: then the answer counts alone (its top is shown), as
+  // the request would take the list to the end and the answer may not go back up.
+  const answers = fresh.filter((message) => !message.own).length
+  if (first) await place('opened')
+  else if (answers > 0) await place('answer', answers)
+  else if (fresh.length > 0) await place('own')
 }
+
+// What is read aloud comes into view and gets a quiet highlight; once it was spoken it counts as read.
+watch(
+  () => speech.playing.value,
+  (id, before) => {
+    if (id !== null) followSpeech(id, before === null)
+  },
+)
 
 onMounted(() => {
   void load()
@@ -210,6 +193,7 @@ const USER_LINES = 2
 const JOG_LINE_PX = 24
 
 function jog(lines: number): void {
+  takenByHand()
   box.value?.scrollBy({ top: lines * JOG_LINE_PX })
 }
 </script>
@@ -274,14 +258,20 @@ function jog(lines: number): void {
         </template>
       </template>
     </div>
-    <div class="flex min-h-0 flex-1">
-    <div ref="box" class="min-h-0 min-w-0 flex-1 overflow-y-auto p-3 [scrollbar-width:none]">
+    <div class="relative flex min-h-0 flex-1">
+    <div
+      ref="box"
+      class="min-h-0 min-w-0 flex-1 overflow-y-auto p-3 [scrollbar-width:none]"
+      @scroll.passive="onScroll"
+      @wheel.passive="takenByHand"
+      @touchstart.passive="takenByHand"
+    >
     <!-- Scaled as a whole (the device's size for views), so all sizes keep their proportions. -->
     <div ref="zoomed" class="flex flex-col gap-4" :style="zoomStyle">
       <p v-if="loaded && !turns.length" class="text-slate-400">{{ $t('answers.empty') }}</p>
       <section v-for="entry in shown" :key="entry.turn.id" class="flex flex-col gap-2">
         <!-- What the user asked: a few lines, more on a click. -->
-        <div class="rounded-lg border-l-4 border-sky-700/70 bg-sky-950/40 px-3 py-2 text-sm text-slate-300">
+        <div :data-anchor="entry.turn.id" class="rounded-lg border-l-4 border-sky-700/70 bg-sky-950/40 px-3 py-2 text-sm text-slate-300">
           <FoldedText v-if="uploadMentions(entry.turn.prompt).text" :text="uploadMentions(entry.turn.prompt).text" :lines="USER_LINES" />
           <AnswerImages :urls="pictureUrls(entry.turn.id, entry.turn.prompt, entry.turn.images)" />
           <!-- Said on the Echo: as the recognition heard it, to compare with the recording. -->
@@ -301,6 +291,7 @@ function jog(lines: number): void {
           <!-- Typed while the agent was answering. -->
           <div
             v-if="item.kind === 'user'"
+            :data-anchor="item.id"
             class="ml-4 rounded-lg border-l-4 border-sky-700/70 bg-sky-950/40 px-3 py-2 text-sm text-slate-300"
             :class="item.pending ? 'opacity-60' : ''"
           >
@@ -315,8 +306,12 @@ function jog(lines: number): void {
                neither moves nor wraps differently when the answer is marked as read. -->
           <article
             v-else
+            :data-anchor="item.id"
             class="card flex flex-col gap-2 p-3"
-            :class="isUnread(item, seenBefore, seenIds) ? 'border-l-4 border-l-red-500 pl-[calc(0.75rem-3px)]' : ''"
+            :class="[
+              isUnread(item, seenBefore, seenIds) ? 'border-l-4 border-l-red-500 pl-[calc(0.75rem-3px)]' : '',
+              speech.playing.value === item.id ? 'ring-1 ring-amber-500/40 bg-slate-800/70' : '',
+            ]"
             :title="isUnread(item, seenBefore, seenIds) ? $t('answers.clickToMark') : undefined"
             @click="markUpTo($event, item)"
           >
@@ -347,6 +342,15 @@ function jog(lines: number): void {
       </section>
     </div>
     </div>
+    <!-- Reading further up while something came in below: one button to the oldest unread answer. -->
+    <button
+      v-if="!following && newBelow > 0"
+      type="button"
+      class="btn-primary btn-small absolute bottom-3 left-1/2 -translate-x-1/2 shadow-lg"
+      @click="showNewBelow"
+    >
+      ↓ {{ $t('answers.newBelow', { count: newBelow }) }}
+    </button>
     <JogScroller @scroll="jog" />
     </div>
   </div>
