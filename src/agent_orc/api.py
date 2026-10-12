@@ -501,6 +501,14 @@ class TtsEntry(BaseModel):
     offered: bool = True
 
 
+class TtsTuning(BaseModel):
+    """What the user sets for an engine in place of the service's own values: speed and pitch
+    (1 = normal); a field left out is the service's to decide."""
+
+    speed: float | None = Field(default=None, gt=0)
+    pitch: float | None = Field(default=None, gt=0)
+
+
 class TtsChoices(BaseModel):
     """Which engines of the TTS service speak, in which order, and with which voice."""
 
@@ -511,6 +519,9 @@ class TtsChoices(BaseModel):
     prefer_loaded: bool
     # The voice of an engine (the same on every machine); an engine without one is not listed.
     voices: dict[str, str]
+    # Speed and pitch of an engine, sent with every reading (the service's values for the voice apply
+    # where nothing is set here).
+    tuning: dict[str, TtsTuning] = Field(default_factory=dict)
 
 
 class PeerMessageRequest(BaseModel):

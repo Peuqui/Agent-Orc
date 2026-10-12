@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { api, type TtsCatalogRow, type TtsChoices, type TtsEntry, type TtsUnit } from '../api'
+import { api, type TtsCatalogRow, type TtsChoices, type TtsEntry, type TtsTuning, type TtsUnit } from '../api'
 import { useHosts } from '../composables/useHosts'
 import { moveInList, useReorder } from '../composables/useReorder'
 import { useToast } from '../composables/useToast'
@@ -22,7 +22,7 @@ const own = computed(() => hostsState.value?.self ?? t('ttsSettings.thisMachine'
 loadHosts().catch(toast.error)
 
 const UNITS: TtsUnit[] = ['sentence', 'paragraph', 'whole']
-const choices = ref<TtsChoices>({ entries: [], voices: {}, paragraph_pause_ms: 0, prefer_loaded: false })
+const choices = ref<TtsChoices>({ entries: [], voices: {}, tuning: {}, paragraph_pause_ms: 0, prefer_loaded: false })
 const catalog = ref<TtsCatalogRow[]>([])
 // The voices of each engine, asked when the window opens; an engine without any has no choice.
 const voices = ref<Record<string, { id: string; label: string }[]>>({})
@@ -73,6 +73,14 @@ function label(entry: TtsEntry): string {
 function where(entry: TtsEntry): string {
   if (catalogRow(entry)?.cloud) return t('ttsSettings.cloud')
   return entry.host ?? own.value
+}
+
+/** Speed or pitch of an engine as typed; an empty field is "the service decides" (null), and an engine with both empty has no entry. */
+function setTuning(engine: string, field: 'speed' | 'pitch', typed: string): void {
+  const tuning: TtsTuning = choices.value.tuning[engine] ?? { speed: null, pitch: null }
+  tuning[field] = typed === '' ? null : Number(typed)
+  if (tuning.speed === null && tuning.pitch === null) delete choices.value.tuning[engine]
+  else choices.value.tuning[engine] = tuning
 }
 
 const unitOptions = computed(() => UNITS.map((unit) => ({ value: unit, label: t(`ttsSettings.unit.${unit}`) })))
@@ -160,6 +168,35 @@ async function save(): Promise<void> {
               button-class="input text-sm text-slate-200"
               :aria-label="$t('ttsSettings.voiceLabel')"
             />
+            <!-- Speed and pitch of the engine: empty leaves them to the service (what is set for the voice there). -->
+            <div class="flex gap-2">
+              <label class="flex min-w-0 flex-1 flex-col gap-0.5 text-xs text-slate-400">
+                {{ $t('ttsSettings.speed') }}
+                <input
+                  type="number"
+                  step="0.05"
+                  min="0.1"
+                  inputmode="decimal"
+                  class="input text-sm text-slate-200"
+                  :placeholder="$t('ttsSettings.serviceValue')"
+                  :value="choices.tuning[entry.engine]?.speed ?? ''"
+                  @input="setTuning(entry.engine, 'speed', ($event.target as HTMLInputElement).value)"
+                />
+              </label>
+              <label class="flex min-w-0 flex-1 flex-col gap-0.5 text-xs text-slate-400">
+                {{ $t('ttsSettings.pitch') }}
+                <input
+                  type="number"
+                  step="0.05"
+                  min="0.1"
+                  inputmode="decimal"
+                  class="input text-sm text-slate-200"
+                  :placeholder="$t('ttsSettings.serviceValue')"
+                  :value="choices.tuning[entry.engine]?.pitch ?? ''"
+                  @input="setTuning(entry.engine, 'pitch', ($event.target as HTMLInputElement).value)"
+                />
+              </label>
+            </div>
           </div>
         </li>
       </ul>

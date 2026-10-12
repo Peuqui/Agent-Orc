@@ -92,6 +92,7 @@ def merged_choices(stored: dict[str, Any], rows: list[dict[str, Any]]) -> dict[s
     return {
         "entries": kept + joined,
         "voices": stored["voices"],
+        "tuning": stored["tuning"],
         "paragraph_pause_ms": stored["paragraph_pause_ms"],
         "prefer_loaded": stored["prefer_loaded"],
     }
@@ -129,6 +130,20 @@ def voices(config: TtsSuiteConfig, directory: Path, engine: str) -> list[dict[st
     return [{"id": voice["name"], "label": voice["label"]} for voice in listed]
 
 
+def _engine_settings(chosen: dict[str, Any], engines: list[str]) -> dict[str, dict[str, Any]]:
+    """Per engine what the user set: the voice, and speed and pitch where one was given (the
+    service uses its own values for the rest)."""
+    settings: dict[str, dict[str, Any]] = {}
+    for engine in engines:
+        own: dict[str, Any] = {}
+        if chosen["voices"].get(engine):
+            own["voice"] = chosen["voices"][engine]
+        own.update({key: value for key, value in chosen["tuning"].get(engine, {}).items() if value is not None})
+        if own:
+            settings[engine] = own
+    return settings
+
+
 def speak(
     config: TtsSuiteConfig,
     directory: Path,
@@ -157,11 +172,7 @@ def speak(
             {"engine": entry["engine"], "unit": entry["unit"], "host": entry["host"]}
             for entry in on
         ],
-        "voices": {
-            engine: {"voice": chosen["voices"][engine]}
-            for engine in engines
-            if chosen["voices"].get(engine)
-        },
+        "voices": _engine_settings(chosen, engines),
     }
     if speed is not None:
         head["speed"] = speed

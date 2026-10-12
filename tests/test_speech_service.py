@@ -149,12 +149,14 @@ def choose(
     client: TestClient,
     *entries: dict[str, Any],
     voices: dict[str, str] | None = None,
+    tuning: dict[str, dict[str, float | None]] | None = None,
     prefer_loaded: bool = False,
 ) -> None:
-    """The user's choice: these entries in this order, with these voices."""
+    """The user's choice: these entries in this order, with these voices (and speed and pitch)."""
     chosen = {
         "entries": list(entries),
         "voices": voices or {},
+        "tuning": tuning or {},
         "paragraph_pause_ms": 700,
         "prefer_loaded": prefer_loaded,
     }
@@ -340,6 +342,25 @@ def test_a_reading_names_the_entries_switched_on_in_order_with_unit_host_and_voi
             "voices": {"edge": {"voice": "Katja"}, "qwen3local": {"voice": "Codine"}},
         }
     ]
+
+
+def test_speed_and_pitch_set_for_an_engine_go_with_the_reading_and_only_those_that_are_set(
+    clock: FakeClock, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, service: str
+) -> None:
+    client = make_client(clock, tmp_path, monkeypatch, service)
+    choose(
+        client,
+        entry("edge"),
+        entry("piper"),
+        entry("qwen3local"),
+        voices={"edge": "Katja"},
+        tuning={"edge": {"speed": 1.2, "pitch": None}, "piper": {"pitch": 0.9}},
+    )
+    client.post("/api/tts/speak", json={"text": "Hello.", "language": "en"})
+    assert FakeSpeechService.heard[0]["voices"] == {
+        "edge": {"voice": "Katja", "speed": 1.2},  # pitch left empty: the service's
+        "piper": {"pitch": 0.9},                    # tuned without a voice chosen
+    }                                               # qwen3local: nothing set, nothing sent
 
 
 def test_without_a_choice_nothing_is_read_and_the_user_is_told_where_to_choose(
