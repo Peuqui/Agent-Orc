@@ -13,7 +13,7 @@ import { sessionName, useSessions } from '../composables/useSessions'
 import { type Speakable, useSpeech } from '../composables/useSpeech'
 import { useToast } from '../composables/useToast'
 import { formatMoment } from '../format'
-import { renderMarkdown } from '../markdown'
+import { LISTEN_REPLAY_CLASS, renderMarkdown } from '../markdown'
 import AnswerImages from './AnswerImages.vue'
 import FoldedText from './FoldedText.vue'
 import AppIcon from './AppIcon.vue'
@@ -112,6 +112,12 @@ const agentName = computed(() => {
 
 function speakable(texts: AnswerText[]): Speakable[] {
   return texts.map((text) => ({ id: text.id, text: text.text, label: agentName.value }))
+}
+
+/** A click on the marker of the paragraph for listening reads this answer again. */
+function readAgain(event: MouseEvent, text: AnswerText): void {
+  if (!(event.target instanceof Element) || !event.target.closest(`.${LISTEN_REPLAY_CLASS}`)) return
+  void speech.play(speakable([text]), markReadAloud)
 }
 
 function readFrom(text: AnswerText): void {
@@ -315,7 +321,11 @@ function jog(lines: number): void {
             :title="isUnread(item, seenBefore, seenIds) ? $t('answers.clickToMark') : undefined"
             @click="markUpTo($event, item)"
           >
-            <div class="markdown note select-text" v-html="renderMarkdown(answersAll ? item.text : summaryOf(item.text), null)" />
+            <div
+              class="markdown note select-text"
+              @click="readAgain($event, item)"
+              v-html="renderMarkdown(answersAll ? item.text : summaryOf(item.text), null, speech.available.value)"
+            />
             <div class="flex items-center gap-2 text-xs text-slate-500">
               <span>{{ formatMoment(new Date(item.time), locale) }}</span>
               <template v-if="speech.available.value">

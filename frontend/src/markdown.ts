@@ -4,6 +4,7 @@ import { rawFileUrl } from './api'
 import { joinPath, parentPath } from './format'
 import { i18n } from './i18n'
 import { ICONS } from './icons'
+import { LISTEN_MARKER } from './speechText'
 
 // A scheme (https:, mailto:, data:) or protocol-relative: not a path in the project.
 const EXTERNAL = /^([a-z][a-z0-9+.-]*:|\/\/)/i
@@ -41,13 +42,34 @@ function withCopyButtons(html: string): string {
   return page.body.innerHTML
 }
 
+/** The marker of the paragraph for listening, as a button that reads the paragraph again (the view answers its click). */
+export const LISTEN_REPLAY_CLASS = 'listen-replay'
+
+/** The marker in front of the last paragraph for listening becomes that button; the rest of the page stays as it is. */
+function withReplayButton(html: string): string {
+  const page = new DOMParser().parseFromString(html, 'text/html')
+  const paragraph = [...page.querySelectorAll('p')].findLast((candidate) => candidate.textContent?.trimStart().startsWith(LISTEN_MARKER))
+  const text = paragraph?.firstChild
+  if (!paragraph || text?.nodeType !== Node.TEXT_NODE) return html
+  const label = i18n.global.t('answers.readAgain')
+  const button = page.createElement('button')
+  button.type = 'button'
+  button.className = LISTEN_REPLAY_CLASS
+  button.title = label
+  button.setAttribute('aria-label', label)
+  button.textContent = LISTEN_MARKER
+  text.textContent = (text.textContent ?? '').trimStart().slice(LISTEN_MARKER.length)
+  paragraph.prepend(button)
+  return page.body.innerHTML
+}
+
 /**
  * Markdown as HTML that runs nothing; pictures with relative paths come from the file's folder.
  * filePath null: a note, which has no file, so pictures stay as written (its own files are linked
  * by address) and a single line break in the text stays one in the page instead of merging the
- * lines into a paragraph.
+ * lines into a paragraph. `listenButton`: the marker of the paragraph for listening is a button (answers).
  */
-export function renderMarkdown(text: string, filePath: string | null): string {
+export function renderMarkdown(text: string, filePath: string | null, listenButton = false): string {
   const isNote = filePath === null
   const marked = new Marked({
     gfm: true,
@@ -59,5 +81,6 @@ export function renderMarkdown(text: string, filePath: string | null): string {
     },
   })
   const html = marked.parse(text, { async: false })
-  return withCopyButtons(DOMPurify.sanitize(html))
+  const page = withCopyButtons(DOMPurify.sanitize(html))
+  return listenButton ? withReplayButton(page) : page
 }

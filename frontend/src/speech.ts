@@ -6,6 +6,7 @@ import { ref } from 'vue'
 import { api } from './api'
 import { FrameReader } from './audioFrames'
 import { i18n } from './i18n'
+import { ReplayCache } from './replayCache'
 import { speechChunks } from './speechText'
 
 export interface VoiceChoice {
@@ -157,6 +158,12 @@ function frameError(body: Uint8Array): Error {
   return new Error(`${answer.error}: ${answer.detail}`)
 }
 
+/** A piece of what the service made: audio, or a pause between two pieces. */
+type ReplayPiece = { buffer: AudioBuffer } | { pauseMs: number }
+
+// How many readings stay in memory for playing again. A reading of a summary is a few MB of decoded audio.
+const REPLAY_CACHE_ENTRIES = 8
+
 /**
  * A TTS-Suite service: it chooses the engine, cleans and cuts the text and answers with audio as
  * it exists. The pieces are decoded and queued one after the other, so the first one starts while
@@ -169,6 +176,8 @@ function ttsSuite(label: string): SpeechEngine {
   let playing = new Set<AudioBufferSourceNode>()
   // When the audio queued so far ends, on the clock of the context: the next piece starts there.
   let queuedUntil = 0
+  // Readings played to the end, by what they were made of: the same text again is not asked for again.
+  const replays = new ReplayCache<ReplayPiece[]>(REPLAY_CACHE_ENTRIES)
 
   function cancel(): void {
     for (const abort of aborts) abort.abort()
@@ -185,36 +194,55 @@ function ttsSuite(label: string): SpeechEngine {
     aborts.add(controller)
     const audio = (context ??= new AudioContext())
     let lastEnded: Promise<void> = Promise.resolve()
+    const key = JSON.stringify([text, options.lang, options.rate, options.pitch])
+    const recorded: ReplayPiece[] = []
+
+    function queue(piece: ReplayPiece): void {
+      if ('pauseMs' in piece) {
+        queuedUntil = Math.max(queuedUntil, audio.currentTime) + piece.pauseMs / 1000
+        return
+      }
+      const source = audio.createBufferSource()
+      source.buffer = piece.buffer
+      source.connect(audio.destination)
+      queuedUntil = Math.max(queuedUntil, audio.currentTime)
+      source.start(queuedUntil)
+      queuedUntil += piece.buffer.duration
+      playing.add(source)
+      lastEnded = new Promise((resolve) => {
+        source.onended = () => resolve()
+      })
+    }
+
+    async function fromService(): Promise<void> {
+      const response = await api.ttsSpeak(text, options.lang, options.rate, options.pitch, controller.signal)
+      const reader = (response.body as ReadableStream<Uint8Array>).getReader()
+      const frames = new FrameReader()
+      for (;;) {
+        const { done, value } = await reader.read()
+        if (done) break
+        for (const { header, body } of frames.push(value)) {
+          if (header.kind === 'error') throw frameError(body)
+          let piece: ReplayPiece
+          if (header.kind === 'audio' && (header.pause_ms ?? 0) > 0) {
+            piece = { pauseMs: header.pause_ms as number }
+          } else if (header.kind === 'audio' && !header.keepalive && body.length > 0) {
+            piece = { buffer: await audio.decodeAudioData(body.buffer as ArrayBuffer) }
+          } else continue
+          recorded.push(piece)
+          queue(piece)
+        }
+      }
+      if (frames.incomplete) throw new Error('the speech service ended in the middle of a piece')
+      replays.set(key, recorded)
+    }
+
     const received = (async (): Promise<void> => {
       try {
         await audio.resume()
-        const response = await api.ttsSpeak(text, options.lang, options.rate, options.pitch, controller.signal)
-        const reader = (response.body as ReadableStream<Uint8Array>).getReader()
-        const frames = new FrameReader()
-        for (;;) {
-          const { done, value } = await reader.read()
-          if (done) break
-          for (const { header, body } of frames.push(value)) {
-            if (header.kind === 'error') throw frameError(body)
-            if (header.kind === 'audio' && (header.pause_ms ?? 0) > 0) {
-              queuedUntil = Math.max(queuedUntil, audio.currentTime) + (header.pause_ms as number) / 1000
-              continue
-            }
-            if (header.kind !== 'audio' || header.keepalive || body.length === 0) continue
-            const buffer = await audio.decodeAudioData(body.buffer as ArrayBuffer)
-            const source = audio.createBufferSource()
-            source.buffer = buffer
-            source.connect(audio.destination)
-            queuedUntil = Math.max(queuedUntil, audio.currentTime)
-            source.start(queuedUntil)
-            queuedUntil += buffer.duration
-            playing.add(source)
-            lastEnded = new Promise((resolve) => {
-              source.onended = () => resolve()
-            })
-          }
-        }
-        if (frames.incomplete) throw new Error('the speech service ended in the middle of a piece')
+        const replay = replays.get(key)
+        if (replay === undefined) await fromService()
+        else replay.forEach(queue)
       } catch (error) {
         // Cancelling ends the request, which is no failure.
         if (!controller.signal.aborted) throw error

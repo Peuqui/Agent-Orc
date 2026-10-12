@@ -175,6 +175,10 @@
   .markdown pre code {
     @apply bg-transparent p-0;
   }
+  /* The marker of the paragraph for listening reads it again on a click. */
+  .markdown .listen-replay {
+    @apply mr-1 cursor-pointer rounded-md px-1 hover:bg-slate-700;
+  }
   /* A file or folder an agent names, which opens on a click (useAnswerFileLinks). */
   .markdown code.file-link {
     @apply cursor-pointer underline decoration-dotted underline-offset-2 hover:bg-slate-700;
