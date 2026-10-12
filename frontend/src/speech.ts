@@ -22,6 +22,14 @@ export interface SpeechOptions {
   lang: string
 }
 
+/** A piece of text given to an engine that works ahead (see `SpeechEngine.begin`). */
+export interface SpeechJob {
+  /** All its audio is here and queued: the next piece may be sent. */
+  received: Promise<void>
+  /** Its audio has been played to the end. */
+  ended: Promise<void>
+}
+
 export interface SpeechEngine {
   id: string
   label: string
@@ -39,6 +47,13 @@ export interface SpeechEngine {
   voices: (lang: string) => Promise<VoiceChoice[]>
   /** Speaks one piece of text; ends when it was spoken or cancelled. */
   speak: (text: string, options: SpeechOptions) => Promise<void>
+  /**
+   * An engine that makes the next piece while the one before is still being played has this too: it
+   * sends the text at once and queues its audio behind what was begun before. The caller begins the
+   * next piece when `received` of the one before is there, and waits for `ended` to know it was spoken.
+   * Both end on `cancel` as well.
+   */
+  begin?: (text: string, options: SpeechOptions) => SpeechJob
   /**
    * An engine that takes all the answers as one announcement (the pauses and the tones around it
    * are its own business) has this instead of being given piece after piece; `speaker` is the
@@ -142,58 +157,71 @@ function frameError(body: Uint8Array): Error {
  */
 function ttsSuite(label: string): SpeechEngine {
   let context: AudioContext | undefined
-  let abort: AbortController | undefined
+  // Every request that is running, so that a cancel ends all of them at once.
+  const aborts = new Set<AbortController>()
   let playing = new Set<AudioBufferSourceNode>()
+  // When the audio queued so far ends, on the clock of the context: the next piece starts there.
+  let queuedUntil = 0
 
   function cancel(): void {
-    abort?.abort()
-    abort = undefined
+    for (const abort of aborts) abort.abort()
+    aborts.clear()
     for (const source of playing) source.stop()
     playing = new Set()
+    queuedUntil = 0
     void context?.resume()
+  }
+
+  /** Sends the text now; its audio is decoded and queued as it arrives, behind the audio before it. */
+  function begin(text: string, options: SpeechOptions): SpeechJob {
+    const controller = new AbortController()
+    aborts.add(controller)
+    const audio = (context ??= new AudioContext())
+    let lastEnded: Promise<void> = Promise.resolve()
+    const received = (async (): Promise<void> => {
+      try {
+        await audio.resume()
+        const response = await api.ttsSpeak(text, options.lang, options.rate === DEFAULT_SPEECH_RATE ? null : options.rate, controller.signal)
+        const reader = (response.body as ReadableStream<Uint8Array>).getReader()
+        const frames = new FrameReader()
+        for (;;) {
+          const { done, value } = await reader.read()
+          if (done) break
+          for (const { header, body } of frames.push(value)) {
+            if (header.kind === 'error') throw frameError(body)
+            if (header.kind === 'audio' && (header.pause_ms ?? 0) > 0) {
+              queuedUntil = Math.max(queuedUntil, audio.currentTime) + (header.pause_ms as number) / 1000
+              continue
+            }
+            if (header.kind !== 'audio' || header.keepalive || body.length === 0) continue
+            const buffer = await audio.decodeAudioData(body.buffer as ArrayBuffer)
+            const source = audio.createBufferSource()
+            source.buffer = buffer
+            source.connect(audio.destination)
+            queuedUntil = Math.max(queuedUntil, audio.currentTime)
+            source.start(queuedUntil)
+            queuedUntil += buffer.duration
+            playing.add(source)
+            lastEnded = new Promise((resolve) => {
+              source.onended = () => resolve()
+            })
+          }
+        }
+        if (frames.incomplete) throw new Error('the speech service ended in the middle of a piece')
+      } catch (error) {
+        // Cancelling ends the request, which is no failure.
+        if (!controller.signal.aborted) throw error
+      } finally {
+        aborts.delete(controller)
+      }
+    })()
+    const ended = received.then(() => lastEnded)
+    return { received, ended }
   }
 
   async function speak(text: string, options: SpeechOptions): Promise<void> {
     cancel()
-    const controller = new AbortController()
-    abort = controller
-    const audio = (context ??= new AudioContext())
-    await audio.resume()
-    let lastEnded: Promise<void> = Promise.resolve()
-    try {
-      const response = await api.ttsSpeak(text, options.lang, options.rate === DEFAULT_SPEECH_RATE ? null : options.rate, controller.signal)
-      const reader = (response.body as ReadableStream<Uint8Array>).getReader()
-      const frames = new FrameReader()
-      let startAt = audio.currentTime
-      for (;;) {
-        const { done, value } = await reader.read()
-        if (done) break
-        for (const { header, body } of frames.push(value)) {
-          if (header.kind === 'error') throw frameError(body)
-          if (header.kind === 'audio' && (header.pause_ms ?? 0) > 0) {
-            startAt = Math.max(startAt, audio.currentTime) + (header.pause_ms as number) / 1000
-            continue
-          }
-          if (header.kind !== 'audio' || header.keepalive || body.length === 0) continue
-          const buffer = await audio.decodeAudioData(body.buffer as ArrayBuffer)
-          const source = audio.createBufferSource()
-          source.buffer = buffer
-          source.connect(audio.destination)
-          startAt = Math.max(startAt, audio.currentTime)
-          source.start(startAt)
-          startAt += buffer.duration
-          playing.add(source)
-          lastEnded = new Promise((resolve) => {
-            source.onended = () => resolve()
-          })
-        }
-      }
-      if (frames.incomplete) throw new Error('the speech service ended in the middle of a piece')
-      await lastEnded
-    } catch (error) {
-      // Cancelling ends the request, which is no failure.
-      if (!controller.signal.aborted) throw error
-    }
+    await begin(text, options).ended
   }
 
   return {
@@ -208,6 +236,7 @@ function ttsSuite(label: string): SpeechEngine {
     hasSettings: true,
     voices: () => Promise.resolve([]),
     speak,
+    begin,
     cancel,
     pause: () => void context?.suspend(),
     resume: () => void context?.resume(),

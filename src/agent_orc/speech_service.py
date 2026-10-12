@@ -6,10 +6,10 @@ and the token stays on the server.
 
 import contextlib
 import json
+import threading
 import urllib.error
 import urllib.parse
 import urllib.request
-from collections.abc import Iterator
 from http.client import HTTPResponse
 from pathlib import Path
 from typing import Any
@@ -28,6 +28,37 @@ class SpeechServiceError(RuntimeError):
 
 class NothingSwitchedOnError(ValueError):
     """Every engine is switched off in the settings, so there is nothing to speak with."""
+
+
+class FrameStream:
+    """The frames of a reading as the service makes them. `close` ends the reading there: the
+    service stops making what is not made yet. It may be called from another thread than the one
+    that reads; a read in progress ends first (the service sends something at least every few
+    seconds), and then the connection is closed by the thread that was reading."""
+
+    def __init__(self, response: HTTPResponse) -> None:
+        self._response = response
+        self._closing = threading.Event()
+        self._reading = threading.Lock()
+
+    def read(self) -> bytes:
+        """The next piece of the answer; empty at its end or once the stream is closed."""
+        with self._reading:
+            if self._closing.is_set():
+                return b""
+            chunk = self._response.read(CHUNK_BYTES)
+            if not chunk or self._closing.is_set():
+                self._response.close()
+                return b""
+            return chunk
+
+    def close(self) -> None:
+        self._closing.set()
+        if self._reading.acquire(blocking=False):
+            try:
+                self._response.close()
+            finally:
+                self._reading.release()
 
 
 def _request(
@@ -60,11 +91,15 @@ def _open(config: TtsSuiteConfig, request: urllib.request.Request) -> HTTPRespon
 
 def catalog(config: TtsSuiteConfig, directory: Path) -> list[dict[str, Any]]:
     """The service's catalog: one row per engine and machine that can speak (`engine`, `host`: null
-    for the service's own machine; `label` and `label_short` per language, `unit_default`, `cloud`, `needs_gpu`,
+    for the service's own machine; `label` and `label_short` per language, `unit_default`, `cloud`,
+    `needs_gpu`,
     `status`, `installed`). The browser's voice is the client's own and not in it."""
     with _open(config, _request(config, directory, "/engines", None)) as response:
         listed: list[dict[str, Any]] = json.load(response)
-    keys = ("engine", "host", "label", "label_short", "unit_default", "cloud", "needs_gpu", "status", "installed")
+    keys = (
+        "engine", "host", "label", "label_short", "unit_default", "cloud", "needs_gpu", "status",
+        "installed",
+    )
     return [{key: row[key] for key in keys} for row in listed if not row["browser"]]
 
 
@@ -138,7 +173,8 @@ def _engine_settings(chosen: dict[str, Any], engines: list[str]) -> dict[str, di
         own: dict[str, Any] = {}
         if chosen["voices"].get(engine):
             own["voice"] = chosen["voices"][engine]
-        own.update({key: value for key, value in chosen["tuning"].get(engine, {}).items() if value is not None})
+        tuning = chosen["tuning"].get(engine, {})
+        own.update({key: value for key, value in tuning.items() if value is not None})
         if own:
             settings[engine] = own
     return settings
@@ -151,7 +187,7 @@ def speak(
     language: str,
     speed: float | None,
     chosen: dict[str, Any],
-) -> Iterator[bytes]:
+) -> FrameStream:
     """The frames of the reading, with the entries the user switched on and the service offers
     (`chosen` as merged_choices has it: `entries` in the order of speaking, `voices` per engine).
     The service answers once the first piece exists, so a
@@ -176,11 +212,4 @@ def speak(
     }
     if speed is not None:
         head["speed"] = speed
-    response = _open(config, _request(config, directory, "/speak", head))
-
-    def frames() -> Iterator[bytes]:
-        with response:
-            while chunk := response.read(CHUNK_BYTES):
-                yield chunk
-
-    return frames()
+    return FrameStream(_open(config, _request(config, directory, "/speak", head)))

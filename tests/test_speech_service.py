@@ -12,6 +12,7 @@ import pytest
 import yaml
 from fastapi.testclient import TestClient
 
+from agent_orc import speech_service
 from agent_orc.api import create_app
 from agent_orc.auth import new_credentials
 from agent_orc.config import Config, default_config_text
@@ -430,3 +431,57 @@ def test_a_loaded_gpu_engine_goes_first_only_when_asked_for_and_only_if_switched
     choose(client, entry("piper"), entry("qwen3local", "Aragon", enabled=False), prefer_loaded=True)
     client.post("/api/tts/speak", json={"text": "Hello.", "language": "en"})
     assert [each["engine"] for each in FakeSpeechService.heard[0]["engines"]] == ["piper"]
+
+
+class FakeResponse:
+    """What urllib hands back: pieces to read (the first read can be held back) and a close."""
+
+    def __init__(self, pieces: list[bytes]) -> None:
+        self.pieces = list(pieces)
+        self.closed = threading.Event()
+        self.in_read = threading.Event()
+        self.release = threading.Event()
+        self.hold_first_read = False
+
+    def read(self, size: int) -> bytes:
+        self.in_read.set()
+        if self.hold_first_read:
+            self.hold_first_read = False
+            assert self.release.wait(5)
+        return self.pieces.pop(0) if self.pieces else b""
+
+    def close(self) -> None:
+        self.closed.set()
+
+
+def test_a_frame_stream_reads_to_its_end_and_closes_the_connection() -> None:
+    response = FakeResponse([b"ab", b"cd"])
+    stream = speech_service.FrameStream(response)  # type: ignore[arg-type]
+    assert [stream.read(), stream.read(), stream.read()] == [b"ab", b"cd", b""]
+    assert response.closed.is_set()
+
+
+def test_closing_an_idle_frame_stream_closes_the_connection_at_once() -> None:
+    response = FakeResponse([b"ab", b"cd"])
+    stream = speech_service.FrameStream(response)  # type: ignore[arg-type]
+    assert stream.read() == b"ab"
+    stream.close()
+    assert response.closed.is_set()
+    assert stream.read() == b""  # nothing more is read after a close
+
+
+def test_closing_in_the_middle_of_a_read_leaves_the_close_to_the_reading_thread() -> None:
+    response = FakeResponse([b"ab", b"cd"])
+    response.hold_first_read = True
+    stream = speech_service.FrameStream(response)  # type: ignore[arg-type]
+    result: list[bytes] = []
+    reader = threading.Thread(target=lambda: result.append(stream.read()))
+    reader.start()
+    assert response.in_read.wait(5)
+    # From another thread while the read is blocked: no waiting, and no close yet.
+    stream.close()
+    assert not response.closed.is_set()
+    # The read returns; the reading thread sees the close and closes.
+    response.release.set()
+    reader.join(5)
+    assert response.closed.is_set() and result == [b""]

@@ -519,8 +519,8 @@ class TtsChoices(BaseModel):
     prefer_loaded: bool
     # The voice of an engine (the same on every machine); an engine without one is not listed.
     voices: dict[str, str]
-    # Speed and pitch of an engine, sent with every reading (the service's values for the voice apply
-    # where nothing is set here).
+    # Speed and pitch of an engine, sent with every reading (the service's values for the voice
+    # apply where nothing is set here).
     tuning: dict[str, TtsTuning] = Field(default_factory=dict)
 
 
@@ -1822,18 +1822,31 @@ def create_app(
             raise TtsChoiceInvalidError("an engine may be listed once on a machine")
         write_tts_choices(body.model_dump(exclude={"entries": {"__all__": {"offered"}}}))
 
-    @app.post("/api/tts/speak", dependencies=authenticated)
-    def tts_speak(body: TtsSpeakRequest) -> StreamingResponse:
-        """The service's frames of audio for the text, passed on as they come."""
+    def open_tts_stream(body: TtsSpeakRequest) -> speech_service.FrameStream:
         settings = tts_settings()
         rows = speech_service.catalog(settings, config_dir())
         chosen = speech_service.with_loaded_first(
             speech_service.merged_choices(read_tts_choices(), rows), rows
         )
-        frames = speech_service.speak(
+        return speech_service.speak(
             settings, config_dir(), body.text, body.language, body.speed, chosen
         )
-        return StreamingResponse(frames, media_type=speech_service.FRAMES_MEDIA_TYPE)
+
+    @app.post("/api/tts/speak", dependencies=authenticated)
+    async def tts_speak(body: TtsSpeakRequest) -> StreamingResponse:
+        """The service's frames of audio for the text, passed on as they come. When the client goes
+        (a cancel in the browser), the stream to the service is closed, so that it makes nothing
+        more of this reading."""
+        stream = await asyncio.to_thread(open_tts_stream, body)
+
+        async def frames() -> AsyncIterator[bytes]:
+            try:
+                while chunk := await asyncio.to_thread(stream.read):
+                    yield chunk
+            finally:
+                stream.close()
+
+        return StreamingResponse(frames(), media_type=speech_service.FRAMES_MEDIA_TYPE)
 
     def require_voice_token(authorization: str | None = Header(default=None)) -> None:
         if config.voice is None:

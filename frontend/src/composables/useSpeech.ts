@@ -1,5 +1,6 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { readAhead } from '../readAhead'
 import { loadServerEngines, speechEngine, speechEngines } from '../speech'
 import { spokenText } from '../speechText'
 import { useSettings, useSpeechVoice } from './useSettings'
@@ -51,6 +52,14 @@ export function useSpeech() {
         const texts = answers.flatMap((answer) => speaker.split(answer.text))
         await speaker.speakAll(texts, options, items[0].label)
         if (reading === mine) items.forEach((item) => done?.(item))
+      } else if (speaker.begin) {
+        const begin = speaker.begin
+        await readAhead(answers, {
+          begin: (text) => begin(text, options),
+          active: () => reading === mine,
+          started: (item) => (playing.value = item.id),
+          finished: (item) => done?.(item),
+        })
       } else {
         for (const { item, text } of answers) {
           playing.value = item.id
