@@ -13,8 +13,9 @@ class SharedSettingsInvalidError(ValueError):
 
 
 class SharedSettings(BaseModel):
-    # Where the STT-Suite transcribes a dictation: the CPU unless the GPU is chosen on purpose.
-    dictation_device: Literal["cpu", "cuda"] = "cpu"
+    # Where the STT-Suite transcribes a dictation: the CPU unless chosen otherwise; "auto" lets the
+    # service walk its own list (GPU first, the CPU last).
+    dictation_device: Literal["cpu", "cuda", "auto"] = "cpu"
     # A dictation goes to the agent as soon as it is transcribed, without pressing send.
     dictation_sends_at_once: bool = False
     # Which speech output reads answers aloud: "browser", "echo" or "tts-suite".

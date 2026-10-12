@@ -1,8 +1,9 @@
 """Dictation: audio recorded in the browser, transcribed by an STT-Suite service.
 
 Speaks the API of the STT-Suite service: POST /transcribe with a multipart form holding the
-audio file, the device ("cpu" or "cuda") and the language; the answer is JSON with "text".
-The device is the user's choice per dictation; nothing switches between them automatically.
+audio file, the device ("cpu", "cuda" or "auto") and the language; the answer is JSON with "text"
+and the "device" that really transcribed. "cpu" and "cuda" name exactly that device (a full GPU is
+an error); "auto" follows the service's own list and may end on the CPU.
 The engine and its model are the service's own settings, one per device (it keeps one model per
 device and reloads it for a request that wants another): Agent-Orc only shows them.
 """
@@ -16,7 +17,7 @@ from typing import Literal
 
 from agent_orc.config import DictationConfig
 
-Device = Literal["cpu", "cuda"]
+Device = Literal["cpu", "cuda", "auto"]
 
 # The service decodes by content; the file name only needs a fitting suffix.
 AUDIO_SUFFIXES = {"audio/webm": ".webm", "audio/ogg": ".ogg", "audio/mp4": ".m4a"}
@@ -37,6 +38,14 @@ class DictationServiceError(RuntimeError):
 
 # How long a look at the service's settings may take; the settings menu waits for it.
 STATUS_TIMEOUT_SECONDS = 3
+
+
+@dataclass(frozen=True)
+class Transcription:
+    """The text and the device ("cpu" or "cuda") the service really transcribed on."""
+
+    text: str
+    device: Literal["cpu", "cuda"]
 
 
 @dataclass(frozen=True)
@@ -70,7 +79,9 @@ def _configured(status: dict[str, str], device: Literal["gpu", "cpu"]) -> str:
     return f"{engine} {status[f'{device}_{"quality" if engine == "parakeet" else "model"}']}"
 
 
-def transcribe(audio: bytes, content_type: str, device: Device, config: DictationConfig) -> str:
+def transcribe(
+    audio: bytes, content_type: str, device: Device, config: DictationConfig
+) -> Transcription:
     if config.stt_url is None:
         raise DictationServiceError("no STT-Suite service configured")
     media_type = content_type.split(";")[0].strip()
@@ -86,7 +97,7 @@ def transcribe(audio: bytes, content_type: str, device: Device, config: Dictatio
     )
     try:
         with urllib.request.urlopen(request, timeout=config.timeout_seconds) as response:
-            text: str = json.load(response)["text"]
+            answer = json.load(response)
     except urllib.error.HTTPError as error:
         detail = error.read().decode(errors="replace")
         if error.code == SERVICE_UNAVAILABLE:
@@ -94,7 +105,7 @@ def transcribe(audio: bytes, content_type: str, device: Device, config: Dictatio
         raise DictationServiceError(f"{error.code}: {detail}") from error
     except (urllib.error.URLError, TimeoutError) as error:
         raise DictationServiceError(str(error)) from error
-    return text.strip()
+    return Transcription(answer["text"].strip(), answer["device"])
 
 
 def _multipart(

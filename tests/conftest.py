@@ -45,7 +45,7 @@ class FakeStt:
 
     def __init__(self) -> None:
         self.status = 200
-        self.answer: dict[str, str] = {"text": " Hallo Welt "}
+        self.answer: dict[str, Any] = {"text": " Hallo Welt ", "device": "cpu"}
         self.bodies: list[bytes] = []
         self.url = ""
 

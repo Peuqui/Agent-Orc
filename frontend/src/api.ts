@@ -268,8 +268,9 @@ export interface Reasoning {
   ultracode: boolean
 }
 
-/** Where the STT-Suite transcribes: the GPU is near instant, the CPU slower but always there. */
-export type DictationDevice = 'cuda' | 'cpu'
+/** Where the STT-Suite transcribes: the GPU is near instant, the CPU slower but always there; auto lets the
+ * service walk its own list (GPU first, the CPU last). */
+export type DictationDevice = 'cuda' | 'cpu' | 'auto'
 
 /** Several agents side by side, as the workspace page arranges them. */
 export interface Workspace {
@@ -771,9 +772,9 @@ function createApi(host?: string) {
     /** service: what the STT-Suite transcribes with, null while it does not answer. */
     dictationSettings: () =>
       request<{ language: string; stt: boolean; service: DictationService | null }>('GET', 'dictation'),
-    /** Transcribe recorded speech on the chosen device; never switches device by itself. */
+    /** Transcribe recorded speech on the chosen device; `device` in the answer is where it really ran. */
     dictate: (audio: Blob, device: DictationDevice) =>
-      request<{ text: string }>('POST', 'dictation', { upload: audio, query: { device } }),
+      request<{ text: string; device: 'cuda' | 'cpu' }>('POST', 'dictation', { upload: audio, query: { device } }),
 
     listFiles: (path: string) => request<FileEntry[]>('GET', 'files', { query: { path } }),
     /** Stores the file in the folder, or in `subfolder` below it (made if need be), under its name;

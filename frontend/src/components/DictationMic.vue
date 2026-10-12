@@ -18,7 +18,12 @@ const busy = computed(
     props.dictation.state === 'transcribing' ||
     (props.dictation.stt === true && props.dictation.state === 'listening'),
 )
-const onGpu = computed(() => props.dictation.stt === true && props.dictation.device === 'cuda')
+// What the service really used for the last dictation; before one, the GPU only where it was chosen outright.
+const onGpu = computed(
+  () =>
+    props.dictation.stt === true &&
+    (props.dictation.usedDevice ?? props.dictation.device) === 'cuda',
+)
 </script>
 
 <template>

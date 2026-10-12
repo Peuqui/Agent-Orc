@@ -1,4 +1,4 @@
-import { computed, ref, type UnwrapNestedRefs } from 'vue'
+import { computed, ref, watch, type UnwrapNestedRefs } from 'vue'
 import { api } from '../api'
 import { useSettings } from './useSettings'
 import { START_BEEP, STOP_BEEP, playBeep } from '../sounds'
@@ -46,6 +46,9 @@ export function useDictation(
   const { dictationDevice: device } = useSettings()
   // Unknown until the server's settings have arrived.
   const stt = ref<boolean | null>(null)
+  // Where the last dictation really ran (with "auto" the service decides); forgotten when the setting changes.
+  const usedDevice = ref<'cuda' | 'cpu' | null>(null)
+  watch(device, () => (usedDevice.value = null))
   const language = ref('')
   const sttFailed = ref(false)
   // Kept when the STT-Suite failed, so the dictation is not lost: it can be sent again, e.g. on the CPU.
@@ -90,7 +93,8 @@ export function useDictation(
     state.value = 'transcribing'
     failedAudio.value = null
     try {
-      const { text } = await api.dictate(audio, device.value)
+      const { text, device: used } = await api.dictate(audio, device.value)
+      usedDevice.value = used
       sttFailed.value = false
       if (text) onText(text)
     } catch (error) {
@@ -148,6 +152,7 @@ export function useDictation(
   return {
     state,
     device,
+    usedDevice,
     stt,
     microphone,
     browserFallback,

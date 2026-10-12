@@ -1203,7 +1203,8 @@ def test_dictation(config: Config, clock: FakeClock, fake_stt: FakeStt) -> None:
         "stt": True,
         "service": {"gpu": "whisper large-v3", "cpu": "parakeet int8"},
     }
-    assert dictate("cpu").json() == {"text": "Hallo Welt"}
+    assert dictate("cpu").json() == {"text": "Hallo Welt", "device": "cpu"}
+    assert dictate("auto").status_code == 200
     assert dictate("tpu").status_code == 422
     fake_stt.status = 503
     fake_stt.answer = {"error": "no GPU with enough VRAM"}

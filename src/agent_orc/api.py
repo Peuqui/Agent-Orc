@@ -1326,12 +1326,12 @@ def create_app(
 
     @app.post("/api/dictation", dependencies=authenticated)
     async def dictate(request: Request, device: Device) -> dict[str, str]:
-        """Transcribe the recorded audio in the request body."""
+        """Transcribe the recorded audio in the request body; the answer names the device used."""
         audio = await request.body()
         content_type = request.headers.get("content-type", "")
         # The call to the STT-Suite blocks for seconds, on the CPU even longer.
-        text = await asyncio.to_thread(transcribe, audio, content_type, device, config.dictation)
-        return {"text": text}
+        result = await asyncio.to_thread(transcribe, audio, content_type, device, config.dictation)
+        return {"text": result.text, "device": result.device}
 
     @app.get("/api/sessions", dependencies=authenticated)
     def list_sessions() -> list[dict[str, Any]]:

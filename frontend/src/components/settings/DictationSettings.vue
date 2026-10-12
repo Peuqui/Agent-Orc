@@ -35,13 +35,13 @@ onMounted(async () => {
         <span>{{ $t('settings.dictationDevice') }}</span>
         <div class="flex overflow-hidden rounded-md border border-slate-600 text-xs">
           <button
-            v-for="choice in (['cpu', 'cuda'] as const)"
+            v-for="choice in (['cpu', 'cuda', 'auto'] as const)"
             :key="choice"
             class="px-2 py-1"
             :class="dictationDevice === choice ? 'segment-on' : 'text-slate-400'"
             @click="dictationDevice = choice"
           >
-            {{ choice === 'cuda' ? 'GPU' : 'CPU' }}
+            {{ $t(`settings.dictationDevice_${choice}`) }}
           </button>
         </div>
       </div>
