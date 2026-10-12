@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { moveInList } from '../src/composables/useReorder.ts'
-import { baseName, formatMinutes, formatSize, formatTokens, joinPath, parentPath } from '../src/format.ts'
+import { baseName, formatFactor, formatMinutes, formatSize, formatTokens, joinPath, parentPath, parseFactor } from '../src/format.ts'
 
 test('paths are split and joined like the file view expects', () => {
   assert.equal(baseName('/home/mp/Projekte/'), 'Projekte')
@@ -55,4 +55,16 @@ test('spans read in minutes, from an hour on with hours', () => {
   assert.equal(formatMinutes(3600), '1 h')
   assert.equal(formatMinutes(3600 + 5 * 60), '1 h 5 min')
   assert.equal(formatMinutes(-10), '0 min')
+})
+
+test('speed and pitch are typed with a comma or a point and shown the way the language writes them', () => {
+  assert.equal(parseFactor('1,15'), 1.15)
+  assert.equal(parseFactor(' 0.9 '), 0.9)
+  assert.equal(parseFactor(''), null)
+  assert.ok(Number.isNaN(parseFactor('abc')))
+  assert.ok(Number.isNaN(parseFactor('0')))
+  assert.ok(Number.isNaN(parseFactor('-1,5')))
+  assert.equal(formatFactor(1, 'de'), '1,0')
+  assert.equal(formatFactor(1.15, 'de'), '1,15')
+  assert.equal(formatFactor(1.15, 'en'), '1.15')
 })

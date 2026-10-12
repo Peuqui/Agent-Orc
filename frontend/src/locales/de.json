@@ -427,6 +427,7 @@
     "speed": "Tempo",
     "pitch": "Tonhöhe",
     "serviceValue": "Vorgabe der Suite",
+    "notANumber": "Keine gültige Zahl über 0 (zum Beispiel 1,15).",
     "thisMachine": "dieser Rechner",
     "preferLoaded": "Bereits geladene lokale Engine bevorzugen",
     "preferLoadedHint": "Läuft schon eine lokale GPU-Engine, die oben an ist, spricht sie zuerst, statt dass eine zweite geladen wird. Cloud- und CPU-Engines sind nicht gemeint.",

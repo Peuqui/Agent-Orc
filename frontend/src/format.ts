@@ -82,3 +82,17 @@ export function formatCountdown(seconds: number): string {
   const minutes = Math.floor(whole / SECONDS_PER_MINUTE)
   return `${minutes}:${String(whole % SECONDS_PER_MINUTE).padStart(2, '0')}`
 }
+
+/** A decimal number as typed: a comma counts as the decimal point; empty is null, anything else that is
+ * no number above 0 is NaN. */
+export function parseFactor(typed: string): number | null {
+  const text = typed.trim().replace(',', '.')
+  if (text === '') return null
+  const value = Number(text)
+  return Number.isFinite(value) && value > 0 ? value : Number.NaN
+}
+
+/** A speed or pitch factor as it is shown in a field: 1 as "1,0" in German and "1.0" in English. */
+export function formatFactor(value: number, locale: string): string {
+  return value.toLocaleString(locale, { minimumFractionDigits: 1, maximumFractionDigits: 3 })
+}

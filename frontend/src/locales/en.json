@@ -427,6 +427,7 @@
     "speed": "Speed",
     "pitch": "Pitch",
     "serviceValue": "service default",
+    "notANumber": "Not a valid number above 0 (for example 1.15).",
     "thisMachine": "this machine",
     "preferLoaded": "Prefer a local engine that is already loaded",
     "preferLoadedHint": "If a local GPU engine that is switched on above is running already, it speaks first instead of a second one being loaded. Cloud and CPU engines are not meant.",
