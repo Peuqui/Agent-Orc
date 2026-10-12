@@ -459,6 +459,17 @@ export interface TtsChoices {
   tuning: Record<string, TtsTuning>
 }
 
+/** The settings that are the same on every device, kept on the server (shared_settings.py has the defaults). */
+export interface SharedSettings {
+  dictation_device: DictationDevice
+  dictation_sends_at_once: boolean
+  speech_engine: string
+  speech_rate: number
+  speech_announce_name: boolean
+  speech_max_chars: number
+  speech_voices: Record<string, string>
+}
+
 interface SendOptions {
   body?: unknown
   upload?: Blob
@@ -686,6 +697,10 @@ function createApi(host?: string) {
     ttsVoices: (engine: string) => request<{ id: string; label: string }[]>('GET', 'tts/voices', { query: { engine } }),
     /** Which engines speak, in which order and with which voice (what the catalog has now is in it). */
     ttsChoices: () => request<TtsChoices>('GET', 'tts/choices'),
+    /** The shared settings, all of them. */
+    settings: () => request<SharedSettings>('GET', 'settings'),
+    /** Changes some of the shared settings (by name); answers with all of them. */
+    changeSettings: (change: Partial<SharedSettings>) => request<SharedSettings>('PATCH', 'settings', { body: change }),
     storeTtsChoices: (choices: TtsChoices) => request<void>('PUT', 'tts/choices', { body: choices }),
     /** The service's frames of audio for the text (see audioFrames.ts), read as they come. `speed` null:
      * the user has not changed the speed, so the values set for the voice and the engine apply. */

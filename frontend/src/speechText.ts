@@ -89,8 +89,6 @@ function splitLong(sentence: string, max: number): string[] {
 
 /** Agents end an answer with a paragraph for listening, which starts with this (global CLAUDE.md). */
 export const LISTEN_MARKER = '🔊'
-/** What is read of an answer without such a paragraph: up to this many characters. */
-export const DEFAULT_MAX_SPOKEN_CHARS = 900
 
 function lastListeningParagraph(markdown: string): string | undefined {
   const paragraphs = markdown.split(/\n\s*\n/).map((paragraph) => paragraph.trim())

@@ -1,6 +1,5 @@
-import { type Ref, ref, watch } from 'vue'
-import type { DictationDevice } from '../api'
-import { DEFAULT_MAX_SPOKEN_CHARS } from '../speechText'
+import { type Ref, computed, ref, watch } from 'vue'
+import { sharedSetting } from './useSharedSettings'
 
 // Settings of this device (a phone scrolls and reads differently than a desktop), kept in the
 // browser. The workspace's iframes share the storage; the storage event tells them about a
@@ -76,11 +75,14 @@ const terminalFont = setting<TerminalFont>(
   (stored) => stored as TerminalFont,
 )
 
-/** A dictation goes to the agent as soon as it is transcribed, without pressing send. */
-const dictationSendsAtOnce = setting('agent-orc-dictation-sends-at-once', false, (stored) => stored === 'true')
+// What is the same on every device lives on the server (shared_settings.py, useSharedSettings.ts); what depends on
+// the device itself (fonts, scrolling, the browser's voices, the columns) is kept here, in the browser.
 
-/** Where Whisper transcribes the dictations of this device, for every agent: the CPU unless the GPU was chosen on purpose. */
-const dictationDevice = setting<DictationDevice>('agent-orc-dictation-device', 'cpu', (stored) => (stored === 'cuda' ? 'cuda' : 'cpu'))
+/** A dictation goes to the agent as soon as it is transcribed, without pressing send. */
+const dictationSendsAtOnce = sharedSetting('dictation_sends_at_once')
+
+/** Where Whisper transcribes the dictations, for every agent and device: the CPU unless the GPU was chosen on purpose. */
+const dictationDevice = sharedSetting('dictation_device')
 
 /** What a terminal shows: the terminal itself, or the agent's answers in short (AnswersFeed). */
 export type TerminalView = 'terminal' | 'answers'
@@ -100,27 +102,36 @@ export function readAnswersAll(sessionId: string): boolean {
   return localStorage.getItem(answersAllKey(sessionId)) === 'true'
 }
 
-/** What reads answers aloud: the engine (speech.ts), its voice and its speed. */
-export const DEFAULT_SPEECH_ENGINE = 'browser'
-export const DEFAULT_SPEECH_RATE = 1
-const speechEngine = setting('agent-orc-speech-engine', DEFAULT_SPEECH_ENGINE, String)
-// What is chosen with an engine (a voice of the device, a room of the Echo): one for each.
-const speechVoices = new Map<string, Ref<string>>()
+/** What reads answers aloud: the engine (speech.ts), its voice and its speed. A speed of 1 leaves what the engine makes as it is. */
+export const NEUTRAL_SPEECH_RATE = 1
+const speechEngine = sharedSetting('speech_engine')
+// What is chosen with an engine (a room of the Echo, a voice of the TTS service) is kept on the server, one for each; the
+// voices of the browser are the device's own and stay in the browser.
+const BROWSER_ENGINE = 'browser'
+const browserVoice = setting(`agent-orc-speech-voice:${BROWSER_ENGINE}`, '', String)
+const speechVoices = sharedSetting('speech_voices')
+const voiceRefs = new Map<string, Ref<string>>()
 export function useSpeechVoice(engineId: string): Ref<string> {
-  let voice = speechVoices.get(engineId)
+  if (engineId === BROWSER_ENGINE) return browserVoice
+  let voice = voiceRefs.get(engineId)
   if (voice === undefined) {
-    voice = setting(`agent-orc-speech-voice:${engineId}`, '', String)
-    speechVoices.set(engineId, voice)
+    voice = computed({
+      get: () => speechVoices.value[engineId] ?? '',
+      set: (chosen: string) => {
+        speechVoices.value = { ...speechVoices.value, [engineId]: chosen }
+      },
+    })
+    voiceRefs.set(engineId, voice)
   }
   return voice
 }
-const speechRate = setting('agent-orc-speech-rate', DEFAULT_SPEECH_RATE, Number)
+const speechRate = sharedSetting('speech_rate')
 /** The agent's name is spoken before its answer, so one hears who is speaking. */
-const speechAnnounceName = setting('agent-orc-speech-announce-name', true, (stored) => stored === 'true')
+const speechAnnounceName = sharedSetting('speech_announce_name')
 /** The workspace reads new answers of its columns aloud by itself, as they arrive. */
 const speechAutoRead = setting('agent-orc-speech-auto-read', false, (stored) => stored === 'true')
 /** Without a paragraph for listening, an answer is read up to this many characters. */
-const speechMaxChars = setting('agent-orc-speech-max-chars', DEFAULT_MAX_SPOKEN_CHARS, Number)
+const speechMaxChars = sharedSetting('speech_max_chars')
 
 /** Bumped when the extra keys were arranged anew: every open terminal fetches them again (the
  * arrangement itself is kept on the server, for every device). */

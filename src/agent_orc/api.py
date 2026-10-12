@@ -143,10 +143,12 @@ from agent_orc.sessions import (
     check_suffix,
     session_id_for,
 )
+from agent_orc.shared_settings import SharedSettings, SharedSettingsInvalidError, changed
 from agent_orc.state import (
     UNNAMED_WORKSPACE,
     add_unassigned_agents,
     assign_agent,
+    changing_settings,
     changing_workspaces,
     empty_workspace,
     keep_living_agents,
@@ -159,6 +161,7 @@ from agent_orc.state import (
     read_extra_keys,
     read_notebooks,
     read_prompt_templates,
+    read_settings,
     read_tts_choices,
     read_workspaces,
     remove_workspace,
@@ -315,6 +318,7 @@ ERROR_STATUS: dict[type[Exception], int] = {
     speech_service.SpeechServiceError: status.HTTP_502_BAD_GATEWAY,
     speech_service.NothingSwitchedOnError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     TtsChoiceInvalidError: status.HTTP_422_UNPROCESSABLE_CONTENT,
+    SharedSettingsInvalidError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     # Not 401: that would send the page to the login.
     peers.UserTokenRefusedError: status.HTTP_403_FORBIDDEN,
     peers.UserTokenMissingError: status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -1814,6 +1818,27 @@ def create_app(
         """The user's choice, with what the catalog has now."""
         rows = speech_service.catalog(tts_settings(), config_dir())
         return TtsChoices.model_validate(speech_service.merged_choices(read_tts_choices(), rows))
+
+    settings_changes = ChangeNotifier()
+
+    @app.get("/api/settings/events", dependencies=authenticated)
+    async def settings_events() -> StreamingResponse:
+        """A message whenever the shared settings changed, on any device."""
+        return event_stream(settings_changes.stream())
+
+    @app.get("/api/settings", dependencies=authenticated)
+    def shared_settings() -> SharedSettings:
+        """The settings that are the same on every device (defaults where none was chosen)."""
+        return SharedSettings.model_validate(read_settings())
+
+    @app.patch("/api/settings", dependencies=authenticated)
+    def change_shared_settings(change: dict[str, Any]) -> SharedSettings:
+        """Changes some of the shared settings (by name) and answers with all of them."""
+        with changing_settings() as stored:
+            now = changed(stored["settings"], change)
+            stored["settings"] = now.model_dump()
+        settings_changes.notify()
+        return now
 
     @app.put("/api/tts/choices", dependencies=authenticated, status_code=status.HTTP_204_NO_CONTENT)
     def store_tts_choices(body: TtsChoices) -> None:

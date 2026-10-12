@@ -13,6 +13,7 @@ CARD_ORDER_FILE = "card-order.json"
 WORKSPACES_FILE = "workspaces.json"
 PROMPT_TEMPLATES_FILE = "prompt-templates.json"
 TTS_CHOICES_FILE = "tts-choices.json"
+SETTINGS_FILE = "settings.json"
 # The silence between paragraphs until the user sets another in the TTS window.
 DEFAULT_PARAGRAPH_PAUSE_MS = 700
 EXTRA_KEYS_FILE = "extra-keys.json"
@@ -167,6 +168,29 @@ def read_tts_choices() -> dict[str, Any]:
 
 def write_tts_choices(choices: dict[str, Any]) -> None:
     write_atomically(state_dir() / TTS_CHOICES_FILE, json.dumps(choices))
+
+
+# Like the workspaces, the settings are changed by reading, changing and writing them.
+_changing_settings = threading.Lock()
+
+
+def read_settings() -> dict[str, Any]:
+    """The shared settings as stored (see shared_settings.py); empty until one was changed."""
+    path = state_dir() / SETTINGS_FILE
+    if not path.is_file():
+        return {}
+    stored: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
+    return stored
+
+
+@contextmanager
+def changing_settings() -> Iterator[dict[str, Any]]:
+    """The stored settings, replaced in the `with` block (assign to `["settings"]`); written back
+    when it ends without an error."""
+    with _changing_settings:
+        holder = {"settings": read_settings()}
+        yield holder
+        write_atomically(state_dir() / SETTINGS_FILE, json.dumps(holder["settings"]))
 
 
 def read_prompt_templates() -> list[dict[str, str]]:

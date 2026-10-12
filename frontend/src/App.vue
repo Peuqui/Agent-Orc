@@ -6,10 +6,12 @@ import AppHeader from './components/AppHeader.vue'
 import ApprovalBanner from './components/ApprovalBanner.vue'
 import BottomNav from './components/BottomNav.vue'
 import AppIcon from './components/AppIcon.vue'
+import SettingsSync from './components/SettingsSync.vue'
 import ToastList from './components/ToastList.vue'
 import UpdateBanner from './components/UpdateBanner.vue'
 import { COLUMN_TAB } from './device'
 import { useCodeCopy } from './composables/useCodeCopy'
+import { sharedSettings } from './composables/useSharedSettings'
 import { useSessions } from './composables/useSessions'
 import { useToast } from './composables/useToast'
 import LoginView from './views/LoginView.vue'
@@ -69,6 +71,8 @@ watch(authenticated, (isAuthenticated) => {
     <button class="btn-primary" @click="checkLogin">{{ $t('app.retry') }}</button>
   </div>
   <LoginView v-else-if="authenticated === false" />
+  <!-- Nothing is shown before the shared settings (the server's) have arrived: the views read them. -->
+  <div v-else-if="authenticated && sharedSettings === null" class="min-h-dvh" />
   <!-- A page per address path; the editor also per file (its query), so a link from one file to
        another loads the other instead of keeping the first. -->
   <RouterView v-else-if="authenticated && route.meta.fullscreen" v-slot="{ Component }">
@@ -92,6 +96,7 @@ watch(authenticated, (isAuthenticated) => {
     </main>
     <BottomNav />
   </div>
+  <SettingsSync v-if="authenticated" />
   <ApprovalBanner v-if="authenticated" />
   <ToastList />
   <UpdateBanner />

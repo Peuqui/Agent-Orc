@@ -5,7 +5,7 @@
 import { ref } from 'vue'
 import { api } from './api'
 import { FrameReader } from './audioFrames'
-import { DEFAULT_SPEECH_RATE } from './composables/useSettings'
+import { NEUTRAL_SPEECH_RATE } from './composables/useSettings'
 import { i18n } from './i18n'
 import { speechChunks } from './speechText'
 
@@ -181,7 +181,7 @@ function ttsSuite(label: string): SpeechEngine {
     const received = (async (): Promise<void> => {
       try {
         await audio.resume()
-        const response = await api.ttsSpeak(text, options.lang, options.rate === DEFAULT_SPEECH_RATE ? null : options.rate, controller.signal)
+        const response = await api.ttsSpeak(text, options.lang, options.rate === NEUTRAL_SPEECH_RATE ? null : options.rate, controller.signal)
         const reader = (response.body as ReadableStream<Uint8Array>).getReader()
         const frames = new FrameReader()
         for (;;) {

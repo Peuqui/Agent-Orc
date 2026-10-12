@@ -2,7 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { formatFactor } from '../format'
-import { DEFAULT_SPEECH_RATE, useSettings, useSpeechVoice } from '../composables/useSettings'
+import { NEUTRAL_SPEECH_RATE, useSettings, useSpeechVoice } from '../composables/useSettings'
 import { useSpeech } from '../composables/useSpeech'
 import { useToast } from '../composables/useToast'
 import { speechEngines, type VoiceChoice } from '../speech'
@@ -36,7 +36,7 @@ const choiceOptions = computed(() => [
 const speedLabel = computed(() => {
   const forService = speech.engine.value?.id === 'tts-suite'
   if (!forService) return t('answers.speed', { rate: formatFactor(speechRate.value, locale.value) })
-  return speechRate.value === DEFAULT_SPEECH_RATE
+  return speechRate.value === NEUTRAL_SPEECH_RATE
     ? t('answers.speedServiceNormal')
     : t('answers.speedServiceOverride', { rate: formatFactor(speechRate.value, locale.value) })
 })
@@ -75,7 +75,7 @@ watch(speechEngine, loadChoices)
     <label class="flex flex-col gap-1 text-slate-400">
       <span class="flex justify-between">
         {{ speedLabel }}
-        <button type="button" class="text-xs underline" @click="speechRate = DEFAULT_SPEECH_RATE">{{ $t('answers.speedReset') }}</button>
+        <button type="button" class="text-xs underline" @click="speechRate = NEUTRAL_SPEECH_RATE">{{ $t('answers.speedReset') }}</button>
       </span>
       <input v-model.number="speechRate" type="range" :min="MIN_RATE" :max="MAX_RATE" :step="RATE_STEP" />
     </label>
