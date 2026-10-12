@@ -60,11 +60,11 @@ def _open(config: TtsSuiteConfig, request: urllib.request.Request) -> HTTPRespon
 
 def catalog(config: TtsSuiteConfig, directory: Path) -> list[dict[str, Any]]:
     """The service's catalog: one row per engine and machine that can speak (`engine`, `host`: null
-    for the service's own machine; `label` per language, `unit_default`, `cloud`, `needs_gpu`,
+    for the service's own machine; `label` and `label_short` per language, `unit_default`, `cloud`, `needs_gpu`,
     `status`, `installed`). The browser's voice is the client's own and not in it."""
     with _open(config, _request(config, directory, "/engines", None)) as response:
         listed: list[dict[str, Any]] = json.load(response)
-    keys = ("engine", "host", "label", "unit_default", "cloud", "needs_gpu", "status", "installed")
+    keys = ("engine", "host", "label", "label_short", "unit_default", "cloud", "needs_gpu", "status", "installed")
     return [{key: row[key] for key in keys} for row in listed if not row["browser"]]
 
 
