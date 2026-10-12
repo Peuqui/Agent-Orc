@@ -5,7 +5,6 @@
 import { ref } from 'vue'
 import { api } from './api'
 import { FrameReader } from './audioFrames'
-import { NEUTRAL_SPEECH_RATE } from './composables/useSettings'
 import { i18n } from './i18n'
 import { speechChunks } from './speechText'
 
@@ -17,7 +16,9 @@ export interface VoiceChoice {
 export interface SpeechOptions {
   /** What was chosen with the engine: a voice, a room. */
   voice: string
-  rate: number
+  /** Speed and pitch the user set as overrides; null: the engine's own (the browser's voices: 1). */
+  rate: number | null
+  pitch: number | null
   /** Language of the text, as the interface language ("de", "en"). */
   lang: string
 }
@@ -37,6 +38,9 @@ export interface SpeechEngine {
   choiceLabel: string
   /** The most text an answer may have for this engine (cut at a sentence beforehand). */
   maxChars: number
+  /** Whether the speed and pitch fields of the speech settings apply to it: the browser's voices and the TTS
+   * service take them (the service as overrides of its own), the Echo has its own. */
+  usesTempo: boolean
   /** The pieces of text the engine is given, one call each. */
   split: (text: string) => string[]
   /** Whether this device can speak with it. */
@@ -82,6 +86,7 @@ function browserVoices(): Promise<SpeechSynthesisVoice[]> {
 
 const browserSpeech: SpeechEngine = {
   id: 'browser',
+  usesTempo: true,
   label: 'Browser',
   choiceLabel: 'answers.voice',
   // Any length, but spoken in short pieces: browsers cut off a long utterance.
@@ -99,7 +104,8 @@ const browserSpeech: SpeechEngine = {
     const voices = await browserVoices()
     const utterance = new SpeechSynthesisUtterance(text)
     utterance.lang = options.lang
-    utterance.rate = options.rate
+    utterance.rate = options.rate ?? 1
+    utterance.pitch = options.pitch ?? 1
     const chosen = voices.find((voice) => voice.voiceURI === options.voice)
     if (chosen) utterance.voice = chosen
     return new Promise<void>((resolve, reject) => {
@@ -126,6 +132,7 @@ function echo(label: string, maxChars: number): SpeechEngine {
     api.announceTexts(options.voice || ALL_ROOMS, texts, speaker)
   return {
     id: 'echo',
+    usesTempo: false,
     label,
     choiceLabel: 'answers.room',
     maxChars,
@@ -181,7 +188,7 @@ function ttsSuite(label: string): SpeechEngine {
     const received = (async (): Promise<void> => {
       try {
         await audio.resume()
-        const response = await api.ttsSpeak(text, options.lang, options.rate === NEUTRAL_SPEECH_RATE ? null : options.rate, controller.signal)
+        const response = await api.ttsSpeak(text, options.lang, options.rate, options.pitch, controller.signal)
         const reader = (response.body as ReadableStream<Uint8Array>).getReader()
         const frames = new FrameReader()
         for (;;) {
@@ -226,6 +233,7 @@ function ttsSuite(label: string): SpeechEngine {
 
   return {
     id: 'tts-suite',
+    usesTempo: true,
     label,
     choiceLabel: 'answers.voice',
     // The service cuts the text by what its engine takes and cleans it.

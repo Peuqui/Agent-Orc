@@ -21,7 +21,7 @@ const paused = ref(false)
 let reading = 0
 
 export function useSpeech() {
-  const { speechEngine: engineId, speechRate, speechMaxChars, speechAnnounceName } = useSettings()
+  const { speechEngine: engineId, speechRate, speechPitch, speechMaxChars, speechAnnounceName } = useSettings()
   const { locale, t } = useI18n()
   const toast = useToast()
   // Not there while the server's engines are still being asked for (see loadServerEngines).
@@ -39,7 +39,7 @@ export function useSpeech() {
       await loadServerEngines()
       const speaker = speechEngine(engineId.value)
       const limit = Math.min(speechMaxChars.value, speaker.maxChars)
-      const options = { voice: voice.value.value, rate: speechRate.value, lang: locale.value }
+      const options = { voice: voice.value.value, rate: speechRate.value, pitch: speechPitch.value, lang: locale.value }
       const answers = items.map((item) => {
         const name = speechAnnounceName.value ? `${item.label}.\n` : ''
         // The name counts towards what the engine takes.

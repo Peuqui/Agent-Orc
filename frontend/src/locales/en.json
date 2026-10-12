@@ -289,9 +289,11 @@
       "speech": "Read aloud",
       "baseDir": "Start folder",
       "push": "Notifications",
-      "handover": "Handover",
-      "app": "App"
+      "handover": "Handover"
     }
+  },
+  "factor": {
+    "notANumber": "Not a valid number above 0 (for example 1.15)."
   },
   "attach": {
     "title": "Attach a photo, screenshot or file",
@@ -438,7 +440,6 @@
     "speed": "Speed",
     "pitch": "Pitch",
     "serviceValue": "service default",
-    "notANumber": "Not a valid number above 0 (for example 1.15).",
     "thisMachine": "this machine",
     "preferLoaded": "Prefer a local engine that is already loaded",
     "preferLoadedHint": "If a local GPU engine that is switched on above is running already, it speaks first instead of a second one being loaded. Cloud and CPU engines are not meant.",
@@ -713,10 +714,10 @@
     "voice": "Voice",
     "voiceDefault": "Device default",
     "engine": "Speech output",
-    "speed": "Speed: {rate}×",
-    "speedReset": "Normal",
-    "speedServiceNormal": "Speed: normal – the service's own setting applies",
-    "speedServiceOverride": "Speed: {rate}× – overrides the service",
+    "tempo": "Speed",
+    "pitch": "Pitch",
+    "tempoPitchHintService": "Empty: the service's own setting applies (per engine and voice). A value overrides it. Comma or point.",
+    "tempoPitchHintBrowser": "Empty: normal (1.0). 1.0 leaves the voice unchanged. Comma or point.",
     "skipped": "A code block or a table follows, left out",
     "maxChars": "Without a listening paragraph, read at most this many characters",
     "speechTitle": "Reading aloud",

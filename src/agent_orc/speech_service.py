@@ -186,6 +186,7 @@ def speak(
     text: str,
     language: str,
     speed: float | None,
+    pitch: float | None,
     chosen: dict[str, Any],
 ) -> FrameStream:
     """The frames of the reading, with the entries the user switched on and the service offers
@@ -212,4 +213,6 @@ def speak(
     }
     if speed is not None:
         head["speed"] = speed
+    if pitch is not None:
+        head["pitch"] = pitch
     return FrameStream(_open(config, _request(config, directory, "/speak", head)))

@@ -71,6 +71,11 @@
 }
 
 /* Width of the page content and the header above it, kept in one place so they line up. */
+/* The chosen one of a row of choices (CPU or GPU, summaries or all): amber, like the headings. */
+@utility segment-on {
+  @apply bg-amber-500/15 text-amber-300 ring-1 ring-amber-500 ring-inset;
+}
+
 @utility page-width {
   @apply mx-auto max-w-[96rem] px-4;
 }

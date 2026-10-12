@@ -37,6 +37,8 @@ def test_a_new_server_starts_with_the_factory_settings(
     assert answer == SharedSettings().model_dump()
     assert answer["dictation_device"] == "cpu"  # the CPU unless the GPU is chosen on purpose
     assert answer["dictation_sends_at_once"] is False and answer["speech_engine"] == "browser"
+    # Speed and pitch are overrides: nothing set means the service's own values apply.
+    assert answer["speech_rate"] is None and answer["speech_pitch"] is None
 
 
 def test_a_change_names_only_what_it_changes_and_lasts(
@@ -60,6 +62,7 @@ def test_a_change_names_only_what_it_changes_and_lasts(
         {"dictation_device": "tpu"},
         {"speech_rate": 0},
         {"speech_rate": "fast"},
+        {"speech_pitch": -1},
         {"speech_max_chars": 5},
         {"speech_engine": ""},
     ],
@@ -71,7 +74,7 @@ def test_what_cannot_be_kept_is_refused_and_nothing_changes(
     answer = client.patch("/api/settings", json={"speech_rate": 1.3, **wrong})
     assert answer.status_code == 422
     # Not even the good part of the change was kept.
-    assert client.get("/api/settings").json()["speech_rate"] == 1.0
+    assert client.get("/api/settings").json()["speech_rate"] is None
 
 
 def test_changed_applies_a_change_to_what_was_stored() -> None:

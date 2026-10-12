@@ -206,7 +206,7 @@ function jog(lines: number): void {
         <button
           type="button"
           class="px-2.5 py-1.5"
-          :class="!answersAll ? 'bg-slate-600 text-slate-100' : 'text-slate-400 hover:bg-slate-700'"
+          :class="!answersAll ? 'segment-on' : 'text-slate-400 hover:bg-slate-700'"
           :aria-pressed="!answersAll"
           :title="$t('answers.summariesHint')"
           @click="answersAll = false"
@@ -216,7 +216,7 @@ function jog(lines: number): void {
         <button
           type="button"
           class="border-l border-slate-600 px-2.5 py-1.5"
-          :class="answersAll ? 'bg-slate-600 text-slate-100' : 'text-slate-400 hover:bg-slate-700'"
+          :class="answersAll ? 'segment-on' : 'text-slate-400 hover:bg-slate-700'"
           :aria-pressed="answersAll"
           :title="$t('answers.allHint')"
           @click="answersAll = true"

@@ -2,21 +2,19 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { formatFactor } from '../format'
-import { NEUTRAL_SPEECH_RATE, useSettings, useSpeechVoice } from '../composables/useSettings'
+import { useSettings, useSpeechVoice } from '../composables/useSettings'
 import { useSpeech } from '../composables/useSpeech'
 import { useToast } from '../composables/useToast'
 import { speechEngines, type VoiceChoice } from '../speech'
 import SelectMenu from './SelectMenu.vue'
+import FactorInput from './FactorInput.vue'
 import ToggleSwitch from './ToggleSwitch.vue'
 
 // Reading answers aloud, for this device: the engine (once more than one is offered), what is
 // chosen with it (a voice, a room), speed, the agent's name before its answer, and how much of
 // an answer without a paragraph for listening is read. A section of the settings menu.
 const emit = defineEmits<{ configure: [] }>()
-const MIN_RATE = 0.6
-const MAX_RATE = 1.8
-const RATE_STEP = 0.1
-const { speechEngine, speechRate, speechMaxChars, speechAnnounceName } = useSettings()
+const { speechEngine, speechRate, speechPitch, speechMaxChars, speechAnnounceName } = useSettings()
 const speech = useSpeech()
 const toast = useToast()
 const { t, locale } = useI18n()
@@ -32,14 +30,9 @@ const choiceOptions = computed(() => [
   { value: '', label: t('answers.voiceDefault') },
   ...choices.value.map((entry) => ({ value: entry.id, label: entry.label })),
 ])
-// The speed slider is an override: at "Normal" nothing is sent and the service's own values (per engine and voice) apply.
-const speedLabel = computed(() => {
-  const forService = speech.engine.value?.id === 'tts-suite'
-  if (!forService) return t('answers.speed', { rate: formatFactor(speechRate.value, locale.value) })
-  return speechRate.value === NEUTRAL_SPEECH_RATE
-    ? t('answers.speedServiceNormal')
-    : t('answers.speedServiceOverride', { rate: formatFactor(speechRate.value, locale.value) })
-})
+// Speed and pitch are overrides. Empty, the TTS service's own values (per engine and voice) apply; the browser's voices speak at 1.
+const forService = computed(() => speech.engine.value?.id === 'tts-suite')
+const tempoPlaceholder = computed(() => (forService.value ? t('ttsSettings.serviceValue') : formatFactor(1, locale.value)))
 const choiceLabel = computed(() => speech.engine.value?.choiceLabel ?? 'answers.voice')
 
 async function loadChoices(): Promise<void> {
@@ -71,13 +64,19 @@ watch(speechEngine, loadChoices)
       {{ $t(choiceLabel) }}
       <SelectMenu v-model="choice" :options="choiceOptions" button-class="input text-sm text-slate-200" />
     </label>
-    <label class="flex flex-col gap-1 text-slate-400">
-      <span class="flex justify-between">
-        {{ speedLabel }}
-        <button type="button" class="text-xs underline" @click="speechRate = NEUTRAL_SPEECH_RATE">{{ $t('answers.speedReset') }}</button>
-      </span>
-      <input v-model.number="speechRate" type="range" :min="MIN_RATE" :max="MAX_RATE" :step="RATE_STEP" />
-    </label>
+    <div v-if="speech.engine.value?.usesTempo" class="flex flex-col gap-1">
+      <div class="flex gap-2">
+        <label class="flex min-w-0 flex-1 flex-col gap-0.5 text-slate-400">
+          {{ $t('answers.tempo') }}
+          <FactorInput v-model="speechRate" :placeholder="tempoPlaceholder" />
+        </label>
+        <label class="flex min-w-0 flex-1 flex-col gap-0.5 text-slate-400">
+          {{ $t('answers.pitch') }}
+          <FactorInput v-model="speechPitch" :placeholder="tempoPlaceholder" />
+        </label>
+      </div>
+      <p class="text-xs text-slate-500">{{ $t(forService ? 'answers.tempoPitchHintService' : 'answers.tempoPitchHintBrowser') }}</p>
+    </div>
     <ToggleSwitch class="h-7 self-start text-slate-300" :checked="speechAnnounceName" @click="speechAnnounceName = !speechAnnounceName">
       {{ $t('answers.announceName') }}
     </ToggleSwitch>

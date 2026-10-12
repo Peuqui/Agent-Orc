@@ -9,7 +9,7 @@ import KeysEditor from './KeysEditor.vue'
 import PushSettings from './PushSettings.vue'
 import SpeechSettings from './SpeechSettings.vue'
 import TtsSettingsDialog from './TtsSettingsDialog.vue'
-import AppSettings from './settings/AppSettings.vue'
+import { reloadToNewVersion } from '../update'
 import DictationSettings from './settings/DictationSettings.vue'
 import DisplaySettings from './settings/DisplaySettings.vue'
 
@@ -23,7 +23,6 @@ const SECTIONS = [
   { id: 'baseDir', component: BaseDirSettings },
   { id: 'push', component: PushSettings },
   { id: 'handover', component: HandoverSettings },
-  { id: 'app', component: AppSettings },
 ] as const satisfies readonly { id: string; component: Component }[]
 type SectionId = (typeof SECTIONS)[number]['id']
 
@@ -71,6 +70,10 @@ function openTts(): void {
       >
         {{ $t(`settings.sections.${entry.id}`) }}
       </button>
+      <!-- Not a window of its own: it is one press. -->
+      <button class="btn-secondary btn-small mx-2 mt-2 justify-center" :title="$t('settings.reloadHint')" @click="reloadToNewVersion">
+        {{ $t('settings.reload') }}
+      </button>
     </div>
     <template #extra>
       <BaseDialog v-if="section" :near="near" :title="$t(`settings.sections.${section}`)" @close="section = null">
@@ -80,7 +83,6 @@ function openTts(): void {
         <BaseDirSettings v-else-if="section === 'baseDir'" />
         <PushSettings v-else-if="section === 'push'" />
         <HandoverSettings v-else-if="section === 'handover'" />
-        <AppSettings v-else-if="section === 'app'" />
       </BaseDialog>
       <KeysEditor v-if="editingKeys" @close="editingKeys = false" />
       <TtsSettingsDialog v-if="editingTts" @close="editingTts = false" />

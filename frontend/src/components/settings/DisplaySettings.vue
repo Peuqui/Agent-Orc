@@ -38,7 +38,7 @@ function changeScrollLines(delta: number): void {
           v-for="(_family, font) in TERMINAL_FONTS"
           :key="font"
           class="px-2 py-1"
-          :class="terminalFont === font ? 'bg-slate-600 text-slate-100' : 'text-slate-400'"
+          :class="terminalFont === font ? 'segment-on' : 'text-slate-400'"
           @click="terminalFont = font"
         >
           {{ FONT_NAMES[font] }}

@@ -464,7 +464,8 @@ export interface SharedSettings {
   dictation_device: DictationDevice
   dictation_sends_at_once: boolean
   speech_engine: string
-  speech_rate: number
+  speech_rate: number | null
+  speech_pitch: number | null
   speech_announce_name: boolean
   speech_max_chars: number
   speech_voices: Record<string, string>
@@ -702,10 +703,10 @@ function createApi(host?: string) {
     /** Changes some of the shared settings (by name); answers with all of them. */
     changeSettings: (change: Partial<SharedSettings>) => request<SharedSettings>('PATCH', 'settings', { body: change }),
     storeTtsChoices: (choices: TtsChoices) => request<void>('PUT', 'tts/choices', { body: choices }),
-    /** The service's frames of audio for the text (see audioFrames.ts), read as they come. `speed` null:
-     * the user has not changed the speed, so the values set for the voice and the engine apply. */
-    ttsSpeak: (text: string, language: string, speed: number | null, signal: AbortSignal) =>
-      fetchApi('POST', 'tts/speak', { body: { text, language, speed }, host, signal }),
+    /** The service's frames of audio for the text (see audioFrames.ts), read as they come. `speed` and `pitch`
+     * override the service's own (see TtsChoices for those set per engine); null: the service's values apply. */
+    ttsSpeak: (text: string, language: string, speed: number | null, pitch: number | null, signal: AbortSignal) =>
+      fetchApi('POST', 'tts/speak', { body: { text, language, speed, pitch }, host, signal }),
     announce: () =>
       request<{ configured: boolean; rooms: string[]; max_chars: number; label: string }>('GET', 'announce'),
     /** Has the text said on the Echo of the room ("*": all); returns once it is queued. */

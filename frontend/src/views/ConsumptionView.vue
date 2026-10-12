@@ -104,7 +104,7 @@ function dayLabel(day: string): string {
           v-for="days_ in PERIODS"
           :key="days_"
           class="px-3 py-1"
-          :class="period === days_ ? 'bg-slate-600 text-slate-100' : 'text-slate-400 hover:bg-slate-700'"
+          :class="period === days_ ? 'segment-on' : 'text-slate-400 hover:bg-slate-700'"
           @click="period = days_"
         >
           {{ $t('consumption.days', { count: days_ }) }}

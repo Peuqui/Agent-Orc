@@ -289,9 +289,11 @@
       "speech": "Vorlesen",
       "baseDir": "Startverzeichnis",
       "push": "Benachrichtigungen",
-      "handover": "Übergabe",
-      "app": "App"
+      "handover": "Übergabe"
     }
+  },
+  "factor": {
+    "notANumber": "Keine gültige Zahl über 0 (zum Beispiel 1,15)."
   },
   "attach": {
     "title": "Foto, Screenshot oder Datei anhängen",
@@ -438,7 +440,6 @@
     "speed": "Tempo",
     "pitch": "Tonhöhe",
     "serviceValue": "Vorgabe der Suite",
-    "notANumber": "Keine gültige Zahl über 0 (zum Beispiel 1,15).",
     "thisMachine": "dieser Rechner",
     "preferLoaded": "Bereits geladene lokale Engine bevorzugen",
     "preferLoadedHint": "Läuft schon eine lokale GPU-Engine, die oben an ist, spricht sie zuerst, statt dass eine zweite geladen wird. Cloud- und CPU-Engines sind nicht gemeint.",
@@ -713,10 +714,10 @@
     "voice": "Stimme",
     "voiceDefault": "Standard des Geräts",
     "engine": "Sprachausgabe",
-    "speed": "Tempo: {rate}×",
-    "speedReset": "Normal",
-    "speedServiceNormal": "Tempo: Normal – es gilt die Einstellung der Suite",
-    "speedServiceOverride": "Tempo: {rate}× – überschreibt die Suite",
+    "tempo": "Tempo",
+    "pitch": "Tonhöhe",
+    "tempoPitchHintService": "Leer: es gilt die Einstellung der Suite (je Engine und Stimme). Eingetragen überschreibt es sie. Komma oder Punkt.",
+    "tempoPitchHintBrowser": "Leer: normal (1,0). 1,0 lässt die Stimme unverändert. Komma oder Punkt.",
     "skipped": "Hier folgt ein Codeblock oder eine Tabelle, ausgelassen",
     "maxChars": "Ohne Hörabsatz höchstens so viele Zeichen vorlesen",
     "speechTitle": "Vorlesen",

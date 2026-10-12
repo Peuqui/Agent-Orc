@@ -4,9 +4,9 @@ import { useI18n } from 'vue-i18n'
 import { api, type TtsCatalogRow, type TtsChoices, type TtsEntry, type TtsTuning, type TtsUnit } from '../api'
 import { useHosts } from '../composables/useHosts'
 import { moveInList, useReorder } from '../composables/useReorder'
-import { formatFactor, parseFactor } from '../format'
 import { useToast } from '../composables/useToast'
 import BaseDialog from './BaseDialog.vue'
+import FactorInput from './FactorInput.vue'
 import SelectMenu from './SelectMenu.vue'
 import ToggleSwitch from './ToggleSwitch.vue'
 
@@ -76,27 +76,12 @@ function where(entry: TtsEntry): string {
   return entry.host ?? own.value
 }
 
-/** What is shown in the field of an engine's speed or pitch: the number the way the language writes it, or nothing. */
-function tuningText(engine: string, field: 'speed' | 'pitch'): string {
-  const value = choices.value.tuning[engine]?.[field]
-  return value === null || value === undefined ? '' : formatFactor(value, locale.value)
-}
-
-/** Speed or pitch of an engine as typed (a comma counts as the decimal point). An empty field is "the service
- * decides" (null), and an engine with both empty has no entry; what is no number is refused and the field shows
- * what is kept. */
-function setTuning(engine: string, field: 'speed' | 'pitch', input: HTMLInputElement): void {
-  const parsed = parseFactor(input.value)
-  if (Number.isNaN(parsed)) {
-    toast.error(new Error(t('ttsSettings.notANumber')))
-    input.value = tuningText(engine, field)
-    return
-  }
+/** Speed or pitch of an engine; null is "the service decides", and an engine with both empty has no entry. */
+function setTuning(engine: string, field: 'speed' | 'pitch', value: number | null): void {
   const tuning: TtsTuning = choices.value.tuning[engine] ?? { speed: null, pitch: null }
-  tuning[field] = parsed
+  tuning[field] = value
   if (tuning.speed === null && tuning.pitch === null) delete choices.value.tuning[engine]
   else choices.value.tuning[engine] = tuning
-  input.value = tuningText(engine, field)
 }
 
 const unitOptions = computed(() => UNITS.map((unit) => ({ value: unit, label: t(`ttsSettings.unit.${unit}`) })))
@@ -188,26 +173,18 @@ async function save(): Promise<void> {
             <div class="flex gap-2">
               <label class="flex min-w-0 flex-1 flex-col gap-0.5 text-xs text-slate-400">
                 {{ $t('ttsSettings.speed') }}
-                <input
-                  type="text"
-                  inputmode="decimal"
-                  autocomplete="off"
-                  class="input text-sm text-slate-200"
+                <FactorInput
+                  :model-value="choices.tuning[entry.engine]?.speed ?? null"
                   :placeholder="$t('ttsSettings.serviceValue')"
-                  :value="tuningText(entry.engine, 'speed')"
-                  @change="setTuning(entry.engine, 'speed', $event.target as HTMLInputElement)"
+                  @update:model-value="setTuning(entry.engine, 'speed', $event)"
                 />
               </label>
               <label class="flex min-w-0 flex-1 flex-col gap-0.5 text-xs text-slate-400">
                 {{ $t('ttsSettings.pitch') }}
-                <input
-                  type="text"
-                  inputmode="decimal"
-                  autocomplete="off"
-                  class="input text-sm text-slate-200"
+                <FactorInput
+                  :model-value="choices.tuning[entry.engine]?.pitch ?? null"
                   :placeholder="$t('ttsSettings.serviceValue')"
-                  :value="tuningText(entry.engine, 'pitch')"
-                  @change="setTuning(entry.engine, 'pitch', $event.target as HTMLInputElement)"
+                  @update:model-value="setTuning(entry.engine, 'pitch', $event)"
                 />
               </label>
             </div>

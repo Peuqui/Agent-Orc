@@ -102,8 +102,7 @@ export function readAnswersAll(sessionId: string): boolean {
   return localStorage.getItem(answersAllKey(sessionId)) === 'true'
 }
 
-/** What reads answers aloud: the engine (speech.ts), its voice and its speed. A speed of 1 leaves what the engine makes as it is. */
-export const NEUTRAL_SPEECH_RATE = 1
+/** What reads answers aloud: the engine (speech.ts), its voice, and its speed and pitch as overrides (none: the engine's own). */
 const speechEngine = sharedSetting('speech_engine')
 // What is chosen with an engine (a room of the Echo, a voice of the TTS service) is kept on the server, one for each; the
 // voices of the browser are the device's own and stay in the browser.
@@ -126,6 +125,7 @@ export function useSpeechVoice(engineId: string): Ref<string> {
   return voice
 }
 const speechRate = sharedSetting('speech_rate')
+const speechPitch = sharedSetting('speech_pitch')
 /** The agent's name is spoken before its answer, so one hears who is speaking. */
 const speechAnnounceName = sharedSetting('speech_announce_name')
 /** The workspace reads new answers of its columns aloud by itself, as they arrive. */
@@ -170,6 +170,7 @@ export function useSettings() {
     extraKeysVersion,
     speechEngine,
     speechRate,
+    speechPitch,
     speechMaxChars,
     speechAnnounceName,
     speechAutoRead,

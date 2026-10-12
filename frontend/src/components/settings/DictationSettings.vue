@@ -38,7 +38,7 @@ onMounted(async () => {
             v-for="choice in (['cpu', 'cuda'] as const)"
             :key="choice"
             class="px-2 py-1"
-            :class="dictationDevice === choice ? 'bg-slate-600 text-slate-100' : 'text-slate-400'"
+            :class="dictationDevice === choice ? 'segment-on' : 'text-slate-400'"
             @click="dictationDevice = choice"
           >
             {{ choice === 'cuda' ? 'GPU' : 'CPU' }}

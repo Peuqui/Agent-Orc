@@ -19,8 +19,10 @@ class SharedSettings(BaseModel):
     dictation_sends_at_once: bool = False
     # Which speech output reads answers aloud: "browser", "echo" or "tts-suite".
     speech_engine: str = Field(default="browser", min_length=1)
-    # Speed of the browser's voices and, as an override of the TTS service's own (1 = unchanged).
-    speech_rate: float = Field(default=1.0, gt=0, le=4)
+    # Speed and pitch of what is read aloud, as overrides: with nothing set the TTS service's own values
+    # apply (per engine and voice) and the browser's voices speak at 1 (unchanged).
+    speech_rate: float | None = Field(default=None, gt=0, le=4)
+    speech_pitch: float | None = Field(default=None, gt=0, le=4)
     # The agent's name is said before its answer.
     speech_announce_name: bool = True
     # The most characters of an answer that are read aloud without a "listening paragraph".

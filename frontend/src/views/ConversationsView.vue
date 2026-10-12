@@ -152,7 +152,7 @@ function replyPlaceholder(recipients: string[]): string {
             v-for="mode in ['tree', 'timeline', 'lanes'] as const"
             :key="mode"
             class="px-3 py-1"
-            :class="view === mode ? 'bg-slate-600 text-slate-100' : 'text-slate-400 hover:bg-slate-700'"
+            :class="view === mode ? 'segment-on' : 'text-slate-400 hover:bg-slate-700'"
             @click="view = mode"
           >
             {{ $t(`peers.view.${mode}`) }}
