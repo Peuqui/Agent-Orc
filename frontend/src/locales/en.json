@@ -273,7 +273,7 @@
     "viewFontSize": "Views: font size",
     "viewFontSizeHint": "Answers, notes, conversations, files, consumption and the editor, not the terminal. All sizes in them scale along. For this device.",
     "dictationService": "Dictation service",
-    "dictationServiceLine": "{engine} · GPU {gpu} · CPU {cpu}",
+    "dictationServiceLine": "GPU {gpu} · CPU {cpu}",
     "dictationServiceHint": "The Whisper service sets its speech recognition itself (engine, quality, model). Here you only see what it uses. Per recording you choose only GPU or CPU.",
     "keys": "Arrange extra keys …",
     "reload": "Reload the app",

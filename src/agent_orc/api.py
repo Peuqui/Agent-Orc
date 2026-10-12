@@ -488,7 +488,8 @@ class TtsSpeakRequest(BaseModel):
     text: str
     # The language of the text, as the interface language ("de", "en").
     language: str
-    # Overrides of the service's own speed and pitch (1 = unchanged); none: the service's values apply.
+    # Overrides of the service's own speed and pitch (1 = unchanged); none: the service's
+    # values apply.
     speed: float | None = Field(default=None, gt=0)
     pitch: float | None = Field(default=None, gt=0)
 

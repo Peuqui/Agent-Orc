@@ -58,7 +58,8 @@ def fake_whisper() -> Iterator[FakeWhisper]:
         def do_GET(self) -> None:
             assert self.path == "/status"
             status = {
-                "engine": "parakeet",
+                "cpu_engine": "parakeet",
+                "gpu_engine": "whisper",
                 "engines": ["whisper", "parakeet"],
                 "gpu_quality": "fp32",
                 "cpu_quality": "int8",

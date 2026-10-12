@@ -301,7 +301,8 @@ def test_the_frames_of_the_service_come_back_unchanged(
 ) -> None:
     client = make_client(clock, tmp_path, monkeypatch, service)
     choose(client, entry("piper"))
-    answer = client.post("/api/tts/speak", json={"text": "Hello.", "language": "en", "speed": 1.2, "pitch": 0.9})
+    request = {"text": "Hello.", "language": "en", "speed": 1.2, "pitch": 0.9}
+    answer = client.post("/api/tts/speak", json=request)
     assert answer.status_code == 200
     assert answer.headers["content-type"] == "application/x-tts-frames"
     assert answer.content == FRAMES

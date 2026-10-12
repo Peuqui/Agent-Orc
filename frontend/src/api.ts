@@ -138,9 +138,8 @@ export interface Turn {
   interjections: Interjection[]
 }
 
-/** The Whisper service's engine and, per device, its precision (Parakeet) or model (Whisper). */
+/** What the Whisper service uses per device: its engine and the model, like "parakeet fp32". */
 export interface DictationService {
-  engine: string
   gpu: string
   cpu: string
 }

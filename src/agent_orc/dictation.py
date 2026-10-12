@@ -3,8 +3,8 @@
 Speaks the API of the STT-Suite service: POST /transcribe with a multipart form holding the
 audio file, the device ("cpu" or "cuda") and the language; the answer is JSON with "text".
 The device is the user's choice per dictation; nothing switches between them automatically.
-The engine and its quality are the service's own settings (it keeps one model per device and
-reloads it for a request that wants another): Agent-Orc only shows them.
+The engine and its model are the service's own settings, one per device (it keeps one model per
+device and reloads it for a request that wants another): Agent-Orc only shows them.
 """
 
 import json
@@ -41,11 +41,9 @@ STATUS_TIMEOUT_SECONDS = 3
 
 @dataclass(frozen=True)
 class ServiceStatus:
-    """What the service transcribes with: its engine and, per device, what the engine uses."""
+    """What the service transcribes with, per device: its engine and the model that engine uses,
+    like "parakeet fp32" or "whisper large-v3"."""
 
-    engine: str
-    # Parakeet has one model with a precision (fp32, int8) per device; Whisper has a model
-    # (tiny to large-v3) per device.
     gpu: str
     cpu: str
 
@@ -62,9 +60,14 @@ def service_status(config: DictationConfig) -> ServiceStatus | None:
             status = json.load(response)
     except (urllib.error.URLError, TimeoutError):
         return None
-    engine = status["engine"]
-    parameter = "quality" if engine == "parakeet" else "model"
-    return ServiceStatus(engine, status[f"gpu_{parameter}"], status[f"cpu_{parameter}"])
+    return ServiceStatus(_configured(status, "gpu"), _configured(status, "cpu"))
+
+
+def _configured(status: dict[str, str], device: Literal["gpu", "cpu"]) -> str:
+    """The engine of a device and its model: Parakeet has a precision (fp32, int8), Whisper a size
+    (tiny to large-v3)."""
+    engine = status[f"{device}_engine"]
+    return f"{engine} {status[f'{device}_{"quality" if engine == "parakeet" else "model"}']}"
 
 
 def transcribe(audio: bytes, content_type: str, device: Device, config: DictationConfig) -> str:

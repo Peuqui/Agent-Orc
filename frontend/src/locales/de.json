@@ -273,7 +273,7 @@
     "viewFontSize": "Ansichten: Schriftgröße",
     "viewFontSizeHint": "Antworten, Notizen, Gespräche, Dateien, Verbrauch und der Editor, nicht das Terminal. Alle Größen darin skalieren mit. Gilt für dieses Gerät.",
     "dictationService": "Diktat-Dienst",
-    "dictationServiceLine": "{engine} · GPU {gpu} · CPU {cpu}",
+    "dictationServiceLine": "GPU {gpu} · CPU {cpu}",
     "dictationServiceHint": "Die Spracherkennung stellt der Whisper-Dienst selbst ein (Engine, Qualität, Modell). Hier siehst du nur, was er verwendet. Gewählt wird pro Aufnahme nur GPU oder CPU.",
     "keys": "Sondertasten anpassen …",
     "reload": "App neu laden",

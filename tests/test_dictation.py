@@ -31,9 +31,9 @@ def test_transcribes_with_chosen_device(fake_whisper: FakeWhisper) -> None:
 
 
 def test_the_service_settings_show_what_the_engine_uses(fake_whisper: FakeWhisper) -> None:
-    # Parakeet: its precision per device (the Whisper models are not in use).
+    # Each device has its own engine: Whisper's size on the GPU, Parakeet's precision on the CPU.
     assert service_status(dictation_config(fake_whisper.url)) == ServiceStatus(
-        "parakeet", gpu="fp32", cpu="int8"
+        gpu="whisper large-v3", cpu="parakeet int8"
     )
     assert service_status(dictation_config("http://127.0.0.1:9")) is None
 
