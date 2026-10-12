@@ -279,11 +279,11 @@
     "reload": "Reload the app",
     "reloadHint": "Fetches the newest version if it did not come by itself (the full-screen pages cannot be pulled down).",
     "dictationDevice": "Dictation runs on",
-    "dictationDeviceHint": "GPU: at once when free, an error otherwise; CPU: slower, always available; Automatic: the STT-Suite's own list, GPU first, CPU last. The microphone shows “GPU” when the dictation really ran on the GPU. For every device and agent.",
+    "dictationDeviceHint": "GPU: at once when free, an error otherwise; CPU: slower, always available; Automatic: the STT-Suite's own list, GPU first, CPU last. The microphone shows “GPU” while a model is loaded on the GPU; with none loaded it is missing until a dictation loads one there. For every device and agent.",
     "dictationDevice_cpu": "CPU",
     "dictationDevice_cuda": "GPU",
     "dictationDevice_auto": "Automatic",
-    "dictationDeviceGpu": "The dictation runs on the GPU",
+    "dictationDeviceGpu": "A model is loaded on the GPU",
     "dictationSendsAtOnce": "Send a dictation at once",
     "dictationSendsAtOnceHint": "The recording goes to the agent as soon as it is recognised, without pressing send; a draft in the field goes with it. For every device.",
     "sections": {

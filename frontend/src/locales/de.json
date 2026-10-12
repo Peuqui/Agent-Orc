@@ -279,11 +279,11 @@
     "reload": "App neu laden",
     "reloadHint": "Holt die neueste Version, falls sie nicht von selbst kam (die Vollbild-Seiten lassen sich nicht herunterziehen).",
     "dictationDevice": "Diktat läuft auf",
-    "dictationDeviceHint": "GPU: sofort, wenn frei, sonst Fehler; CPU: langsamer, immer verfügbar; Automatik: die Liste der STT-Suite, zuerst GPU, zuletzt CPU. Am Mikrofon steht „GPU“, wenn das Diktat wirklich auf der GPU lief. Gilt für alle Geräte und Agenten.",
+    "dictationDeviceHint": "GPU: sofort, wenn frei, sonst Fehler; CPU: langsamer, immer verfügbar; Automatik: die Liste der STT-Suite, zuerst GPU, zuletzt CPU. Am Mikrofon steht „GPU“, solange ein Modell auf der GPU geladen ist; ist keins geladen, fehlt es, bis ein Diktat dort lädt. Gilt für alle Geräte und Agenten.",
     "dictationDevice_cpu": "CPU",
     "dictationDevice_cuda": "GPU",
     "dictationDevice_auto": "Automatik",
-    "dictationDeviceGpu": "Das Diktat läuft auf der GPU",
+    "dictationDeviceGpu": "Ein Modell ist auf der GPU geladen",
     "dictationSendsAtOnce": "Diktat sofort senden",
     "dictationSendsAtOnceHint": "Die Aufnahme geht nach dem Erkennen gleich an den Agenten, ohne Druck auf Senden; ein Entwurf im Feld geht mit. Gilt für alle Geräte.",
     "sections": {

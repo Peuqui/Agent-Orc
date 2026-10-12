@@ -65,6 +65,8 @@ def fake_stt() -> Iterator[FakeStt]:
                 "cpu_quality": "int8",
                 "gpu_model": "large-v3",
                 "cpu_model": "medium",
+                "gpu_loaded": False,
+                "cpu_loaded": True,
             }
             body = json.dumps(status).encode()
             self.send_response(200)

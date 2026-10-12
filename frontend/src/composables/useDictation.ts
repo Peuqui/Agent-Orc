@@ -1,4 +1,4 @@
-import { computed, ref, watch, type UnwrapNestedRefs } from 'vue'
+import { computed, ref, type UnwrapNestedRefs } from 'vue'
 import { api } from '../api'
 import { useSettings } from './useSettings'
 import { START_BEEP, STOP_BEEP, playBeep } from '../sounds'
@@ -46,9 +46,9 @@ export function useDictation(
   const { dictationDevice: device } = useSettings()
   // Unknown until the server's settings have arrived.
   const stt = ref<boolean | null>(null)
-  // Where the last dictation really ran (with "auto" the service decides); forgotten when the setting changes.
-  const usedDevice = ref<'cuda' | 'cpu' | null>(null)
-  watch(device, () => (usedDevice.value = null))
+  // Whether the service has a model on the GPU: asked at the start and after every dictation, which is
+  // what loads it (with "auto" the service decides where a dictation runs) or finds it gone.
+  const gpuLoaded = ref(false)
   const language = ref('')
   const sttFailed = ref(false)
   // Kept when the STT-Suite failed, so the dictation is not lost: it can be sent again, e.g. on the CPU.
@@ -64,13 +64,17 @@ export function useDictation(
     () => stt.value === true && sttFailed.value && hasBrowserRecognition,
   )
 
-  api
-    .dictationSettings()
-    .then((settings) => {
-      stt.value = settings.stt
-      language.value = settings.language
-    })
-    .catch(onError)
+  function refreshService(): Promise<void> {
+    return api
+      .dictationSettings()
+      .then((settings) => {
+        stt.value = settings.stt
+        language.value = settings.language
+        gpuLoaded.value = settings.service?.gpu_loaded ?? false
+      })
+      .catch(onError)
+  }
+  void refreshService()
 
   async function startRecording(): Promise<void> {
     const mimeType = RECORDING_TYPES.find((type) => MediaRecorder.isTypeSupported(type))
@@ -93,8 +97,7 @@ export function useDictation(
     state.value = 'transcribing'
     failedAudio.value = null
     try {
-      const { text, device: used } = await api.dictate(audio, device.value)
-      usedDevice.value = used
+      const { text } = await api.dictate(audio, device.value)
       sttFailed.value = false
       if (text) onText(text)
     } catch (error) {
@@ -103,6 +106,7 @@ export function useDictation(
       onError(error)
     } finally {
       state.value = 'idle'
+      void refreshService()
     }
   }
 
@@ -152,7 +156,7 @@ export function useDictation(
   return {
     state,
     device,
-    usedDevice,
+    gpuLoaded,
     stt,
     microphone,
     browserFallback,

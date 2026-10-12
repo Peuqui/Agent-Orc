@@ -13,7 +13,7 @@ import urllib.error
 import urllib.request
 import uuid
 from dataclasses import dataclass
-from typing import Literal
+from typing import Any, Literal
 
 from agent_orc.config import DictationConfig
 
@@ -51,10 +51,12 @@ class Transcription:
 @dataclass(frozen=True)
 class ServiceStatus:
     """What the service transcribes with, per device: its engine and the model that engine uses,
-    like "parakeet fp32" or "whisper large-v3"."""
+    like "parakeet fp32" or "whisper large-v3", and whether a model sits in memory right now."""
 
     gpu: str
     cpu: str
+    gpu_loaded: bool
+    cpu_loaded: bool
 
 
 def service_status(config: DictationConfig) -> ServiceStatus | None:
@@ -69,10 +71,15 @@ def service_status(config: DictationConfig) -> ServiceStatus | None:
             status = json.load(response)
     except (urllib.error.URLError, TimeoutError):
         return None
-    return ServiceStatus(_configured(status, "gpu"), _configured(status, "cpu"))
+    return ServiceStatus(
+        _configured(status, "gpu"),
+        _configured(status, "cpu"),
+        status["gpu_loaded"],
+        status["cpu_loaded"],
+    )
 
 
-def _configured(status: dict[str, str], device: Literal["gpu", "cpu"]) -> str:
+def _configured(status: dict[str, Any], device: Literal["gpu", "cpu"]) -> str:
     """The engine of a device and its model: Parakeet has a precision (fp32, int8), Whisper a size
     (tiny to large-v3)."""
     engine = status[f"{device}_engine"]

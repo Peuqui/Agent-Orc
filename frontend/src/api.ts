@@ -142,6 +142,9 @@ export interface Turn {
 export interface DictationService {
   gpu: string
   cpu: string
+  /** Whether a model sits in the memory of that device right now (the GPU worker ends itself when idle). */
+  gpu_loaded: boolean
+  cpu_loaded: boolean
 }
 
 /** A request spoken to the agent on the Echo and sent on (its time is when it was sent). */

@@ -18,11 +18,9 @@ const busy = computed(
     props.dictation.state === 'transcribing' ||
     (props.dictation.stt === true && props.dictation.state === 'listening'),
 )
-// What the service really used for the last dictation; before one, the GPU only where it was chosen outright.
+// The GPU is shown while the service has a model there and the dictation may use it (GPU or automatic).
 const onGpu = computed(
-  () =>
-    props.dictation.stt === true &&
-    (props.dictation.usedDevice ?? props.dictation.device) === 'cuda',
+  () => props.dictation.stt === true && props.dictation.device !== 'cpu' && props.dictation.gpuLoaded,
 )
 </script>
 

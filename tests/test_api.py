@@ -1201,7 +1201,12 @@ def test_dictation(config: Config, clock: FakeClock, fake_stt: FakeStt) -> None:
     assert client.get("/api/dictation").json() == {
         "language": "de",
         "stt": True,
-        "service": {"gpu": "whisper large-v3", "cpu": "parakeet int8"},
+        "service": {
+            "gpu": "whisper large-v3",
+            "cpu": "parakeet int8",
+            "gpu_loaded": False,
+            "cpu_loaded": True,
+        },
     }
     assert dictate("cpu").json() == {"text": "Hallo Welt", "device": "cpu"}
     assert dictate("auto").status_code == 200
