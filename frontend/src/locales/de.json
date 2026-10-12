@@ -423,6 +423,8 @@
     "nothingOn": "Keine Engine ist an: es lässt sich nichts vorlesen.",
     "unreachable": "Eingeschaltet, aber nicht erreichbar – wird beim Sprechen übersprungen",
     "notOffered": "vom Dienst nicht angeboten",
+    "cloud": "Cloud",
+    "thisMachine": "dieser Rechner",
     "preferLoaded": "Bereits geladene lokale Engine bevorzugen",
     "preferLoadedHint": "Läuft schon eine lokale GPU-Engine, die oben an ist, spricht sie zuerst, statt dass eine zweite geladen wird. Cloud- und CPU-Engines sind nicht gemeint.",
     "pause": "Pause zwischen Absätzen (ms)"

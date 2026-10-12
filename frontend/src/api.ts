@@ -425,6 +425,7 @@ export interface TtsCatalogRow {
   engine: string
   host: string | null
   label: Record<string, string>
+  label_short: Record<string, string>
   unit_default: TtsUnit
   cloud: boolean
   needs_gpu: boolean

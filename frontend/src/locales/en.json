@@ -423,6 +423,8 @@
     "nothingOn": "No engine is on: nothing can be read aloud.",
     "unreachable": "Switched on, but not reachable – skipped when speaking",
     "notOffered": "not offered by the service",
+    "cloud": "Cloud",
+    "thisMachine": "this machine",
     "preferLoaded": "Prefer a local engine that is already loaded",
     "preferLoadedHint": "If a local GPU engine that is switched on above is running already, it speaks first instead of a second one being loaded. Cloud and CPU engines are not meant.",
     "pause": "Pause between paragraphs (ms)"

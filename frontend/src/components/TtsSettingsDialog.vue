@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { api, type TtsCatalogRow, type TtsChoices, type TtsEntry, type TtsUnit } from '../api'
+import { useHosts } from '../composables/useHosts'
 import { moveInList, useReorder } from '../composables/useReorder'
 import { useToast } from '../composables/useToast'
 import BaseDialog from './BaseDialog.vue'
@@ -15,6 +16,10 @@ import ToggleSwitch from './ToggleSwitch.vue'
 const emit = defineEmits<{ close: [] }>()
 const toast = useToast()
 const { t, locale } = useI18n()
+// This machine's own name (the engines of the service's own machine run here).
+const { state: hostsState, loadHosts } = useHosts()
+const own = computed(() => hostsState.value?.self ?? t('ttsSettings.thisMachine'))
+loadHosts().catch(toast.error)
 
 const UNITS: TtsUnit[] = ['sentence', 'paragraph', 'whole']
 const choices = ref<TtsChoices>({ entries: [], voices: {}, paragraph_pause_ms: 0, prefer_loaded: false })
@@ -55,10 +60,19 @@ const unreachable = (entry: TtsEntry): boolean =>
   entry.offered &&
   catalog.value.find((row) => placeOf(row) === placeOf(entry))?.status === 'unreachable'
 
+const catalogRow = (entry: TtsEntry): TtsCatalogRow | undefined =>
+  catalog.value.find((candidate) => placeOf(candidate) === placeOf(entry))
+
+/** The short name of the engine; where it runs is in a line of its own (see `where`). */
 function label(entry: TtsEntry): string {
-  const row = catalog.value.find((candidate) => placeOf(candidate) === placeOf(entry))
-  const name = row?.label[locale.value] ?? row?.label.en ?? entry.engine
-  return entry.host === null ? name : `${name} · ${entry.host}`
+  const row = catalogRow(entry)
+  return row?.label_short[locale.value] ?? row?.label_short.en ?? entry.engine
+}
+
+/** Where the engine runs: in the cloud, on another machine, or on this one (named, so that two entries of an engine can be told apart). */
+function where(entry: TtsEntry): string {
+  if (catalogRow(entry)?.cloud) return t('ttsSettings.cloud')
+  return entry.host ?? own.value
 }
 
 const unitOptions = computed(() => UNITS.map((unit) => ({ value: unit, label: t(`ttsSettings.unit.${unit}`) })))
@@ -125,9 +139,12 @@ async function save(): Promise<void> {
           @contextmenu.prevent
         >
           <div class="flex items-center justify-between gap-2">
-            <span class="min-w-0 truncate font-medium" :class="entry.enabled && entry.offered ? 'text-slate-200' : 'text-slate-500'">
-              {{ label(entry) }}
-            </span>
+            <div class="min-w-0">
+              <div class="truncate font-medium" :class="entry.enabled && entry.offered ? 'text-slate-200' : 'text-slate-500'">
+                {{ label(entry) }}
+              </div>
+              <div class="truncate text-xs text-amber-400">{{ where(entry) }}</div>
+            </div>
             <span v-if="unreachable(entry)" class="shrink-0 text-amber-400" :title="$t('ttsSettings.unreachable')" aria-hidden="false">⚠</span>
             <span v-if="!entry.offered" class="shrink-0 text-xs text-amber-400">{{ $t('ttsSettings.notOffered') }}</span>
             <ToggleSwitch v-else data-no-drag :checked="entry.enabled" @click="entry.enabled = !entry.enabled">
