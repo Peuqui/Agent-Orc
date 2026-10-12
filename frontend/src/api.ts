@@ -687,10 +687,10 @@ function createApi(host?: string) {
     /** Which engines speak, in which order and with which voice (what the catalog has now is in it). */
     ttsChoices: () => request<TtsChoices>('GET', 'tts/choices'),
     storeTtsChoices: (choices: TtsChoices) => request<void>('PUT', 'tts/choices', { body: choices }),
-    /** The service's frames of audio for the text (see audioFrames.ts), read as they come. Voice, speed and
-     * pitch are the service's and those set for the engines (see TtsChoices). */
-    ttsSpeak: (text: string, language: string, signal: AbortSignal) =>
-      fetchApi('POST', 'tts/speak', { body: { text, language }, host, signal }),
+    /** The service's frames of audio for the text (see audioFrames.ts), read as they come. `speed` null:
+     * the user has not changed the speed, so the values set for the voice and the engine apply. */
+    ttsSpeak: (text: string, language: string, speed: number | null, signal: AbortSignal) =>
+      fetchApi('POST', 'tts/speak', { body: { text, language, speed }, host, signal }),
     announce: () =>
       request<{ configured: boolean; rooms: string[]; max_chars: number; label: string }>('GET', 'announce'),
     /** Has the text said on the Echo of the room ("*": all); returns once it is queued. */

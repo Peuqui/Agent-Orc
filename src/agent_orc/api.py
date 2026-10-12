@@ -484,6 +484,7 @@ class TtsSpeakRequest(BaseModel):
     text: str
     # The language of the text, as the interface language ("de", "en").
     language: str
+    speed: float | None = None
 
 
 class TtsEntry(BaseModel):
@@ -1828,7 +1829,7 @@ def create_app(
             speech_service.merged_choices(read_tts_choices(), rows), rows
         )
         return speech_service.speak(
-            settings, config_dir(), body.text, body.language, chosen
+            settings, config_dir(), body.text, body.language, body.speed, chosen
         )
 
     @app.post("/api/tts/speak", dependencies=authenticated)

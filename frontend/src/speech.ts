@@ -5,6 +5,7 @@
 import { ref } from 'vue'
 import { api } from './api'
 import { FrameReader } from './audioFrames'
+import { DEFAULT_SPEECH_RATE } from './composables/useSettings'
 import { i18n } from './i18n'
 import { speechChunks } from './speechText'
 
@@ -36,9 +37,6 @@ export interface SpeechEngine {
   choiceLabel: string
   /** The most text an answer may have for this engine (cut at a sentence beforehand). */
   maxChars: number
-  /** Whether the speed slider of the speech settings applies to it (the browser's voices): the Echo has its own
-   * speed, and the TTS service takes speed and pitch per engine (its window) and per voice (its own settings). */
-  usesRate: boolean
   /** The pieces of text the engine is given, one call each. */
   split: (text: string) => string[]
   /** Whether this device can speak with it. */
@@ -84,7 +82,6 @@ function browserVoices(): Promise<SpeechSynthesisVoice[]> {
 
 const browserSpeech: SpeechEngine = {
   id: 'browser',
-  usesRate: true,
   label: 'Browser',
   choiceLabel: 'answers.voice',
   // Any length, but spoken in short pieces: browsers cut off a long utterance.
@@ -129,7 +126,6 @@ function echo(label: string, maxChars: number): SpeechEngine {
     api.announceTexts(options.voice || ALL_ROOMS, texts, speaker)
   return {
     id: 'echo',
-    usesRate: false,
     label,
     choiceLabel: 'answers.room',
     maxChars,
@@ -185,7 +181,7 @@ function ttsSuite(label: string): SpeechEngine {
     const received = (async (): Promise<void> => {
       try {
         await audio.resume()
-        const response = await api.ttsSpeak(text, options.lang, controller.signal)
+        const response = await api.ttsSpeak(text, options.lang, options.rate === DEFAULT_SPEECH_RATE ? null : options.rate, controller.signal)
         const reader = (response.body as ReadableStream<Uint8Array>).getReader()
         const frames = new FrameReader()
         for (;;) {
@@ -230,7 +226,6 @@ function ttsSuite(label: string): SpeechEngine {
 
   return {
     id: 'tts-suite',
-    usesRate: false,
     label,
     choiceLabel: 'answers.voice',
     // The service cuts the text by what its engine takes and cleans it.

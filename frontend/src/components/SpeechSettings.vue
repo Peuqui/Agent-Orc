@@ -63,7 +63,7 @@ watch(speechEngine, loadChoices)
       {{ $t(choiceLabel) }}
       <SelectMenu v-model="choice" :options="choiceOptions" button-class="input text-sm text-slate-200" />
     </label>
-    <label v-if="speech.engine.value?.usesRate" class="flex flex-col gap-1 text-slate-400">
+    <label class="flex flex-col gap-1 text-slate-400">
       <span class="flex justify-between">
         {{ $t('answers.speed', { rate: speechRate.toFixed(1) }) }}
         <button type="button" class="text-xs underline" @click="speechRate = DEFAULT_SPEECH_RATE">{{ $t('answers.speedReset') }}</button>
