@@ -706,6 +706,8 @@
     "engine": "Sprachausgabe",
     "speed": "Tempo: {rate}×",
     "speedReset": "Normal",
+    "speedServiceNormal": "Tempo: Normal – es gilt die Einstellung der Suite",
+    "speedServiceOverride": "Tempo: {rate}× – überschreibt die Suite",
     "skipped": "Hier folgt ein Codeblock oder eine Tabelle, ausgelassen",
     "maxChars": "Ohne Hörabsatz höchstens so viele Zeichen vorlesen",
     "speechTitle": "Vorlesen",

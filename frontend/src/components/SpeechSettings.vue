@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { formatFactor } from '../format'
 import { DEFAULT_SPEECH_RATE, useSettings, useSpeechVoice } from '../composables/useSettings'
 import { useSpeech } from '../composables/useSpeech'
 import { useToast } from '../composables/useToast'
@@ -18,7 +19,7 @@ const RATE_STEP = 0.1
 const { speechEngine, speechRate, speechMaxChars, speechAnnounceName } = useSettings()
 const speech = useSpeech()
 const toast = useToast()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const choices = ref<VoiceChoice[]>([])
 // What is chosen is kept for each engine.
 const choice = computed({
@@ -31,6 +32,14 @@ const choiceOptions = computed(() => [
   { value: '', label: t('answers.voiceDefault') },
   ...choices.value.map((entry) => ({ value: entry.id, label: entry.label })),
 ])
+// The speed slider is an override: at "Normal" nothing is sent and the service's own values (per engine and voice) apply.
+const speedLabel = computed(() => {
+  const forService = speech.engine.value?.id === 'tts-suite'
+  if (!forService) return t('answers.speed', { rate: formatFactor(speechRate.value, locale.value) })
+  return speechRate.value === DEFAULT_SPEECH_RATE
+    ? t('answers.speedServiceNormal')
+    : t('answers.speedServiceOverride', { rate: formatFactor(speechRate.value, locale.value) })
+})
 const choiceLabel = computed(() => speech.engine.value?.choiceLabel ?? 'answers.voice')
 
 async function loadChoices(): Promise<void> {
@@ -65,7 +74,7 @@ watch(speechEngine, loadChoices)
     </label>
     <label class="flex flex-col gap-1 text-slate-400">
       <span class="flex justify-between">
-        {{ $t('answers.speed', { rate: speechRate.toFixed(1) }) }}
+        {{ speedLabel }}
         <button type="button" class="text-xs underline" @click="speechRate = DEFAULT_SPEECH_RATE">{{ $t('answers.speedReset') }}</button>
       </span>
       <input v-model.number="speechRate" type="range" :min="MIN_RATE" :max="MAX_RATE" :step="RATE_STEP" />

@@ -706,6 +706,8 @@
     "engine": "Speech output",
     "speed": "Speed: {rate}×",
     "speedReset": "Normal",
+    "speedServiceNormal": "Speed: normal – the service's own setting applies",
+    "speedServiceOverride": "Speed: {rate}× – overrides the service",
     "skipped": "A code block or a table follows, left out",
     "maxChars": "Without a listening paragraph, read at most this many characters",
     "speechTitle": "Reading aloud",
