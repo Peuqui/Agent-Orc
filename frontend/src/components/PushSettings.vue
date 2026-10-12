@@ -37,7 +37,7 @@ async function sendTest(): Promise<void> {
 </script>
 
 <template>
-  <div class="mt-3 border-t border-slate-700 pt-3 text-sm text-slate-300">
+  <div class="text-sm text-slate-300">
     <div class="flex items-center justify-between gap-2">
       <span>{{ $t('push.title') }}</span>
       <ToggleSwitch

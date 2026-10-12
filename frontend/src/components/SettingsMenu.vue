@@ -1,166 +1,83 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
-import { api, type DictationService } from '../api'
-import { useToast } from '../composables/useToast'
-import { useI18n } from 'vue-i18n'
-import {
-  LINE_HEIGHT_STEP,
-  TERMINAL_FONTS,
-  type TerminalFont,
-  MAX_LINE_HEIGHT,
-  MAX_SCROLL_LINES,
-  MIN_LINE_HEIGHT,
-  MIN_SCROLL_LINES,
-  useSettings,
-} from '../composables/useSettings'
+import { type Component, ref } from 'vue'
 import AppIcon from './AppIcon.vue'
+import BaseDialog from './BaseDialog.vue'
 import BaseDirSettings from './BaseDirSettings.vue'
 import DropdownMenu from './DropdownMenu.vue'
 import HandoverSettings from './HandoverSettings.vue'
 import KeysEditor from './KeysEditor.vue'
 import PushSettings from './PushSettings.vue'
 import SpeechSettings from './SpeechSettings.vue'
-import ToggleSwitch from './ToggleSwitch.vue'
 import TtsSettingsDialog from './TtsSettingsDialog.vue'
-import { reloadToNewVersion } from '../update'
+import AppSettings from './settings/AppSettings.vue'
+import DictationSettings from './settings/DictationSettings.vue'
+import DisplaySettings from './settings/DisplaySettings.vue'
 
-// Settings of this device; more entries join here as they become adjustable.
-const { scrollLines, lineHeight, fontSize, stepFontSize, viewFontSize, stepViewFontSize, terminalFont, dictationDevice, dictationSendsAtOnce } = useSettings()
-const toast = useToast()
+// The menu is a short list; each entry opens a window of its own, in the middle of the screen. What a
+// window holds is set at once, there is no button to save it (the project folder, which asks for a
+// password, has its own).
+const SECTIONS = [
+  { id: 'display', component: DisplaySettings },
+  { id: 'dictation', component: DictationSettings },
+  { id: 'speech', component: SpeechSettings },
+  { id: 'baseDir', component: BaseDirSettings },
+  { id: 'push', component: PushSettings },
+  { id: 'handover', component: HandoverSettings },
+  { id: 'app', component: AppSettings },
+] as const satisfies readonly { id: string; component: Component }[]
+type SectionId = (typeof SECTIONS)[number]['id']
+
 const open = ref(false)
-// The extra-keys editor stays open after the menu has closed.
+const section = ref<SectionId | null>(null)
+// The windows that open from inside another one (the extra keys, the engines of the TTS service) take its
+// place: the section closes.
 const editingKeys = ref(false)
-// The window for the engines of the TTS service, likewise.
 const editingTts = ref(false)
-// What the Whisper service transcribes with; asked when the menu opens.
-const service = ref<DictationService | null>(null)
 
-watch(open, async (isOpen) => {
-  if (!isOpen) return
-  try {
-    service.value = (await api.dictationSettings()).service
-  } catch (error) {
-    toast.error(error)
-  }
-})
-const FONT_NAMES: Record<TerminalFont, string> = { jetbrains: 'JetBrains Mono', system: 'System' }
-const { locale } = useI18n()
-
-function changeLineHeight(delta: number): void {
-  // Rounded, so repeated steps do not drift (1.2000000000000002).
-  const height = Math.round((lineHeight.value + delta) * 100) / 100
-  lineHeight.value = Math.min(MAX_LINE_HEIGHT, Math.max(MIN_LINE_HEIGHT, height))
+function choose(id: SectionId): void {
+  section.value = id
+  open.value = false
 }
 
-function changeScrollLines(delta: number): void {
-  scrollLines.value = Math.min(MAX_SCROLL_LINES, Math.max(MIN_SCROLL_LINES, scrollLines.value + delta))
+function openKeys(): void {
+  section.value = null
+  editingKeys.value = true
+}
+
+function openTts(): void {
+  section.value = null
+  editingTts.value = true
 }
 </script>
 
 <template>
-  <DropdownMenu v-model:open="open" right panel-class="w-64 overscroll-contain p-3">
+  <DropdownMenu v-model:open="open" right panel-class="w-60 overscroll-contain p-2">
     <template #trigger="{ toggle }">
       <button class="btn-icon" :title="$t('settings.title')" :aria-label="$t('settings.title')" @click="toggle">
         <AppIcon name="menu" />
       </button>
     </template>
-    <div>
-      <h2 class="mb-2 text-sm font-semibold text-slate-200">{{ $t('settings.title') }}</h2>
-      <div class="flex items-center justify-between gap-2 text-sm text-slate-300">
-        <span>{{ $t('settings.font') }}</span>
-        <div class="flex overflow-hidden rounded-md border border-slate-600 text-xs">
-          <button
-            v-for="(_family, font) in TERMINAL_FONTS"
-            :key="font"
-            class="px-2 py-1"
-            :class="terminalFont === font ? 'bg-slate-600 text-slate-100' : 'text-slate-400'"
-            @click="terminalFont = font"
-          >
-            {{ FONT_NAMES[font] }}
-          </button>
-        </div>
-      </div>
-      <div class="mt-3 flex items-center justify-between gap-2 text-sm text-slate-300">
-        <span>{{ $t('settings.fontSize') }}</span>
-        <div class="flex items-center gap-1">
-          <button class="btn-icon size-7" :aria-label="$t('settings.less')" @click="stepFontSize(-1)">A−</button>
-          <span class="w-12 text-center tabular-nums">{{ fontSize }} px</span>
-          <button class="btn-icon size-7" :aria-label="$t('settings.more')" @click="stepFontSize(1)">A+</button>
-        </div>
-      </div>
-      <p class="mt-1 mb-3 text-xs text-slate-500">{{ $t('settings.fontSizeHint') }}</p>
-      <div class="flex items-center justify-between gap-2 text-sm text-slate-300">
-        <span>{{ $t('settings.viewFontSize') }}</span>
-        <div class="flex items-center gap-1">
-          <button class="btn-icon size-7" :aria-label="$t('settings.less')" @click="stepViewFontSize(-1)">A−</button>
-          <span class="w-12 text-center tabular-nums">{{ viewFontSize }} px</span>
-          <button class="btn-icon size-7" :aria-label="$t('settings.more')" @click="stepViewFontSize(1)">A+</button>
-        </div>
-      </div>
-      <p class="mt-1 mb-3 text-xs text-slate-500">{{ $t('settings.viewFontSizeHint') }}</p>
-      <div class="flex items-center justify-between gap-2 text-sm text-slate-300">
-        <span>{{ $t('settings.scrollLines') }}</span>
-        <div class="flex items-center gap-1">
-          <button class="btn-icon size-7" :aria-label="$t('settings.less')" @click="changeScrollLines(-1)">−</button>
-          <span class="w-6 text-center tabular-nums">{{ scrollLines }}</span>
-          <button class="btn-icon size-7" :aria-label="$t('settings.more')" @click="changeScrollLines(1)">+</button>
-        </div>
-      </div>
-      <p class="mt-1 text-xs text-slate-500">{{ $t('settings.scrollLinesHint') }}</p>
-      <div class="mt-3 flex items-center justify-between gap-2 text-sm text-slate-300">
-        <span>{{ $t('settings.lineHeight') }}</span>
-        <div class="flex items-center gap-1">
-          <button class="btn-icon size-7" :aria-label="$t('settings.less')" @click="changeLineHeight(-LINE_HEIGHT_STEP)">−</button>
-          <span class="w-10 text-center tabular-nums">{{ lineHeight.toLocaleString(locale, { minimumFractionDigits: 2 }) }}</span>
-          <button class="btn-icon size-7" :aria-label="$t('settings.more')" @click="changeLineHeight(LINE_HEIGHT_STEP)">+</button>
-        </div>
-      </div>
-      <p class="mt-1 text-xs text-slate-500">{{ $t('settings.lineHeightHint') }}</p>
-      <div v-if="service" class="mt-3 border-t border-slate-700 pt-3 text-sm text-slate-300">
-        <span>{{ $t('settings.dictationService') }}</span>
-        <p class="mt-1 text-xs text-slate-400 capitalize">
-          {{ $t('settings.dictationServiceLine', service) }}
-        </p>
-        <p class="mt-1 text-xs text-slate-500">{{ $t('settings.dictationServiceHint') }}</p>
-      </div>
-      <!-- The dictation: where Whisper transcribes (CPU or GPU) and whether it goes to the agent at once; for this device. -->
-      <div class="mt-3 border-t border-slate-700 pt-3 text-sm text-slate-300">
-        <div v-if="service" class="flex items-center justify-between gap-2">
-          <span>{{ $t('settings.dictationDevice') }}</span>
-          <div class="flex overflow-hidden rounded-md border border-slate-600 text-xs">
-            <button
-              v-for="choice in (['cpu', 'cuda'] as const)"
-              :key="choice"
-              class="px-2 py-1"
-              :class="dictationDevice === choice ? 'bg-slate-600 text-slate-100' : 'text-slate-400'"
-              @click="dictationDevice = choice"
-            >
-              {{ choice === 'cuda' ? 'GPU' : 'CPU' }}
-            </button>
-          </div>
-        </div>
-        <p v-if="service" class="mt-1 text-xs text-slate-500">{{ $t('settings.dictationDeviceHint') }}</p>
-        <ToggleSwitch class="mt-2 h-7 text-slate-300" :checked="dictationSendsAtOnce" @click="dictationSendsAtOnce = !dictationSendsAtOnce">
-          {{ $t('settings.dictationSendsAtOnce') }}
-        </ToggleSwitch>
-        <p class="mt-1 text-xs text-slate-500">{{ $t('settings.dictationSendsAtOnceHint') }}</p>
-      </div>
+    <div class="flex flex-col">
+      <h2 class="px-2 pt-1 pb-2 text-sm font-semibold text-slate-200">{{ $t('settings.title') }}</h2>
       <button
-        class="btn-secondary btn-small mt-3 w-full justify-center"
-        @click="((editingKeys = true), (open = false))"
+        v-for="entry in SECTIONS"
+        :key="entry.id"
+        class="rounded-md px-2 py-2 text-left text-sm text-slate-200 hover:bg-slate-700"
+        @click="choose(entry.id)"
       >
-        {{ $t('settings.keys') }}
+        {{ $t(`settings.sections.${entry.id}`) }}
       </button>
-      <BaseDirSettings />
-      <SpeechSettings @configure="((editingTts = true), (open = false))" />
-      <PushSettings />
-      <HandoverSettings />
-      <button class="btn-secondary btn-small mt-3 w-full justify-center" @click="reloadToNewVersion">
-        {{ $t('settings.reload') }}
-      </button>
-      <p class="mt-1 text-xs text-slate-500">{{ $t('settings.reloadHint') }}</p>
     </div>
     <template #extra>
+      <BaseDialog v-if="section" centered :title="$t(`settings.sections.${section}`)" @close="section = null">
+        <DisplaySettings v-if="section === 'display'" @keys="openKeys" />
+        <DictationSettings v-else-if="section === 'dictation'" />
+        <SpeechSettings v-else-if="section === 'speech'" @configure="openTts" />
+        <BaseDirSettings v-else-if="section === 'baseDir'" />
+        <PushSettings v-else-if="section === 'push'" />
+        <HandoverSettings v-else-if="section === 'handover'" />
+        <AppSettings v-else-if="section === 'app'" />
+      </BaseDialog>
       <KeysEditor v-if="editingKeys" @close="editingKeys = false" />
       <TtsSettingsDialog v-if="editingTts" @close="editingTts = false" />
     </template>

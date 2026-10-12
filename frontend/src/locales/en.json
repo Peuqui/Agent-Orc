@@ -279,10 +279,19 @@
     "reload": "Reload the app",
     "reloadHint": "Fetches the newest version if it did not come by itself (the full-screen pages cannot be pulled down).",
     "dictationDevice": "Dictation runs on",
-    "dictationDeviceHint": "GPU: at once when free; CPU: slower, always available. For this device and every agent.",
+    "dictationDeviceHint": "GPU: at once when free; CPU: slower, always available. For every device and agent.",
     "dictationDeviceGpu": "The dictation runs on the GPU",
     "dictationSendsAtOnce": "Send a dictation at once",
-    "dictationSendsAtOnceHint": "The recording goes to the agent as soon as it is recognised, without pressing send; a draft in the field goes with it. For this device."
+    "dictationSendsAtOnceHint": "The recording goes to the agent as soon as it is recognised, without pressing send; a draft in the field goes with it. For every device.",
+    "sections": {
+      "display": "Display",
+      "dictation": "Dictation",
+      "speech": "Read aloud",
+      "baseDir": "Start folder",
+      "push": "Notifications",
+      "handover": "Handover",
+      "app": "App"
+    }
   },
   "attach": {
     "title": "Attach a photo, screenshot or file",

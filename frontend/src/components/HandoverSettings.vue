@@ -28,7 +28,7 @@ async function toggle(): Promise<void> {
 </script>
 
 <template>
-  <div class="mt-3 border-t border-slate-700 pt-3 text-sm text-slate-300">
+  <div class="text-sm text-slate-300">
     <div class="flex items-center justify-between gap-2">
       <span>{{ $t('handover.auto') }}</span>
       <ToggleSwitch class="h-7" :checked="auto" :aria-label="$t('handover.auto')" @click="toggle" />

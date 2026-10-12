@@ -55,8 +55,7 @@ watch(speechEngine, loadChoices)
 </script>
 
 <template>
-  <div v-if="speech.available.value" class="mt-3 flex flex-col gap-2 border-t border-slate-700 pt-3 text-sm text-slate-300">
-    <h3 class="font-semibold text-slate-200">{{ $t('answers.speechTitle') }}</h3>
+  <div v-if="speech.available.value" class="flex flex-col gap-3 text-sm text-slate-300">
     <label v-if="speechEngines.length > 1" class="flex flex-col gap-1 text-slate-400">
       {{ $t('answers.engine') }}
       <SelectMenu

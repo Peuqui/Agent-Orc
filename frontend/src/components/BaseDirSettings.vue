@@ -36,7 +36,7 @@ async function save(): Promise<void> {
 </script>
 
 <template>
-  <form v-if="scope" class="mt-3 border-t border-slate-700 pt-3 text-sm text-slate-300" @submit.prevent="save">
+  <form v-if="scope" class="text-sm text-slate-300" @submit.prevent="save">
     <label for="base-dir">{{ $t('settings.baseDir') }}</label>
     <input id="base-dir" v-model="path" class="input mt-1 w-full text-xs" spellcheck="false" autocomplete="off" />
     <input

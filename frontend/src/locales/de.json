@@ -279,10 +279,19 @@
     "reload": "App neu laden",
     "reloadHint": "Holt die neueste Version, falls sie nicht von selbst kam (die Vollbild-Seiten lassen sich nicht herunterziehen).",
     "dictationDevice": "Diktat läuft auf",
-    "dictationDeviceHint": "GPU: sofort, wenn frei; CPU: langsamer, immer verfügbar. Gilt für dieses Gerät und alle Agenten.",
+    "dictationDeviceHint": "GPU: sofort, wenn frei; CPU: langsamer, immer verfügbar. Gilt für alle Geräte und Agenten.",
     "dictationDeviceGpu": "Das Diktat läuft auf der GPU",
     "dictationSendsAtOnce": "Diktat sofort senden",
-    "dictationSendsAtOnceHint": "Die Aufnahme geht nach dem Erkennen gleich an den Agenten, ohne Druck auf Senden; ein Entwurf im Feld geht mit. Gilt für dieses Gerät."
+    "dictationSendsAtOnceHint": "Die Aufnahme geht nach dem Erkennen gleich an den Agenten, ohne Druck auf Senden; ein Entwurf im Feld geht mit. Gilt für alle Geräte.",
+    "sections": {
+      "display": "Anzeige",
+      "dictation": "Diktat",
+      "speech": "Vorlesen",
+      "baseDir": "Startverzeichnis",
+      "push": "Benachrichtigungen",
+      "handover": "Übergabe",
+      "app": "App"
+    }
   },
   "attach": {
     "title": "Foto, Screenshot oder Datei anhängen",
