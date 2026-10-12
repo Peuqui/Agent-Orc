@@ -2,6 +2,12 @@
 
 Nur was noch aussteht. Erledigtes steht in der Git-Historie.
 
+## Vorlesen
+
+- **Wiederholen mit Speicher auf dem Server** (12.10., Variante B): Der Zwischenspeicher der Wiederholung liegt im
+  Arbeitsspeicher des Browsers (`replayCache.ts`) und ist nach einem Neuladen leer. Auf dem Server (Ordner von Agent-Orc,
+  geleert mit dem Papierkorb) überlebte er das Neuladen und gälte für alle Geräte. Die TTS-Suite speichert nichts.
+
 ## Mehrere Rechner
 
 - **Weitere Rechner und Feinschliff der Anbindung** (Stand 10.10.): Aragon ist angebunden. Jeder Rechner hat eine

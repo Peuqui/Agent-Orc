@@ -90,7 +90,9 @@ that run Agent-Orc can be shown in the same app, through an SSH tunnel ([Several
   server speaks: the engines it offers (on other machines and in the cloud, too) are put in order,
   switched on and given a voice in a window of their own in the settings, and the first piece plays
   while the rest is still being made; the browser plays what the service sends, and the token stays
-  on the server. “Read new (n)” turns grey when nothing is new, like the check mark beside it.
+  on the server. “Read new (n)” turns grey when nothing is new, like the check mark beside it. The 🔊 in front of an answer's
+  paragraph for listening is a button that reads it again; with the TTS-Suite the repeat plays from the browser's memory
+  (last 8 readings, emptied by a reload) without asking the service again.
 - Every code block in the answers, in notes and in the Markdown preview has a copy button at the
   right edge of the block, over its text; it stays there while the block scrolls sideways. One
   tap puts the block into the clipboard, without the line break at its end (pasted into a
@@ -160,9 +162,11 @@ that run Agent-Orc can be shown in the same app, through an SSH tunnel ([Several
 - File paths in an agent's output are clickable and open the file (at the line named) or the
   folder: in the terminal, and in the answers view for paths written as code (`docs/TODO.md`,
   `src/app.py:42`). Only paths that exist in the agent's folder are offered.
-- Settings per device (terminal font, the two font sizes, line spacing, scroll speed, speech) and
-  a help dialog (light bulb); the settings menu scrolls when it is longer than the screen, so
-  the bottom entries, down to “Reload app”, can always be reached.
+- The ☰ menu is a short list, each entry a window of its own right below the button. Dictation and
+  reading aloud (engine, speed and pitch as decimal fields, the agent's name, maximum length) are
+  saved on the server and are the same on every device, a change reaches all open ones; the terminal
+  font, the two font sizes, line spacing, scroll speed and the browser voice stay with the device.
+  A help dialog (light bulb) explains the app.
 - Menus and choices look the same everywhere: a list that opens at the button which asked for it,
   on a phone as on a computer (not the system's picker). It opens above or below, wherever the
   room is (the header and the bottom bar of the app count), and scrolls when neither side has

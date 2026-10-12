@@ -97,7 +97,9 @@ einen SSH-Tunnel ([Mehrere Rechner](#mehrere-rechner)).
   anderen Rechnern und in der Cloud), werden in einem eigenen Fenster der Einstellungen geordnet, angeschaltet
   und mit einer Stimme versehen, und das erste Stück läuft schon, während der Rest noch entsteht; der Browser
   spielt, was der Dienst schickt, und das Token bleibt auf dem Server. „Neue vorlesen (n)“ wird grau, wenn nichts Neues da ist, wie
-  das Häkchen daneben.
+  das Häkchen daneben. Das 🔊 vor dem Hörabsatz einer Antwort ist ein Knopf, der ihn noch einmal vorliest; mit der
+  TTS-Suite spielt die Wiederholung aus dem Speicher des Browsers (letzte 8 Lesungen, ein Neuladen leert ihn), ohne den
+  Dienst erneut zu fragen.
 - Jeder Codeblock in den Antworten, in Notizen und in der Markdown-Vorschau hat am rechten Rand
   einen Kopieren-Knopf, über dem Text des Blocks; er bleibt dort stehen, wenn der Block seitlich
   scrollt. Ein Tipp legt den Block in die Zwischenablage, ohne den Zeilenumbruch am Ende (ins
@@ -172,10 +174,11 @@ einen SSH-Tunnel ([Mehrere Rechner](#mehrere-rechner)).
   genannten Zeile) oder den Ordner: im Terminal und in der Antworten-Ansicht bei Pfaden, die als
   Code geschrieben sind (`docs/TODO.md`, `src/app.py:42`). Angeboten werden nur Pfade, die im
   Ordner des Agenten existieren.
-- Einstellungen pro Gerät (Terminal-Schrift, die zwei Schriftgrößen, Zeilenabstand,
-  Scrollgeschwindigkeit, Sprachausgabe) und eine Hilfe (Glühbirne); das Einstellungsmenü scrollt,
-  wenn es länger ist als der Bildschirm, damit auch die untersten Einträge bis „App neu laden“
-  erreichbar sind.
+- Das ☰-Menü ist eine kurze Liste, jeder Eintrag ein eigenes Fenster direkt unter dem Knopf. Diktat und
+  Vorlesen (Engine, Tempo und Tonhöhe als Dezimalfelder, Name des Agenten, Höchstlänge) liegen auf dem Server
+  und sind auf jedem Gerät gleich, eine Änderung kommt auf allen offenen an; Terminal-Schrift, die zwei
+  Schriftgrößen, Zeilenabstand, Scrollgeschwindigkeit und die Browser-Stimme bleiben am Gerät.
+  Eine Hilfe (Glühbirne) erklärt die App.
 - Menüs und Auswahlen sehen überall gleich aus: eine Liste, die an dem Knopf aufgeht, der sie
   verlangt hat, am Handy wie am Rechner (nicht die Auswahl des Systems). Sie öffnet nach oben oder
   unten, wo Platz ist (Kopfzeile und Navigationsleiste der App zählen mit), und scrollt, wenn
