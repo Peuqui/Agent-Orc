@@ -432,7 +432,7 @@ Konfiguration mit dem passenden `backends`-Eintrag.
 ## Tests
 
 ```bash
-venv/bin/ruff check . && venv/bin/mypy && venv/bin/python -m pytest   # Backend, mit echtem tmux
+~/.venv/devtools/bin/ruff check . && ~/.venv/devtools/bin/mypy && venv/bin/python -m pytest   # Backend, mit echtem tmux
 cd frontend && npm test                                               # reine Frontend-Logik (Test-Runner von Node)
 ```
 

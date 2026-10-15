@@ -411,7 +411,7 @@ configuration with the matching `backends` entry.
 ## Tests
 
 ```bash
-venv/bin/ruff check . && venv/bin/mypy && venv/bin/python -m pytest   # backend, with a real tmux
+~/.venv/devtools/bin/ruff check . && ~/.venv/devtools/bin/mypy && venv/bin/python -m pytest   # backend, with a real tmux
 cd frontend && npm test                                               # pure frontend logic (Node's test runner)
 ```
 

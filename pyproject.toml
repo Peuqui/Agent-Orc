@@ -23,8 +23,6 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest",
-    "ruff",
-    "mypy",
     "types-PyYAML",
     "httpx2",
 ]
@@ -46,6 +44,8 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 
 [tool.mypy]
 strict = true
+# ruff and mypy come from the shared tools venv (~/.venv/devtools); mypy reads the types of this venv.
+python_executable = "venv/bin/python"
 files = ["src", "tests"]
 
 # The web push libraries ship no type information.
