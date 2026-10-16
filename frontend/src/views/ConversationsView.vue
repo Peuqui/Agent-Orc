@@ -96,11 +96,14 @@ function receive(event: PeerEvent): void {
 onBeforeUnmount(() => source?.close())
 
 // One agent picked (its chip above, or its lane's name): the conversations and the timeline show
-// only what concerns it, the lanes fade the rest back. A second click lets go of it.
+// only what concerns it, the lanes fade the rest back, and the field at the foot writes to it.
+// A second click lets go of it.
 const focus = ref<string | null>(null)
 
 function toggleFocus(name: string): void {
   focus.value = focus.value === name ? null : name
+  // Whom one looks at is whom the field at the foot writes to, without picking it a second time.
+  if (peerNames.value.includes(name)) recipients.value = focus.value === null ? [] : [name]
 }
 
 function concernsFocus(message: PeerMessage): boolean {
