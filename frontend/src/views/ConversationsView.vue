@@ -266,12 +266,13 @@ function replyPlaceholder(recipients: string[]): string {
           <button
             type="button"
             class="border-l border-current/40 py-0.5 pr-2 pl-1.5 hover:bg-slate-700/60"
+            :class="{ 'bg-slate-600': recipients.includes(peer.name) }"
             :title="$t('peers.writeTo', { name: peer.name })"
             :aria-label="$t('peers.writeTo', { name: peer.name })"
             :aria-pressed="recipients.includes(peer.name)"
             @click="toggleRecipient(peer.name)"
           >
-            ✉
+            ✉︎
           </button>
         </span>
         <button
