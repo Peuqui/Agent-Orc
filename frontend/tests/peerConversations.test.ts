@@ -1,6 +1,17 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { arrowOf, firstLine, groupConversations, isMachine, laneLabel, lanesOf, replyRecipients } from '../src/peerConversations.ts'
+import {
+  arrowOf,
+  byDay,
+  chatOf,
+  clip,
+  collapseRepeats,
+  groupConversations,
+  isMachine,
+  laneLabel,
+  lanesOf,
+  replyRecipients,
+} from '../src/peerConversations.ts'
 
 const message = (id: number, from: string, to: string, timestamp: string) => ({
   id,
@@ -36,10 +47,74 @@ test('an answer goes to everyone in the conversation but the user', () => {
   assert.deepEqual(replyRecipients(notice!), [])
 })
 
-test('the first line is cut, and marked when more follows', () => {
-  assert.equal(firstLine('  Kurz  ', 20), 'Kurz')
-  assert.equal(firstLine('Erste Zeile\nZweite', 20), 'Erste Zeile…')
-  assert.equal(firstLine('Eine sehr lange Zeile', 9), 'Eine sehr…')
+test('a text is cut to its lines and characters, and marked when more follows', () => {
+  assert.equal(clip('  Kurz  ', 20, 1), 'Kurz')
+  assert.equal(clip('Erste Zeile\nZweite', 20, 1), 'Erste Zeile…')
+  assert.equal(clip('Eine sehr lange Zeile', 9, 1), 'Eine sehr…')
+  assert.equal(clip('Eins\nZwei\nDrei', 100, 2), 'Eins\nZwei…')
+  assert.equal(clip('Eins\nZwei', 100, 2), 'Eins\nZwei')
+})
+
+test('a message repeated right after itself is one run with its count and time span', () => {
+  const notice = (id: number, timestamp: string) => ({ ...message(id, 'Bridge', 'Mini:A', timestamp), content: 'Standby' })
+  const runs = collapseRepeats([
+    notice(1, '2026-10-09T20:00:00.000Z'),
+    notice(2, '2026-10-09T20:05:00.000Z'),
+    message(3, 'Mini:B', 'Mini:A', '2026-10-09T20:06:00.000Z'),
+    notice(4, '2026-10-09T20:07:00.000Z'),
+  ])
+  assert.deepEqual(
+    runs.map((run) => [run.message.id, run.count, run.first, run.last]),
+    [
+      [1, 2, '2026-10-09T20:00:00.000Z', '2026-10-09T20:05:00.000Z'],
+      [3, 1, '2026-10-09T20:06:00.000Z', '2026-10-09T20:06:00.000Z'],
+      [4, 1, '2026-10-09T20:07:00.000Z', '2026-10-09T20:07:00.000Z'],
+    ],
+  )
+})
+
+test('runs are split by the local day they were sent', () => {
+  const days = byDay(
+    collapseRepeats([
+      message(1, 'Mini:A', 'Mini:B', new Date(2026, 9, 9, 23, 50).toISOString()),
+      message(2, 'Mini:B', 'Mini:A', new Date(2026, 9, 10, 0, 10).toISOString()),
+      message(3, 'Mini:A', 'Mini:B', new Date(2026, 9, 10, 8, 0).toISOString()),
+    ]),
+  )
+  assert.deepEqual(
+    days.map((day) => day.runs.map((run) => run.message.id)),
+    [[1], [2, 3]],
+  )
+})
+
+test('in a chat the user is on the right, of two agents the one who began on the left, a machine in the middle', () => {
+  const [agents] = groupConversations([
+    message(1, 'Mini:B', 'Mini:A', '2026-10-09T20:00:00.000Z'),
+    message(2, 'Mini:A', 'Mini:B', '2026-10-09T20:01:00.000Z'),
+    message(3, 'Mini:A', 'Mini:B', '2026-10-09T20:02:00.000Z'),
+  ])
+  const entries = chatOf(agents!).flatMap((day) => day.entries)
+  assert.deepEqual(
+    entries.map((entry) => [entry.side, entry.showName]),
+    [
+      ['left', true],
+      ['right', true],
+      ['right', false],
+    ],
+  )
+  const [withUser] = groupConversations([
+    message(4, 'Mini:A', 'User:Ada', '2026-10-09T20:00:00.000Z'),
+    message(5, 'User:Ada', 'Mini:A', '2026-10-09T20:01:00.000Z'),
+  ])
+  assert.deepEqual(
+    chatOf(withUser!).flatMap((day) => day.entries.map((entry) => entry.side)),
+    ['left', 'right'],
+  )
+  const [notice] = groupConversations([message(6, 'Bridge', 'Mini:A', '2026-10-09T20:00:00.000Z')])
+  assert.deepEqual(
+    chatOf(notice!).flatMap((day) => day.entries.map((entry) => entry.side)),
+    ['center'],
+  )
 })
 
 test('every participant is a lane, in the order they first appear; a broadcast spans them all', () => {

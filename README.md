@@ -100,8 +100,13 @@ that run Agent-Orc can be shown in the same app, through an SSH tunnel ([Several
   letters on a phone.
 
 **Conversations** (with [AI-Connect](https://github.com/Peuqui/AI-Connect), the bridge that lets agent sessions talk to each other; optional)
-- Read along live: by conversation (a tree), as a timeline, or as lanes (a sequence diagram with
-  an arrow per message); the agents online with their state (working, waiting, ready).
+- Read along live: by conversation (a chat as in a messenger: you on the right, of two agents the
+  one who began on the left, the bridge's notices small in the middle), as a timeline, or as
+  lanes (a sequence diagram with an arrow per message); the agents online with their state
+  (working, waiting, ready).
+- Split by day (today, yesterday, weekday and date), each message with its time only; the same
+  message several times in a row (such as a standby notice of the bridge) stands there once, with
+  its count and time span.
 - Switched on by the `peers:` section of the config; AI-Connect keeps its tokens in its own files.
 - Write to one, several or all of them as yourself; Enter sends, Shift+Enter breaks the line. In
   an open conversation the field below answers everyone in it.

@@ -1,7 +1,18 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { moveInList } from '../src/composables/useReorder.ts'
-import { baseName, formatFactor, formatMinutes, formatSize, formatTokens, joinPath, parentPath, parseFactor } from '../src/format.ts'
+import {
+  baseName,
+  formatDay,
+  formatFactor,
+  formatMinutes,
+  formatSize,
+  formatTimeSpan,
+  formatTokens,
+  joinPath,
+  parentPath,
+  parseFactor,
+} from '../src/format.ts'
 
 test('paths are split and joined like the file view expects', () => {
   assert.equal(baseName('/home/mp/Projekte/'), 'Projekte')
@@ -67,4 +78,19 @@ test('speed and pitch are typed with a comma or a point and shown the way the la
   assert.equal(formatFactor(1, 'de'), '1,0')
   assert.equal(formatFactor(1.15, 'de'), '1,15')
   assert.equal(formatFactor(1.15, 'en'), '1.15')
+})
+
+test('a day is today, yesterday, or its weekday and date, with the year only when another', () => {
+  const names = { today: 'Heute', yesterday: 'Gestern' }
+  const now = new Date(2026, 9, 16, 9, 0)
+  assert.equal(formatDay(new Date(2026, 9, 16, 0, 5), 'de', names, now), 'Heute')
+  assert.equal(formatDay(new Date(2026, 9, 15, 23, 59), 'de', names, now), 'Gestern')
+  assert.equal(formatDay(new Date(2026, 9, 14, 12, 0), 'de', names, now), 'Mittwoch, 14. Oktober')
+  assert.equal(formatDay(new Date(2025, 9, 14, 12, 0), 'de', names, now), 'Dienstag, 14. Oktober 2025')
+})
+
+test('a time span is two times within a day, one time when both are the same', () => {
+  const first = new Date(2026, 9, 16, 9, 54)
+  assert.equal(formatTimeSpan(first, new Date(2026, 9, 16, 10, 29), 'de'), '09:54–10:29')
+  assert.equal(formatTimeSpan(first, first, 'de'), '09:54')
 })

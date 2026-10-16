@@ -2,14 +2,27 @@
 import { computed, onBeforeUnmount, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { api, rootAddress, type Peer, type PeerEvent, type PeerMessage } from '../api'
+import PeerBubble from '../components/PeerBubble.vue'
 import PeerComposer from '../components/PeerComposer.vue'
+import PeerDay from '../components/PeerDay.vue'
 import PeerLanes from '../components/PeerLanes.vue'
 import PeerMessageItem from '../components/PeerMessageItem.vue'
 import { useHeightVariable } from '../composables/useHeightVariable'
 import { useToast } from '../composables/useToast'
 import { useViewZoom } from '../composables/useViewZoom'
 import { formatMoment } from '../format'
-import { EVERYONE, groupConversations, isMachine, laneLabel, lanesOf, replyRecipients, type Conversation } from '../peerConversations'
+import {
+  byDay,
+  chatOf,
+  collapseRepeats,
+  EVERYONE,
+  groupConversations,
+  isMachine,
+  laneLabel,
+  lanesOf,
+  replyRecipients,
+  type Conversation,
+} from '../peerConversations'
 
 // AI-Connect read along: the conversations between the agents, live, and fields to write to
 // them as the user: below each open conversation to those in it, at the foot to whom one picks. The server runs AI-Connect's program per open page and hands its lines on;
@@ -74,7 +87,9 @@ function receive(event: PeerEvent): void {
 onBeforeUnmount(() => source?.close())
 
 const conversations = computed(() => groupConversations(messages.value))
-const timeline = computed(() => [...messages.value].sort((a, b) => b.timestamp.localeCompare(a.timestamp)))
+const timeline = computed(() =>
+  byDay(collapseRepeats([...messages.value].sort((a, b) => b.timestamp.localeCompare(a.timestamp)))),
+)
 const sortedPeers = computed(() =>
   peers.value.filter((peer) => !isMachine(peer.name)).sort((a, b) => a.name.localeCompare(b.name)),
 )
@@ -221,7 +236,12 @@ function replyPlaceholder(recipients: string[]): string {
             </button>
           </div>
           <div v-if="openConversations.has(conversation.key)" class="border-t border-slate-700 px-3 pb-3">
-            <PeerMessageItem v-for="message in conversation.messages" :key="message.id" :message="message" />
+            <template v-for="day in chatOf(conversation)" :key="day.key">
+              <PeerDay :date="day.date" />
+              <div class="flex flex-col">
+                <PeerBubble v-for="entry in day.entries" :key="entry.run.message.id" :entry="entry" />
+              </div>
+            </template>
             <PeerComposer
               v-if="replyRecipients(conversation).length"
               :recipients="replyRecipients(conversation)"
@@ -234,10 +254,15 @@ function replyPlaceholder(recipients: string[]): string {
       </div>
 
       <div v-else-if="view === 'timeline'" ref="zoomed" class="card px-3 py-1" :style="zoomStyle">
-        <PeerMessageItem v-for="message in timeline" :key="message.id" :message="message" />
+        <template v-for="day in timeline" :key="day.key">
+          <PeerDay :date="day.date" />
+          <div>
+            <PeerMessageItem v-for="run in day.runs" :key="run.message.id" :run="run" />
+          </div>
+        </template>
       </div>
 
-      <PeerLanes v-else :messages="timeline" :lanes="lanes" :columns="laneColumns" class="-mt-4 rounded-t-none border-t-0" />
+      <PeerLanes v-else :days="timeline" :lanes="lanes" :columns="laneColumns" class="-mt-4 rounded-t-none border-t-0" />
 
       <!-- Flush with the bottom (above the phone's bottom bar), so nothing scrolls by below it. -->
       <div ref="foot" class="sticky bottom-(--bottom-nav-height) z-20 -mx-4 -mb-4 border-t border-slate-800 bg-slate-900 px-4 py-2">

@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { PeerMessage } from '../api'
-import { formatMoment } from '../format'
-import { EVERYONE, firstLine, laneLabel } from '../peerConversations'
+import { formatTimeSpan } from '../format'
+import { clip, EVERYONE, isMachine, laneLabel, type MessageRun } from '../peerConversations'
 
 // One message of AI-Connect: its first line, the whole text (and what came with it) on a tap.
+// Only its time: the day stands above it. Repeats of it are one row with their count.
 const FIRST_LINE_CHARS = 140
 
-defineProps<{ message: PeerMessage }>()
+defineProps<{ run: MessageRun }>()
 const { locale, t } = useI18n()
 const open = ref(false)
 
@@ -21,20 +21,28 @@ function recipient(to: string): string {
   <article class="border-t border-slate-700/60 py-2 first:border-t-0">
     <button type="button" class="press-row -mx-1 block w-[calc(100%+0.5rem)] px-1 text-left" :aria-expanded="open" @click="open = !open">
       <div class="flex flex-wrap items-baseline gap-x-2 text-xs text-slate-500">
-        <span>{{ formatMoment(new Date(message.timestamp), locale) }}</span>
+        <span>{{ formatTimeSpan(new Date(run.first), new Date(run.last), locale) }}</span>
         <!-- Short names (without the host); the whole name on hover. -->
-        <span class="text-amber-400" :title="message.from">{{ laneLabel(message.from) }}</span>
-        <span>→ <span class="text-amber-400/80" :title="message.to">{{ recipient(message.to) }}</span></span>
-        <span v-if="message.context">📎</span>
+        <span class="text-amber-400" :title="run.message.from">{{ laneLabel(run.message.from) }}</span>
+        <span>→ <span class="text-amber-400/80" :title="run.message.to">{{ recipient(run.message.to) }}</span></span>
+        <span v-if="run.count > 1">{{ $t('peers.times', { count: run.count }) }}</span>
+        <span v-if="run.message.context">📎</span>
       </div>
-      <p v-if="!open" class="mt-0.5 text-sm break-words text-slate-200">{{ firstLine(message.content, FIRST_LINE_CHARS) }}</p>
+      <!-- A machine's notices (the bridge) step back behind what the agents write. -->
+      <p
+        v-if="!open"
+        class="mt-0.5 text-sm break-words"
+        :class="isMachine(run.message.from) ? 'text-slate-400' : 'text-slate-200'"
+      >
+        {{ clip(run.message.content, FIRST_LINE_CHARS, 1) }}
+      </p>
     </button>
     <template v-if="open">
-      <p class="mt-0.5 text-sm break-words whitespace-pre-wrap text-slate-200 select-text">{{ message.content }}</p>
+      <p class="mt-0.5 text-sm break-words whitespace-pre-wrap text-slate-200 select-text">{{ run.message.content }}</p>
       <pre
-        v-if="message.context"
+        v-if="run.message.context"
         class="mt-2 max-h-80 overflow-auto rounded bg-slate-900 p-2 text-xs whitespace-pre-wrap text-slate-400 select-text"
-        >{{ message.context }}</pre
+        >{{ run.message.context }}</pre
       >
     </template>
   </article>

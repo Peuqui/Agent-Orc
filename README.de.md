@@ -107,9 +107,13 @@ einen SSH-Tunnel ([Mehrere Rechner](#mehrere-rechner)).
   richtigen Buchstaben zu markieren.
 
 **Gespräche** (mit [AI-Connect](https://github.com/Peuqui/AI-Connect), der Brücke, über die Agenten-Sitzungen miteinander sprechen; optional)
-- Live mitlesen: nach Gespräch (als Baum), als Verlauf oder als Spuren (Sequenzdiagramm mit einem
-  Pfeil je Nachricht); dazu die Agenten, die online sind, mit ihrem Zustand (arbeitet, wartet,
-  bereit).
+- Live mitlesen: nach Gespräch (als Chat wie im Messenger: du rechts, von zwei Agenten der, der
+  angefangen hat, links, Hinweise der Bridge klein in der Mitte), als Verlauf oder als Spuren
+  (Sequenzdiagramm mit einem Pfeil je Nachricht); dazu die Agenten, die online sind, mit ihrem
+  Zustand (arbeitet, wartet, bereit).
+- Nach Tagen getrennt (Heute, Gestern, Wochentag und Datum), an jeder Nachricht nur die Uhrzeit;
+  dieselbe Nachricht mehrmals hintereinander (etwa ein Standby-Hinweis der Bridge) steht einmal da,
+  mit Anzahl und Zeitspanne.
 - Eingeschaltet durch den Abschnitt `peers:` der Config; AI-Connect hält seine Tokens in eigenen
   Dateien.
 - An einen, mehrere oder alle schreiben, als du selbst; Enter sendet, Shift+Enter macht eine neue

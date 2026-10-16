@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { PeerMessage } from '../api'
-import { arrowOf } from '../peerConversations'
+import { arrowOf, type Day } from '../peerConversations'
+import PeerDay from './PeerDay.vue'
 import PeerMessageItem from './PeerMessageItem.vue'
 
 // The messages as a sequence diagram: a lane for everyone taking part, each message an arrow from
-// its sender's lane to its receiver's (a broadcast reaches across all lanes), its text below. The
-// page shows the lanes' names in its header, which stays in view; `columns` lays out both alike.
-const props = defineProps<{ messages: PeerMessage[]; lanes: string[]; columns: Record<string, string> }>()
+// its sender's lane to its receiver's (a broadcast reaches across all lanes), its text below, under
+// the day it was sent; repeats of a message are one arrow. The page shows the lanes' names in its header, which stays in view; `columns` lays out both alike.
+const props = defineProps<{ days: Day[]; lanes: string[]; columns: Record<string, string> }>()
 const lanes = computed(() => props.lanes)
 
 /** The middle of a lane, in percent of the width. */
@@ -35,9 +36,11 @@ function arrow(message: PeerMessage) {
       <div class="pointer-events-none absolute inset-0 grid" :style="columns" aria-hidden="true">
         <div v-for="lane in lanes" :key="lane" class="mx-auto w-px bg-slate-600/60" />
       </div>
-      <div v-for="message in messages" :key="message.id" class="relative border-b border-slate-700/50 pt-2 last:border-b-0">
+      <template v-for="day in days" :key="day.key">
+      <PeerDay :date="day.date" />
+      <div v-for="run in day.runs" :key="run.message.id" class="relative border-b border-slate-700/50 pt-2 last:border-b-0">
         <div class="relative h-3" aria-hidden="true">
-          <template v-for="shape in [arrow(message)]" :key="message.id">
+          <template v-for="shape in [arrow(run.message)]" :key="run.message.id">
             <span class="absolute top-1/2 h-0.5 -translate-y-1/2 bg-amber-400" :style="shape.bar" />
             <span
               class="absolute top-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-amber-400"
@@ -61,8 +64,9 @@ function arrow(message: PeerMessage) {
             </template>
           </template>
         </div>
-        <PeerMessageItem :message="message" class="relative border-t-0 bg-slate-800/90 pt-1" />
+        <PeerMessageItem :run="run" class="relative border-t-0 bg-slate-800/90 pt-1" />
       </div>
+      </template>
     </div>
   </div>
 </template>

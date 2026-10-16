@@ -36,6 +36,29 @@ export function formatDate(date: Date, locale: string): string {
   return date.toLocaleString(locale, { dateStyle: 'short', timeStyle: 'short' })
 }
 
+export function formatTime(date: Date, locale: string): string {
+  return date.toLocaleTimeString(locale, { timeStyle: 'short' })
+}
+
+/** From one time to another: the times alone within a day, otherwise with the date; one time
+ * when both are the same. */
+export function formatTimeSpan(first: Date, last: Date, locale: string): string {
+  if (first.getTime() === last.getTime()) return formatTime(first, locale)
+  const format = first.toDateString() === last.toDateString() ? formatTime : formatDate
+  return `${format(first, locale)}–${format(last, locale)}`
+}
+
+/** A day as a heading over its messages: "today", "yesterday", otherwise weekday and date (with
+ * the year only when it is not this one). */
+export function formatDay(date: Date, locale: string, names: { today: string; yesterday: string }, now = new Date()): string {
+  const yesterday = new Date(now)
+  yesterday.setDate(now.getDate() - 1)
+  if (date.toDateString() === now.toDateString()) return names.today
+  if (date.toDateString() === yesterday.toDateString()) return names.yesterday
+  const year = date.getFullYear() === now.getFullYear() ? undefined : 'numeric'
+  return date.toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long', year })
+}
+
 /** A moment near now, as short as it can be: the time today, otherwise weekday and time. */
 export function formatMoment(date: Date, locale: string): string {
   const sameDay = date.toDateString() === new Date().toDateString()
