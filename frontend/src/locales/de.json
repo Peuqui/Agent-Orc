@@ -765,6 +765,7 @@
     "less": "weniger",
     "times": "{count}×",
     "focus": "Klicken: nur dessen Nachrichten zeigen, noch einmal: alle",
+    "writeTo": "Schreiben an {name}: als Empfänger unten wählen",
     "unread": "eine ungelesene Nachricht | {count} ungelesene Nachrichten",
     "handshake": {"LGTM": "einverstanden, fertig (LGTM)", "CONTINUE": "noch nicht fertig (CONTINUE)"},
     "answer": "Antworten",

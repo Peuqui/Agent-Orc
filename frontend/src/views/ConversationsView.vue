@@ -245,18 +245,32 @@ function replyPlaceholder(recipients: string[]): string {
     <p v-if="configured === false" class="card p-6 text-center text-slate-400">{{ $t('peers.notConfigured') }}</p>
     <template v-else-if="configured">
       <div v-if="sortedPeers.length" class="flex flex-wrap gap-2 text-xs">
-        <button
+        <span
           v-for="peer in sortedPeers"
           :key="peer.name"
-          type="button"
-          class="rounded-full border px-2 py-0.5"
-          :class="focus === peer.name ? chosenClass : 'border-slate-600 text-slate-300'"
-          :title="`${peerTitle(peer)} · ${$t('peers.focus')}`"
-          :aria-pressed="focus === peer.name"
-          @click="toggleFocus(peer.name)"
+          class="inline-flex overflow-hidden rounded-full border border-current"
+          :class="[colorOf(peer.name), focus === peer.name ? 'bg-slate-700 font-medium' : '']"
         >
-          <span :class="stateColor(peer)">●</span> {{ peer.name }}
-        </button>
+          <button
+            type="button"
+            class="py-0.5 pr-1.5 pl-2"
+            :title="`${peerTitle(peer)} · ${$t('peers.focus')}`"
+            :aria-pressed="focus === peer.name"
+            @click="toggleFocus(peer.name)"
+          >
+            <span :class="stateColor(peer)">●</span> {{ peer.name }}
+          </button>
+          <button
+            type="button"
+            class="border-l border-current/40 py-0.5 pr-2 pl-1.5 hover:bg-slate-700/60"
+            :title="$t('peers.writeTo', { name: peer.name })"
+            :aria-label="$t('peers.writeTo', { name: peer.name })"
+            :aria-pressed="recipients.includes(peer.name)"
+            @click="toggleRecipient(peer.name)"
+          >
+            ✉
+          </button>
+        </span>
         <button
           v-if="focus !== null && !peerNames.includes(focus)"
           type="button"

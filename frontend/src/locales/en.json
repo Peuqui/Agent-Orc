@@ -765,6 +765,7 @@
     "less": "less",
     "times": "{count}×",
     "focus": "Click: show only its messages, again: all",
+    "writeTo": "Write to {name}: pick as recipient below",
     "unread": "one unread message | {count} unread messages",
     "handshake": {"LGTM": "agreed, done (LGTM)", "CONTINUE": "not done yet (CONTINUE)"},
     "answer": "Answer",
