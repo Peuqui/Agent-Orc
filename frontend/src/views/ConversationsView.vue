@@ -253,7 +253,7 @@ function replyPlaceholder(recipients: string[]): string {
           v-for="peer in sortedPeers"
           :key="peer.name"
           class="inline-flex overflow-hidden rounded-full border border-current"
-          :class="[colorOf(peer.name), focus === peer.name ? 'bg-slate-700 font-medium' : '']"
+          :class="[colorOf(peer.name), focus === peer.name ? 'font-medium ring-2 ring-current' : '']"
         >
           <button
             type="button"
