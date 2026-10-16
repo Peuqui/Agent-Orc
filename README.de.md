@@ -114,6 +114,14 @@ einen SSH-Tunnel ([Mehrere Rechner](#mehrere-rechner)).
 - Nach Tagen getrennt (Heute, Gestern, Wochentag und Datum), an jeder Nachricht nur die Uhrzeit;
   dieselbe Nachricht mehrmals hintereinander (etwa ein Standby-Hinweis der Bridge) steht einmal da,
   mit Anzahl und Zeitspanne.
+- Jeder Agent hat in allen Ansichten seine eigene Farbe (Name, Spur, Pfeil); Hinweise der Bridge
+  sind grau, in den Spuren gestrichelt und ganz außen. Die Marken des Handshakes (`[LGTM]`,
+  `[CONTINUE]`) stehen als kleine Zeichen neben der Nachricht statt im Text.
+- Ein Klick auf einen Agenten (oben in der Liste, in den Spuren auf seinen Namen) zeigt nur, was ihn
+  betrifft: nach Gespräch und im Verlauf als Filter, in den Spuren blendet er den Rest ab; ein
+  zweiter Klick zeigt wieder alles.
+- Ein zugeklapptes Gespräch zeigt seine letzte Nachricht und die Zahl der ungelesenen (ohne deine
+  eigenen und ohne Hinweise der Bridge); gelesen ist, was aufgeklappt war, gemerkt pro Gerät.
 - Eingeschaltet durch den Abschnitt `peers:` der Config; AI-Connect hält seine Tokens in eigenen
   Dateien.
 - An einen, mehrere oder alle schreiben, als du selbst; Enter sendet, Shift+Enter macht eine neue

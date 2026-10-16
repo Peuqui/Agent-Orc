@@ -37,8 +37,8 @@ window.addEventListener('storage', (event) => {
   if (event.key !== null && event.newValue !== null) updatersByKey.get(event.key)?.(event.newValue)
 })
 
-/** A setting stored under key; parse turns the stored text back into its value. */
-function setting<T>(key: string, initial: T, parse: (stored: string) => T): Ref<T> {
+/** A setting stored under key; serialize turns its value into text, parse back into the value. */
+function setting<T>(key: string, initial: T, parse: (stored: string) => T, serialize: (value: T) => string = String): Ref<T> {
   const stored = localStorage.getItem(key)
   const value = ref(stored === null ? initial : parse(stored)) as Ref<T>
   // What arrived from another document is not stored again: every document would otherwise
@@ -49,7 +49,7 @@ function setting<T>(key: string, initial: T, parse: (stored: string) => T): Ref<
   watch(
     value,
     (current) => {
-      if (!fromOtherDocument) localStorage.setItem(key, String(current))
+      if (!fromOtherDocument) localStorage.setItem(key, serialize(current))
     },
     { flush: 'sync' },
   )
@@ -83,6 +83,13 @@ const dictationSendsAtOnce = sharedSetting('dictation_sends_at_once')
 
 /** Where the STT-Suite transcribes the dictations, for every agent and device: the CPU unless the GPU was chosen on purpose. */
 const dictationDevice = sharedSetting('dictation_device')
+
+/** Per conversation of AI-Connect (its key), the last message read on this device. */
+const peerMessagesSeen = setting<Record<string, number>>('agent-orc-peers-seen', {}, JSON.parse, JSON.stringify)
+
+export function usePeerMessagesSeen(): Ref<Record<string, number>> {
+  return peerMessagesSeen
+}
 
 /** What a terminal shows: the terminal itself, or the agent's answers in short (AnswersFeed). */
 export type TerminalView = 'terminal' | 'answers'

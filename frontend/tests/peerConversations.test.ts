@@ -6,11 +6,16 @@ import {
   chatOf,
   clip,
   collapseRepeats,
+  colorsOf,
   groupConversations,
+  handshakeOf,
+  involves,
   isMachine,
   laneLabel,
   lanesOf,
+  MACHINE_COLOR,
   replyRecipients,
+  unreadCount,
 } from '../src/peerConversations.ts'
 
 const message = (id: number, from: string, to: string, timestamp: string) => ({
@@ -134,4 +139,44 @@ test('a name without a project is a machine, not an agent', () => {
   assert.equal(isMachine('Mini'), true)
   assert.equal(isMachine('Mini:AIfred'), false)
   assert.equal(isMachine('User:Ada'), false)
+})
+
+test('the machines get the last lanes and grey, every other lane a colour of its own', () => {
+  const lanes = lanesOf([
+    message(1, 'Bridge', 'Mini:A', '2026-10-09T20:00:00.000Z'),
+    message(2, 'Mini:A', 'Mini:B', '2026-10-09T20:01:00.000Z'),
+    message(3, 'User:Ada', 'Mini:A', '2026-10-09T20:02:00.000Z'),
+  ])
+  assert.deepEqual(lanes, ['Mini:A', 'Mini:B', 'User:Ada', 'Bridge'])
+  const colors = colorsOf(lanes)
+  assert.equal(colors.get('Bridge'), MACHINE_COLOR)
+  assert.equal(new Set(['Mini:A', 'Mini:B', 'User:Ada'].map((lane) => colors.get(lane))).size, 3)
+})
+
+test('a message concerns its sender, its receiver, and everyone when it went to all', () => {
+  const direct = message(1, 'Mini:A', 'Mini:B', '2026-10-09T20:00:00.000Z')
+  assert.equal(involves(direct, 'Mini:A'), true)
+  assert.equal(involves(direct, 'Mini:B'), true)
+  assert.equal(involves(direct, 'Mini:C'), false)
+  assert.equal(involves(message(2, 'Mini:A', '*', '2026-10-09T20:00:00.000Z'), 'Mini:C'), true)
+})
+
+test('the handshake tags leave the text and become marks', () => {
+  assert.deepEqual(handshakeOf('Danke, angekommen. [LGTM]'), { text: 'Danke, angekommen.', tags: ['LGTM'] })
+  assert.deepEqual(handshakeOf('[CONTINUE] Eine Frage noch'), { text: 'Eine Frage noch', tags: ['CONTINUE'] })
+  assert.deepEqual(handshakeOf('[LGTM]'), { text: '', tags: ['LGTM'] })
+  assert.deepEqual(handshakeOf('Ohne Marke [OK]'), { text: 'Ohne Marke [OK]', tags: [] })
+})
+
+test('unread are the messages after the last one seen, without the user\'s own and the notices', () => {
+  const [conversation] = groupConversations([
+    message(1, 'Mini:A', 'User:Ada', '2026-10-09T20:00:00.000Z'),
+    message(2, 'User:Ada', 'Mini:A', '2026-10-09T20:01:00.000Z'),
+    message(3, 'Mini:A', 'User:Ada', '2026-10-09T20:02:00.000Z'),
+  ])
+  assert.equal(unreadCount(conversation!, 0), 2)
+  assert.equal(unreadCount(conversation!, 1), 1)
+  assert.equal(unreadCount(conversation!, 3), 0)
+  const [notices] = groupConversations([message(4, 'Bridge', 'Mini:A', '2026-10-09T20:00:00.000Z')])
+  assert.equal(unreadCount(notices!, 0), 0)
 })

@@ -42,7 +42,8 @@ export function replyRecipients(conversation: Conversation): string[] {
   return conversation.members.filter((member) => !member.startsWith(USER_PREFIX))
 }
 
-/** Everyone who wrote or was written to, a lane each, in the order they first appear. */
+/** Everyone who wrote or was written to, a lane each, in the order they first appear; the
+ * machines (the bridge) at the far end, as their notices are the least of it. */
 export function lanesOf(messages: Iterable<PeerMessage>): string[] {
   const lanes = new Set<string>()
   const chronological = [...messages].sort((a, b) => a.timestamp.localeCompare(b.timestamp))
@@ -50,7 +51,57 @@ export function lanesOf(messages: Iterable<PeerMessage>): string[] {
     lanes.add(message.from)
     if (message.to !== EVERYONE) lanes.add(message.to)
   }
-  return [...lanes]
+  return [...lanes].sort((a, b) => Number(isMachine(a)) - Number(isMachine(b)))
+}
+
+// A colour for each agent and user, the same in every view: its name, its lane and its arrows.
+// None of the state colours (amber, red, emerald), so a name is not taken for a state.
+const PEER_COLORS = [
+  'text-sky-400',
+  'text-violet-400',
+  'text-orange-400',
+  'text-teal-300',
+  'text-pink-400',
+  'text-lime-400',
+  'text-indigo-300',
+  'text-yellow-200',
+]
+// The machines' notices step back.
+export const MACHINE_COLOR = 'text-slate-500'
+
+/** Each lane's colour, by its place among the lanes; more lanes than colours share them. */
+export function colorsOf(lanes: string[]): Map<string, string> {
+  const colors = new Map<string, string>()
+  let next = 0
+  for (const lane of lanes) {
+    if (isMachine(lane)) colors.set(lane, MACHINE_COLOR)
+    else colors.set(lane, PEER_COLORS[next++ % PEER_COLORS.length]!)
+  }
+  return colors
+}
+
+/** Whether a message concerns someone: from them, to them, or to everyone. */
+export function involves(message: PeerMessage, name: string): boolean {
+  return message.from === name || message.to === name || message.to === EVERYONE
+}
+
+// The handshake's tags (see AI-Connect's rules): agreement, or "not done yet".
+export const HANDSHAKE_TAGS = ['LGTM', 'CONTINUE'] as const
+export type HandshakeTag = (typeof HANDSHAKE_TAGS)[number]
+const HANDSHAKE_PATTERN = new RegExp(`\\s*\\[(${HANDSHAKE_TAGS.join('|')})\\]`, 'g')
+
+/** A text without its handshake tags, and the tags it carried, to be shown as marks. */
+export function handshakeOf(text: string): { text: string; tags: HandshakeTag[] } {
+  const tags = [...text.matchAll(HANDSHAKE_PATTERN)].map((match) => match[1] as HandshakeTag)
+  return { text: text.replace(HANDSHAKE_PATTERN, '').trim(), tags: [...new Set(tags)] }
+}
+
+/** The messages of a conversation after the last one seen, but the user's own and a machine's
+ * notices (the bridge repeats them, they would only drown the rest). */
+export function unreadCount(conversation: Conversation, seenId: number): number {
+  return conversation.messages.filter(
+    (message) => message.id > seenId && !message.from.startsWith(USER_PREFIX) && !isMachine(message.from),
+  ).length
 }
 
 // Peers are Host:Project; a name that is only a host is a machine's own connection to the bridge.

@@ -107,6 +107,14 @@ that run Agent-Orc can be shown in the same app, through an SSH tunnel ([Several
 - Split by day (today, yesterday, weekday and date), each message with its time only; the same
   message several times in a row (such as a standby notice of the bridge) stands there once, with
   its count and time span.
+- Every agent has its own colour in all views (name, lane, arrow); the bridge's notices are grey,
+  dashed and at the far end in the lanes. The handshake's tags (`[LGTM]`, `[CONTINUE]`) are small
+  marks beside the message instead of part of its text.
+- A click on an agent (in the list at the top, or on its name over the lanes) shows only what
+  concerns it: a filter by conversation and in the timeline, the lanes fade the rest; a second
+  click shows everything again.
+- A closed conversation shows its last message and how many are unread (not your own, not the
+  bridge's notices); read is what was open, remembered per device.
 - Switched on by the `peers:` section of the config; AI-Connect keeps its tokens in its own files.
 - Write to one, several or all of them as yourself; Enter sends, Shift+Enter breaks the line. In
   an open conversation the field below answers everyone in it.

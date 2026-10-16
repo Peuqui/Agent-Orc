@@ -1,15 +1,19 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { PeerMessage } from '../api'
-import { arrowOf, type Day } from '../peerConversations'
+import { usePeerColor } from '../composables/usePeerColors'
+import { arrowOf, involves, isMachine, type Day } from '../peerConversations'
 import PeerDay from './PeerDay.vue'
 import PeerMessageItem from './PeerMessageItem.vue'
 
 // The messages as a sequence diagram: a lane for everyone taking part, each message an arrow from
 // its sender's lane to its receiver's (a broadcast reaches across all lanes), its text below, under
-// the day it was sent; repeats of a message are one arrow. The page shows the lanes' names in its header, which stays in view; `columns` lays out both alike.
-const props = defineProps<{ days: Day[]; lanes: string[]; columns: Record<string, string> }>()
+// the day it was sent; repeats of a message are one arrow. An arrow has its sender's colour, a
+// machine's notice is a thin dashed grey one. With one lane in `focus` the rest fades back. The
+// page shows the lanes' names in its header, which stays in view; `columns` lays out both alike.
+const props = defineProps<{ days: Day[]; lanes: string[]; columns: Record<string, string>; focus: string | null }>()
 const lanes = computed(() => props.lanes)
+const colorOf = usePeerColor()
 
 /** The middle of a lane, in percent of the width. */
 function middle(lane: number): number {
@@ -26,6 +30,7 @@ function arrow(message: PeerMessage) {
     bar: { left: `${left}%`, width: `${middle(Math.max(...ends)) - left}%` },
     // The tip points away from the sender.
     rightwards: to !== null && to > from,
+    notice: isMachine(message.from),
   }
 }
 </script>
@@ -37,35 +42,45 @@ function arrow(message: PeerMessage) {
         <div v-for="lane in lanes" :key="lane" class="mx-auto w-px bg-slate-600/60" />
       </div>
       <template v-for="day in days" :key="day.key">
-      <PeerDay :date="day.date" />
-      <div v-for="run in day.runs" :key="run.message.id" class="relative border-b border-slate-700/50 pt-2 last:border-b-0">
-        <div class="relative h-3" aria-hidden="true">
-          <template v-for="shape in [arrow(run.message)]" :key="run.message.id">
-            <span class="absolute top-1/2 h-0.5 -translate-y-1/2 bg-amber-400" :style="shape.bar" />
-            <span
-              class="absolute top-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-amber-400"
-              :style="{ left: `${middle(shape.from)}%` }"
-            />
-            <!-- The tip at the receiver; a broadcast marks every lane it reaches. -->
-            <span
-              v-if="shape.to !== null"
-              class="absolute top-1/2 size-0 -translate-y-1/2 border-y-[5px] border-y-transparent"
-              :class="shape.rightwards ? '-translate-x-full border-l-[8px] border-l-amber-400' : 'border-r-[8px] border-r-amber-400'"
-              :style="{ left: `${middle(shape.to)}%` }"
-            />
-            <template v-else>
+        <PeerDay :date="day.date" />
+        <div
+          v-for="run in day.runs"
+          :key="run.message.id"
+          class="relative border-b border-slate-700/50 pt-2 transition-opacity last:border-b-0"
+          :class="{ 'opacity-30': focus !== null && !involves(run.message, focus) }"
+        >
+          <div class="relative h-3" :class="colorOf(run.message.from)" aria-hidden="true">
+            <template v-for="shape in [arrow(run.message)]" :key="run.message.id">
               <span
-                v-for="(_lane, index) in lanes"
-                v-show="index !== shape.from"
-                :key="index"
-                class="absolute top-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-amber-400 bg-slate-800"
-                :style="{ left: `${middle(index)}%` }"
+                class="absolute top-1/2 -translate-y-1/2"
+                :class="shape.notice ? 'border-t border-dashed border-current' : 'h-0.5 bg-current'"
+                :style="shape.bar"
               />
+              <span
+                class="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-current"
+                :class="shape.notice ? 'size-1.5' : 'size-2'"
+                :style="{ left: `${middle(shape.from)}%` }"
+              />
+              <!-- The tip at the receiver; a broadcast marks every lane it reaches. -->
+              <span
+                v-if="shape.to !== null"
+                class="absolute top-1/2 size-0 -translate-y-1/2 border-y-[5px] border-y-transparent"
+                :class="shape.rightwards ? '-translate-x-full border-l-[8px] border-l-current' : 'border-r-[8px] border-r-current'"
+                :style="{ left: `${middle(shape.to)}%` }"
+              />
+              <template v-else>
+                <span
+                  v-for="(_lane, index) in lanes"
+                  v-show="index !== shape.from"
+                  :key="index"
+                  class="absolute top-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-current bg-slate-800"
+                  :style="{ left: `${middle(index)}%` }"
+                />
+              </template>
             </template>
-          </template>
+          </div>
+          <PeerMessageItem :run="run" class="relative border-t-0 bg-slate-800/90 pt-1" />
         </div>
-        <PeerMessageItem :run="run" class="relative border-t-0 bg-slate-800/90 pt-1" />
-      </div>
       </template>
     </div>
   </div>

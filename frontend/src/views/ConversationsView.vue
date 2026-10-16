@@ -1,27 +1,36 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { api, rootAddress, type Peer, type PeerEvent, type PeerMessage } from '../api'
 import PeerBubble from '../components/PeerBubble.vue'
 import PeerComposer from '../components/PeerComposer.vue'
 import PeerDay from '../components/PeerDay.vue'
+import PeerHandshake from '../components/PeerHandshake.vue'
 import PeerLanes from '../components/PeerLanes.vue'
 import PeerMessageItem from '../components/PeerMessageItem.vue'
 import { useHeightVariable } from '../composables/useHeightVariable'
+import { providePeerColors } from '../composables/usePeerColors'
+import { usePeerMessagesSeen } from '../composables/useSettings'
 import { useToast } from '../composables/useToast'
 import { useViewZoom } from '../composables/useViewZoom'
 import { formatMoment } from '../format'
 import {
   byDay,
   chatOf,
+  clip,
   collapseRepeats,
+  colorsOf,
   EVERYONE,
   groupConversations,
+  handshakeOf,
+  involves,
   isMachine,
   laneLabel,
   lanesOf,
   replyRecipients,
+  unreadCount,
   type Conversation,
+  type HandshakeTag,
 } from '../peerConversations'
 
 // AI-Connect read along: the conversations between the agents, live, and fields to write to
@@ -86,15 +95,59 @@ function receive(event: PeerEvent): void {
 
 onBeforeUnmount(() => source?.close())
 
-const conversations = computed(() => groupConversations(messages.value))
-const timeline = computed(() =>
-  byDay(collapseRepeats([...messages.value].sort((a, b) => b.timestamp.localeCompare(a.timestamp)))),
+// One agent picked (its chip above, or its lane's name): the conversations and the timeline show
+// only what concerns it, the lanes fade the rest back. A second click lets go of it.
+const focus = ref<string | null>(null)
+
+function toggleFocus(name: string): void {
+  focus.value = focus.value === name ? null : name
+}
+
+function concernsFocus(message: PeerMessage): boolean {
+  return focus.value === null || involves(message, focus.value)
+}
+
+const allConversations = computed(() => groupConversations(messages.value))
+const conversations = computed(() =>
+  allConversations.value.filter((conversation) => conversation.messages.some(concernsFocus)),
 )
+const newestFirst = computed(() => [...messages.value].sort((a, b) => b.timestamp.localeCompare(a.timestamp)))
+const timeline = computed(() => byDay(collapseRepeats(newestFirst.value.filter(concernsFocus))))
+const laneDays = computed(() => byDay(collapseRepeats(newestFirst.value)))
 const sortedPeers = computed(() =>
   peers.value.filter((peer) => !isMachine(peer.name)).sort((a, b) => a.name.localeCompare(b.name)),
 )
 const peerNames = computed(() => sortedPeers.value.map((peer) => peer.name))
 const lanes = computed(() => lanesOf(messages.value))
+const colorOf = providePeerColors(computed(() => colorsOf(lanes.value)))
+
+// What was read on this device: an open conversation is read up to its last message. Kept only for
+// the conversations still shown, once the history is in, so the list does not grow for ever.
+const seen = usePeerMessagesSeen()
+watch([allConversations, openConversations, historyLoaded], () => {
+  if (!historyLoaded.value) return
+  const marked: Record<string, number> = {}
+  for (const conversation of allConversations.value) {
+    const last = openConversations.value.has(conversation.key) ? conversation.messages.at(-1)!.id : 0
+    const read = Math.max(seen.value[conversation.key] ?? 0, last)
+    if (read > 0) marked[conversation.key] = read
+  }
+  if (JSON.stringify(marked) !== JSON.stringify(seen.value)) seen.value = marked
+})
+
+function unread(conversation: Conversation): number {
+  return unreadCount(conversation, seen.value[conversation.key] ?? 0)
+}
+
+const LAST_LINE_CHARS = 120
+
+/** The last message of a conversation in one line, for it closed: "vllm-research: Danke …", and
+ * its handshake's tags as marks behind it. */
+function lastLine(conversation: Conversation): { text: string; tags: HandshakeTag[] } {
+  const last = conversation.messages.at(-1)!
+  const { text, tags } = handshakeOf(last.content)
+  return { text: `${laneLabel(last.from)}: ${clip(text, LAST_LINE_CHARS, 1)}`, tags }
+}
 const laneColumns = computed(() => ({ gridTemplateColumns: `repeat(${lanes.value.length}, minmax(0, 1fr))` }))
 const chosenClass = 'border-sky-500 bg-sky-900/40 text-sky-200'
 
@@ -121,11 +174,6 @@ function peerTitle(peer: Peer): string {
 const offlineRecipients = computed(() =>
   recipients.value.filter((recipient) => recipient !== EVERYONE && !peerNames.value.includes(recipient)),
 )
-
-function title(conversation: Conversation): string {
-  const [first, second] = conversation.members
-  return second === EVERYONE ? `${first} → ${t('peers.everyone')}` : `${first} ↔ ${second}`
-}
 
 function toggleConversation(key: string): void {
   answering.value = null
@@ -179,23 +227,46 @@ function replyPlaceholder(recipients: string[]): string {
         class="mt-3 -mb-1 grid gap-1 rounded-t-xl border-x border-t border-slate-700 bg-slate-800 px-3 py-2"
         :style="laneColumns"
       >
-        <span v-for="lane in lanes" :key="lane" class="truncate text-center text-xs font-medium text-amber-400" :title="lane">
+        <button
+          v-for="lane in lanes"
+          :key="lane"
+          type="button"
+          class="truncate rounded text-center text-xs font-medium hover:bg-slate-700/60"
+          :class="[colorOf(lane), focus === lane ? 'underline underline-offset-4' : focus !== null ? 'opacity-50' : '']"
+          :title="`${lane} · ${$t('peers.focus')}`"
+          :aria-pressed="focus === lane"
+          @click="toggleFocus(lane)"
+        >
           {{ laneLabel(lane) }}
-        </span>
+        </button>
       </div>
     </div>
 
     <p v-if="configured === false" class="card p-6 text-center text-slate-400">{{ $t('peers.notConfigured') }}</p>
     <template v-else-if="configured">
       <div v-if="sortedPeers.length" class="flex flex-wrap gap-2 text-xs">
-        <span
+        <button
           v-for="peer in sortedPeers"
           :key="peer.name"
-          class="rounded-full border border-slate-600 px-2 py-0.5 text-slate-300"
-          :title="peerTitle(peer)"
+          type="button"
+          class="rounded-full border px-2 py-0.5"
+          :class="focus === peer.name ? chosenClass : 'border-slate-600 text-slate-300'"
+          :title="`${peerTitle(peer)} · ${$t('peers.focus')}`"
+          :aria-pressed="focus === peer.name"
+          @click="toggleFocus(peer.name)"
         >
           <span :class="stateColor(peer)">●</span> {{ peer.name }}
-        </span>
+        </button>
+        <button
+          v-if="focus !== null && !peerNames.includes(focus)"
+          type="button"
+          class="rounded-full border px-2 py-0.5"
+          :class="chosenClass"
+          :aria-pressed="true"
+          @click="toggleFocus(focus)"
+        >
+          {{ focus }} ✕
+        </button>
       </div>
       <p v-if="sortedPeers.length" class="-mt-2 flex flex-wrap gap-x-3 text-xs text-slate-500">
         <span v-for="(color, state) in STATE_COLORS" :key="state"><span :class="color">●</span> {{ $t(`peers.state.${state}`) }}</span>
@@ -220,10 +291,31 @@ function replyPlaceholder(recipients: string[]): string {
               :aria-expanded="openConversations.has(conversation.key)"
               @click="toggleConversation(conversation.key)"
             >
-              <span class="text-sm font-medium break-words text-amber-400">{{ title(conversation) }}</span>
+              <span class="flex items-baseline gap-2">
+                <span class="min-w-0 flex-1 text-sm font-medium break-words">
+                  <span :class="colorOf(conversation.members[0])">{{ conversation.members[0] }}</span>
+                  <span class="text-slate-500">{{ conversation.members[1] === EVERYONE ? ' → ' : ' ↔ ' }}</span>
+                  <span :class="colorOf(conversation.members[1])">{{
+                    conversation.members[1] === EVERYONE ? $t('peers.everyone') : conversation.members[1]
+                  }}</span>
+                </span>
+                <span
+                  v-if="unread(conversation) && !openConversations.has(conversation.key)"
+                  class="rounded-full bg-sky-600 px-1.5 text-xs font-medium text-white"
+                  :title="$t('peers.unread', { count: unread(conversation) })"
+                >
+                  {{ unread(conversation) }}
+                </span>
+              </span>
               <span class="text-xs text-slate-500">
                 {{ $t('peers.count', { count: conversation.messages.length }) }} ·
                 {{ formatMoment(new Date(conversation.last), locale) }}
+              </span>
+              <span v-if="!openConversations.has(conversation.key)" class="mt-0.5 flex items-baseline gap-2 text-sm text-slate-400">
+                <template v-for="line in [lastLine(conversation)]" :key="conversation.key">
+                  <span class="min-w-0 truncate">{{ line.text }}</span>
+                  <PeerHandshake :tags="line.tags" />
+                </template>
               </span>
             </button>
             <button
@@ -262,7 +354,7 @@ function replyPlaceholder(recipients: string[]): string {
         </template>
       </div>
 
-      <PeerLanes v-else :days="timeline" :lanes="lanes" :columns="laneColumns" class="-mt-4 rounded-t-none border-t-0" />
+      <PeerLanes v-else :days="laneDays" :focus="focus" :lanes="lanes" :columns="laneColumns" class="-mt-4 rounded-t-none border-t-0" />
 
       <!-- Flush with the bottom (above the phone's bottom bar), so nothing scrolls by below it. -->
       <div ref="foot" class="sticky bottom-(--bottom-nav-height) z-20 -mx-4 -mb-4 border-t border-slate-800 bg-slate-900 px-4 py-2">
