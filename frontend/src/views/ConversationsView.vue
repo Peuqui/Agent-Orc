@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { api, rootAddress, type Peer, type PeerEvent, type PeerMessage } from '../api'
+import AppIcon from '../components/AppIcon.vue'
 import PeerBubble from '../components/PeerBubble.vue'
 import PeerComposer from '../components/PeerComposer.vue'
 import PeerDay from '../components/PeerDay.vue'
@@ -272,7 +273,7 @@ function replyPlaceholder(recipients: string[]): string {
             :aria-pressed="recipients.includes(peer.name)"
             @click="toggleRecipient(peer.name)"
           >
-            ✉︎
+            <AppIcon name="mail" class="size-4" />
           </button>
         </span>
         <button
