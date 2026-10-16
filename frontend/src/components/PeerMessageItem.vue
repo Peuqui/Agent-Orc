@@ -3,7 +3,7 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { usePeerColor } from '../composables/usePeerColors'
 import { formatTimeSpan } from '../format'
-import { clip, EVERYONE, handshakeOf, isMachine, laneLabel, type MessageRun } from '../peerConversations'
+import { clip, EVERYONE, isMachine, laneLabel, readableOf, type MessageRun } from '../peerConversations'
 import PeerHandshake from './PeerHandshake.vue'
 
 // One message of AI-Connect: its first line, the whole text (and what came with it) on a tap.
@@ -15,7 +15,7 @@ const props = defineProps<{ run: MessageRun }>()
 const { locale, t } = useI18n()
 const colorOf = usePeerColor()
 const open = ref(false)
-const handshake = computed(() => handshakeOf(props.run.message.content))
+const readable = computed(() => readableOf(props.run.message))
 
 function recipient(to: string): string {
   return to === EVERYONE ? t('peers.everyone') : laneLabel(to)
@@ -30,7 +30,7 @@ function recipient(to: string): string {
         <!-- Short names (without the host); the whole name on hover. -->
         <span :class="colorOf(run.message.from)" :title="run.message.from">{{ laneLabel(run.message.from) }}</span>
         <span>→ <span :class="colorOf(run.message.to)" :title="run.message.to">{{ recipient(run.message.to) }}</span></span>
-        <PeerHandshake :tags="handshake.tags" />
+        <PeerHandshake :tags="readable.tags" />
         <span v-if="run.count > 1">{{ $t('peers.times', { count: run.count }) }}</span>
         <span v-if="run.message.context">📎</span>
       </div>
@@ -40,11 +40,11 @@ function recipient(to: string): string {
         class="mt-0.5 text-sm break-words"
         :class="isMachine(run.message.from) ? 'text-slate-400' : 'text-slate-200'"
       >
-        {{ clip(handshake.text, FIRST_LINE_CHARS, 1) }}
+        {{ clip(readable.text, FIRST_LINE_CHARS, 1) }}
       </p>
     </button>
     <template v-if="open">
-      <p class="mt-0.5 text-sm break-words whitespace-pre-wrap text-slate-200 select-text">{{ handshake.text }}</p>
+      <p class="mt-0.5 text-sm break-words whitespace-pre-wrap text-slate-200 select-text">{{ readable.text }}</p>
       <pre
         v-if="run.message.context"
         class="mt-2 max-h-80 overflow-auto rounded bg-slate-900 p-2 text-xs whitespace-pre-wrap text-slate-400 select-text"

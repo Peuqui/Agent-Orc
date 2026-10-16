@@ -22,11 +22,11 @@ import {
   colorsOf,
   EVERYONE,
   groupConversations,
-  handshakeOf,
   involves,
   isMachine,
   laneLabel,
   lanesOf,
+  readableOf,
   replyRecipients,
   unreadCount,
   type Conversation,
@@ -145,7 +145,7 @@ const LAST_LINE_CHARS = 120
  * its handshake's tags as marks behind it. */
 function lastLine(conversation: Conversation): { text: string; tags: HandshakeTag[] } {
   const last = conversation.messages.at(-1)!
-  const { text, tags } = handshakeOf(last.content)
+  const { text, tags } = readableOf(last)
   return { text: `${laneLabel(last.from)}: ${clip(text, LAST_LINE_CHARS, 1)}`, tags }
 }
 const laneColumns = computed(() => ({ gridTemplateColumns: `repeat(${lanes.value.length}, minmax(0, 1fr))` }))

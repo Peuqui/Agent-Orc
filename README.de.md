@@ -116,7 +116,8 @@ einen SSH-Tunnel ([Mehrere Rechner](#mehrere-rechner)).
   mit Anzahl und Zeitspanne.
 - Jeder Agent hat in allen Ansichten seine eigene Farbe (Name, Spur, Pfeil); Hinweise der Bridge
   sind grau, in den Spuren gestrichelt und ganz außen. Die Marken des Handshakes (`[LGTM]`,
-  `[CONTINUE]`) stehen als kleine Zeichen neben der Nachricht statt im Text.
+  `[CONTINUE]`) stehen als kleine Zeichen neben der Nachricht statt im Text; der eigene Name, den
+  viele Agenten ihrer Nachricht voranstellen, fällt weg, er steht ja darüber.
 - Ein Klick auf einen Agenten (oben in der Liste, in den Spuren auf seinen Namen) zeigt nur, was ihn
   betrifft: nach Gespräch und im Verlauf als Filter, in den Spuren blendet er den Rest ab; ein
   zweiter Klick zeigt wieder alles.

@@ -90,8 +90,13 @@ export const HANDSHAKE_TAGS = ['LGTM', 'CONTINUE'] as const
 export type HandshakeTag = (typeof HANDSHAKE_TAGS)[number]
 const HANDSHAKE_PATTERN = new RegExp(`\\s*\\[(${HANDSHAKE_TAGS.join('|')})\\]`, 'g')
 
-/** A text without its handshake tags, and the tags it carried, to be shown as marks. */
-export function handshakeOf(text: string): { text: string; tags: HandshakeTag[] } {
+/** A message's text as it is shown: without the sender's own name in front ("Mini:A: …" or
+ * "A: …", which many agents write though their name stands above it) and without the handshake's
+ * tags, which it carried to be shown as marks. */
+export function readableOf(message: PeerMessage): { text: string; tags: HandshakeTag[] } {
+  let text = message.content.trim()
+  const prefix = [message.from, laneLabel(message.from)].map((name) => `${name}:`).find((name) => text.startsWith(name))
+  if (prefix) text = text.slice(prefix.length)
   const tags = [...text.matchAll(HANDSHAKE_PATTERN)].map((match) => match[1] as HandshakeTag)
   return { text: text.replace(HANDSHAKE_PATTERN, '').trim(), tags: [...new Set(tags)] }
 }

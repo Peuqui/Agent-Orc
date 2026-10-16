@@ -8,12 +8,12 @@ import {
   collapseRepeats,
   colorsOf,
   groupConversations,
-  handshakeOf,
   involves,
   isMachine,
   laneLabel,
   lanesOf,
   MACHINE_COLOR,
+  readableOf,
   replyRecipients,
   unreadCount,
 } from '../src/peerConversations.ts'
@@ -161,11 +161,16 @@ test('a message concerns its sender, its receiver, and everyone when it went to 
   assert.equal(involves(message(2, 'Mini:A', '*', '2026-10-09T20:00:00.000Z'), 'Mini:C'), true)
 })
 
-test('the handshake tags leave the text and become marks', () => {
-  assert.deepEqual(handshakeOf('Danke, angekommen. [LGTM]'), { text: 'Danke, angekommen.', tags: ['LGTM'] })
-  assert.deepEqual(handshakeOf('[CONTINUE] Eine Frage noch'), { text: 'Eine Frage noch', tags: ['CONTINUE'] })
-  assert.deepEqual(handshakeOf('[LGTM]'), { text: '', tags: ['LGTM'] })
-  assert.deepEqual(handshakeOf('Ohne Marke [OK]'), { text: 'Ohne Marke [OK]', tags: [] })
+test('the sender\'s own name in front and the handshake tags leave the text, the tags become marks', () => {
+  const said = (from: string, content: string) => readableOf({ ...message(1, from, 'Mini:B', ''), content })
+  assert.deepEqual(said('Mini:A', 'Danke, angekommen. [LGTM]'), { text: 'Danke, angekommen.', tags: ['LGTM'] })
+  assert.deepEqual(said('Mini:A', '[CONTINUE] Eine Frage noch'), { text: 'Eine Frage noch', tags: ['CONTINUE'] })
+  assert.deepEqual(said('Mini:A', '[LGTM]'), { text: '', tags: ['LGTM'] })
+  assert.deepEqual(said('Mini:A', 'Ohne Marke [OK]'), { text: 'Ohne Marke [OK]', tags: [] })
+  assert.deepEqual(said('Mini:A', 'Mini:A: Messfenster ab jetzt'), { text: 'Messfenster ab jetzt', tags: [] })
+  assert.deepEqual(said('Mini:A', 'A: fertig. [LGTM]'), { text: 'fertig.', tags: ['LGTM'] })
+  // Another's name in front stays: it says something.
+  assert.deepEqual(said('Mini:A', 'Mini:B: hat recht'), { text: 'Mini:B: hat recht', tags: [] })
 })
 
 test('unread are the messages after the last one seen, without the user\'s own and the notices', () => {

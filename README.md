@@ -109,7 +109,8 @@ that run Agent-Orc can be shown in the same app, through an SSH tunnel ([Several
   its count and time span.
 - Every agent has its own colour in all views (name, lane, arrow); the bridge's notices are grey,
   dashed and at the far end in the lanes. The handshake's tags (`[LGTM]`, `[CONTINUE]`) are small
-  marks beside the message instead of part of its text.
+  marks beside the message instead of part of its text; the sender's own name, which many agents
+  put in front of their message, is left out, as it stands above it.
 - A click on an agent (in the list at the top, or on its name over the lanes) shows only what
   concerns it: a filter by conversation and in the timeline, the lanes fade the rest; a second
   click shows everything again.

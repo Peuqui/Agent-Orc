@@ -3,13 +3,13 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { usePeerColor } from '../composables/usePeerColors'
 import { formatTimeSpan } from '../format'
-import { clip, handshakeOf, laneLabel, type ChatEntry } from '../peerConversations'
+import { clip, laneLabel, readableOf, type ChatEntry } from '../peerConversations'
 import PeerHandshake from './PeerHandshake.vue'
 
 // One message in a conversation, as a messenger shows it: a bubble on its sender's side, a
 // machine's notice small in the middle. A long text shows its beginning, "more" the rest and what
 // came with it; repeats of the same message are one bubble with their count and time span. The
-// handshake's tags ([LGTM], [CONTINUE]) are marks at its foot, not part of the text.
+// text is shown as readableOf gives it; the handshake's tags are marks at its foot.
 const PREVIEW_CHARS = 600
 const PREVIEW_LINES = 8
 
@@ -19,9 +19,9 @@ const colorOf = usePeerColor()
 const open = ref(false)
 
 const message = computed(() => props.entry.run.message)
-const handshake = computed(() => handshakeOf(message.value.content))
-const preview = computed(() => clip(handshake.value.text, PREVIEW_CHARS, PREVIEW_LINES))
-const hasMore = computed(() => preview.value !== handshake.value.text || message.value.context !== null)
+const readable = computed(() => readableOf(message.value))
+const preview = computed(() => clip(readable.value.text, PREVIEW_CHARS, PREVIEW_LINES))
+const hasMore = computed(() => preview.value !== readable.value.text || message.value.context !== null)
 const time = computed(() => formatTimeSpan(new Date(props.entry.run.first), new Date(props.entry.run.last), locale.value))
 
 const BUBBLE_CLASSES = {
@@ -36,7 +36,7 @@ const BUBBLE_CLASSES = {
     class="mx-auto mt-2 max-w-[90%] rounded-md bg-slate-900/60 px-3 py-1 text-center text-xs text-slate-400"
   >
     <span class="mr-1 text-slate-500" :title="message.from">{{ laneLabel(message.from) }}:</span>
-    <span class="break-words whitespace-pre-wrap select-text">{{ open ? handshake.text : preview }}</span>
+    <span class="break-words whitespace-pre-wrap select-text">{{ open ? readable.text : preview }}</span>
     <button v-if="hasMore" type="button" class="ml-1 text-sky-300 hover:underline" @click="open = !open">
       {{ open ? $t('peers.less') : $t('peers.more') }}
     </button>
@@ -48,7 +48,7 @@ const BUBBLE_CLASSES = {
     <div v-if="entry.showName" class="text-xs font-medium" :class="colorOf(message.from)" :title="message.from">
       {{ laneLabel(message.from) }}
     </div>
-    <p v-if="handshake.text" class="text-sm break-words whitespace-pre-wrap text-slate-100 select-text">{{ open ? handshake.text : preview }}</p>
+    <p v-if="readable.text" class="text-sm break-words whitespace-pre-wrap text-slate-100 select-text">{{ open ? readable.text : preview }}</p>
     <pre
       v-if="open && message.context"
       class="mt-2 max-h-80 overflow-auto rounded bg-slate-900 p-2 text-xs whitespace-pre-wrap text-slate-400 select-text"
@@ -58,7 +58,7 @@ const BUBBLE_CLASSES = {
       <button v-if="hasMore" type="button" class="mr-auto text-sky-300 hover:underline" @click="open = !open">
         {{ open ? $t('peers.less') : $t('peers.more') }}
       </button>
-      <PeerHandshake :tags="handshake.tags" />
+      <PeerHandshake :tags="readable.tags" />
       <span v-if="message.context">📎</span>
       <span v-if="entry.run.count > 1">{{ $t('peers.times', { count: entry.run.count }) }}</span>
       <span>{{ time }}</span>
