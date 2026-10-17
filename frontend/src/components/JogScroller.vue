@@ -13,8 +13,8 @@ const emit = defineEmits<{ scroll: [lines: number] }>()
 const DEAD_ZONE_PX = 6
 // At the end of the track the history moves at this many lines per second. The cubic curve
 // below keeps the first part of the track slow, so a high top speed does not make slow
-// scrolling harder (doubled from 100 on 11.10.2026: that was too slow for long histories).
-const MAX_LINES_PER_SECOND = 200
+// scrolling harder (100 until 11.10.2026, 200 until 17.10.2026: still too slow for long histories).
+const MAX_LINES_PER_SECOND = 400
 // Cubic: slow over most of the way, fast only near the end of the track.
 const SPEED_CURVE = 3
 const MILLISECONDS_PER_SECOND = 1000

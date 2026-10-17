@@ -566,12 +566,13 @@ function deleteThis(): void {
             @load="onFrameLoad(id)"
           />
           <!-- Divider on the boundary of two neighbouring columns (not after the last), in room the iframes leave free (they are that much
-               narrower), so it does not cover the jog at their right edge; wider for a finger. On
+               narrower), so it does not cover the jog at their right edge; wider for a finger, whose hit area reaches 1.75rem into the next column
+               (not to the left: there the jog strip of the column sits). On
                phones every column fills the screen, so there is nothing to divide. -->
           <div
             v-for="id in showTabs ? workspace.tabs.slice(0, -1) : []"
             :key="`divider-${id}`"
-            class="z-10 w-(--divider-width) cursor-col-resize touch-none justify-self-end border-r border-slate-700 hover:bg-red-500/30 pointer-coarse:bg-slate-700/40"
+            class="relative z-10 w-(--divider-width) cursor-col-resize touch-none justify-self-end border-r border-slate-700 hover:bg-red-500/30 pointer-coarse:bg-slate-700/40 pointer-coarse:after:absolute pointer-coarse:after:inset-y-0 pointer-coarse:after:left-full pointer-coarse:after:w-7 pointer-coarse:after:content-['']"
             :class="{ 'bg-red-500/40': widths.resize.value?.id === id }"
             :style="{ gridColumn: column(id), gridRow: '1 / span 2' }"
             :title="$t('workspace.resize')"
