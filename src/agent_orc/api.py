@@ -440,13 +440,8 @@ class HandoverAutoRequest(BaseModel):
     auto: bool
 
 
-class KeepWarmDefaultRequest(BaseModel):
-    default: bool
-
-
-class KeepWarmAgentRequest(BaseModel):
-    # None: follow the default.
-    enabled: bool | None
+class KeepWarmRequest(BaseModel):
+    enabled: bool
 
 
 class ApprovalDecision(BaseModel):
@@ -844,13 +839,9 @@ def create_app(
     def keep_warm_entry(session: AgentSession) -> dict[str, Any]:
         profile = config.agents.get(session.profile)
         progress = keep_warm_progress.get(session.id)
-        settings = keepwarm.read_settings()
         return {
             "available": profile is not None and profile.keep_warm is not None,
-            "enabled": settings.enabled(session.id),
-            # The user's own choice for this agent; null: it follows the default.
-            "own": settings.agents.get(session.id),
-            "default": settings.default,
+            "enabled": session.id in keepwarm.read_enabled(),
             "pings": progress.pings if progress else 0,
         }
 
@@ -890,7 +881,7 @@ def create_app(
     keep_warm_progress: dict[str, keepwarm.KeepWarmProgress] = {}
 
     def check_keep_warm() -> None:
-        settings = keepwarm.read_settings()
+        enabled = keepwarm.read_enabled()
         listed = sessions.list()
         for session_id in keep_warm_progress.keys() - {s.id for s in listed}:
             del keep_warm_progress[session_id]
@@ -915,7 +906,7 @@ def create_app(
             if handover_progress.get(session.id) == HANDOVER_ASKED:
                 continue
             pings = progress.pings if progress else 0
-            if settings.enabled(session.id) and keepwarm.due(
+            if session.id in enabled and keepwarm.due(
                 keep_warm, agent_cache(session), clock(), pings
             ):
                 sessions.type_line(session.id, keep_warm.prompt)
@@ -1684,20 +1675,12 @@ def create_app(
     def set_handover_auto(body: HandoverAutoRequest) -> None:
         write_auto(body.auto)
 
-    @app.get("/api/keep-warm", dependencies=authenticated)
-    def keep_warm_default() -> dict[str, bool]:
-        return {"default": keepwarm.read_settings().default}
-
-    @app.put("/api/keep-warm", dependencies=authenticated, status_code=status.HTTP_204_NO_CONTENT)
-    def set_keep_warm_default(body: KeepWarmDefaultRequest) -> None:
-        keepwarm.write_default(body.default)
-
     @app.put(
         "/api/sessions/{session_id}/keep-warm",
         dependencies=authenticated,
         status_code=status.HTTP_204_NO_CONTENT,
     )
-    def set_keep_warm_agent(session_id: str, body: KeepWarmAgentRequest) -> None:
+    def set_keep_warm_agent(session_id: str, body: KeepWarmRequest) -> None:
         if find_session(session_id) is None:
             raise SessionNotFoundError(session_id)
         keepwarm.write_agent(session_id, body.enabled)

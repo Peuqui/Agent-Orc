@@ -5,7 +5,7 @@ import pytest
 from agent_orc.cache import CacheState
 from agent_orc.config import KeepWarmConfig
 from agent_orc.handover import ASKED, DONE, WORKING
-from agent_orc.keepwarm import KeepWarmProgress, due, read_settings, write_agent, write_default
+from agent_orc.keepwarm import KeepWarmProgress, due, read_enabled, write_agent
 
 CONFIG = KeepWarmConfig(prompt="Keep-alive", lead_minutes=5, max_pings=3)
 HOUR = 3600
@@ -49,19 +49,13 @@ def test_a_prompt_runs_its_course_and_the_users_input_ends_the_rest() -> None:
     assert done.follow(busy=True) is None
 
 
-def test_settings_default_and_per_agent_choice(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_agents_are_switched_on_one_by_one(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
-    assert not read_settings().enabled("a")
-    write_default(True)
-    write_agent("b", False)
-    settings = read_settings()
-    assert settings.enabled("a") and not settings.enabled("b")
-    # The default can change without losing the choices of agents.
-    write_default(False)
+    assert read_enabled() == set()
     write_agent("a", True)
-    settings = read_settings()
-    assert settings.enabled("a") and not settings.enabled("b")
-    write_agent("a", None)
-    assert not read_settings().enabled("a")
+    write_agent("b", True)
+    assert read_enabled() == {"a", "b"}
+    write_agent("a", False)
+    # Off again for an agent that was never on changes nothing.
+    write_agent("c", False)
+    assert read_enabled() == {"b"}

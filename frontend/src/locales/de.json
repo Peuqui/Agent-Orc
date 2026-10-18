@@ -292,8 +292,7 @@
       "speech": "Vorlesen",
       "baseDir": "Startverzeichnis",
       "push": "Benachrichtigungen",
-      "handover": "Übergabe",
-      "keepWarm": "Warmhalten"
+      "handover": "Übergabe"
     }
   },
   "factor": {
@@ -334,7 +333,7 @@
           "Fragt ein Agent um Erlaubnis, zeigt seine Karte den Befehl mit „Erlauben“ und „Ablehnen“. Im Terminal steht dieselbe Frage; wo zuerst geantwortet wird, das gilt.",
           "„Änderungen“ (Zweig-Symbol, auf der Karte und im Kopf jedes Terminals) zeigt, was der Agent im Projekt geändert hat: geänderte, neue und gelöschte Dateien seit dem letzten Commit, ein Tipp zeigt den Diff. „Datei öffnen“ an einer Datei öffnet sie im Editor, „Ordner öffnen“ den Ordner in der Dateiansicht.",
           "Ab der eingestellten Kontextgröße (Voreinstellung 50 %) empfiehlt die Karte eine Übergabe an eine frische Sitzung, eine Benachrichtigung sagt es einmal; „Übergabe schreiben lassen“ bittet den Agenten um ein Übergabe-Dokument. Im Menü der Einstellungen lässt sich das automatisch anstoßen.",
-          "„warm halten“ (Schalter auf der Karte und im Kopf des Terminals): Ein ruhender Agent verliert nach etwa einer Stunde seinen Zwischenspeicher (Cache), und die nächste Nachricht liest den ganzen Kontext neu ein – langsam, und es kostet Nutzungsgrenze. Ist das Warmhalten an, tippt Agent-Orc ihm kurz davor eine winzige Bitte ein, auf die er mit einem Wort antwortet; das verlängert den Zwischenspeicher. Höchstens wenige Bitten hintereinander, danach darf er kalt werden, und deine nächste Eingabe zählt von vorn. Die Vorgabe für alle Agenten steht im Menü ☰ unter „Warmhalten“, jeder Agent kann auf seiner Karte davon abweichen. Gilt nur für Agenten, deren Profil das kann (Claude).",
+          "„warm halten“ (Schalter auf der Karte und im Kopf des Terminals, aus bis du ihn für diesen Agenten einschaltest): Ein ruhender Agent verliert nach etwa einer Stunde seinen Zwischenspeicher (Cache), und die nächste Nachricht liest den ganzen Kontext neu ein – langsam, und es kostet Nutzungsgrenze. Ist das Warmhalten an, tippt Agent-Orc ihm kurz davor eine winzige Bitte ein, auf die er mit einem Wort antwortet; das verlängert den Zwischenspeicher. Höchstens wenige Bitten hintereinander, danach darf er kalt werden, und deine nächste Eingabe zählt von vorn. Gilt nur für Agenten, deren Profil das kann (Claude).",
           "„In eigenem Worktree starten“ (Startdialog): Der Agent arbeitet in einer zweiten Arbeitskopie auf einem neuen Branch neben dem Projekt; ist er beendet, entfernt „Worktree entfernen“ auf der Karte sie wieder – ohne ungesicherte Arbeit zu verlieren.",
           "Neu starten (Menü ⋮ der Karte und der Agentenseite) startet den Agenten neu und setzt das Gespräch fort, etwa wenn er hängt oder geänderte Einstellungen lesen soll. Vorher kommt eine Rückfrage; eine laufende Antwort und Hintergrundaufgaben enden dabei. Hat ein Agent noch kein gespeichertes Modell (gestartet vor der Modellwahl), fragt Agent-Orc beim Neustart und beim Fortsetzen danach – ohne Modell startet kein Agent.",
           "Prompt planen (Menü ⋮ der Karte und der Agentenseite): einen Prompt für später planen, etwa „Tests laufen lassen und berichten“ um 7 Uhr. Er wird zur Zeit eingetippt, sobald der Agent fertig ist; geplante Prompts stehen auf der Karte und lassen sich mit × entfernen.",
@@ -423,7 +422,7 @@
       {
         "title": "Einstellungen (☰)",
         "items": [
-          "Das Menü ☰ ist eine kurze Liste (Anzeige, Diktat, Vorlesen, Startverzeichnis, Benachrichtigungen, Übergabe, Warmhalten, App); jeder Eintrag öffnet ein eigenes Fenster direkt unter dem Knopf, gespeichert wird sofort.",
+          "Das Menü ☰ ist eine kurze Liste (Anzeige, Diktat, Vorlesen, Startverzeichnis, Benachrichtigungen, Übergabe, App); jeder Eintrag öffnet ein eigenes Fenster direkt unter dem Knopf, gespeichert wird sofort.",
           "Schrift, Schriftgröße, Zeilenabstand und Scroll-Zeilen pro Schritt – gespeichert auf diesem Gerät.",
           "Die Einstellungen für Diktat (CPU oder GPU, sofort senden) und Vorlesen (Engine, Tempo, Tonhöhe, Ansage des Agentennamens, Höchstlänge) liegen auf dem Server und sind auf jedem Gerät gleich; eine Änderung kommt auf allen offenen Geräten an. Tempo und Tonhöhe sind Felder mit Komma oder Punkt: leer gilt die Einstellung der TTS-Suite, ein Wert überschreibt sie. Am Gerät bleiben Schrift, Scrollen, Browser-Stimme, automatisch vorlesen, die Ansicht je Agent und die Spalten.",
           "Push-Meldungen: im Menü ☰ pro Gerät einschalten. Dann kommt eine Nachricht, wenn ein Agent fertig ist oder auf eine Freigabe oder Antwort wartet; Antippen öffnet ihn. Nur über HTTPS, am iPhone nur in der installierten App."
@@ -522,8 +521,6 @@
   },
   "keepWarm": {
     "label": "warm halten",
-    "default": "Zwischenspeicher warm halten",
-    "defaultHint": "Ist es eingeschaltet, tippt Agent-Orc einem ruhenden Agenten kurz bevor sein Zwischenspeicher (Cache) abläuft eine winzige Bitte ein, auf die er mit einem Wort antwortet. Das Lesen aus dem Zwischenspeicher startet dessen Frist neu: Die nächste Nachricht kommt ohne Wartezeit und ohne den Kontext neu einzulesen. Es werden nur wenige Bitten hintereinander getippt, danach darf der Agent kalt werden; deine nächste Eingabe zählt von vorn. Jeder Agent kann auf seiner Karte davon abweichen. Läuft auch, wenn kein Gerät offen ist.",
     "onHint": "Zwischenspeicher wird warm gehalten (diese Ruhepause bisher {count} Bitten). Klicken schaltet aus.",
     "offHint": "Zwischenspeicher wird nicht warm gehalten. Klicken schaltet ein."
   },

@@ -53,6 +53,7 @@ export const ICONS = {
   menu: 'M4 6h16 M4 12h16 M4 18h16',
   mic: 'M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3z M5 11a7 7 0 0 0 14 0 M12 18v3',
   check: 'M5 12l5 5 9-10',
+  flame: 'M12 3c1 3.5 5 5.5 5 10a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5 0 2 1 3 2 3 0-3-1-5 1-8.5z',
 } as const
 
 export type IconName = keyof typeof ICONS

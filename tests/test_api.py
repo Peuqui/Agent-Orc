@@ -1691,20 +1691,14 @@ def test_keep_warm_prompts_a_resting_agent_before_its_cache_expires(
         report_context(session_id, 100, answered_at(transcript, clock() - 57 * 60))
         store_activity(session_id, busy=False)
         entry = client.get("/api/sessions").json()[0]["keep_warm"]
-        assert entry == {
-            "available": True,
-            "enabled": False,
-            "own": None,
-            "default": False,
-            "pings": 0,
-        }
+        assert entry == {"available": True, "enabled": False, "pings": 0}
 
         # Off until switched on: nothing is typed.
         time.sleep(0.5)
         assert "Keep-alive" not in client.get(f"/api/sessions/{session_id}/text").json()["text"]
 
-        assert client.put("/api/keep-warm", json={"default": True}).status_code == 204
-        assert client.get("/api/keep-warm").json() == {"default": True}
+        url = f"/api/sessions/{session_id}/keep-warm"
+        assert client.put(url, json={"enabled": True}).status_code == 204
         assert wait_for_text(client, session_id, "Keep-alive: one word.")
         assert pings_become(client, 1)
         assert client.get("/api/sessions").json()[0]["keep_warm"]["enabled"] is True
@@ -1739,24 +1733,17 @@ def test_keep_warm_prompts_a_resting_agent_before_its_cache_expires(
         assert pings_become(client, 0)
 
 
-def test_keep_warm_of_one_agent_overrides_the_default(
+def test_keep_warm_is_switched_on_and_off_per_agent(
     client: TestClient, home: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
     session_id = start_shell(client, home / "projects")
-    assert (
-        client.put(f"/api/sessions/{session_id}/keep-warm", json={"enabled": True}).status_code
-        == 204
-    )
-    entry = client.get("/api/sessions").json()[0]["keep_warm"]
-    assert entry["enabled"] is True and entry["own"] is True
-    client.put("/api/keep-warm", json={"default": True})
-    client.put(f"/api/sessions/{session_id}/keep-warm", json={"enabled": False})
+    url = f"/api/sessions/{session_id}/keep-warm"
     assert client.get("/api/sessions").json()[0]["keep_warm"]["enabled"] is False
-    # Back to the default.
-    client.put(f"/api/sessions/{session_id}/keep-warm", json={"enabled": None})
-    entry = client.get("/api/sessions").json()[0]["keep_warm"]
-    assert entry["enabled"] is True and entry["own"] is None
+    assert client.put(url, json={"enabled": True}).status_code == 204
+    assert client.get("/api/sessions").json()[0]["keep_warm"]["enabled"] is True
+    assert client.put(url, json={"enabled": False}).status_code == 204
+    assert client.get("/api/sessions").json()[0]["keep_warm"]["enabled"] is False
     assert client.put("/api/sessions/nope/keep-warm", json={"enabled": True}).status_code == 404
 
 

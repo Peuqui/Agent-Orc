@@ -5,7 +5,6 @@ import BaseDialog from './BaseDialog.vue'
 import BaseDirSettings from './BaseDirSettings.vue'
 import DropdownMenu from './DropdownMenu.vue'
 import HandoverSettings from './HandoverSettings.vue'
-import KeepWarmSettings from './KeepWarmSettings.vue'
 import KeysEditor from './KeysEditor.vue'
 import PushSettings from './PushSettings.vue'
 import SpeechSettings from './SpeechSettings.vue'
@@ -24,7 +23,6 @@ const SECTIONS = [
   { id: 'baseDir', component: BaseDirSettings },
   { id: 'push', component: PushSettings },
   { id: 'handover', component: HandoverSettings },
-  { id: 'keepWarm', component: KeepWarmSettings },
 ] as const satisfies readonly { id: string; component: Component }[]
 type SectionId = (typeof SECTIONS)[number]['id']
 
@@ -85,7 +83,6 @@ function openTts(): void {
         <BaseDirSettings v-else-if="section === 'baseDir'" />
         <PushSettings v-else-if="section === 'push'" />
         <HandoverSettings v-else-if="section === 'handover'" />
-        <KeepWarmSettings v-else-if="section === 'keepWarm'" />
       </BaseDialog>
       <KeysEditor v-if="editingKeys" @close="editingKeys = false" />
       <TtsSettingsDialog v-if="editingTts" @close="editingTts = false" />

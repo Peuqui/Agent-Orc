@@ -38,7 +38,7 @@ einen SSH-Tunnel ([Mehrere Rechner](#mehrere-rechner)).
 - Token-Verbrauch aller Claude-Gespräche pro Tag, Projekt und Modell; Suche in früheren
   Gesprächen; eine Übergabe-Empfehlung, sobald der Kontext eines Agenten groß wird.
 - Hält auf Wunsch den Zwischenspeicher ruhender Agenten warm (eine winzige Bitte kurz vor dem
-  Ablauf), für alle Agenten oder einzelne, damit die nächste Nachricht ohne Wartezeit kommt.
+  Ablauf), je Agent einzuschalten, damit die nächste Nachricht ohne Wartezeit kommt.
 - Benachrichtigungen aufs Handy oder den Rechner, wenn ein Agent fertig ist oder auf eine
   Freigabe oder Antwort wartet (Web Push, pro Gerät einschaltbar); Antippen öffnet den Agenten.
 - Der Freigabe-Modus, in dem ein Agent startet, pro Projekt (Fragen, Bearbeiten, Auto, Planen;

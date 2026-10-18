@@ -2,17 +2,18 @@
 import { computed } from 'vue'
 import { api, type AgentSession } from '../api'
 import { useToast } from '../composables/useToast'
+import AppIcon from './AppIcon.vue'
 
-// Keeping this agent's prompt cache warm: on (amber) or off. Choosing what the default is leaves the agent
-// with the default again, so a later change of the default reaches it.
-const props = defineProps<{ session: AgentSession }>()
+// Keeping this agent's prompt cache warm: on (amber) or off.
+// Compact (a terminal's narrow header, where the agent's name needs the room) it is only a flame.
+const props = defineProps<{ session: AgentSession; compact?: boolean }>()
 const toast = useToast()
 const keepWarm = computed(() => props.session.keep_warm)
 
 async function toggle(): Promise<void> {
   const next = !keepWarm.value.enabled
   try {
-    await api.setKeepWarmAgent(props.session.id, next === keepWarm.value.default ? null : next)
+    await api.setKeepWarm(props.session.id, next)
   } catch (error) {
     toast.error(error)
   }
@@ -23,13 +24,18 @@ async function toggle(): Promise<void> {
   <button
     v-if="keepWarm.available"
     type="button"
-    class="shrink-0 rounded-full border px-2 text-xs whitespace-nowrap"
-    :class="keepWarm.enabled ? 'border-amber-300 text-amber-300' : 'border-slate-600 text-slate-500'"
+    class="shrink-0 rounded-full border text-xs whitespace-nowrap"
+    :class="[
+      compact ? 'p-1' : 'px-2',
+      keepWarm.enabled ? 'border-amber-300 text-amber-300' : 'border-slate-600 text-slate-500',
+    ]"
     :aria-pressed="keepWarm.enabled"
+    :aria-label="$t('keepWarm.label')"
     :title="$t(keepWarm.enabled ? 'keepWarm.onHint' : 'keepWarm.offHint', { count: keepWarm.pings })"
     @click.stop="toggle"
     @pointerdown.stop
   >
-    {{ $t('keepWarm.label') }}
+    <AppIcon v-if="compact" name="flame" class="size-4" />
+    <template v-else>{{ $t('keepWarm.label') }}</template>
   </button>
 </template>

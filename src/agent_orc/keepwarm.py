@@ -8,7 +8,7 @@ starts the window anew; a large context costs next to nothing that way.
 The cache's window comes from the agent's transcript (cache.py), so nothing here knows an hour.
 A prompt is typed only into a resting agent whose cache is still alive but about to expire,
 and only so often in a row: the user's next input starts the count anew, as it ends a handover.
-Switched on for all agents or for single ones; the profile says whether it applies at all.
+Switched on per agent; the profile says whether it applies at all.
 """
 
 import json
@@ -22,17 +22,6 @@ from agent_orc.state import state_dir, write_atomically
 
 SETTINGS_FILE = "keep-warm.json"
 SECONDS_PER_MINUTE = 60
-
-
-@dataclass(frozen=True)
-class KeepWarmSettings:
-    # For agents without a choice of their own.
-    default: bool
-    # Per agent (its session id): the choice of the user.
-    agents: dict[str, bool]
-
-    def enabled(self, session_id: str) -> bool:
-        return self.agents.get(session_id, self.default)
 
 
 @dataclass(frozen=True)
@@ -57,33 +46,20 @@ class KeepWarmProgress:
         return None if followed is None else KeepWarmProgress(followed, self.pings)
 
 
-def read_settings() -> KeepWarmSettings:
-    """Off until switched on."""
+def read_enabled() -> set[str]:
+    """The agents (session ids) it is switched on for; none until the user switches one on."""
     path = state_dir() / SETTINGS_FILE
     if not path.is_file():
-        return KeepWarmSettings(default=False, agents={})
+        return set()
     stored: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
-    return KeepWarmSettings(default=stored["default"], agents=stored["agents"])
+    return set(stored["agents"])
 
 
-def _write(settings: KeepWarmSettings) -> None:
-    write_atomically(
-        state_dir() / SETTINGS_FILE,
-        json.dumps({"default": settings.default, "agents": settings.agents}),
-    )
-
-
-def write_default(default: bool) -> None:
-    _write(KeepWarmSettings(default=default, agents=read_settings().agents))
-
-
-def write_agent(session_id: str, enabled: bool | None) -> None:
-    """The user's choice for one agent; None hands it back to the default."""
-    settings = read_settings()
-    agents = {key: value for key, value in settings.agents.items() if key != session_id}
-    if enabled is not None:
-        agents[session_id] = enabled
-    _write(KeepWarmSettings(default=settings.default, agents=agents))
+def write_agent(session_id: str, enabled: bool) -> None:
+    agents = read_enabled() - {session_id}
+    if enabled:
+        agents.add(session_id)
+    write_atomically(state_dir() / SETTINGS_FILE, json.dumps({"agents": sorted(agents)}))
 
 
 def due(config: KeepWarmConfig, cache: CacheState | None, now: float, pings: int) -> bool:

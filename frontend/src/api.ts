@@ -244,8 +244,8 @@ export interface AgentSession {
    * handover is due lead_seconds before. Null until the agent has answered. */
   cache: { last_request: number; window_seconds: number; lead_seconds: number } | null
   /** Keeping the prompt cache warm (keepwarm.py): whether the profile has it, whether it is on for
-   * this agent (its own choice, else the default), and the prompts typed during this rest. */
-  keep_warm: { available: boolean; enabled: boolean; own: boolean | null; default: boolean; pings: number }
+   * this agent, and the prompts typed during this rest. */
+  keep_warm: { available: boolean; enabled: boolean; pings: number }
   /** A reasoning change waits until the current answer is finished. */
   effort_pending: boolean
   pending_effort: string | null
@@ -675,10 +675,7 @@ function createApi(host?: string) {
     /** Types the handover request into the agent. */
     requestHandover: (sessionId: string) =>
       request<void>('POST', `sessions/${encodeURIComponent(sessionId)}/handover`),
-    keepWarmDefault: () => request<{ default: boolean }>('GET', 'keep-warm'),
-    setKeepWarmDefault: (value: boolean) => request<void>('PUT', 'keep-warm', { body: { default: value } }),
-    /** null hands the agent back to the default. */
-    setKeepWarmAgent: (sessionId: string, enabled: boolean | null) =>
+    setKeepWarm: (sessionId: string, enabled: boolean) =>
       request<void>('PUT', `sessions/${encodeURIComponent(sessionId)}/keep-warm`, { body: { enabled } }),
     handoverAuto: () => request<{ auto: boolean }>('GET', 'handover/auto'),
     setHandoverAuto: (auto: boolean) => request<void>('PUT', 'handover/auto', { body: { auto } }),
