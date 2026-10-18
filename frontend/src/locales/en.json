@@ -292,7 +292,8 @@
       "speech": "Read aloud",
       "baseDir": "Start folder",
       "push": "Notifications",
-      "handover": "Handover"
+      "handover": "Handover",
+      "keepWarm": "Keep warm"
     }
   },
   "factor": {
@@ -517,6 +518,13 @@
     "requestHint": "Types the request for a handover document into the agent",
     "auto": "Ask for handovers automatically",
     "autoHint": "When a resting agent's context is large, Agent-Orc asks it for a handover document itself shortly before its prompt cache expires, once per rest and also when no device is open. Switched off, only a notification comes."
+  },
+  "keepWarm": {
+    "label": "keep warm",
+    "default": "Keep the prompt cache warm",
+    "defaultHint": "When on, Agent-Orc types a tiny request into a resting agent shortly before its prompt cache expires, which it answers with one word. Reading the cache starts its window anew: the next message comes without a wait and without reading the context in again. Only a few requests are typed in a row, then the agent may go cold; your next input counts from the start. Each agent can deviate on its card. Works also when no device is open.",
+    "onHint": "The cache is kept warm ({count} requests so far in this rest). Click to switch off.",
+    "offHint": "The cache is not kept warm. Click to switch on."
   },
   "consumption": {
     "title": "Consumption",

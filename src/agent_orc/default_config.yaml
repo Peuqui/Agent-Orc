@@ -275,6 +275,14 @@ agents:
     env: {AI_CONNECT_PEER_SUFFIX: "{suffix}"}
     # Usage limits (five hours, week) as Claude reports them in its status line.
     quota: claude
+    # The prompt cache lasts an hour after the last request (five minutes once the account is
+    # over its quota, then nothing is typed). Switched on in the settings menu or per agent,
+    # this prompt is typed into a resting agent shortly before the hour is over: it reads the
+    # cache, which starts the hour anew. At most max_pings in a row, then the agent goes cold.
+    keep_warm:
+      prompt: "Keep-alive: answer with one word only."
+      lead_minutes: 5
+      max_pings: 4
     # Reasoning effort of each agent, handed over in its settings file at start.
     effort:
       levels: [low, medium, high, xhigh, max]

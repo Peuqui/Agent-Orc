@@ -292,7 +292,8 @@
       "speech": "Vorlesen",
       "baseDir": "Startverzeichnis",
       "push": "Benachrichtigungen",
-      "handover": "Übergabe"
+      "handover": "Übergabe",
+      "keepWarm": "Warmhalten"
     }
   },
   "factor": {
@@ -517,6 +518,13 @@
     "requestHint": "Tippt dem Agenten die Bitte um ein Übergabe-Dokument ein",
     "auto": "Übergabe automatisch anstoßen",
     "autoHint": "Ist der Kontext eines ruhenden Agenten groß, bittet Agent-Orc ihn kurz bevor sein Zwischenspeicher abläuft selbst um ein Übergabe-Dokument, einmal je Ruhepause und auch wenn kein Gerät offen ist. Ausgeschaltet kommt dann nur eine Benachrichtigung."
+  },
+  "keepWarm": {
+    "label": "warm halten",
+    "default": "Zwischenspeicher warm halten",
+    "defaultHint": "Ist es eingeschaltet, tippt Agent-Orc einem ruhenden Agenten kurz bevor sein Zwischenspeicher (Cache) abläuft eine winzige Bitte ein, auf die er mit einem Wort antwortet. Das Lesen aus dem Zwischenspeicher startet dessen Frist neu: Die nächste Nachricht kommt ohne Wartezeit und ohne den Kontext neu einzulesen. Es werden nur wenige Bitten hintereinander getippt, danach darf der Agent kalt werden; deine nächste Eingabe zählt von vorn. Jeder Agent kann auf seiner Karte davon abweichen. Läuft auch, wenn kein Gerät offen ist.",
+    "onHint": "Zwischenspeicher wird warm gehalten (diese Ruhepause bisher {count} Bitten). Klicken schaltet aus.",
+    "offHint": "Zwischenspeicher wird nicht warm gehalten. Klicken schaltet ein."
   },
   "consumption": {
     "title": "Verbrauch",

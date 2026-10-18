@@ -9,6 +9,7 @@ import BroadcastButton from './BroadcastButton.vue'
 import ConfirmDialog from './ConfirmDialog.vue'
 import ModelDialog from './ModelDialog.vue'
 import CacheAge from './CacheAge.vue'
+import KeepWarmToggle from './KeepWarmToggle.vue'
 import ContextMeter from './ContextMeter.vue'
 import ReasoningControl from './ReasoningControl.vue'
 import AgentActions from './AgentActions.vue'
@@ -353,6 +354,7 @@ function resumeWith(session: AgentSession, model: string | null, effort: string 
           <div class="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-3">
             <h2 class="font-semibold">{{ sessionName(session) }}</h2>
             <CacheAge v-if="session.running" :session="session" />
+            <KeepWarmToggle v-if="session.running" :session="session" />
             <span class="min-w-0 truncate text-xs text-slate-500">{{ session.path }}</span>
             <span class="text-sm text-slate-400">
               {{ labels.get(session.profile) ?? session.profile }}

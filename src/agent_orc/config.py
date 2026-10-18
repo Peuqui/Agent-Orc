@@ -113,6 +113,20 @@ class HandoverConfig(StrictModel):
     prompt: str
 
 
+class KeepWarmConfig(StrictModel):
+    """Keeps a resting agent's prompt cache warm by typing a tiny prompt shortly before the cache
+    expires (see keepwarm.py). Each answer that reads the cache starts its window anew."""
+
+    # Typed into the agent; it should answer with next to nothing.
+    prompt: str
+    # This long before the cache expires, the prompt is typed. It must be shorter than the
+    # cache's window, or the agent would be asked again and again.
+    lead_minutes: int
+    # Prompts in a row during one rest; then the agent is left to go cold. The user's next input
+    # starts the count anew.
+    max_pings: int
+
+
 class LimitResumeConfig(StrictModel):
     """Resuming an agent stopped by its usage limit once the limit is reset (schedule.py)."""
 
@@ -324,6 +338,9 @@ class AgentProfile(StrictModel):
     trust: Literal["claude"] | None = None
     # Where the account's usage limits come from (see context.QUOTA_SOURCES).
     quota: Literal["claude"] | None = None
+    # Keeping the prompt cache warm of agents that rest; without it the profile has no such thing
+    # (the cache of other services than Anthropic's lives by other rules).
+    keep_warm: KeepWarmConfig | None = None
     # A plain terminal, no agent: it may run in a folder next to that folder's agent.
     terminal: bool = False
     # Prints the models to choose from at start, one per line; the choice fills {model}. A tab

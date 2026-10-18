@@ -173,6 +173,7 @@ def config(home: Path, socket_name: str) -> Config:
             "start": ["sh", "-c", "echo READY; exec cat"],
             "resume": ["true"],
             "terminal": True,
+            "keep_warm": {"prompt": "Keep-alive: one word.", "lead_minutes": 5, "max_pings": 2},
         },
     }
     return Config.model_validate(raw)
@@ -1665,6 +1666,98 @@ def wait_for_text(client: TestClient, session_id: str, text: str, count: int = 1
             return True
         time.sleep(0.1)
     return False
+
+
+def pings_become(client: TestClient, wanted: int) -> bool:
+    for _ in range(30):
+        if client.get("/api/sessions").json()[0]["keep_warm"]["pings"] == wanted:
+            return True
+        time.sleep(0.1)
+    return False
+
+
+def test_keep_warm_prompts_a_resting_agent_before_its_cache_expires(
+    config: Config, clock: FakeClock, home: Path, socket_name: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
+    monkeypatch.setattr("agent_orc.api.AGENT_CHECK_SECONDS", 0.1)
+    with TestClient(
+        create_app(config, new_credentials(PASSWORD), static_dir=None, clock=clock)
+    ) as client:
+        client.post("/api/login", json={"password": PASSWORD})
+        session_id = start_shell(client, home / "projects")
+        transcript = home / "conversation.jsonl"
+        # Resting for 57 minutes: within the last five of the hour.
+        report_context(session_id, 100, answered_at(transcript, clock() - 57 * 60))
+        store_activity(session_id, busy=False)
+        entry = client.get("/api/sessions").json()[0]["keep_warm"]
+        assert entry == {
+            "available": True,
+            "enabled": False,
+            "own": None,
+            "default": False,
+            "pings": 0,
+        }
+
+        # Off until switched on: nothing is typed.
+        time.sleep(0.5)
+        assert "Keep-alive" not in client.get(f"/api/sessions/{session_id}/text").json()["text"]
+
+        assert client.put("/api/keep-warm", json={"default": True}).status_code == 204
+        assert client.get("/api/keep-warm").json() == {"default": True}
+        assert wait_for_text(client, session_id, "Keep-alive: one word.")
+        assert pings_become(client, 1)
+        assert client.get("/api/sessions").json()[0]["keep_warm"]["enabled"] is True
+
+        # Answered: the cache is warm again, so it is not asked again, until the end nears.
+        store_activity(session_id, busy=True)
+        time.sleep(0.5)
+        report_context(session_id, 100, answered_at(transcript, clock()))
+        store_activity(session_id, busy=False)
+        time.sleep(0.5)
+        assert client.get("/api/sessions").json()[0]["keep_warm"]["pings"] == 1
+        clock.advance(56 * 60)
+        assert pings_become(client, 2)
+
+        # At most two in a row; the user's next input starts the count anew.
+        store_activity(session_id, busy=True)
+        report_context(session_id, 100, answered_at(transcript, clock()))
+        store_activity(session_id, busy=False)
+        time.sleep(0.5)
+        clock.advance(56 * 60)
+        time.sleep(0.5)
+        assert client.get("/api/sessions").json()[0]["keep_warm"]["pings"] == 2
+        text = client.get(f"/api/sessions/{session_id}/text").json()["text"]
+        # The terminal shows each line twice: typed, and echoed by `cat`.
+        assert text.count("Keep-alive: one word.") == 2 * 2
+        # The second prompt is answered, then the user works on: the count starts anew.
+        store_activity(session_id, busy=True)
+        time.sleep(0.5)
+        store_activity(session_id, busy=False)
+        time.sleep(0.5)
+        store_activity(session_id, busy=True)
+        assert pings_become(client, 0)
+
+
+def test_keep_warm_of_one_agent_overrides_the_default(
+    client: TestClient, home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
+    session_id = start_shell(client, home / "projects")
+    assert (
+        client.put(f"/api/sessions/{session_id}/keep-warm", json={"enabled": True}).status_code
+        == 204
+    )
+    entry = client.get("/api/sessions").json()[0]["keep_warm"]
+    assert entry["enabled"] is True and entry["own"] is True
+    client.put("/api/keep-warm", json={"default": True})
+    client.put(f"/api/sessions/{session_id}/keep-warm", json={"enabled": False})
+    assert client.get("/api/sessions").json()[0]["keep_warm"]["enabled"] is False
+    # Back to the default.
+    client.put(f"/api/sessions/{session_id}/keep-warm", json={"enabled": None})
+    entry = client.get("/api/sessions").json()[0]["keep_warm"]
+    assert entry["enabled"] is True and entry["own"] is None
+    assert client.put("/api/sessions/nope/keep-warm", json={"enabled": True}).status_code == 404
 
 
 def test_scheduled_prompt_waits_for_its_time_and_an_idle_agent(

@@ -32,7 +32,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from agent_orc import announce as announcing
-from agent_orc import files, peers, speech_service
+from agent_orc import files, keepwarm, peers, speech_service
 from agent_orc.answers import read_image, read_turns
 from agent_orc.approvals import ApprovalNotFoundError, ApprovalRequest, decide, open_requests
 from agent_orc.attachments import (
@@ -440,6 +440,15 @@ class HandoverAutoRequest(BaseModel):
     auto: bool
 
 
+class KeepWarmDefaultRequest(BaseModel):
+    default: bool
+
+
+class KeepWarmAgentRequest(BaseModel):
+    # None: follow the default.
+    enabled: bool | None
+
+
 class ApprovalDecision(BaseModel):
     request: str
     allow: bool
@@ -832,6 +841,19 @@ def create_app(
         lead = config.handover.lead_minutes * SECONDS_PER_MINUTE
         return {**asdict(cache), "lead_seconds": lead}
 
+    def keep_warm_entry(session: AgentSession) -> dict[str, Any]:
+        profile = config.agents.get(session.profile)
+        progress = keep_warm_progress.get(session.id)
+        settings = keepwarm.read_settings()
+        return {
+            "available": profile is not None and profile.keep_warm is not None,
+            "enabled": settings.enabled(session.id),
+            # The user's own choice for this agent; null: it follows the default.
+            "own": settings.agents.get(session.id),
+            "default": settings.default,
+            "pings": progress.pings if progress else 0,
+        }
+
     def agent_cache(session: AgentSession) -> CacheState | None:
         transcript = session_transcript(session)
         return None if transcript is None else cache_state(transcript)
@@ -863,6 +885,41 @@ def create_app(
         if followed == HANDOVER_DONE and progress != HANDOVER_DONE:
             message = agent_message("handover_done", session.id, session.name, "")
             send_to_all(message, config.push)
+
+    # Where each agent's keep-warm prompts of the current rest stand (see keepwarm.py).
+    keep_warm_progress: dict[str, keepwarm.KeepWarmProgress] = {}
+
+    def check_keep_warm() -> None:
+        settings = keepwarm.read_settings()
+        listed = sessions.list()
+        for session_id in keep_warm_progress.keys() - {s.id for s in listed}:
+            del keep_warm_progress[session_id]
+        for session in listed:
+            profile = config.agents.get(session.profile)
+            keep_warm = profile.keep_warm if profile else None
+            if keep_warm is None or not session.running:
+                keep_warm_progress.pop(session.id, None)
+                continue
+            busy = session_busy(session)
+            progress = keep_warm_progress.get(session.id)
+            if progress is not None:
+                progress = progress.follow(busy)
+                if progress is None:
+                    del keep_warm_progress[session.id]
+                else:
+                    keep_warm_progress[session.id] = progress
+            # Our own prompt still being answered, the agent working, or a handover just asked
+            # for (it warms the cache itself): wait.
+            if busy or (progress is not None and not progress.answered):
+                continue
+            if handover_progress.get(session.id) == HANDOVER_ASKED:
+                continue
+            pings = progress.pings if progress else 0
+            if settings.enabled(session.id) and keepwarm.due(
+                keep_warm, agent_cache(session), clock(), pings
+            ):
+                sessions.type_line(session.id, keep_warm.prompt)
+                keep_warm_progress[session.id] = keepwarm.KeepWarmProgress.typed(pings + 1)
 
     def plan_limit_resumes() -> None:
         """Resume agents stopped by their usage limit once it is reset, as far as their quota
@@ -915,6 +972,10 @@ def create_app(
                 await asyncio.to_thread(check_handovers)
             except Exception:
                 logger.exception("checking for handovers failed")
+            try:
+                await asyncio.to_thread(check_keep_warm)
+            except Exception:
+                logger.exception("keeping the caches warm failed")
             try:
                 await asyncio.to_thread(plan_limit_resumes)
                 await asyncio.to_thread(deliver_scheduled)
@@ -1368,6 +1429,7 @@ def create_app(
                 "progress": handover_progress.get(session.id),
             },
             "cache": cache_entry(cache),
+            "keep_warm": keep_warm_entry(session),
             # The newest answer looked at, on any device ("" none yet).
             "answers_seen": seen.get(session.id, ""),
             # Waiting for the user's answer; normally at most one, as Claude asks one at a time.
@@ -1621,6 +1683,24 @@ def create_app(
     )
     def set_handover_auto(body: HandoverAutoRequest) -> None:
         write_auto(body.auto)
+
+    @app.get("/api/keep-warm", dependencies=authenticated)
+    def keep_warm_default() -> dict[str, bool]:
+        return {"default": keepwarm.read_settings().default}
+
+    @app.put("/api/keep-warm", dependencies=authenticated, status_code=status.HTTP_204_NO_CONTENT)
+    def set_keep_warm_default(body: KeepWarmDefaultRequest) -> None:
+        keepwarm.write_default(body.default)
+
+    @app.put(
+        "/api/sessions/{session_id}/keep-warm",
+        dependencies=authenticated,
+        status_code=status.HTTP_204_NO_CONTENT,
+    )
+    def set_keep_warm_agent(session_id: str, body: KeepWarmAgentRequest) -> None:
+        if find_session(session_id) is None:
+            raise SessionNotFoundError(session_id)
+        keepwarm.write_agent(session_id, body.enabled)
 
     def session_folder(session_id: str) -> Path:
         session = find_session(session_id)
