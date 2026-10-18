@@ -360,10 +360,12 @@ def test_speed_and_pitch_set_for_an_engine_go_with_the_reading_and_only_those_th
         tuning={"edge": {"speed": 1.2, "pitch": None}, "piper": {"pitch": 0.9}},
     )
     client.post("/api/tts/speak", json={"text": "Hello.", "language": "en"})
+    # edge: pitch left empty, so the service's own; piper: tuned without a voice chosen;
+    # qwen3local: nothing set, nothing sent.
     assert FakeSpeechService.heard[0]["voices"] == {
-        "edge": {"voice": "Katja", "speed": 1.2},  # pitch left empty: the service's
-        "piper": {"pitch": 0.9},                    # tuned without a voice chosen
-    }                                               # qwen3local: nothing set, nothing sent
+        "edge": {"voice": "Katja", "speed": 1.2},
+        "piper": {"pitch": 0.9},
+    }
 
 
 def test_without_a_choice_nothing_is_read_and_the_user_is_told_where_to_choose(

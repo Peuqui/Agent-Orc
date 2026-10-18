@@ -159,9 +159,7 @@ def configured_text(answers: SetupAnswers) -> str:
 
 def stt_reachable(url: str) -> bool:
     try:
-        with urllib.request.urlopen(
-            url.rstrip("/") + STT_HEALTH_PATH, timeout=STT_CHECK_SECONDS
-        ):
+        with urllib.request.urlopen(url.rstrip("/") + STT_HEALTH_PATH, timeout=STT_CHECK_SECONDS):
             return True
     except (urllib.error.URLError, OSError):
         return False

@@ -97,7 +97,14 @@ def catalog(config: TtsSuiteConfig, directory: Path) -> list[dict[str, Any]]:
     with _open(config, _request(config, directory, "/engines", None)) as response:
         listed: list[dict[str, Any]] = json.load(response)
     keys = (
-        "engine", "host", "label", "label_short", "unit_default", "cloud", "needs_gpu", "status",
+        "engine",
+        "host",
+        "label",
+        "label_short",
+        "unit_default",
+        "cloud",
+        "needs_gpu",
+        "status",
         "installed",
     )
     return [{key: row[key] for key in keys} for row in listed if not row["browser"]]
