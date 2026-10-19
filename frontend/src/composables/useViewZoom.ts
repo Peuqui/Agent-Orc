@@ -55,6 +55,14 @@ function letterBelow(element: HTMLElement, edge: number): Range | null {
   return letterRange(text, offset)
 }
 
+/** The views' font size as the zoom factor (1 at the default size) and as the style that applies it. */
+export function useZoomFactor() {
+  const { viewFontSize } = useSettings()
+  const zoomFactor = computed(() => viewFontSize.value / DEFAULT_FONT_SIZE)
+  const zoomStyle = computed(() => ({ zoom: zoomFactor.value }))
+  return { zoomFactor, zoomStyle }
+}
+
 /**
  * The views' font size as a zoom: what a view shows is scaled as a whole, so all its sizes keep
  * their proportions (its texts are set in rem, which a font size on the element would not reach).
@@ -63,8 +71,7 @@ function letterBelow(element: HTMLElement, edge: number): Range | null {
  * factor on the scroll position would not do, larger text also wraps into more lines.
  */
 export function useViewZoom(content: Ref<HTMLElement | undefined>, scroller?: Ref<HTMLElement | undefined>) {
-  const { viewFontSize } = useSettings()
-  const zoomStyle = computed(() => ({ zoom: viewFontSize.value / DEFAULT_FONT_SIZE }))
+  const { zoomStyle } = useZoomFactor()
 
   // Before the change reaches the page, while the text is still where it was.
   watch(

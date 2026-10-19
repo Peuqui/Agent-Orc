@@ -4,6 +4,7 @@ import { api } from '../api'
 import { MESSAGE_FIELD_ATTRIBUTE } from '../columns'
 import { useDictation } from '../composables/useDictation'
 import { useSettings } from '../composables/useSettings'
+import { useZoomFactor } from '../composables/useViewZoom'
 import { attachInOrder } from '../attachInOrder'
 import { pastedImages } from '../composables/usePastedImages'
 import { useToast } from '../composables/useToast'
@@ -17,6 +18,7 @@ import DictationRetry from './DictationRetry.vue'
 import PromptTemplates from './PromptTemplates.vue'
 
 const props = defineProps<{ sessionId: string }>()
+const { zoomFactor, zoomStyle } = useZoomFactor()
 
 const toast = useToast()
 // The unsent text survives a reload (e.g. when a new version is installed), per agent and tab.
@@ -253,7 +255,8 @@ function onKeydown(event: KeyboardEvent): void {
       </button>
     </div>
   </div>
-  <form class="flex items-end gap-1 p-1" @submit.prevent="submit">
+  <!-- Scaled with the views' font size, like the answers above it. -->
+  <form class="flex items-end gap-1 p-1" :style="zoomStyle" @submit.prevent="submit">
     <DictationRetry :dictation="dictation" />
     <AttachMenu
       :open="attaching"
@@ -269,12 +272,13 @@ function onKeydown(event: KeyboardEvent): void {
       <template #popup><PromptTemplates ref="templates" @insert="insertTemplate" /></template>
     </AttachMenu>
     <DictationMic :dictation="dictation" />
-    <!-- Grows with its content up to a share of the view, so a long dictation can be read before sending. -->
+    <!-- Grows with its content up to a share of the view (cqh is not zoomed, hence the division), so a long dictation can be read before sending. -->
     <textarea
       ref="field"
       v-model="text"
       :[MESSAGE_FIELD_ATTRIBUTE]="''"
-      class="input max-h-[40cqh] min-h-10 flex-1 resize-none py-2 field-sizing-content"
+      class="input min-h-10 flex-1 resize-none py-2 field-sizing-content"
+      :style="{ maxHeight: `calc(40cqh / ${zoomFactor})` }"
       :placeholder="dictation.state === 'transcribing' ? $t('dictation.transcribing') : $t('terminal.placeholder')"
       enterkeyhint="send"
       @keydown="onKeydown"
