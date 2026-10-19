@@ -29,7 +29,7 @@ function press(key: TerminalKey): void {
 <template>
   <!-- pointerdown.prevent keeps the focus (and so the on-screen keyboard) where it is.
        Wide screens (landscape, desktop) put all rows side by side to save height. -->
-  <div class="flex flex-col gap-1 border-t border-slate-800 bg-slate-900 px-1 py-1 md:flex-row">
+  <div class="controls-zoom flex flex-col gap-1 border-t border-slate-800 bg-slate-900 px-1 py-1 md:flex-row">
     <div v-for="(row, index) in shownRows" :key="index" class="flex flex-1 gap-1">
       <button
         v-for="key in row"

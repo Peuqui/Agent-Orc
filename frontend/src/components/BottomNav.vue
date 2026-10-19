@@ -15,7 +15,7 @@ useHeightVariable('--bottom-nav-height', 'bar')
       v-for="item in NAV_ITEMS"
       :key="item.to"
       :to="item.to"
-      class="flex min-h-14 flex-col items-center justify-center gap-0.5 text-xs text-slate-400"
+      class="controls-zoom flex min-h-14 flex-col items-center justify-center gap-0.5 text-xs text-slate-400"
       active-class="!text-red-400"
     >
       <AppIcon :name="item.icon" />

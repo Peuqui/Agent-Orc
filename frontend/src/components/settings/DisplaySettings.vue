@@ -14,7 +14,7 @@ import {
 // What depends on the device itself (its screen, its mouse or finger), kept in the browser: the fonts, the
 // scrolling, the line spacing; and the arrangement of the extra keys (its editor opens from here).
 defineEmits<{ keys: [] }>()
-const { scrollLines, lineHeight, fontSize, stepFontSize, viewFontSize, stepViewFontSize, terminalFont } = useSettings()
+const { scrollLines, lineHeight, fontSize, stepFontSize, viewFontSize, stepViewFontSize, controlsScale, stepControlsScale, terminalFont } = useSettings()
 const FONT_NAMES: Record<TerminalFont, string> = { jetbrains: 'JetBrains Mono', system: 'System' }
 const { locale } = useI18n()
 
@@ -63,6 +63,15 @@ function changeScrollLines(delta: number): void {
       </div>
     </div>
     <p class="mt-1 mb-3 text-xs text-slate-500">{{ $t('settings.viewFontSizeHint') }}</p>
+    <div class="flex items-center justify-between gap-2 text-sm text-slate-300">
+      <span>{{ $t('settings.controlsScale') }}</span>
+      <div class="flex items-center gap-1">
+        <button class="btn-icon size-7" :aria-label="$t('settings.less')" @click="stepControlsScale(-1)">A−</button>
+        <span class="w-12 text-center tabular-nums">{{ controlsScale }} %</span>
+        <button class="btn-icon size-7" :aria-label="$t('settings.more')" @click="stepControlsScale(1)">A+</button>
+      </div>
+    </div>
+    <p class="mt-1 mb-3 text-xs text-slate-500">{{ $t('settings.controlsScaleHint') }}</p>
     <div class="flex items-center justify-between gap-2 text-sm text-slate-300">
       <span>{{ $t('settings.scrollLines') }}</span>
       <div class="flex items-center gap-1">

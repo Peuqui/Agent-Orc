@@ -432,7 +432,7 @@ onBeforeUnmount(() => {
     <!-- Compact buttons on phones, so name and all buttons fit in one row. -->
     <header
       v-if="!fullscreen"
-      class="flex items-center gap-1 border-b border-slate-600 px-1 py-1 max-md:[&_.btn-icon]:size-8"
+      class="controls-zoom flex items-center gap-1 border-b border-slate-600 px-1 py-1 max-md:[&_.btn-icon]:size-8"
     >
       <button
         v-if="!embedded"

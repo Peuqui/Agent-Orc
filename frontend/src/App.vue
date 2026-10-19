@@ -12,12 +12,19 @@ import UpdateBanner from './components/UpdateBanner.vue'
 import { COLUMN_TAB } from './device'
 import { useCodeCopy } from './composables/useCodeCopy'
 import { sharedSettings } from './composables/useSharedSettings'
+import { useSettings } from './composables/useSettings'
 import { useSessions } from './composables/useSessions'
 import { useToast } from './composables/useToast'
 import LoginView from './views/LoginView.vue'
 
 const { startPolling, stopPolling, loadProfiles } = useSessions()
 const toast = useToast()
+// The controls' size reaches the stylesheet as a variable (`.controls-zoom`); each document of a
+// workspace (its columns are iframes) sets its own from the shared setting.
+const { controlsScale } = useSettings()
+watch(controlsScale, (percent) => document.documentElement.style.setProperty('--controls-zoom', String(percent / 100)), {
+  immediate: true,
+})
 useCodeCopy()
 const route = useRoute()
 const router = useRouter()

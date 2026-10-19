@@ -271,6 +271,8 @@
     "fontSize": "Terminal: font size",
     "fontSizeHint": "For all terminals on this device.",
     "viewFontSize": "Views: font size",
+    "controlsScale": "Controls: size",
+    "controlsScaleHint": "Headers, tabs, navigation bars and key rows, not the content. For this device.",
     "viewFontSizeHint": "Answers, notes, conversations, files, consumption and the editor, not the terminal. All sizes in them scale along. For this device.",
     "dictationService": "Dictation service",
     "dictationServiceLine": "GPU {gpu} · CPU {cpu}",

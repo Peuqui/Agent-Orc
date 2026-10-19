@@ -407,7 +407,7 @@ function deleteThis(): void {
       <!-- Compact buttons below md, so name, workspaces and usage fit on a phone. -->
       <header
         v-if="!fullscreen"
-        class="flex flex-wrap items-center gap-1 border-b border-slate-800 px-1 py-1 max-md:[&_.btn-icon]:size-8"
+        class="controls-zoom flex flex-wrap items-center gap-1 border-b border-slate-800 px-1 py-1 max-md:[&_.btn-icon]:size-8"
       >
         <!-- No bottom bar in full screen: home is the agents page, the other pages are one tap on. -->
         <RouterLink to="/sessions" class="btn-icon" :aria-label="$t('nav.home')" :title="$t('nav.home')">
@@ -523,7 +523,7 @@ function deleteThis(): void {
             :key="`head-${id}`"
             ref="heads"
             :data-tab-id="id"
-            class="flex cursor-grab touch-pan-x snap-start items-center gap-1 border-b-2 bg-slate-900 py-1 pl-2 text-sm select-none [-webkit-touch-callout:none]"
+            class="controls-zoom flex cursor-grab touch-pan-x snap-start items-center gap-1 border-b-2 bg-slate-900 py-1 pl-2 text-sm select-none [-webkit-touch-callout:none]"
             :class="[
               workspace.active === id ? 'border-red-500 text-slate-100' : 'border-slate-800 text-slate-400',
               drag?.active && drag.target === id && drag.id !== id ? 'ring-2 ring-amber-400 ring-inset' : '',

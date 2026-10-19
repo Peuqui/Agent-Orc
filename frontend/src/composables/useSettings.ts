@@ -18,6 +18,13 @@ export const DEFAULT_FONT_SIZE = 14
 export const MIN_FONT_SIZE = 8
 export const MAX_FONT_SIZE = 28
 
+// Size of the controls (headers, tab rows, bottom bars, key rows) in percent: a tablet wants them
+// larger than a desktop does. Applied as the CSS zoom of `.controls-zoom` (style.css).
+export const DEFAULT_CONTROLS_SCALE = 100
+export const MIN_CONTROLS_SCALE = 70
+export const MAX_CONTROLS_SCALE = 250
+export const CONTROLS_SCALE_STEP = 10
+
 // Noto Sans Symbols 2 follows each font for the symbols Claude Code draws (⏵ ⏺ ● ✻ ⎿), which
 // the monospace fonts lack; also shipped with the app (OFL), as phones often have none.
 const SYMBOLS = '"Noto Sans Symbols 2"'
@@ -69,6 +76,8 @@ const lineHeight = setting('agent-orc-line-height', DEFAULT_LINE_HEIGHT, Number)
 const fontSize = setting('agent-orc-font-size', DEFAULT_FONT_SIZE, Number)
 /** Font size of every view of this device: the base size its texts are scaled from (useViewZoom). */
 const viewFontSize = setting('agent-orc-view-font-size', DEFAULT_FONT_SIZE, Number)
+/** Size of the controls of this device in percent (see DEFAULT_CONTROLS_SCALE). */
+const controlsScale = setting('agent-orc-controls-scale', DEFAULT_CONTROLS_SCALE, Number)
 const terminalFont = setting<TerminalFont>(
   'agent-orc-terminal-font',
   'jetbrains',
@@ -162,6 +171,14 @@ function stepViewFontSize(delta: number): void {
   stepWithinBounds(viewFontSize, delta)
 }
 
+/** The controls' size; from the settings. */
+function stepControlsScale(direction: number): void {
+  controlsScale.value = Math.min(
+    MAX_CONTROLS_SCALE,
+    Math.max(MIN_CONTROLS_SCALE, controlsScale.value + direction * CONTROLS_SCALE_STEP),
+  )
+}
+
 export function useSettings() {
   return {
     scrollLines,
@@ -170,6 +187,8 @@ export function useSettings() {
     stepFontSize,
     viewFontSize,
     stepViewFontSize,
+    controlsScale,
+    stepControlsScale,
     terminalFont,
     dictationSendsAtOnce,
     dictationDevice,

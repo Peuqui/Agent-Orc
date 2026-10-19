@@ -271,6 +271,8 @@
     "fontSize": "Terminal: Schriftgröße",
     "fontSizeHint": "Gilt für alle Terminals auf diesem Gerät.",
     "viewFontSize": "Ansichten: Schriftgröße",
+    "controlsScale": "Bedienelemente: Größe",
+    "controlsScaleHint": "Kopfzeilen, Reiter, Navigationsleisten und Tastenreihen, nicht der Inhalt. Gilt für dieses Gerät.",
     "viewFontSizeHint": "Antworten, Notizen, Gespräche, Dateien, Verbrauch und der Editor, nicht das Terminal. Alle Größen darin skalieren mit. Gilt für dieses Gerät.",
     "dictationService": "Diktat-Dienst",
     "dictationServiceLine": "GPU {gpu} · CPU {cpu}",

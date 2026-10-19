@@ -66,6 +66,11 @@
 }
 
 /* Component classes as utilities, so they can build on each other via @apply. */
+/* The controls' size of this device (setting in percent, set as a variable by App.vue). */
+@utility controls-zoom {
+  zoom: var(--controls-zoom);
+}
+
 @utility card {
   @apply rounded-xl border border-slate-700 bg-slate-800;
 }
