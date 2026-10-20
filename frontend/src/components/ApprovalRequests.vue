@@ -30,7 +30,7 @@ async function answer(approval: Approval, allow: boolean): Promise<void> {
     <div
       v-for="approval in session.approvals"
       :key="approval.id"
-      class="flex flex-col gap-2 rounded-lg border border-amber-600 bg-amber-950/40 px-3 py-2 text-sm"
+      class="controls-zoom flex flex-col gap-2 rounded-lg border border-amber-600 bg-amber-950/40 px-3 py-2 text-sm"
     >
       <span v-if="named" class="font-semibold text-amber-100">{{ sessionName(session) }}</span>
       <span class="text-amber-200">
