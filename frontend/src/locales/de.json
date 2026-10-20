@@ -195,6 +195,7 @@
     "SessionNotFoundError": "Diese Sitzung gibt es nicht mehr.",
     "ApprovalNotFoundError": "Diese Anfrage ist nicht mehr offen, vermutlich wurde sie schon beantwortet.",
     "TrashEntryNotFoundError": "Dieser Eintrag ist nicht mehr im Papierkorb.",
+    "http500": "Interner Serverfehler, Näheres steht im Log des Dienstes.",
     "http401": "Falsches Passwort.",
     "http429": "Zu viele Fehlversuche. Bitte warte {minutes} Minuten.",
     "GpuUnavailableError": "Auf keiner GPU ist gerade Platz für die Spracherkennung. Schalte auf CPU um.",

@@ -195,6 +195,7 @@
     "SessionNotFoundError": "This session no longer exists.",
     "ApprovalNotFoundError": "This request is no longer open, it was probably answered already.",
     "TrashEntryNotFoundError": "This entry is no longer in the trash.",
+    "http500": "Internal server error, see the service log.",
     "http401": "Wrong password.",
     "http429": "Too many failed attempts. Please wait {minutes} minutes.",
     "GpuUnavailableError": "No GPU has room for speech recognition right now. Switch to CPU.",

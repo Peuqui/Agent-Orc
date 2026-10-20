@@ -406,6 +406,8 @@ const NO_CONTENT = 204
 // Sent by the server with the id of its installed build (agent_orc.api.BUILD_ID_HEADER).
 const BUILD_ID_HEADER = 'X-Build-Id'
 export const NETWORK_ERROR = 'NetworkError'
+/** What a reverse proxy answers while the app behind it is down (502 Bad Gateway, 503, 504). */
+const PROXY_UNREACHABLE_STATUSES = [502, 503, 504]
 
 /** The machine whose app this page is (served below /hosts/<name>/ by this machine's own), if it
  * is not this machine's own. */
@@ -525,6 +527,12 @@ async function fetchApi(method: string, path: string, options: SendOptions = {})
     else window.location.assign(rootAddress())
   }
   if (!response.ok) {
+    // What is not JSON did not come from the app: the reverse proxy without a backend (a restart,
+    // a deploy) or an uncaught error of the server, which answers in plain text.
+    if (!response.headers.get('Content-Type')?.includes('application/json')) {
+      if (PROXY_UNREACHABLE_STATUSES.includes(response.status)) throw new ApiError(0, NETWORK_ERROR, String(response.status), null)
+      throw new ApiError(response.status, `http${response.status}`, `${response.status} ${response.statusText}`, null)
+    }
     const data = await response.json()
     // Agent-Orc errors carry {error, detail}; FastAPI's own errors only {detail}.
     const code: string = data.error ?? `http${response.status}`
