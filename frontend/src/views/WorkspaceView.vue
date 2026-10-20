@@ -368,6 +368,18 @@ async function showRequested(): Promise<void> {
   }
 }
 
+/** One column fills the screen: on a phone, or where the user set one column for this workspace. */
+const singleColumn = computed(() => phone.value || workspace.value.visible === 1)
+
+/** A swipe came to rest: with one column on the screen, the one in view is the active one (the red one). */
+function activateColumnInView(): void {
+  const rowLeft = row.value?.getBoundingClientRect().left
+  if (!singleColumn.value || rowLeft === undefined) return
+  const leftOf = (id: string): number => Math.abs((frameOf(id)?.getBoundingClientRect().left ?? Infinity) - rowLeft)
+  const inView = workspace.value.tabs.reduce<string | null>((nearest, id) => (nearest === null || leftOf(id) < leftOf(nearest) ? id : nearest), null)
+  if (inView !== null) workspace.value.active = inView
+}
+
 /** Where the row of each workspace was scrolled to; only while it is shown (switching empties
  * the row first, which scrolls it back to the start). */
 function rememberScroll(): void {
@@ -515,6 +527,7 @@ function deleteThis(): void {
         ref="row"
         class="min-h-0 flex-1 overflow-x-auto"
         @scroll.passive="rememberScroll"
+        @scrollend="activateColumnInView"
         :class="{ 'snap-x snap-mandatory': widths.resize.value === null, '[scrollbar-width:none]': phone }"
         style="container-type: inline-size"
       >
