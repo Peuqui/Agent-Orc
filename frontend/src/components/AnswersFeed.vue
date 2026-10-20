@@ -132,11 +132,13 @@ function readUnread(): void {
 
 
 // Where the list goes when something comes in (the rules are in feedScroll.ts).
-const { following, newBelow, place, onScroll, takenByHand, showNewBelow, followSpeech } = useFeedScroll(
+const { unreadBelow, countUnreadBelow, place, onScroll, takenByHand, showNewBelow, followSpeech } = useFeedScroll(
   box,
   props.sessionId,
-  () => unread.value[0]?.id,
+  () => unread.value.map((text) => text.id),
 )
+// Marked as read elsewhere, or new ones arriving, change what lies below without a scroll.
+watch(unread, countUnreadBelow, { flush: 'post' })
 
 // Every message of the feed at the last look: what is not in it is new.
 let known: Set<string> | null = null
@@ -161,7 +163,7 @@ async function load(): Promise<void> {
   // the request would take the list to the end and the answer may not go back up.
   const answers = fresh.filter((message) => !message.own).length
   if (first) await place('opened')
-  else if (answers > 0) await place('answer', answers)
+  else if (answers > 0) await place('answer')
   else if (fresh.length > 0) await place('own')
 }
 
@@ -352,14 +354,14 @@ function jog(lines: number): void {
       </section>
     </div>
     </div>
-    <!-- Reading further up while something came in below: one button to the oldest unread answer. -->
+    <!-- Unread answers below the view: one button to the first of them. -->
     <button
-      v-if="!following && newBelow > 0"
+      v-if="unreadBelow > 0"
       type="button"
       class="btn-primary btn-small absolute bottom-3 left-1/2 -translate-x-1/2 shadow-lg"
       @click="showNewBelow"
     >
-      ↓ {{ $t('answers.newBelow', { count: newBelow }) }}
+      ↓ {{ $t('answers.newBelow', { count: unreadBelow }) }}
     </button>
     <JogScroller @scroll="jog" />
     </div>

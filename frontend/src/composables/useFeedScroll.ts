@@ -7,12 +7,13 @@ const remembered = new Map<string, { id: string; offset: number }>()
 
 /**
  * The scrolling of a feed of answers (the rules are in feedScroll.ts). The list's elements carry their
- * message's id in `data-anchor`; `firstUnreadId` says which answer is the oldest unread.
+ * message's id in `data-anchor`; `unreadIds` lists the unread answers, the oldest first.
  */
-export function useFeedScroll(box: Ref<HTMLElement | undefined>, sessionId: string, firstUnreadId: () => string | undefined) {
+export function useFeedScroll(box: Ref<HTMLElement | undefined>, sessionId: string, unreadIds: () => string[]) {
   const following = ref(true)
-  // Answers that came in while the reader was reading further up.
-  const newBelow = ref(0)
+  // Unread answers that lie below the part of the list in view.
+  const unreadBelow = ref(0)
+  const firstUnreadId = (): string | undefined => unreadIds()[0]
   // A reading aloud rolls the list along until the reader scrolls by hand.
   let followsSpeech = true
 
@@ -44,13 +45,26 @@ export function useFeedScroll(box: Ref<HTMLElement | undefined>, sessionId: stri
   }
 
   /** Something happened (see Reason): the list goes where the rules say, or stays and counts what came in below. */
-  async function place(reason: Reason, newAnswers = 0): Promise<void> {
+  async function place(reason: Reason): Promise<void> {
     await nextTick()
     const move = moveFor(reason, { following: following.value, hasUnread: firstUnreadId() !== undefined, hasRemembered: remembered.has(sessionId) })
     if (move === 'end') toEnd()
     else if (move === 'oldestUnread') toOldestUnread()
     else if (move === 'remembered') toRemembered()
-    else if (reason === 'answer') newBelow.value += newAnswers
+    countUnreadBelow()
+  }
+
+  /** The unread answers whose top is below the lower edge of the list, oldest first. */
+  function unreadBelowView(): string[] {
+    const scroller = box.value
+    if (!scroller) return []
+    const bottom = scroller.getBoundingClientRect().bottom
+    return unreadIds().filter((id) => (anchor(id)?.getBoundingClientRect().top ?? 0) >= bottom)
+  }
+
+  /** Call when the unread answers or the layout changed: the scroll does it for itself. */
+  function countUnreadBelow(): void {
+    unreadBelow.value = unreadBelowView().length
   }
 
   /** The reader scrolled (or the list moved): following or reading, and where the reader is. */
@@ -58,7 +72,7 @@ export function useFeedScroll(box: Ref<HTMLElement | undefined>, sessionId: stri
     const scroller = box.value
     if (!scroller) return
     following.value = isFollowing(endTop(scroller) - scroller.scrollTop)
-    if (following.value) newBelow.value = 0
+    countUnreadBelow()
     const top = scroller.getBoundingClientRect().top
     const first = [...scroller.querySelectorAll<HTMLElement>('[data-anchor]')].find((element) => element.getBoundingClientRect().bottom > top + 1)
     if (first?.dataset.anchor) remembered.set(sessionId, { id: first.dataset.anchor, offset: first.getBoundingClientRect().top - top })
@@ -69,10 +83,13 @@ export function useFeedScroll(box: Ref<HTMLElement | undefined>, sessionId: stri
     followsSpeech = false
   }
 
-  /** The button "↓ N new": down to the oldest unread answer. */
+  /** The button "↓ N new": down to the first unread answer below the view. */
   function showNewBelow(): void {
-    toOldestUnread()
-    newBelow.value = 0
+    const id = unreadBelowView()[0]
+    const scroller = box.value
+    const element = id === undefined ? null : anchor(id)
+    if (!scroller || element === null) return
+    scroller.scrollTo({ top: scroller.scrollTop + element.getBoundingClientRect().top - scroller.getBoundingClientRect().top - TOP_ROOM_PX })
   }
 
   /** The answer that is read aloud now comes into view (its top, if it is not wholly in view), until the reader scrolls by hand. */
@@ -87,5 +104,5 @@ export function useFeedScroll(box: Ref<HTMLElement | undefined>, sessionId: stri
     scroller.scrollTo({ top: scroller.scrollTop + bounds.top - view.top - TOP_ROOM_PX })
   }
 
-  return { following, newBelow, place, onScroll, takenByHand, showNewBelow, followSpeech }
+  return { unreadBelow, countUnreadBelow, place, onScroll, takenByHand, showNewBelow, followSpeech }
 }
