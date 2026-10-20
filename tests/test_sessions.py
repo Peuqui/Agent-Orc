@@ -304,6 +304,19 @@ def test_a_long_line_is_typed_in_pieces_and_arrives_whole(
     assert manager.text(session.id, 50).count(line) == 2
 
 
+def test_a_line_that_looks_like_a_tmux_option_is_typed_as_text(
+    manager: SessionManager, workdir: Path
+) -> None:
+    session = manager.start("reader", workdir, resume=False)
+    line = "-o is typed, not parsed"
+    manager.type_line(session.id, line)
+    for _ in range(50):
+        if manager.text(session.id, 50).count(line) == 2:
+            break
+        time.sleep(0.1)
+    assert manager.text(session.id, 50).count(line) == 2
+
+
 def exit_agents(marker: Path) -> dict[str, AgentProfile]:
     """An agent that tidies up when told to quit, and one that takes no notice."""
     return {

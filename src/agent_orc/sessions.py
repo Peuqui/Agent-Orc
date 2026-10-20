@@ -317,7 +317,7 @@ class SessionManager:
     def type_line(self, session_id: str, line: str) -> None:
         """Type a line into the agent and submit it, as the user would."""
         for piece in text_pieces(line, self._terminal.type_chunk_chars):
-            self._tmux("send-keys", "-t", exact_target(session_id), "-l", piece)
+            self._tmux("send-keys", "-t", exact_target(session_id), "-l", "--", piece)
             time.sleep(self._terminal.type_chunk_delay_ms / MILLISECONDS_PER_SECOND)
         # Enter separately, so the agent sees typed text plus submit, not one pasted block.
         time.sleep(self._terminal.submit_delay_ms / MILLISECONDS_PER_SECOND)
