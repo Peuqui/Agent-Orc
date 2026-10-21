@@ -1958,7 +1958,9 @@ def test_raw_file_is_served_without_running_its_scripts(client: TestClient, home
     assert client.get("/api/files/raw", params={"path": str(secret)}).status_code == 403
 
 
-def test_existing_paths_of_an_agents_output(client: TestClient, home: Path) -> None:
+def test_existing_paths_of_an_agents_output(
+    client: TestClient, home: Path, caplog: pytest.LogCaptureFixture
+) -> None:
     project = home / "projects" / "demo"
     (project / "src").mkdir(parents=True)
     (project / "src" / "main.py").write_text("print()")
@@ -1970,6 +1972,8 @@ def test_existing_paths_of_an_agents_output(client: TestClient, home: Path) -> N
         "missing.py",
         # Exists, but outside the scope: not offered.
         "~/private/secret.txt",
+        # A ~ with a user that does not exist is skipped, with a warning.
+        "~nobody-by-this-name/notes.md",
     ]
     found = client.post(
         "/api/files/existing", json={"base": str(project), "candidates": candidates}
@@ -1980,6 +1984,7 @@ def test_existing_paths_of_an_agents_output(client: TestClient, home: Path) -> N
         "src": {"path": str(project / "src"), "kind": "folder"},
         str(project / "src" / "main.py"): main,
     }
+    assert "~nobody-by-this-name/notes.md" in caplog.text
 
 
 def test_a_terminal_opens_next_to_the_folders_agent(client: TestClient, home: Path) -> None:

@@ -1,6 +1,7 @@
 """File manager operations. Callers pass paths already checked by AccessScope."""
 
 import itertools
+import logging
 import os
 import re
 import shutil
@@ -8,6 +9,8 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
 from typing import BinaryIO
+
+logger = logging.getLogger(__name__)
 
 UNSAFE_NAME_CHARACTERS = re.compile(r"[^A-Za-z0-9._-]+")
 CONTROL_CHARACTERS = re.compile(r"[\x00-\x1f\x7f]")
@@ -194,7 +197,12 @@ def existing_paths(base: Path, candidates: list[str]) -> dict[str, Path]:
     relative to its folder (base)."""
     found = {}
     for candidate in candidates:
-        path = Path(candidate).expanduser()
+        try:
+            path = Path(candidate).expanduser()
+        except RuntimeError:
+            # "~name" with a user that does not exist: the agent's text, not a path.
+            logger.warning("skipped %r: no home directory for the user after the ~", candidate)
+            continue
         if not path.is_absolute():
             path = base / path
         if path.exists():
