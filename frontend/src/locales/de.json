@@ -585,7 +585,7 @@
     "quadrillion": " Brd."
   },
   "restart": {
-    "changeModelLive": "Modell für „{name}“ wählen. Der Agent wechselt es im laufenden Betrieb, bei laufender Antwort danach; Gespräch und Hintergrundaufgaben bleiben, nur der Prompt-Cache beginnt für das neue Modell von vorn.",
+    "changeModelLive": "Modell für „{name}“ wählen. Der Agent wechselt es im laufenden Betrieb, bei laufender Antwort danach; Gespräch und Hintergrundaufgaben bleiben, nur der Prompt-Cache beginnt für das neue Modell von vorn. Mit demselben Modell ändert sich nur die Stufe.",
     "modelScheduled": "„{name}“ wechselt nach der aktuellen Antwort auf {model}.",
     "modelChanged": "„{name}“ läuft jetzt mit {model}.",
     "modelTitle": "Agent oder Modell wechseln",

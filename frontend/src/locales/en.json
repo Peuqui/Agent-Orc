@@ -585,7 +585,7 @@
     "quadrillion": "Q"
   },
   "restart": {
-    "changeModelLive": "Choose the model for “{name}”. The agent switches in place, after its answer if it is working; the conversation and background tasks stay, only the prompt cache starts over for the new model.",
+    "changeModelLive": "Choose the model for “{name}”. The agent switches in place, after its answer if it is working; the conversation and background tasks stay, only the prompt cache starts over for the new model. With the same model only the level changes.",
     "modelScheduled": "“{name}” switches to {model} after the current answer.",
     "modelChanged": "“{name}” now runs with {model}.",
     "modelTitle": "Change agent or model",

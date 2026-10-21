@@ -153,8 +153,18 @@ def config(home: Path, socket_name: str) -> Config:
             "models": ["printf", "thinker\\nplain\\n"],
             "start": ["sh", "-c", SWAPPER_SCRIPT.replace("{start}", "started {model}")],
             "resume": ["sh", "-c", 'echo "resumed {model}"; exec cat'],
+            "settings": {},
             "clear_command": "/clear",
             "compact_command": "/compact",
+            "effort": {
+                "levels": ["low", "high"],
+                "default": "low",
+                "live": {
+                    "command": "/effort {level}",
+                    "ultracode_command": "/effort ultracode {state}",
+                    "protected_file": str(home / "user-settings.json"),
+                },
+            },
             "model_live": {
                 "command": "/model {model}",
                 "confirm": "Switch model?",
@@ -2192,6 +2202,34 @@ def test_model_switches_in_place_where_the_agent_can(
     assert wait_for_text(client, session_id, "/model plain")
     assert wait_for_text(client, session_id, "confirmed")
     assert pane_process(socket_name, session_id) == process
+
+
+def test_model_and_level_change_together_in_place(
+    client: TestClient, home: Path, socket_name: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("agent_orc.effort.PROTECT_SECONDS", 0.3)
+    session_id = start_with_model(client, home, "swapper", "thinker")
+    assert wait_for_text(client, session_id, "started thinker")
+    process = pane_process(socket_name, session_id)
+    url = f"/api/sessions/{session_id}/model"
+    # The model it has: only the level changes, as the card's own control does it.
+    assert client.post(url, json={"model": "thinker", "effort": "high"}).json() == {"applied": True}
+    assert wait_for_text(client, session_id, "/effort high")
+    assert client.get("/api/sessions").json()[0]["effort"] == "high"
+    # Another model and level in one go, the agent going on.
+    assert client.post(url, json={"model": "plain", "effort": "low"}).json() == {"applied": True}
+    assert wait_for_text(client, session_id, "/model plain")
+    assert wait_for_text(client, session_id, "/effort low")
+    shown = client.get("/api/sessions").json()[0]
+    assert (shown["chosen_model"], shown["effort"]) == ("plain", "low")
+    assert pane_process(socket_name, session_id) == process
+    assert client.post(url, json={"model": "thinker", "effort": "max"}).status_code == 422
+    # A busy agent waits for the end of its answer with both.
+    store_activity(session_id, busy=True)
+    assert client.post(url, json={"model": "thinker", "effort": "high"}).json() == {
+        "applied": False
+    }
+    assert client.get("/api/sessions").json()[0]["pending_model"] == "thinker"
 
 
 def test_context_is_cleared_or_shrunk_in_place_for_an_idle_agent(

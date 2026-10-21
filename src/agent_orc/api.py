@@ -12,7 +12,7 @@ from contextlib import asynccontextmanager
 from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
-from typing import Annotated, Any, BinaryIO, Literal
+from typing import Annotated, Any, BinaryIO, Literal, NamedTuple
 from urllib.parse import urlsplit
 
 from fastapi import (
@@ -578,9 +578,17 @@ def context_commands(profile: AgentProfile) -> dict[ContextAction, str | None]:
 
 class ModelRequest(BaseModel):
     model: str
-    # The level the new model runs with, for one that takes levels and is restarted for the
-    # change (one that switches in place keeps its level).
+    # The level the agent runs with from now on, for one that takes levels; none: it keeps its
+    # own (which a restart needs to be one the new model takes). With the model it already has,
+    # this is a change of the level alone.
     effort: str | None = None
+
+
+class ModelChange(NamedTuple):
+    """A model change waiting for the agent to finish its answer."""
+
+    model: str
+    effort: str | None
 
 
 class ProfileChangeRequest(BaseModel):
@@ -671,7 +679,7 @@ def create_app(
     # Reasoning changes waiting until their (busy) agent has finished its answer.
     pending_effort: dict[str, Reasoning] = {}
     # A model change of a busy agent that switches in place, typed in once it is idle.
-    pending_model: dict[str, str] = {}
+    pending_model: dict[str, ModelChange] = {}
     # What waits for a spoken yes, per room; gone when the server restarts, which is fine: the
     # user just says it again.
     voice_router = VoiceRouter(config.voice) if config.voice is not None else None
@@ -1454,7 +1462,7 @@ def create_app(
             "effort_pending": pending is not None,
             "pending_effort": pending.effort if pending else None,
             "pending_ultracode": pending.ultracode if pending else None,
-            "pending_model": pending_model.get(session.id),
+            "pending_model": change.model if (change := pending_model.get(session.id)) else None,
         }
 
     @app.post("/api/sessions", dependencies=authenticated)
@@ -1570,7 +1578,8 @@ def create_app(
         live = config.agents[session.profile].model_live
         if not session.running or live is None:
             return restart_agent(session.id, RestartRequest(model=model, effort=effort))
-        store_model_reasoning(session, model, None)
+        previous = agent_reasoning(session.profile, session.id)
+        store_model_reasoning(session, model, effort)
 
         def switch() -> None:
             sessions.type_line(session.id, live.command.format(model=model))
@@ -1586,15 +1595,23 @@ def create_app(
         changed = find_session(session.id)
         if changed is None:
             raise SessionNotFoundError(session.id)
+        live_level = live_effort(session.profile)
+        if effort is not None and effort != previous.effort and live_level is not None:
+            set_reasoning_live(
+                lambda line: sessions.type_line(session.id, line),
+                live_level,
+                previous,
+                agent_reasoning(session.profile, session.id),
+            )
         return changed
 
     def apply_pending_models() -> None:
-        for session_id, model in list(pending_model.items()):
+        for session_id, change in list(pending_model.items()):
             session = find_session(session_id)
             if session is None:
                 pending_model.pop(session_id, None)
             elif not session.running or not session_busy(session):
-                apply_model(session, model, None)
+                apply_model(session, change.model, change.effort)
 
     @app.post("/api/sessions/{session_id}/model", dependencies=authenticated)
     def change_model(session_id: str, body: ModelRequest) -> dict[str, bool]:
@@ -1605,10 +1622,21 @@ def create_app(
         if session is None:
             raise SessionNotFoundError(session_id)
         check_model(session.profile, body.model)
+        if body.model == session.chosen_model:
+            if body.effort is None:
+                return {"applied": True}
+            # The same model: only the level changes, as the agent's card does it.
+            kept = agent_reasoning(session.profile, session_id)
+            return change_effort(
+                session_id,
+                EffortRequest(effort=body.effort, ultracode=kept.ultracode, immediately=False),
+            )
+        if body.effort is not None:
+            validate_effort(session.profile, Reasoning(body.effort, False), body.model)
         live = config.agents[session.profile].model_live
         # Typing into a busy agent would mix with its work.
         if live is not None and session.running and session_busy(session):
-            pending_model[session_id] = body.model
+            pending_model[session_id] = ModelChange(body.model, body.effort)
             return {"applied": False}
         apply_model(session, body.model, body.effort)
         return {"applied": True}

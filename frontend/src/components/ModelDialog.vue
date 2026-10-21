@@ -51,11 +51,9 @@ const carriesConversation = computed(
     currentProfile.value.conversations === targetProfile.value?.conversations,
 )
 
-// An agent that switches its model in place keeps its level; every other restarts with the new
-// model, which has to be given one it takes.
-const asksEffort = computed(
-  () => levels.value.length > 0 && !(!switching.value && currentProfile.value?.model_live),
-)
+// The level goes with the model: an agent that restarts needs one the new model takes, one that
+// switches in place can be given another at the same time (or keep the model and change only it).
+const asksEffort = computed(() => levels.value.length > 0)
 
 async function loadLevels(): Promise<void> {
   const profile = targetProfile.value
