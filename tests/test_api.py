@@ -2258,11 +2258,14 @@ def test_model_change_restarts_an_agent_that_cannot_switch_in_place(
     session_id = start_with_model(client, home, "chooser", "thinker", effort="high")
     assert wait_for_text(client, session_id, "started thinker")
     process = pane_process(socket_name, session_id)
+    client.put(f"/api/sessions/{session_id}/answers-mode", json={"all_texts": False})
     switched = client.post(f"/api/sessions/{session_id}/model", json={"model": "plain"})
     assert switched.json() == {"applied": True}
     assert client.get("/api/sessions").json()[0]["chosen_model"] == "plain"
     assert wait_for_text(client, session_id, "resumed plain")
     assert pane_process(socket_name, session_id) != process
+    # The same agent going on with another model keeps its switches.
+    assert client.get("/api/sessions").json()[0]["answers_all"] is False
 
 
 def test_change_notifier_wakes_listeners_from_other_threads() -> None:

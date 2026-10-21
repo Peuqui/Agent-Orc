@@ -800,7 +800,6 @@ def create_app(
         restarted = sessions.restart(session, env, own_conversation(session), model)
         # The ended agent cannot report that it stopped working.
         store_activity(session.id, busy=False)
-        reset_switches(session.id)
         return restarted
 
     def apply_effort(session: AgentSession, reasoning: Reasoning) -> AgentSession:
@@ -1537,11 +1536,11 @@ def create_app(
             raise ApprovalNotFoundError(body.request)
         decide(body.request, body.allow)
 
-    @app.post("/api/sessions/{session_id}/restart", dependencies=authenticated)
-    def restart_session(session_id: str, body: RestartRequest | None = None) -> AgentSession:
+    def restart_agent(session_id: str, body: RestartRequest | None) -> AgentSession:
         """Resume the agent in its own session, ending a running answer and background tasks
         (the user confirmed that); attached terminals stay connected. An agent without a stored
-        model gets the one in the request."""
+        model gets the one in the request. Its switches stay: a change of model or effort is
+        the same agent going on."""
         session = find_session(session_id)
         if session is None:
             raise SessionNotFoundError(session_id)
@@ -1558,12 +1557,19 @@ def create_app(
         env = launch_env(session.profile, session.id, session.suffix, chosen)
         return resume_agent(session, env, model)
 
+    @app.post("/api/sessions/{session_id}/restart", dependencies=authenticated)
+    def restart_session(session_id: str, body: RestartRequest | None = None) -> AgentSession:
+        """The user's restart of an agent: it begins anew, with its switches at their defaults."""
+        restarted = restart_agent(session_id, body)
+        reset_switches(session_id)
+        return restarted
+
     def apply_model(session: AgentSession, model: str, effort: str | None) -> AgentSession:
         """Typed into a running agent that can switch in place, otherwise by resuming it."""
         pending_model.pop(session.id, None)
         live = config.agents[session.profile].model_live
         if not session.running or live is None:
-            return restart_session(session.id, RestartRequest(model=model, effort=effort))
+            return restart_agent(session.id, RestartRequest(model=model, effort=effort))
         store_model_reasoning(session, model, None)
 
         def switch() -> None:
