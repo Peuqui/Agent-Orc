@@ -313,7 +313,7 @@ function replyPlaceholder(recipients: string[]): string {
               <span class="flex items-baseline gap-2">
                 <span class="min-w-0 flex-1 text-sm font-medium break-words">
                   <span :class="colorOf(conversation.members[0])">{{ conversation.members[0] }}</span>
-                  <span class="text-slate-500">{{ conversation.members[1] === EVERYONE ? ' → ' : ' ↔ ' }}</span>
+                  <span class="text-amber-400">{{ conversation.members[1] === EVERYONE ? ' → ' : ' ↔ ' }}</span>
                   <span :class="colorOf(conversation.members[1])">{{
                     conversation.members[1] === EVERYONE ? $t('peers.everyone') : conversation.members[1]
                   }}</span>
