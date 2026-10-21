@@ -1,5 +1,6 @@
 import { computed, ref } from 'vue'
 import { apiFor, type AgentProfile, type AgentQuota, type AgentSession } from '../api'
+import { keepAnswersAllOf } from './useAnswersAll'
 import { useHostContext } from './useHostContext'
 import { useToast } from './useToast'
 
@@ -22,6 +23,8 @@ function createStore(host: string | null) {
       ])
       sessions.value = currentSessions
       quotas.value = currentQuotas
+      // The choices are kept by agent id alone, so only this machine's own list may tidy them.
+      if (host === null) keepAnswersAllOf(new Set(currentSessions.map((session) => session.id)))
     } catch (error) {
       useToast().error(error)
     }

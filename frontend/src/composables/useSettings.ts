@@ -106,22 +106,6 @@ export type TerminalView = 'terminal' | 'answers'
 export function useTerminalView(sessionId: string): Ref<TerminalView> {
   return setting<TerminalView>(`agent-orc-terminal-view:${sessionId}`, 'answers', (stored) => stored as TerminalView)
 }
-const answersAllKey = (sessionId: string) => `agent-orc-answers-all:${sessionId}`
-
-/** Until the user chooses summaries for an agent, its answers show every text. */
-const ANSWERS_ALL_INITIAL = true
-
-/** An agent's answers show every text it wrote, not only the last one of each request; each agent has its own choice. */
-export function useAnswersAll(sessionId: string): Ref<boolean> {
-  return setting(answersAllKey(sessionId), ANSWERS_ALL_INITIAL, (stored) => stored === 'true')
-}
-
-/** The choice of an agent, read once (for a page that is not showing its answers). */
-export function readAnswersAll(sessionId: string): boolean {
-  const stored = localStorage.getItem(answersAllKey(sessionId))
-  return stored === null ? ANSWERS_ALL_INITIAL : stored === 'true'
-}
-
 /** What reads answers aloud: the engine (speech.ts), its voice, and its speed and pitch as overrides (none: the engine's own). */
 const speechEngine = sharedSetting('speech_engine')
 // What is chosen with an engine (a room of the Echo, a voice of the TTS service) is kept on the server, one for each; the
