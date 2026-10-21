@@ -1,28 +1,23 @@
-import { type Ref, computed, reactive } from 'vue'
+import { type Ref, computed } from 'vue'
+import { api } from '../api'
+import { useSessions } from './useSessions'
+import { useToast } from './useToast'
 
 // Whether an agent's answers show every text it wrote, not only the last one of each request.
-// Only held while the page is open and the agent exists: a reload, or a new agent in the same
-// folder, starts with every text again, as no stored choice can follow an agent that is new.
-const INITIAL = true
-const chosen = reactive<Record<string, boolean>>({})
-
-export function useAnswersAll(sessionId: string): Ref<boolean> {
-  return computed({
-    get: () => chosen[sessionId] ?? INITIAL,
-    set: (all) => {
-      chosen[sessionId] = all
-    },
-  })
-}
+// The server keeps it for every device and sends it with the session list, until the agent's
+// session ends: a new agent, even in the same folder, shows every text again.
 
 /** The choice of an agent, read once (for a page that is not showing its answers). */
 export function readAnswersAll(sessionId: string): boolean {
-  return chosen[sessionId] ?? INITIAL
+  return useSessions().sessions.value.find((session) => session.id === sessionId)?.answers_all ?? true
 }
 
-/** The agents that are gone take their choice with them. */
-export function keepAnswersAllOf(existing: Set<string>): void {
-  for (const sessionId of Object.keys(chosen)) {
-    if (!existing.has(sessionId)) delete chosen[sessionId]
-  }
+export function useAnswersAll(sessionId: string): Ref<boolean> {
+  const { refresh } = useSessions()
+  return computed({
+    get: () => readAnswersAll(sessionId),
+    set: (all) => {
+      api.setAnswersMode(sessionId, all).then(refresh, useToast().error)
+    },
+  })
 }

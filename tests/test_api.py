@@ -1763,6 +1763,30 @@ def test_keep_warm_is_switched_off_by_every_start_and_restart(
     assert not enabled()
 
 
+def test_answers_show_every_text_until_the_agent_is_set_to_summaries(
+    client: TestClient, home: Path
+) -> None:
+    session_id = start_shell(client, home / "projects")
+    url = f"/api/sessions/{session_id}/answers-mode"
+
+    def answers_all() -> bool:
+        return bool(client.get("/api/sessions").json()[0]["answers_all"])
+
+    assert answers_all()
+    assert client.put(url, json={"all_texts": False}).status_code == 204
+    assert not answers_all()
+    # Every device asks the same server; a restart of the agent is back to the default.
+    assert client.post(f"/api/sessions/{session_id}/restart").status_code == 200
+    assert answers_all()
+    client.put(url, json={"all_texts": False})
+    assert client.delete(f"/api/sessions/{session_id}").status_code == 204
+    assert start_shell(client, home / "projects") == session_id
+    assert answers_all()
+    assert (
+        client.put("/api/sessions/nope/answers-mode", json={"all_texts": True}).status_code == 404
+    )
+
+
 def test_scheduled_prompt_waits_for_its_time_and_an_idle_agent(
     config: Config, clock: FakeClock, home: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

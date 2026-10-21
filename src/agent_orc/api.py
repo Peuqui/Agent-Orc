@@ -444,6 +444,10 @@ class KeepWarmRequest(BaseModel):
     enabled: bool
 
 
+class AnswersModeRequest(BaseModel):
+    all_texts: bool
+
+
 class ApprovalDecision(BaseModel):
     request: str
     allow: bool
@@ -796,8 +800,7 @@ def create_app(
         restarted = sessions.restart(session, env, own_conversation(session), model)
         # The ended agent cannot report that it stopped working.
         store_activity(session.id, busy=False)
-        # A start begins with a cold cache: keeping warm is switched on again on purpose.
-        keep_warm_enabled.discard(session.id)
+        reset_switches(session.id)
         return restarted
 
     def apply_effort(session: AgentSession, reasoning: Reasoning) -> AgentSession:
@@ -841,9 +844,17 @@ def create_app(
         lead = config.handover.lead_minutes * SECONDS_PER_MINUTE
         return {**asdict(cache), "lead_seconds": lead}
 
-    # The agents keeping warm is switched on for. Only in memory on purpose: it ends with the
-    # agent's session, and no crash can leave a stale "on" behind (see keepwarm.py).
+    # The agents' switches, shared by every device. Only in memory on purpose: they end with the
+    # agent's session, and no crash can leave a stale one behind (see keepwarm.py). Keeping warm
+    # is off by default, the answers show every text by default (the agents that show only the
+    # summaries are listed).
     keep_warm_enabled: set[str] = set()
+    answers_summaries: set[str] = set()
+
+    def reset_switches(session_id: str) -> None:
+        """Back to the defaults, for an agent that starts anew."""
+        keep_warm_enabled.discard(session_id)
+        answers_summaries.discard(session_id)
 
     def keep_warm_entry(session: AgentSession) -> dict[str, Any]:
         profile = config.agents.get(session.profile)
@@ -891,7 +902,10 @@ def create_app(
 
     def check_keep_warm() -> None:
         listed = sessions.list()
-        keep_warm_enabled.intersection_update(s.id for s in listed if s.running)
+        # An agent whose session has ended takes its switches with it.
+        running = {s.id for s in listed if s.running}
+        keep_warm_enabled.intersection_update(running)
+        answers_summaries.intersection_update(running)
         for session_id in keep_warm_progress.keys() - {s.id for s in listed}:
             del keep_warm_progress[session_id]
         for session in listed:
@@ -1430,6 +1444,7 @@ def create_app(
             },
             "cache": cache_entry(cache),
             "keep_warm": keep_warm_entry(session),
+            "answers_all": session.id not in answers_summaries,
             # The newest answer looked at, on any device ("" none yet).
             "answers_seen": seen.get(session.id, ""),
             # Waiting for the user's answer; normally at most one, as Claude asks one at a time.
@@ -1466,7 +1481,7 @@ def create_app(
         started = sessions.start(
             body.profile, path, body.resume, body.conversation, body.model, env, body.suffix
         )
-        keep_warm_enabled.discard(started.id)
+        reset_switches(started.id)
         if body.workspace is not None:
             assign_workspace(started.id, body.workspace)
         return started
@@ -1694,6 +1709,20 @@ def create_app(
             keep_warm_enabled.add(session_id)
         else:
             keep_warm_enabled.discard(session_id)
+
+    @app.put(
+        "/api/sessions/{session_id}/answers-mode",
+        dependencies=authenticated,
+        status_code=status.HTTP_204_NO_CONTENT,
+    )
+    def set_answers_mode(session_id: str, body: AnswersModeRequest) -> None:
+        """Every text of the agent's answers (the default), or only the summaries."""
+        if find_session(session_id) is None:
+            raise SessionNotFoundError(session_id)
+        if body.all_texts:
+            answers_summaries.discard(session_id)
+        else:
+            answers_summaries.add(session_id)
 
     def session_folder(session_id: str) -> Path:
         session = find_session(session_id)

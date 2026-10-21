@@ -246,6 +246,9 @@ export interface AgentSession {
   /** Keeping the prompt cache warm (keepwarm.py): whether the profile has it, whether it is on for
    * this agent, and the prompts typed during this rest. */
   keep_warm: { available: boolean; enabled: boolean; pings: number }
+  /** The answers show every text the agent wrote (the default), not only the summaries. Kept by
+   * the server for every device, until the agent's session ends. */
+  answers_all: boolean
   /** A reasoning change waits until the current answer is finished. */
   effort_pending: boolean
   pending_effort: string | null
@@ -687,6 +690,8 @@ function createApi(host?: string) {
       request<void>('POST', `sessions/${encodeURIComponent(sessionId)}/handover`),
     setKeepWarm: (sessionId: string, enabled: boolean) =>
       request<void>('PUT', `sessions/${encodeURIComponent(sessionId)}/keep-warm`, { body: { enabled } }),
+    setAnswersMode: (sessionId: string, allTexts: boolean) =>
+      request<void>('PUT', `sessions/${encodeURIComponent(sessionId)}/answers-mode`, { body: { all_texts: allTexts } }),
     handoverAuto: () => request<{ auto: boolean }>('GET', 'handover/auto'),
     setHandoverAuto: (auto: boolean) => request<void>('PUT', 'handover/auto', { body: { auto } }),
     /** Takes effect at the agent's next start. */
