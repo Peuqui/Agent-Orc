@@ -5,18 +5,20 @@ export const EVERYONE = '*'
 // The bridge names a person this way (User:Peuqui); peers are Host:Project.
 const USER_PREFIX = 'User:'
 
-/** The messages between two (a sorted pair), or of one sender to everyone. */
+/** The messages between two, or of one sender to everyone. */
 export interface Conversation {
   key: string
+  /** Who started it first, then who was written to. */
   members: [string, string]
   /** Oldest first. */
   messages: PeerMessage[]
   last: string
 }
 
-export function conversationMembers(message: PeerMessage): [string, string] {
-  if (message.to === EVERYONE) return [message.from, EVERYONE]
-  return [message.from, message.to].sort() as [string, string]
+/** The same for both directions of a pair, so they form one conversation. */
+function conversationKey(message: PeerMessage): string {
+  const pair = message.to === EVERYONE ? [message.from, EVERYONE] : [message.from, message.to].sort()
+  return pair.join('\n')
 }
 
 /** Conversations with the latest activity first. */
@@ -24,9 +26,8 @@ export function groupConversations(messages: Iterable<PeerMessage>): Conversatio
   const conversations = new Map<string, Conversation>()
   const chronological = [...messages].sort((a, b) => a.timestamp.localeCompare(b.timestamp))
   for (const message of chronological) {
-    const members = conversationMembers(message)
-    const key = members.join('\n')
-    const conversation = conversations.get(key) ?? { key, members, messages: [], last: '' }
+    const key = conversationKey(message)
+    const conversation = conversations.get(key) ?? { key, members: [message.from, message.to], messages: [], last: '' }
     conversation.messages.push(message)
     conversation.last = message.timestamp
     conversations.set(key, conversation)

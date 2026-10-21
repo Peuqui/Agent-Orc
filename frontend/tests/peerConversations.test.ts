@@ -33,12 +33,13 @@ test('both directions of a pair are one conversation, a broadcast is its own', (
     message(3, 'Mini:A', '*', '2026-10-09T20:02:00.000Z'),
     message(2, 'Mini:A', 'Mini:B', '2026-10-09T20:01:00.000Z'),
   ])
-  // The latest activity first, the messages within oldest first.
+  // The latest activity first, the messages within oldest first; the pair is named the way
+  // the first message ran: sender, then recipient.
   assert.deepEqual(
     conversations.map((c) => [c.members, c.messages.map((m) => m.id)]),
     [
       [['Mini:A', '*'], [3]],
-      [['Mini:A', 'Mini:B'], [1, 2]],
+      [['Mini:B', 'Mini:A'], [1, 2]],
     ],
   )
 })
