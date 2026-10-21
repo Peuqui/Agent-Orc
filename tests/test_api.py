@@ -1928,17 +1928,19 @@ def test_broadcast_types_into_every_chosen_agent(client: TestClient, home: Path)
     assert "nope" not in client.get(f"/api/sessions/{first}/text").json()["text"]
 
 
-def test_broadcast_can_leave_the_text_unsent(client: TestClient, home: Path) -> None:
+def test_broadcast_drafts_type_nothing_and_return_each_agents_text(
+    client: TestClient, home: Path
+) -> None:
     session = start_shell(client, home / "projects" / "a")
     assert wait_for_text(client, session, "READY")
     response = client.post(
-        "/api/broadcast", json={"sessions": [session], "text": "draft note", "submit": False}
+        "/api/broadcast/drafts", json={"sessions": [session], "text": "draft note"}
     )
-    assert response.status_code == 204
-    assert wait_for_text(client, session, "draft note")
+    assert response.json() == {session: "draft note"}
     time.sleep(0.3)
-    # cat prints a line only once it is submitted: only the terminal's own echo is on screen.
-    assert client.get(f"/api/sessions/{session}/text").json()["text"].count("draft note") == 1
+    assert "draft note" not in client.get(f"/api/sessions/{session}/text").json()["text"]
+    refused = client.post("/api/broadcast/drafts", json={"sessions": ["gone"], "text": "x"})
+    assert refused.status_code == 404
 
 
 def test_raw_file_is_served_without_running_its_scripts(client: TestClient, home: Path) -> None:
@@ -2303,11 +2305,8 @@ def test_sending_a_note_brings_its_files_into_the_agents_folder(
     assert wait_for_text(client, session, "READY")
     url = client.post("/api/notes/files", params={"name": "foto.png"}, content=b"png").json()["url"]
     text = f"Schau dir das an: ![Foto]({url}) und [Plan]({url})"
-    response = client.post(
-        "/api/broadcast", json={"sessions": [session], "text": text, "submit": False}
-    )
-    assert response.status_code == 204
-    assert wait_for_text(client, session, "Schau dir das an: @.agent-orc/uploads/")
+    response = client.post("/api/broadcast/drafts", json={"sessions": [session], "text": text})
+    assert response.json()[session].startswith("Schau dir das an: @.agent-orc/uploads/")
     copies = list((home / "projects" / "a" / ".agent-orc" / "uploads").glob("*foto*.png"))
     # One copy per link, each with the file's content.
     assert len(copies) == 2 and all(copy.read_bytes() == b"png" for copy in copies)

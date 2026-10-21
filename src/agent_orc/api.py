@@ -562,8 +562,6 @@ class AnswersSeenRequest(BaseModel):
 class BroadcastRequest(BaseModel):
     sessions: list[str]
     text: str
-    # False: the text only lands in each agent's input, the user sends it there.
-    submit: bool = True
 
 
 ContextAction = Literal["clear", "compact"]
@@ -2099,21 +2097,30 @@ def create_app(
     def cancel_scheduled(prompt_id: str) -> None:
         remove_scheduled(prompt_id)
 
-    @app.post("/api/broadcast", dependencies=authenticated, status_code=status.HTTP_204_NO_CONTENT)
-    def broadcast(body: BroadcastRequest) -> None:
-        """Type the same prompt into several agents, as the user would into each."""
+    def broadcast_texts(body: BroadcastRequest) -> dict[str, str]:
+        """The prompt for each of the chosen running agents, with the files a note links to
+        brought into that agent's folder, so it can read them."""
         running = {s.id for s in sessions.list() if s.running}
         missing = [session_id for session_id in body.sessions if session_id not in running]
         if missing:
             raise SessionNotFoundError(", ".join(missing))
         folders = {s.id: s.path for s in sessions.list()}
-        for session_id in body.sessions:
-            # Files a note links to go into this agent's folder, so it can read them.
-            text = bring_note_files(body.text, folders[session_id], notes_dir(), clock)
-            if body.submit:
-                sessions.type_line(session_id, text)
-            else:
-                sessions.paste_text(session_id, text)
+        return {
+            session_id: bring_note_files(body.text, folders[session_id], notes_dir(), clock)
+            for session_id in body.sessions
+        }
+
+    @app.post("/api/broadcast", dependencies=authenticated, status_code=status.HTTP_204_NO_CONTENT)
+    def broadcast(body: BroadcastRequest) -> None:
+        """Type the same prompt into several agents, as the user would into each."""
+        for session_id, text in broadcast_texts(body).items():
+            sessions.type_line(session_id, text)
+
+    @app.post("/api/broadcast/drafts", dependencies=authenticated)
+    def broadcast_drafts(body: BroadcastRequest) -> dict[str, str]:
+        """The prompt as each agent would get it, but typed nowhere: the page puts it into the
+        agents' input fields, where the user reads and sends it."""
+        return broadcast_texts(body)
 
     @app.post("/api/sessions/{session_id}/remove-worktree", dependencies=authenticated)
     def remove_session_worktree(session_id: str) -> dict[str, Any]:

@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { api } from '../api'
+import { addToDraft } from '../composables/useDrafts'
 import { sessionName, useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
 import AppIcon from './AppIcon.vue'
@@ -9,7 +10,8 @@ import BaseDialog from './BaseDialog.vue'
 import ToggleSwitch from './ToggleSwitch.vue'
 
 // One prompt for the chosen agents, e.g. "commit and push", "read the new CLAUDE.md" or a note;
-// typed into each as if the user did it there.
+// typed into each as if the user did it there, or put into each one's message field to be sent
+// from there.
 const props = withDefaults(defineProps<{ initialText?: string; submit?: boolean }>(), { initialText: '', submit: true })
 const emit = defineEmits<{ close: [] }>()
 const { t } = useI18n()
@@ -18,15 +20,20 @@ const { sessions, refresh } = useSessions()
 
 const chosen = ref<string[]>([])
 const text = ref(props.initialText)
-// Whether the text is also submitted, or only put into each agent's input to be sent there.
+// Whether the text is sent at once, or only put into each agent's message field.
 const submit = ref(props.submit)
 const running = computed(() => sessions.value.filter((session) => session.running))
 
 async function send(): Promise<void> {
   try {
-    await api.broadcast(chosen.value, text.value.trim(), submit.value)
+    if (submit.value) {
+      await api.broadcast(chosen.value, text.value.trim())
+    } else {
+      const drafts = await api.broadcastDrafts(chosen.value, text.value.trim())
+      for (const [sessionId, draft] of Object.entries(drafts)) addToDraft(sessionId, draft)
+    }
     emit('close')
-    toast.info(t('broadcast.sent', { count: chosen.value.length }))
+    toast.info(t(submit.value ? 'broadcast.sent' : 'broadcast.inserted', { count: chosen.value.length }))
   } catch (error) {
     toast.error(error)
   }

@@ -676,10 +676,12 @@ function createApi(host?: string) {
     /** Types the message into the agent and submits it (the server types, then presses Enter). */
     sendMessage: (sessionId: string, text: string) =>
       request<void>('POST', `sessions/${encodeURIComponent(sessionId)}/message`, { body: { text } }),
-    /** Types the same prompt into each of the (running) agents; without submit it only lands in
-     * their input and the user sends it there. */
-    broadcast: (sessionIds: string[], text: string, submit = true) =>
-      request<void>('POST', 'broadcast', { body: { sessions: sessionIds, text, submit } }),
+    /** Types the same prompt into each of the (running) agents and submits it. */
+    broadcast: (sessionIds: string[], text: string) =>
+      request<void>('POST', 'broadcast', { body: { sessions: sessionIds, text } }),
+    /** The prompt as each of the (running) agents would get it, by session id, typed nowhere. */
+    broadcastDrafts: (sessionIds: string[], text: string) =>
+      request<Record<string, string>>('POST', 'broadcast/drafts', { body: { sessions: sessionIds, text } }),
     /** Types the handover request into the agent. */
     requestHandover: (sessionId: string) =>
       request<void>('POST', `sessions/${encodeURIComponent(sessionId)}/handover`),

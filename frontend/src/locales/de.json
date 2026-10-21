@@ -341,7 +341,7 @@
           "Neu starten (Menü ⋮ der Karte und der Agentenseite) startet den Agenten neu und setzt das Gespräch fort, etwa wenn er hängt oder geänderte Einstellungen lesen soll. Vorher kommt eine Rückfrage; eine laufende Antwort und Hintergrundaufgaben enden dabei. Hat ein Agent noch kein gespeichertes Modell (gestartet vor der Modellwahl), fragt Agent-Orc beim Neustart und beim Fortsetzen danach – ohne Modell startet kein Agent.",
           "Prompt planen (Menü ⋮ der Karte und der Agentenseite): einen Prompt für später planen, etwa „Tests laufen lassen und berichten“ um 7 Uhr. Er wird zur Zeit eingetippt, sobald der Agent fertig ist; geplante Prompts stehen auf der Karte und lassen sich mit × entfernen.",
           "Läuft ein Claude-Agent ins Nutzungslimit, plant Agent-Orc das Weitermachen zur nächsten Rücksetzung des Kontingents (gelber Eintrag auf der Karte). Ist er dann noch gesperrt, kommt der nächste Termin.",
-          "„An mehrere“ (neben den Arbeitsflächen, ab zwei laufenden Agenten): denselben Prompt an mehrere Agenten schicken, etwa „committe und pushe“. „Abschicken“ aus: der Text landet nur im Eingabefeld der Agenten, du sendest ihn dort selbst.",
+          "„An mehrere“ (neben den Arbeitsflächen, ab zwei laufenden Agenten): denselben Prompt an mehrere Agenten schicken, etwa „committe und pushe“. „Abschicken“ aus: der Text landet nur im Eingabefeld der Agenten, du liest ihn dort und sendest ihn selbst.",
           "„>_“ (Karte und Terminalleiste) öffnet ein normales Terminal im Projektordner, auch neben dem laufenden Agenten; läuft schon eins, öffnet es dieses. Einen weiteren Agenten im Ordner startest du über „Agent hier starten“ (mit eigenem Namenszusatz), nicht von Hand im Terminal, sonst kennt Agent-Orc ihn nicht.",
           "Das Menü ⋮ auf der Karte (rechts unten) und auf der Agentenseite sammelt, was man seltener braucht oder was Folgen hat: Prompt planen, Modell wechseln, Kontext komprimieren, Kontext leeren, Neu starten und, abgesetzt und rot, Beenden. Häufiges bleibt sichtbar: „Terminal“ (öffnet die Agentenseite), Änderungen und „>_“.",
           "Modell wechseln (Menü ⋮, nur bei Agenten mit Modellauswahl): Der Agent wechselt das Modell im laufenden Betrieb, wo seine Profil-Einstellung das erlaubt (Claude: /model); Gespräch, laufende Antwort und Hintergrundaufgaben bleiben, nur der Prompt-Cache beginnt für das neue Modell von vorn. Arbeitet er gerade, wird der Wechsel vorgemerkt (gelbe Zeile mit „Verwerfen“) und nach der Antwort eingetippt. Kann ein Agent das nicht, startet Agent-Orc ihn mit dem Modell neu und setzt das Gespräch fort.",
@@ -374,7 +374,7 @@
           "Notizbücher als Reiter: „+“ legt eines an, Stift benennt es um, Papierkorb löscht es samt Notizen. Sie liegen auf dem Server, jedes Gerät zeigt dasselbe.",
           "Ein Notizbuch hat lose Notizen und Ordner (Ordner-Symbol neben der Suche; eine Ebene). Die Suche durchsucht Titel und Text. Eine Notiz lässt sich über das Feld „Kein Ordner“ in einen Ordner verschieben.",
           "Eine Notiz ist Markdown. Die Leiste (B, I, H, •, </>, Link) setzt die Zeichen um die Auswahl oder in die Zeile; die Ansicht zeigt das Ergebnis, Zeilenumbrüche bleiben erhalten. Auf Rechner und Tablet stehen Text und Ansicht nebeneinander, am Handy schaltet „Ansicht/Bearbeiten“ um. Eine Notiz ohne Text öffnet zum Schreiben. Das Mikrofon rechts neben der Leiste diktiert an die Cursorstelle (STT-Suite mit GPU oder CPU, wie im Terminal). Die Büroklammer in der Leiste hängt Foto, Bild, Screenshot oder eine beliebige Datei (auch PDF) an; Bilder lassen sich auch mit Strg+V einfügen. Die Datei liegt auf dem Server und steht als Markdown-Link an der Cursorstelle: Bilder erscheinen in der Ansicht als Vorschau, ein Klick öffnet sie in einem neuen Tab, andere Dateien sind ein Link. Beim Senden an einen Agenten werden sie in dessen Projektordner kopiert und als „{'@'}Pfad“ eingesetzt. PDFs zeigen unter dem Text eine Vorschau der ersten Seite; „Alle Seiten“ klappt das ganze PDF auf, „In neuem Tab öffnen“ nutzt den Betrachter des Browsers.",
-          "„Kopieren“ legt den Text in die Zwischenablage. „An Agent“ fügt ihn in das Eingabefeld der gewählten Agenten ein; mit „Abschicken“ wird er zugleich gesendet, sonst schickst du ihn im Terminal selbst ab.",
+          "„Kopieren“ legt den Text in die Zwischenablage. „An Agent“ fügt ihn in das Eingabefeld der gewählten Agenten ein; mit „Abschicken“ wird er zugleich gesendet, sonst liest du ihn dort und schickst ihn selbst ab.",
           "Wird dasselbe Notizbuch auf zwei Geräten gleichzeitig bearbeitet, gilt der zuletzt gespeicherte Stand; ein Gerät mit eigenen offenen Änderungen übernimmt fremde nicht."
         ]
       },
@@ -672,7 +672,8 @@
     "title": "An Agenten senden",
     "text": "Nachricht an alle gewählten Agenten …",
     "send": "An {count} senden",
-    "sent": "An {count} Agenten gesendet"
+    "sent": "An {count} Agenten gesendet",
+    "inserted": "In das Eingabefeld von {count} Agenten eingefügt"
   },
   "terminalButton": {
     "title": "Terminal in diesem Ordner (ohne Agent)"

@@ -3,6 +3,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } 
 import { api } from '../api'
 import { MESSAGE_FIELD_ATTRIBUTE } from '../columns'
 import { useDictation } from '../composables/useDictation'
+import { draftOf } from '../composables/useDrafts'
 import { useSettings } from '../composables/useSettings'
 import { useZoomFactor } from '../composables/useViewZoom'
 import { attachInOrder } from '../attachInOrder'
@@ -21,13 +22,7 @@ const props = defineProps<{ sessionId: string }>()
 const { zoomFactor, zoomStyle } = useZoomFactor()
 
 const toast = useToast()
-// The unsent text survives a reload (e.g. when a new version is installed), per agent and tab.
-const draftKey = `agent-orc-draft:${props.sessionId}`
-const text = ref(sessionStorage.getItem(draftKey) ?? '')
-watch(text, (current) => {
-  if (current) sessionStorage.setItem(draftKey, current)
-  else sessionStorage.removeItem(draftKey)
-})
+const text = draftOf(props.sessionId)
 const field = ref<HTMLTextAreaElement>()
 
 const { dictationSendsAtOnce } = useSettings()

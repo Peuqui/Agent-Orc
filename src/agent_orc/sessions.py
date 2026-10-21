@@ -326,14 +326,6 @@ class SessionManager:
     def press_enter(self, session_id: str) -> None:
         self._tmux("send-keys", "-t", exact_target(session_id), "-l", "\r")
 
-    def paste_text(self, session_id: str, text: str) -> None:
-        """Put text into the agent's input without submitting it, as one paste (bracketed, if
-        the agent asked for that), so the user can read it there and send it themselves."""
-        buffer = f"agent-orc-{session_id}"
-        self._tmux("set-buffer", "-b", buffer, "--", text)
-        # -r keeps the line breaks as they are, -d drops the buffer afterwards.
-        self._tmux("paste-buffer", "-p", "-r", "-d", "-b", buffer, "-t", exact_target(session_id))
-
     def text(self, session_id: str, history_lines: int) -> str:
         """The session's screen and history as plain text; wrapped lines are joined again."""
         result = self._tmux(
