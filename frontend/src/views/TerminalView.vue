@@ -429,10 +429,12 @@ onBeforeUnmount(() => {
 <template>
   <!-- A size container, so the message field caps its height at a share of this view (cqh). -->
   <div class="flex h-full flex-col bg-slate-900 [container-type:size]">
-    <!-- Compact buttons on phones, so name and all buttons fit in one row. -->
+    <!-- Compact buttons on phones, so name and all buttons fit in one row; in a column too narrow
+         for the state and the buttons together (a long cache age) the buttons go to a second row
+         instead of being cut off at the right. -->
     <header
       v-if="!fullscreen"
-      class="controls-zoom flex items-center gap-1 border-b border-slate-600 px-1 py-1 max-md:[&_.btn-icon]:size-8"
+      class="controls-zoom flex flex-wrap items-center gap-1 border-b border-slate-600 px-1 py-1 max-md:[&_.btn-icon]:size-8"
     >
       <button
         v-if="!embedded"
@@ -482,7 +484,7 @@ onBeforeUnmount(() => {
         </button>
       </div>
       <!-- The actions: side by side on computers, behind ⋯ on phones so the name has room. -->
-      <div ref="actionsMenu" class="relative flex items-center">
+      <div ref="actionsMenu" class="relative ml-auto flex items-center">
         <button
           v-if="phone"
           class="btn-icon"
