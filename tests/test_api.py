@@ -1733,10 +1733,7 @@ def test_keep_warm_prompts_a_resting_agent_before_its_cache_expires(
         assert pings_become(client, 0)
 
 
-def test_keep_warm_is_switched_on_and_off_per_agent(
-    client: TestClient, home: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
+def test_keep_warm_is_switched_on_and_off_per_agent(client: TestClient, home: Path) -> None:
     session_id = start_shell(client, home / "projects")
     url = f"/api/sessions/{session_id}/keep-warm"
     assert client.get("/api/sessions").json()[0]["keep_warm"]["enabled"] is False
@@ -1745,6 +1742,25 @@ def test_keep_warm_is_switched_on_and_off_per_agent(
     assert client.put(url, json={"enabled": False}).status_code == 204
     assert client.get("/api/sessions").json()[0]["keep_warm"]["enabled"] is False
     assert client.put("/api/sessions/nope/keep-warm", json={"enabled": True}).status_code == 404
+
+
+def test_keep_warm_is_switched_off_by_every_start_and_restart(
+    client: TestClient, home: Path
+) -> None:
+    session_id = start_shell(client, home / "projects")
+    url = f"/api/sessions/{session_id}/keep-warm"
+
+    def enabled() -> bool:
+        return bool(client.get("/api/sessions").json()[0]["keep_warm"]["enabled"])
+
+    client.put(url, json={"enabled": True})
+    assert client.post(f"/api/sessions/{session_id}/restart").status_code == 200
+    assert not enabled()
+    client.put(url, json={"enabled": True})
+    assert client.delete(f"/api/sessions/{session_id}").status_code == 204
+    # Same folder, same id: the new agent must not inherit the switch.
+    assert start_shell(client, home / "projects") == session_id
+    assert not enabled()
 
 
 def test_scheduled_prompt_waits_for_its_time_and_an_idle_agent(

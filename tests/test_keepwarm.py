@@ -1,11 +1,7 @@
-from pathlib import Path
-
-import pytest
-
 from agent_orc.cache import CacheState
 from agent_orc.config import KeepWarmConfig
 from agent_orc.handover import ASKED, DONE, WORKING
-from agent_orc.keepwarm import KeepWarmProgress, due, read_enabled, write_agent
+from agent_orc.keepwarm import KeepWarmProgress, due
 
 CONFIG = KeepWarmConfig(prompt="Keep-alive", lead_minutes=5, max_pings=3)
 HOUR = 3600
@@ -47,15 +43,3 @@ def test_a_prompt_runs_its_course_and_the_users_input_ends_the_rest() -> None:
     # Work after the answer is the user's: the count starts anew.
     assert done.follow(busy=False) == done
     assert done.follow(busy=True) is None
-
-
-def test_agents_are_switched_on_one_by_one(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
-    assert read_enabled() == set()
-    write_agent("a", True)
-    write_agent("b", True)
-    assert read_enabled() == {"a", "b"}
-    write_agent("a", False)
-    # Off again for an agent that was never on changes nothing.
-    write_agent("c", False)
-    assert read_enabled() == {"b"}

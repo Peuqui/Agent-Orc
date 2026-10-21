@@ -792,6 +792,16 @@ def create_app(
         profile = config.agents.get(profile_name)
         return profile.effort.live if profile and profile.effort else None
 
+    def resume_agent(
+        session: AgentSession, env: dict[str, str], model: str | None = None
+    ) -> AgentSession:
+        restarted = sessions.restart(session, env, own_conversation(session), model)
+        # The ended agent cannot report that it stopped working.
+        store_activity(session.id, busy=False)
+        # A start begins with a cold cache: keeping warm is switched on again on purpose.
+        keep_warm_enabled.discard(session.id)
+        return restarted
+
     def apply_effort(session: AgentSession, reasoning: Reasoning) -> AgentSession:
         """Store the agent's reasoning (handed over at every start) and hand it to the agent:
         typed into a running agent that can switch in place, otherwise by resuming it."""
@@ -808,10 +818,7 @@ def create_app(
             )
             return session
         env = launch_env(session.profile, session.id, session.suffix, session.chosen_model)
-        restarted = sessions.restart(session, env, own_conversation(session))
-        # The ended agent cannot report that it stopped working.
-        store_activity(session.id, busy=False)
-        return restarted
+        return resume_agent(session, env)
 
     def apply_pending_efforts() -> None:
         for session_id, reasoning in list(pending_effort.items()):
@@ -836,12 +843,16 @@ def create_app(
         lead = config.handover.lead_minutes * SECONDS_PER_MINUTE
         return {**asdict(cache), "lead_seconds": lead}
 
+    # The agents keeping warm is switched on for. Only in memory on purpose: it ends with the
+    # agent's session, and no crash can leave a stale "on" behind (see keepwarm.py).
+    keep_warm_enabled: set[str] = set()
+
     def keep_warm_entry(session: AgentSession) -> dict[str, Any]:
         profile = config.agents.get(session.profile)
         progress = keep_warm_progress.get(session.id)
         return {
             "available": profile is not None and profile.keep_warm is not None,
-            "enabled": session.id in keepwarm.read_enabled(),
+            "enabled": session.id in keep_warm_enabled,
             "pings": progress.pings if progress else 0,
         }
 
@@ -881,8 +892,8 @@ def create_app(
     keep_warm_progress: dict[str, keepwarm.KeepWarmProgress] = {}
 
     def check_keep_warm() -> None:
-        enabled = keepwarm.read_enabled()
         listed = sessions.list()
+        keep_warm_enabled.intersection_update(s.id for s in listed if s.running)
         for session_id in keep_warm_progress.keys() - {s.id for s in listed}:
             del keep_warm_progress[session_id]
         for session in listed:
@@ -906,7 +917,7 @@ def create_app(
             if handover_progress.get(session.id) == HANDOVER_ASKED:
                 continue
             pings = progress.pings if progress else 0
-            if session.id in enabled and keepwarm.due(
+            if session.id in keep_warm_enabled and keepwarm.due(
                 keep_warm, agent_cache(session), clock(), pings
             ):
                 sessions.type_line(session.id, keep_warm.prompt)
@@ -1457,6 +1468,7 @@ def create_app(
         started = sessions.start(
             body.profile, path, body.resume, body.conversation, body.model, env, body.suffix
         )
+        keep_warm_enabled.discard(started.id)
         if body.workspace is not None:
             assign_workspace(started.id, body.workspace)
         return started
@@ -1531,10 +1543,7 @@ def create_app(
         elif model is not None:
             store_model_reasoning(session, model, body.effort if body else None)
         env = launch_env(session.profile, session.id, session.suffix, chosen)
-        restarted = sessions.restart(session, env, own_conversation(session), model)
-        # The ended agent cannot report that it stopped working.
-        store_activity(session_id, busy=False)
-        return restarted
+        return resume_agent(session, env, model)
 
     def apply_model(session: AgentSession, model: str, effort: str | None) -> AgentSession:
         """Typed into a running agent that can switch in place, otherwise by resuming it."""
@@ -1683,7 +1692,10 @@ def create_app(
     def set_keep_warm_agent(session_id: str, body: KeepWarmRequest) -> None:
         if find_session(session_id) is None:
             raise SessionNotFoundError(session_id)
-        keepwarm.write_agent(session_id, body.enabled)
+        if body.enabled:
+            keep_warm_enabled.add(session_id)
+        else:
+            keep_warm_enabled.discard(session_id)
 
     def session_folder(session_id: str) -> Path:
         session = find_session(session_id)
