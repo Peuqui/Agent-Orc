@@ -39,3 +39,26 @@ class ChangeNotifier:
                     yield ": keep-alive\n\n"
         finally:
             self.unsubscribe(listener)
+
+
+async def until_stopped[T](events: AsyncGenerator[T], stopping: asyncio.Event) -> AsyncGenerator[T]:
+    """`events` until `stopping` is set. A live stream never ends by itself: without this, a stop
+    of the server waits for it in vain and then cancels it (see cli.Server)."""
+    stop = asyncio.ensure_future(stopping.wait())
+    try:
+        while True:
+            following = asyncio.ensure_future(anext(events))
+            await asyncio.wait({following, stop}, return_when=asyncio.FIRST_COMPLETED)
+            if not following.done():
+                # Ends the stream's own waiting; waited for, so it is done before it is closed.
+                following.cancel()
+                await asyncio.wait({following})
+                return
+            try:
+                event = following.result()
+            except StopAsyncIteration:
+                return
+            yield event
+    finally:
+        stop.cancel()
+        await events.aclose()

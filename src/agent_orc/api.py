@@ -7,7 +7,7 @@ import mimetypes
 import socket
 import subprocess
 import time
-from collections.abc import AsyncIterator, Awaitable, Callable
+from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from dataclasses import asdict
 from datetime import datetime
@@ -92,7 +92,7 @@ from agent_orc.effort import (
     store_agent_reasoning,
     write_agent_settings,
 )
-from agent_orc.events import KEEP_ALIVE_SECONDS, ChangeNotifier
+from agent_orc.events import KEEP_ALIVE_SECONDS, ChangeNotifier, until_stopped
 from agent_orc.handover import ADVISED as HANDOVER_ADVISED
 from agent_orc.handover import ASKED as HANDOVER_ASKED
 from agent_orc.handover import DONE as HANDOVER_DONE
@@ -1039,6 +1039,9 @@ def create_app(
     app = FastAPI(
         title="Agent-Orc", docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan
     )
+    # Set as the server stops (cli.Server): the live streams end, instead of being waited for.
+    stopping = asyncio.Event()
+    app.state.stopping = stopping
 
     for error_type, status_code in ERROR_STATUS.items():
         app.add_exception_handler(error_type, _error_handler(status_code))
@@ -1238,7 +1241,7 @@ def create_app(
     @app.get("/api/workspaces/events", dependencies=authenticated)
     async def workspace_events() -> StreamingResponse:
         """A message whenever a workspace changed, on any device."""
-        return event_stream(workspace_changes.stream())
+        return event_stream(workspace_changes.stream(), stopping)
 
     @app.get("/api/workspaces", dependencies=authenticated)
     def workspaces() -> WorkspaceSet:
@@ -1298,7 +1301,7 @@ def create_app(
     @app.get("/api/notebooks/events", dependencies=authenticated)
     async def notebook_events() -> StreamingResponse:
         """A message whenever a notebook changed, on any device."""
-        return event_stream(notebook_changes.stream())
+        return event_stream(notebook_changes.stream(), stopping)
 
     @app.get("/api/notebooks", dependencies=authenticated)
     def notebooks() -> dict[str, Notebook]:
@@ -1916,11 +1919,11 @@ def create_app(
         if settings is None:
             raise NotConfiguredError("peers")
 
-        async def events() -> AsyncIterator[str]:
+        async def events() -> AsyncGenerator[str]:
             async for line in peers.observe(settings, KEEP_ALIVE_SECONDS):
                 yield ": keep-alive\n\n" if line is None else f"data: {line}\n\n"
 
-        return event_stream(events())
+        return event_stream(events(), stopping)
 
     @app.post("/api/peers/message", dependencies=authenticated)
     def peer_message(body: PeerMessageRequest) -> dict[str, Any]:
@@ -1982,7 +1985,7 @@ def create_app(
     @app.get("/api/settings/events", dependencies=authenticated)
     async def settings_events() -> StreamingResponse:
         """A message whenever the shared settings changed, on any device."""
-        return event_stream(settings_changes.stream())
+        return event_stream(settings_changes.stream(), stopping)
 
     @app.get("/api/settings", dependencies=authenticated)
     def shared_settings() -> SharedSettings:
@@ -2263,7 +2266,7 @@ def create_app(
         dependencies=authenticated,
     )
     async def host_request(name: str, path: str, request: Request) -> Response:
-        return await forward(request, host_link(name), path)
+        return await forward(request, host_link(name), path, stopping)
 
     @app.websocket("/hosts/{name}/{path:path}")
     async def host_websocket(websocket: WebSocket, name: str, path: str) -> None:
@@ -2451,10 +2454,10 @@ def create_app(
     return app
 
 
-def event_stream(events: AsyncIterator[str]) -> StreamingResponse:
-    """Server-sent events, neither cached nor held back by a proxy."""
+def event_stream(events: AsyncGenerator[str], stopping: asyncio.Event) -> StreamingResponse:
+    """Server-sent events, neither cached nor held back by a proxy, until the server stops."""
     return StreamingResponse(
-        events,
+        until_stopped(events, stopping),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"},
     )

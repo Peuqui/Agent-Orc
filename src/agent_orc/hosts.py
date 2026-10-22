@@ -13,7 +13,7 @@ import os
 import signal
 import socket
 import time
-from collections.abc import AsyncIterator, Iterable
+from collections.abc import AsyncGenerator, AsyncIterator, Iterable
 from pathlib import Path
 from typing import Literal
 from urllib.parse import urlsplit
@@ -24,6 +24,7 @@ from fastapi.responses import Response, StreamingResponse
 from starlette.websockets import WebSocketState
 
 from agent_orc.config import HostConfig
+from agent_orc.events import until_stopped
 from agent_orc.listen import SocketFolderError, prepare_socket
 
 logger = logging.getLogger(__name__)
@@ -295,7 +296,7 @@ def _response_headers(headers: Iterable[tuple[str, str]], path: str, prefix: str
     return forwarded
 
 
-async def _chunks(upstream: aiohttp.ClientResponse) -> AsyncIterator[bytes]:
+async def _chunks(upstream: aiohttp.ClientResponse) -> AsyncGenerator[bytes]:
     try:
         async for chunk in upstream.content.iter_any():
             yield chunk
@@ -313,9 +314,10 @@ async def _body_of(request: Request) -> AsyncIterator[bytes]:
         yield chunk
 
 
-async def forward(request: Request, link: HostLink, path: str) -> Response:
+async def forward(request: Request, link: HostLink, path: str, stopping: asyncio.Event) -> Response:
     """The request for /hosts/<name>/<path> as the other machine's Agent-Orc answers it; its
-    answer is streamed back, so live streams (server-sent events) arrive as they are sent."""
+    answer is streamed back, so live streams (server-sent events) arrive as they are sent, until
+    this server stops."""
     headers = [
         (name, value) for name, value in request.headers.items() if name not in NOT_FORWARDED
     ]
@@ -336,7 +338,7 @@ async def forward(request: Request, link: HostLink, path: str) -> Response:
         raise HostUnreachableError(link.name) from error
     prefix = f"/hosts/{link.name}"
     return StreamingResponse(
-        _chunks(upstream),
+        until_stopped(_chunks(upstream), stopping),
         status_code=upstream.status,
         headers=_response_headers(upstream.headers.items(), path, prefix),
     )

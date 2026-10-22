@@ -1,10 +1,12 @@
 """Command line entry point: `agent-orc setup | set-password | serve` and the agents' hooks."""
 
 import argparse
+import asyncio
 import getpass
 import json
 import os
 import signal
+import socket
 import sys
 from datetime import date
 from importlib.resources import files
@@ -69,10 +71,25 @@ def set_password() -> None:
     print(f"Wrote {path}. All existing logins are now invalid.")
 
 
-# How long a stop waits for connections that do not end by themselves (the browsers' live
-# streams and terminals stay open for days). Without it the stop hangs until systemd kills the
-# service, and what the app cleans up as it ends (the tunnels to other machines) is not done.
+# How long a stop waits for connections that do not end by themselves. The live streams end as
+# the stop begins (Server), and uvicorn closes the terminals' WebSockets itself; what is left (a
+# download, a forwarded request) gets this long. Without a limit the stop hangs until systemd
+# kills the service, and what the app cleans up as it ends (the tunnels to other machines) is
+# not done.
 SHUTDOWN_GRACE_SECONDS = 5
+
+
+class Server(uvicorn.Server):
+    """Tells the app's live streams to end as the stop begins: otherwise the stop waits for them
+    in vain and cancels them, which uvicorn logs as an error for each."""
+
+    def __init__(self, config: uvicorn.Config, stopping: asyncio.Event) -> None:
+        super().__init__(config)
+        self.stopping = stopping
+
+    async def shutdown(self, sockets: list[socket.socket] | None = None) -> None:
+        self.stopping.set()
+        await super().shutdown(sockets)
 
 
 def serve() -> None:
@@ -92,18 +109,14 @@ def serve() -> None:
             prepare_socket(socket)
         except SocketFolderError as error:
             sys.exit(str(error))
-        uvicorn.run(
-            app, uds=str(socket), loop="asyncio", timeout_graceful_shutdown=SHUTDOWN_GRACE_SECONDS
-        )
+        where: dict[str, Any] = {"uds": str(socket)}
     else:
         assert config.server.host is not None and config.server.port is not None
-        uvicorn.run(
-            app,
-            host=config.server.host,
-            port=config.server.port,
-            loop="asyncio",
-            timeout_graceful_shutdown=SHUTDOWN_GRACE_SECONDS,
-        )
+        where = {"host": config.server.host, "port": config.server.port}
+    server_config = uvicorn.Config(
+        app, loop="asyncio", timeout_graceful_shutdown=SHUTDOWN_GRACE_SECONDS, **where
+    )
+    Server(server_config, app.state.stopping).run()
 
 
 def statusline() -> None:
