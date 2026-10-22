@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { api, type AgentSession } from '../api'
+import type { AgentSession } from '../api'
+import { useApi } from '../composables/useHostContext'
 import { useToast } from '../composables/useToast'
 import AppIcon from './AppIcon.vue'
 
 // Keeping this agent's prompt cache warm: on (amber) or off.
 // Compact (a terminal's narrow header, where the agent's name needs the room) it is only a flame.
 const props = defineProps<{ session: AgentSession; compact?: boolean }>()
+const api = useApi()
 const toast = useToast()
 const keepWarm = computed(() => props.session.keep_warm)
 
