@@ -128,7 +128,7 @@ async function reset(): Promise<void> {
 
 <template>
   <BaseDialog :title="$t('keysEditor.title')" @close="emit('close')">
-    <div class="flex max-h-[65dvh] flex-col gap-4 overflow-y-auto text-sm">
+    <div class="flex max-h-[calc(65dvh/var(--controls-zoom))] flex-col gap-4 overflow-y-auto text-sm">
       <p class="text-xs text-slate-500">{{ $t('keysEditor.hint') }}</p>
       <div v-for="(row, index) in rows" :key="index" class="flex flex-col gap-1">
         <span class="text-xs text-slate-400">{{ $t('keysEditor.row', { number: index + 1 }) }}</span>
