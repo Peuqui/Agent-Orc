@@ -45,14 +45,12 @@ async def until_stopped[T](events: AsyncGenerator[T], stopping: asyncio.Event) -
     """`events` until `stopping` is set. A live stream never ends by itself: without this, a stop
     of the server waits for it in vain and then cancels it (see cli.Server)."""
     stop = asyncio.ensure_future(stopping.wait())
+    following: asyncio.Future[T] | None = None
     try:
         while True:
             following = asyncio.ensure_future(anext(events))
             await asyncio.wait({following, stop}, return_when=asyncio.FIRST_COMPLETED)
             if not following.done():
-                # Ends the stream's own waiting; waited for, so it is done before it is closed.
-                following.cancel()
-                await asyncio.wait({following})
                 return
             try:
                 event = following.result()
@@ -61,4 +59,10 @@ async def until_stopped[T](events: AsyncGenerator[T], stopping: asyncio.Event) -
             yield event
     finally:
         stop.cancel()
-        await events.aclose()
+        if following is not None and not following.done():
+            # Still waiting for the next event when the stop came or the page went: cancelling
+            # that ends the stream, which cleans up in it. Not waited for: a page that went leaves
+            # this in Starlette's cancelled scope, where every await is cancelled again.
+            following.cancel()
+        else:
+            await events.aclose()

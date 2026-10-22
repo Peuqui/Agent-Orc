@@ -1,6 +1,8 @@
 import asyncio
 from collections.abc import AsyncGenerator
 
+import anyio
+
 from agent_orc.events import ChangeNotifier, until_stopped
 
 
@@ -20,7 +22,8 @@ def test_a_stream_ends_as_the_server_stops_and_is_closed() -> None:
             await waiting
         except StopAsyncIteration:
             received.append("ended")
-        # The inner stream was closed: it is no longer listening.
+        # The inner stream was closed (in its own task, a moment later): it no longer listens.
+        await asyncio.sleep(0.01)
         assert not notifier._listeners
         return received
 
@@ -36,3 +39,21 @@ def test_a_stream_that_ends_by_itself_ends_the_same() -> None:
         return [event async for event in until_stopped(two(), asyncio.Event())]
 
     assert asyncio.run(scenario()) == ["one", "two"]
+
+
+def test_a_stream_whose_page_goes_away_is_closed_without_an_error() -> None:
+    async def scenario() -> None:
+        notifier = ChangeNotifier()
+        stream = until_stopped(notifier.stream(), asyncio.Event())
+
+        async def read() -> None:
+            async for _event in stream:
+                pass
+
+        # The page goes while the stream waits for the next change: Starlette cancels it so.
+        with anyio.move_on_after(0.05):
+            await read()
+        await asyncio.sleep(0.01)
+        assert not notifier._listeners
+
+    asyncio.run(scenario())
