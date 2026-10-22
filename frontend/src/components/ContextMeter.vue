@@ -2,10 +2,12 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useTokenFormat } from '../composables/useTokenFormat'
+import { contextLevel } from '../usage'
 import UsageMeter from './UsageMeter.vue'
 
-// The agent's context window: the tokens too where there is room, unless compact.
-const props = defineProps<{ tokens: number; window: number; compact?: boolean }>()
+// The agent's context window: the tokens too where there is room, unless compact. Red once the
+// server advises its handover.
+const props = defineProps<{ tokens: number; window: number; handoverAdvised: boolean; compact?: boolean }>()
 const { t } = useI18n()
 const formatTokens = useTokenFormat()
 
@@ -20,5 +22,5 @@ const text = computed(() =>
 </script>
 
 <template>
-  <UsageMeter :percent="percent" :title="text" :detail="compact ? undefined : text" />
+  <UsageMeter :percent="percent" :level="contextLevel(percent, handoverAdvised)" :title="text" :detail="compact ? undefined : text" />
 </template>

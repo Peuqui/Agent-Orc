@@ -329,7 +329,7 @@
           "„Neuen Agenten starten“: Ordner wählen, der Agent startet und legt sofort mit seiner Start-Anfrage los (z. B. AI-Connect-Watcher). Fortsetzen startet ohne diese Anfrage. Im Feld „Arbeitsfläche“ wählst du, wohin der Agent kommt (Unbenannt oder eine benannte Fläche); nach dem Start bleibst du in der Übersicht.",
           "Auswahlfeld mit der Arbeitsfläche auf der Karte: weist den Agenten einer Fläche zu oder verschiebt ihn. Ein Agent liegt in genau einer Fläche; hat er keine, steht er in „Unbenannt“. Der Server hält die Zuordnung, jedes Gerät zeigt dasselbe.",
           "Karten sortieren: mit der Maus an einer freien Stelle ziehen, mit dem Finger erst kurz halten. Die Reihenfolge gilt auf allen Geräten.",
-          "Kontext-Ring: grün unter 50 %, gelb darüber, rot ab 70 % – dann bald /compact oder ein neues Gespräch.",
+          "Kontext-Ring: grün unter 80 %, gelb darüber, rot sobald eine Übergabe empfohlen ist (Voreinstellung ab 95 %) – kurz danach komprimiert Claude Code den Kontext selbst.",
           "Denkaufwand (Dropdown auf der Karte, kein Schieber, damit ein Wischen über die Karte ihn nicht verstellt) und Ultracode gelten pro Projektordner. Ein laufender Claude übernimmt die neue Stufe ohne Neustart, sobald er mit seiner aktuellen Antwort fertig ist; Hintergrundaufgaben laufen weiter. Auf dem Handy stehen Kontext, Stufe und Ultracode in einer Zeile.",
           "Kontingent oben: verbrauchte 5-Stunden- und Wochen-Quote von Claude, sobald eine Sitzung sie gemeldet hat.",
           "„Start“ auf der Karte: Freigabe-Modus, in dem der Agent startet – Fragen, Bearbeiten (Dateiänderungen ohne Nachfrage), Auto oder Planen. Voreinstellung ist Auto; gilt ab dem nächsten Start, im Agenten wechselt Shift+Tab.",

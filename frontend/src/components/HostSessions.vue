@@ -413,6 +413,7 @@ function resumeWith(session: AgentSession, model: string | null, effort: string 
             v-if="session.context_tokens != null && session.context_window != null"
             :tokens="session.context_tokens"
             :window="session.context_window"
+            :handover-advised="session.handover.recommended"
           />
           <ReasoningControl
             v-if="session.running && session.effort_levels.length"

@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import type { QuotaWindow } from '../api'
 import { useSessions } from '../composables/useSessions'
 import { formatMoment } from '../format'
+import { quotaLevel } from '../usage'
 import UsageBar from './UsageBar.vue'
 import UsageMeter from './UsageMeter.vue'
 
@@ -62,6 +63,7 @@ function detail(window: QuotaWindow): string {
           class="px-2"
           room-of="container"
           :percent="usage.used_percentage"
+          :level="quotaLevel(usage.used_percentage)"
           :title="`${windowLabel(String(name))}: ${detail(usage)}`"
           :detail="`${shortLabel(String(name))} ${Math.round(usage.used_percentage)} %`"
         />

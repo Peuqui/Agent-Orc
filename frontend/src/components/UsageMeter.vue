@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import type { UsageLevel } from '../usage'
 import ContextRing from './ContextRing.vue'
 
 // A usage (context window, account limit) as a small ring with its percentage; where there is
@@ -8,6 +9,8 @@ import ContextRing from './ContextRing.vue'
 const props = defineProps<{
   /** 0 to 100. */
   percent: number
+  /** Decides the ring's colour (usage.ts). */
+  level: UsageLevel
   /** Shown on hover or tap. */
   title: string
   detail?: string
@@ -23,7 +26,7 @@ const room = computed(() => props.roomOf ?? 'window')
 
 <template>
   <span class="inline-flex shrink-0 items-center gap-1.5 text-xs whitespace-nowrap text-slate-400" :title="title">
-    <ContextRing :percent="percent" />
+    <ContextRing :percent="percent" :level="level" />
     <span v-if="detail" :class="DETAIL_SHOWN[room]">{{ detail }}</span>
     <span :class="detail ? PERCENT_HIDDEN[room] : ''">{{ Math.round(percent) }} %</span>
   </span>

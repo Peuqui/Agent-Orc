@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { usageTone } from '../usage'
+import { quotaLevel, usageTone } from '../usage'
 
 // What belongs together stands together: the bar, right next to it the percentage, then (set off
 // by a wider gap) when the limit resets.
 const props = defineProps<{ label: string; percent: number; reset: string }>()
 
-const tone = computed(() => usageTone(props.percent))
+const tone = computed(() => usageTone(quotaLevel(props.percent)))
 </script>
 
 <template>

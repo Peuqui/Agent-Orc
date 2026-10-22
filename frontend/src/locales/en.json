@@ -329,7 +329,7 @@
           "“Start new agent”: pick a folder; the agent starts and gets going at once with its start request (e.g. the AI-Connect watcher). Resuming starts without it. In the “Workspace” field you choose where the agent goes (Default or a named workspace); after the start you stay in the overview.",
           "The workspace field on the card assigns the agent to a workspace or moves it. An agent lives in exactly one workspace; without one it is in “Default”. The server keeps the assignment, every device shows the same.",
           "Sorting cards: drag at a free spot with the mouse; with a finger, hold briefly first. The order is the same on every device.",
-          "Context ring: green below 50 %, amber above, red from 70 % – time for /compact or a new conversation soon.",
+          "Context ring: green below 80 %, amber above, red once a handover is advised (from 95 % by default) – shortly after, Claude Code compacts the context by itself.",
           "Reasoning (a dropdown on the card, not a slider, so a swipe over the card cannot change it) and ultracode apply per project folder. A running Claude takes the new level without a restart as soon as it has finished its current answer; background tasks keep running. On a phone, context, level and ultracode share one row.",
           "Quota at the top: Claude's used five-hour and weekly limits, once a session has reported them.",
           "“Start” on the card: the permission mode the agent starts in – Ask, Edit (file edits without asking), Auto or Plan. Auto by default; applies from the next start, inside the agent Shift+Tab switches it.",

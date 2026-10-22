@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { usageTone } from '../usage'
+import { usageTone, type UsageLevel } from '../usage'
 
 // Context usage as a small ring that fills clockwise from 0 to 100 % (like Claude Code's,
 // but visible from the start).
 /** 0 to 100. */
-const props = defineProps<{ percent: number }>()
+const props = defineProps<{ percent: number; level: UsageLevel }>()
 
 const RADIUS = 7
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS
@@ -22,7 +22,7 @@ const filled = computed(() => (props.percent / 100) * CIRCUMFERENCE)
       :r="RADIUS"
       fill="none"
       stroke-width="3"
-      :class="usageTone(percent).ring"
+      :class="usageTone(level).ring"
       :stroke-dasharray="`${filled} ${CIRCUMFERENCE}`"
     />
   </svg>
