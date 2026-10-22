@@ -838,12 +838,21 @@ def create_app(
             elif not session.running or not session_busy(session):
                 apply_effort(session, reasoning)
 
-    # Where each agent's handover stands (see handover.py), so it comes once per filling.
+    # Where each agent's handover stands (see handover.py), so it comes once per filling; and the
+    # agents whose handover was asked for by hand before their context was nearly full.
     handover_progress: dict[str, str] = {}
+    early_handovers: set[str] = set()
 
     def ask_for_handover(session: AgentSession) -> None:
-        sessions.type_line(session.id, config.handover.prompt)
+        """Nearly full, the request says so; earlier (asked for by hand) it is a plain one."""
+        settings = config.handover
+        nearly_full = advise(session, settings).recommended
+        sessions.type_line(session.id, settings.prompt if nearly_full else settings.early_prompt)
         handover_progress[session.id] = HANDOVER_ASKED
+        if nearly_full:
+            early_handovers.discard(session.id)
+        else:
+            early_handovers.add(session.id)
 
     def cache_entry(cache: CacheState | None) -> dict[str, float] | None:
         """When the cache expires (the page counts down itself) and how long before that its age
@@ -891,11 +900,16 @@ def create_app(
         listed = sessions.list()
         for session_id in handover_progress.keys() - {s.id for s in listed}:
             del handover_progress[session_id]
+        early_handovers.intersection_update(handover_progress)
         for session in listed:
             advice = advise(session, config.handover)
             if not advice.recommended:
-                # Compacted, started anew or ended: the next filling is asked for again.
-                handover_progress.pop(session.id, None)
+                # Below the advice share only a handover asked for by hand runs; done, it stays
+                # until the user's next input. Anything else ended with a compaction, a new start
+                # or the session: the next filling is asked for again.
+                if not runs_below_advice(session):
+                    handover_progress.pop(session.id, None)
+                    early_handovers.discard(session.id)
                 continue
             progress = handover_progress.get(session.id)
             if progress in (HANDOVER_ASKED, HANDOVER_WORKING):
@@ -908,6 +922,16 @@ def create_app(
             elif progress is None:
                 handover_progress[session.id] = HANDOVER_ADVISED
                 send_to_all(agent_message("handover", session.id, session.name, ""), config.push)
+
+    def runs_below_advice(session: AgentSession) -> bool:
+        """Follows a handover asked for by hand below the advice share; False once it is over."""
+        progress = handover_progress.get(session.id)
+        if not session.running or session.id not in early_handovers:
+            return False
+        if progress in (HANDOVER_ASKED, HANDOVER_WORKING):
+            follow_handover(session, progress)
+            return True
+        return progress == HANDOVER_DONE and not session_busy(session)
 
     def follow_handover(session: AgentSession, progress: str) -> None:
         followed = follow_course(progress, session_busy(session))

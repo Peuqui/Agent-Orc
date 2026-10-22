@@ -1445,6 +1445,29 @@ def test_automatic_handover_runs_once_per_filling(
         assert progress_becomes(client, "asked")
 
 
+def test_an_early_handover_by_hand_is_a_plain_request_and_ends_with_the_next_input(
+    config: Config, clock: FakeClock, home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
+    with automatic_handovers(config, clock, monkeypatch, auto=True) as client:
+        client.post("/api/login", json={"password": PASSWORD})
+        session_id = start_shell(client, home / "projects")
+        report_context(session_id, 300)
+        store_activity(session_id, busy=False)
+        assert client.post(f"/api/sessions/{session_id}/handover").status_code == 204
+        assert wait_for_text(client, session_id, "Write a handover document")
+        assert "nearly full" not in client.get(f"/api/sessions/{session_id}/text").json()["text"]
+        store_activity(session_id, busy=True)
+        assert progress_becomes(client, "working")
+        store_activity(session_id, busy=False)
+        assert progress_becomes(client, "done")
+        time.sleep(0.5)
+        assert client.get("/api/sessions").json()[0]["handover"]["progress"] == "done"
+        # Far from full, it does not count for the filling: the user's next input ends it.
+        store_activity(session_id, busy=True)
+        assert progress_becomes(client, None)
+
+
 def test_without_automatic_handovers_the_advice_comes_early_and_once(
     config: Config, clock: FakeClock, home: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

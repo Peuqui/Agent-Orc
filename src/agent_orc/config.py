@@ -111,8 +111,10 @@ class HandoverConfig(StrictModel):
     advice_percent: int
     # From here on the handover is due: typed into the agent while automatic handovers are on.
     threshold_percent: int
-    # Typed into the agent to ask for its handover.
+    # Typed into the agent to ask for its handover once its context is nearly full.
     prompt: str
+    # Typed into the agent when the user asks for a handover before that (the agent's menu).
+    early_prompt: str
 
     @model_validator(mode="after")
     def advice_comes_first(self) -> Self:

@@ -4,6 +4,7 @@ import type { AgentSession } from '../api'
 import { useSessions } from '../composables/useSessions'
 import AppIcon from './AppIcon.vue'
 import ContextButton from './ContextButton.vue'
+import HandoverButton from './HandoverButton.vue'
 import RestartButton from './RestartButton.vue'
 import ScheduleButton from './ScheduleButton.vue'
 
@@ -36,6 +37,7 @@ const canChange = computed(
     with-label
     @done="emit('done')"
   />
+  <HandoverButton v-if="!session.terminal" :session="session" :button-class="itemClass" @done="emit('done')" />
   <RestartButton :session="session" :button-class="itemClass" with-label @done="emit('done')" />
   <hr class="my-1 border-slate-700" />
   <button :class="`${itemClass} !text-red-400`" @click="emit('stop')">
