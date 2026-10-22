@@ -1,13 +1,16 @@
 """Handover advice: an agent whose context is nearly full should hand over to a fresh session.
 
 Shortly before the window is full, Claude Code compacts the context by itself, and the agent
-goes on with a summary of what it knew. So an agent beyond the threshold (set just below that
-point) is advised to hand over as soon as it rests: once as a push message, or, if the user
-switched it on, by typing the handover request into the agent itself. The agent cannot see how
-full its context is; the request is its warning.
+goes on with a summary of what it knew. The agent cannot see how full its context is, so
+Agent-Orc tells it. From the advice share on, the card advises a handover, and while automatic
+handovers are off a push message says so once, early enough for the user to ask for it. From
+the threshold on (set just below the compaction) the handover is due: with automatic handovers
+on, the request is typed into the agent at once, also while it works, as Claude Code takes in
+what is typed during a turn at its next step. Not while it waits for a permission (the text
+would answer the prompt) or compacts.
 
 A handover runs its course (asked, working, done) and stays done while the context is beyond the
-threshold, so the agent is asked once per filling; a compaction or a new session starts anew.
+advice share, so the agent is asked once per filling; a compaction or a new session starts anew.
 """
 
 import json
@@ -15,7 +18,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from agent_orc.config import HandoverConfig
-from agent_orc.context import session_busy, session_status
+from agent_orc.context import session_status
 from agent_orc.sessions import AgentSession
 from agent_orc.state import state_dir, write_atomically
 
@@ -31,8 +34,9 @@ ADVISED = "advised"
 
 @dataclass(frozen=True)
 class HandoverAdvice:
+    # Beyond the advice share.
     recommended: bool
-    # Recommended, and resting: nothing is typed into a working agent.
+    # Beyond the threshold.
     due: bool
 
 
@@ -46,9 +50,12 @@ def context_percent(session: AgentSession) -> float | None:
 
 
 def advise(session: AgentSession, config: HandoverConfig) -> HandoverAdvice:
-    percent = context_percent(session)
-    recommended = session.running and percent is not None and percent >= config.threshold_percent
-    return HandoverAdvice(recommended=recommended, due=recommended and not session_busy(session))
+    percent = context_percent(session) if session.running else None
+    if percent is None:
+        return HandoverAdvice(recommended=False, due=False)
+    return HandoverAdvice(
+        recommended=percent >= config.advice_percent, due=percent >= config.threshold_percent
+    )
 
 
 def follow_course(progress: str, busy: bool) -> str:
@@ -62,7 +69,7 @@ def follow_course(progress: str, busy: bool) -> str:
 
 
 def read_auto() -> bool:
-    """Whether Agent-Orc asks idle agents for their handover by itself (off until switched on)."""
+    """Whether Agent-Orc asks agents for their handover by itself (off until switched on)."""
     path = state_dir() / SETTINGS_FILE
     if not path.is_file():
         return False

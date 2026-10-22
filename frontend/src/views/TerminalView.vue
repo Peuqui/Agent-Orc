@@ -450,7 +450,7 @@ onBeforeUnmount(() => {
         compact
         :tokens="session.context_tokens"
         :window="session.context_window"
-        :handover-advised="session.handover.recommended"
+        :handover-due="session.handover.due"
       />
       <!-- Embedded in the workspace, the column's tab names the agent already (not on phones). -->
       <!-- In the light bulb's amber, set off from the usage figure. -->

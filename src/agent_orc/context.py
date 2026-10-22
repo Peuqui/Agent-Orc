@@ -52,13 +52,23 @@ def store_activity(session_id: str, busy: bool) -> Path:
     return store_activity_state(session_id, BUSY if busy else IDLE)
 
 
+def _session_activity(session: AgentSession) -> str | None:
+    """What the agent reported since it started; None before its first report."""
+    path = activity_file(session.id)
+    if not path.is_file() or path.stat().st_mtime < session.created:
+        return None
+    return path.read_text(encoding="utf-8")
+
+
 def session_busy(session: AgentSession) -> bool:
     """True while the agent works on a request (also while it waits for a permission, or
     shrinks its context)."""
-    path = activity_file(session.id)
-    if not path.is_file() or path.stat().st_mtime < session.created:
-        return False
-    return path.read_text(encoding="utf-8") in (BUSY, COMPACTING)
+    return _session_activity(session) in (BUSY, COMPACTING)
+
+
+def session_compacting(session: AgentSession) -> bool:
+    """True while a resting agent shrinks its context (see begin_compaction)."""
+    return _session_activity(session) == COMPACTING
 
 
 def _recorded_activity(session_id: str) -> str | None:

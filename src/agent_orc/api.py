@@ -65,6 +65,7 @@ from agent_orc.consumption import claude_consumption
 from agent_orc.context import (
     QUOTA_SOURCES,
     session_busy,
+    session_compacting,
     session_status,
     session_transcript,
     store_activity,
@@ -95,6 +96,7 @@ from agent_orc.events import KEEP_ALIVE_SECONDS, ChangeNotifier
 from agent_orc.handover import ADVISED as HANDOVER_ADVISED
 from agent_orc.handover import ASKED as HANDOVER_ASKED
 from agent_orc.handover import DONE as HANDOVER_DONE
+from agent_orc.handover import WORKING as HANDOVER_WORKING
 from agent_orc.handover import advise, follow_course, read_auto, write_auto
 from agent_orc.history import (
     CLAUDE_PROJECTS,
@@ -876,6 +878,14 @@ def create_app(
         transcript = session_transcript(session)
         return None if transcript is None else cache_state(transcript)
 
+    def can_take_handover(session: AgentSession) -> bool:
+        """Typing reaches the agent's input, not a prompt that waits for an answer (the text
+        and its Enter would answer it), nor a compaction. Claude's questions to the user and its
+        plan approval come as permission requests too (AskUserQuestion, ExitPlanMode; seen with
+        Claude Code 2.1.308)."""
+        waiting = any(r.session == session.id for r in open_requests())
+        return session.running and not waiting and not session_compacting(session)
+
     def check_handovers() -> None:
         auto = read_auto()
         listed = sessions.list()
@@ -888,14 +898,14 @@ def create_app(
                 handover_progress.pop(session.id, None)
                 continue
             progress = handover_progress.get(session.id)
-            if progress is not None:
+            if progress in (HANDOVER_ASKED, HANDOVER_WORKING):
                 follow_handover(session, progress)
+            elif progress == HANDOVER_DONE:
                 continue
-            if not advice.due:
-                continue
-            if auto:
-                ask_for_handover(session)
-            else:
+            elif auto:
+                if advice.due and can_take_handover(session):
+                    ask_for_handover(session)
+            elif progress is None:
                 handover_progress[session.id] = HANDOVER_ADVISED
                 send_to_all(agent_message("handover", session.id, session.name, ""), config.push)
 
@@ -1721,11 +1731,18 @@ def create_app(
         session = find_session(session_id)
         if session is None or not session.running:
             raise SessionNotFoundError(session_id)
+        if not can_take_handover(session):
+            raise AgentBusyError(session_id)
         ask_for_handover(session)
 
-    @app.get("/api/handover/auto", dependencies=authenticated)
-    def handover_auto() -> dict[str, bool]:
-        return {"auto": read_auto()}
+    @app.get("/api/handover", dependencies=authenticated)
+    def handover_settings() -> dict[str, Any]:
+        """Whether handovers are asked for by themselves, and from which shares of the context."""
+        return {
+            "auto": read_auto(),
+            "advice_percent": config.handover.advice_percent,
+            "threshold_percent": config.handover.threshold_percent,
+        }
 
     @app.put(
         "/api/handover/auto", dependencies=authenticated, status_code=status.HTTP_204_NO_CONTENT

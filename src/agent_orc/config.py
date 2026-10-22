@@ -103,12 +103,22 @@ class TerminalConfig(StrictModel):
 
 
 class HandoverConfig(StrictModel):
-    """When an agent's context is full enough to advise a handover to a fresh session: just
-    below the point where Claude Code compacts it by itself (see handover.py)."""
+    """When an agent's context is full enough for a handover to a fresh session: just below the
+    point where Claude Code compacts it by itself (see handover.py)."""
 
+    # From here on the card advises the handover, and a push message says so once while
+    # automatic handovers are off: early enough for the user to ask for it.
+    advice_percent: int
+    # From here on the handover is due: typed into the agent while automatic handovers are on.
     threshold_percent: int
     # Typed into the agent to ask for its handover.
     prompt: str
+
+    @model_validator(mode="after")
+    def advice_comes_first(self) -> Self:
+        if self.advice_percent > self.threshold_percent:
+            raise ValueError("handover: advice_percent is above threshold_percent")
+        return self
 
 
 class CacheConfig(StrictModel):

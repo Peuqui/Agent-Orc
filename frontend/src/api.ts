@@ -203,6 +203,12 @@ export interface ExistingPath {
 
 export type HandoverProgress = 'asked' | 'working' | 'done' | 'advised'
 
+export interface HandoverSettings {
+  auto: boolean
+  advice_percent: number
+  threshold_percent: number
+}
+
 export interface AgentSession {
   id: string
   profile: string
@@ -237,8 +243,8 @@ export interface AgentSession {
   scheduled: ScheduledPrompt[]
   /** Runs in a git worktree of its own (removable once ended). */
   worktree: boolean
-  /** From the configured share of the context on (just below Claude Code's own compaction): hand
-   * over to a fresh session; due as soon as the agent rests; where a handover stands (handover.py). */
+  /** Handing over to a fresh session (handover.py): advised from the advice share of the context
+   * on, due from the threshold on (just below Claude Code's own compaction); where it stands. */
   handover: { recommended: boolean; due: boolean; progress: HandoverProgress | null }
   /** When the prompt cache expires: the last request (Unix seconds) plus its window; the
    * age turns amber warning_seconds before. Null until the agent has answered. */
@@ -692,7 +698,8 @@ function createApi(host?: string) {
       request<void>('PUT', `sessions/${encodeURIComponent(sessionId)}/keep-warm`, { body: { enabled } }),
     setAnswersMode: (sessionId: string, allTexts: boolean) =>
       request<void>('PUT', `sessions/${encodeURIComponent(sessionId)}/answers-mode`, { body: { all_texts: allTexts } }),
-    handoverAuto: () => request<{ auto: boolean }>('GET', 'handover/auto'),
+    /** Whether handovers are asked for by themselves, and from which shares of the context. */
+    handover: () => request<HandoverSettings>('GET', 'handover'),
     setHandoverAuto: (auto: boolean) => request<void>('PUT', 'handover/auto', { body: { auto } }),
     /** Takes effect at the agent's next start. */
     changePermissionMode: (sessionId: string, mode: string) =>

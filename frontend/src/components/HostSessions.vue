@@ -413,7 +413,7 @@ function resumeWith(session: AgentSession, model: string | null, effort: string 
             v-if="session.context_tokens != null && session.context_window != null"
             :tokens="session.context_tokens"
             :window="session.context_window"
-            :handover-advised="session.handover.recommended"
+            :handover-due="session.handover.due"
           />
           <ReasoningControl
             v-if="session.running && session.effort_levels.length"
@@ -426,9 +426,9 @@ function resumeWith(session: AgentSession, model: string | null, effort: string 
           />
         </div>
         <ScheduledList :prompts="session.scheduled" />
-        <!-- The context is large: a handover to a fresh session saves tokens (more so once cold). -->
+        <!-- The context is nearly full: a handover before Claude Code compacts it (also while it works). -->
         <div
-          v-if="session.handover.recommended && !session.busy"
+          v-if="session.handover.recommended"
           class="flex flex-wrap items-center gap-2 rounded-lg border border-amber-700 bg-amber-950/40 px-3 py-2 text-sm text-amber-200"
         >
           <span class="flex-1">{{ $t('handover.advice', { percent: contextPercent(session) }) }}</span>

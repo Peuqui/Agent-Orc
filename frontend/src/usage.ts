@@ -1,6 +1,6 @@
 // How worth noticing a usage is: an account limit from its own shares on (time for a pause); a
-// context from a share on that it is filling up, and critical once the server advises its
-// handover (shortly before Claude Code compacts it, see handover.py).
+// context from a share on that it is filling up, and critical once its handover is due (shortly
+// before Claude Code compacts it, see handover.py).
 const QUOTA_WARN_PERCENT = 50
 const QUOTA_CRITICAL_PERCENT = 70
 const CONTEXT_WARN_PERCENT = 80
@@ -12,8 +12,8 @@ export function quotaLevel(percent: number): UsageLevel {
   return percent >= QUOTA_WARN_PERCENT ? 'warn' : 'normal'
 }
 
-export function contextLevel(percent: number, handoverAdvised: boolean): UsageLevel {
-  if (handoverAdvised) return 'critical'
+export function contextLevel(percent: number, handoverDue: boolean): UsageLevel {
+  if (handoverDue) return 'critical'
   return percent >= CONTEXT_WARN_PERCENT ? 'warn' : 'normal'
 }
 

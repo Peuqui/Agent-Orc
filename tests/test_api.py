@@ -24,7 +24,7 @@ from starlette.testclient import WebSocketTestSession
 from starlette.websockets import WebSocketDisconnect
 
 from agent_orc.api import BUILD_ID_FILE, BUILD_ID_HEADER, create_app
-from agent_orc.approvals import open_request, wait_for_decision
+from agent_orc.approvals import close_request, open_request, wait_for_decision
 from agent_orc.auth import new_credentials
 from agent_orc.config import Config, DictationConfig, HostConfig, ServerConfig, default_config_text
 from agent_orc.context import store_activity, store_status
@@ -1351,7 +1351,7 @@ def answered_at(transcript: Path, at: float) -> Path:
     return transcript
 
 
-def test_handover_is_due_as_soon_as_a_nearly_full_agent_rests(
+def test_handover_is_advised_then_due_and_typed_even_into_a_working_agent(
     client: TestClient,
     clock: FakeClock,
     home: Path,
@@ -1361,8 +1361,8 @@ def test_handover_is_due_as_soon_as_a_nearly_full_agent_rests(
     monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
     session_id = start_shell(client, home / "projects")
     transcript = answered_at(home / "conversation.jsonl", clock())
-    report_context(session_id, 940, transcript)
-    store_activity(session_id, busy=False)
+    report_context(session_id, 880, transcript)
+    store_activity(session_id, busy=True)
     listed = client.get("/api/sessions").json()[0]
     assert listed["handover"] == {"recommended": False, "due": False, "progress": None}
     assert listed["cache"] == {
@@ -1371,18 +1371,20 @@ def test_handover_is_due_as_soon_as_a_nearly_full_agent_rests(
         "warning_seconds": 10 * 60,
     }
 
-    # Beyond the threshold and resting: due at once, however warm the cache.
+    report_context(session_id, 920, transcript)
+    handover = client.get("/api/sessions").json()[0]["handover"]
+    assert (handover["recommended"], handover["due"]) == (True, False)
     report_context(session_id, 960, transcript)
-    assert client.get("/api/sessions").json()[0]["handover"] == {
-        "recommended": True,
-        "due": True,
-        "progress": None,
-    }
-    # Not into a working agent.
-    store_activity(session_id, busy=True)
-    assert client.get("/api/sessions").json()[0]["handover"]["due"] is False
+    handover = client.get("/api/sessions").json()[0]["handover"]
+    assert (handover["recommended"], handover["due"]) == (True, True)
 
-    assert client.post(f"/api/sessions/{session_id}/handover").status_code == 204
+    # Waiting for a permission, the text would answer the prompt.
+    request = open_request(session_id, {"tool_name": "Bash", "tool_input": {"command": "ls"}})
+    url = f"/api/sessions/{session_id}/handover"
+    assert client.post(url).status_code == 409
+    close_request(request.id)
+    # Working, it takes the request in at its next step.
+    assert client.post(url).status_code == 204
     screen = subprocess.run(
         ["tmux", "-L", socket_name, "capture-pane", "-p", "-t", f"={session_id}:"],
         capture_output=True, text=True, check=True,
@@ -1391,34 +1393,46 @@ def test_handover_is_due_as_soon_as_a_nearly_full_agent_rests(
     assert client.get("/api/sessions").json()[0]["handover"]["progress"] == "asked"
 
 
+def automatic_handovers(
+    config: Config, clock: FakeClock, monkeypatch: pytest.MonkeyPatch, auto: bool
+) -> TestClient:
+    monkeypatch.setattr("agent_orc.api.AGENT_CHECK_SECONDS", 0.1)
+    write_auto(auto)
+    return TestClient(create_app(config, new_credentials(PASSWORD), static_dir=None, clock=clock))
+
+
+def progress_becomes(client: TestClient, wanted: str | None) -> bool:
+    for _ in range(30):
+        if client.get("/api/sessions").json()[0]["handover"]["progress"] == wanted:
+            return True
+        time.sleep(0.1)
+    return False
+
+
 def test_automatic_handover_runs_once_per_filling(
     config: Config, clock: FakeClock, home: Path, socket_name: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
-    monkeypatch.setattr("agent_orc.api.AGENT_CHECK_SECONDS", 0.1)
-    write_auto(True)
-    with TestClient(
-        create_app(config, new_credentials(PASSWORD), static_dir=None, clock=clock)
-    ) as client:
+    with automatic_handovers(config, clock, monkeypatch, auto=True) as client:
         client.post("/api/login", json={"password": PASSWORD})
         session_id = start_shell(client, home / "projects")
-        report_context(session_id, 960)
-        store_activity(session_id, busy=False)
-
-        def progress_becomes(wanted: str | None) -> bool:
-            for _ in range(30):
-                if client.get("/api/sessions").json()[0]["handover"]["progress"] == wanted:
-                    return True
-                time.sleep(0.1)
-            return False
-
-        assert progress_becomes("asked")
-        assert wait_for_text(client, session_id, "context is nearly full")
+        # Advised, but not due yet: nothing is typed.
+        report_context(session_id, 920)
         store_activity(session_id, busy=True)
-        assert progress_becomes("working")
+        time.sleep(0.5)
+        assert client.get("/api/sessions").json()[0]["handover"]["progress"] is None
+        # Due while it waits for a permission: only once that is answered.
+        request = open_request(session_id, {"tool_name": "Bash", "tool_input": {"command": "ls"}})
+        report_context(session_id, 960)
+        time.sleep(0.5)
+        assert client.get("/api/sessions").json()[0]["handover"]["progress"] is None
+        close_request(request.id)
+        # Typed into the working agent; it is still working, so it writes it now.
+        assert progress_becomes(client, "working")
+        assert wait_for_text(client, session_id, "context is nearly full")
         store_activity(session_id, busy=False)
-        assert progress_becomes("done")
-        # The user goes on with the agent, which rests again still nearly full: not asked again.
+        assert progress_becomes(client, "done")
+        # The user goes on with the agent, still nearly full: not asked again.
         store_activity(session_id, busy=True)
         time.sleep(0.5)
         store_activity(session_id, busy=False)
@@ -1426,18 +1440,37 @@ def test_automatic_handover_runs_once_per_filling(
         assert client.get("/api/sessions").json()[0]["handover"]["progress"] == "done"
         # Compacted, the context is small again; the next filling is asked for anew.
         report_context(session_id, 300)
-        assert progress_becomes(None)
+        assert progress_becomes(client, None)
         report_context(session_id, 960)
-        assert progress_becomes("asked")
+        assert progress_becomes(client, "asked")
+
+
+def test_without_automatic_handovers_the_advice_comes_early_and_once(
+    config: Config, clock: FakeClock, home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
+    with automatic_handovers(config, clock, monkeypatch, auto=False) as client:
+        client.post("/api/login", json={"password": PASSWORD})
+        session_id = start_shell(client, home / "projects")
+        # From the advice share on, also while the agent works.
+        report_context(session_id, 920)
+        store_activity(session_id, busy=True)
+        assert progress_becomes(client, "advised")
+        # Due, it is not typed, and the advice stays the one already given.
+        report_context(session_id, 960)
+        store_activity(session_id, busy=False)
+        time.sleep(0.5)
+        assert client.get("/api/sessions").json()[0]["handover"]["progress"] == "advised"
 
 
 def test_automatic_handover_setting_is_kept(
     client: TestClient, home: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
-    assert client.get("/api/handover/auto").json() == {"auto": False}
+    settings = {"auto": False, "advice_percent": 90, "threshold_percent": 95}
+    assert client.get("/api/handover").json() == settings
     assert client.put("/api/handover/auto", json={"auto": True}).status_code == 204
-    assert client.get("/api/handover/auto").json() == {"auto": True}
+    assert client.get("/api/handover").json() == {**settings, "auto": True}
 
 
 def test_push_subscription_and_test_message(

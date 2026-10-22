@@ -60,15 +60,17 @@ terminal:
   # How much history the plain-text view (for selecting and copying) shows.
   text_history_lines: 5000
 
-# Handover advice: from this share of its context window on, an agent's card advises a handover
-# to a fresh session. Claude Code compacts the context by itself at about 97 %, so the threshold
-# sits just below. As soon as the agent rests, a push message says so once, or, if switched on in
-# the settings menu, the prompt below is typed into the agent by itself (the agent cannot see how
-# full its context is); it is told when the handover is written. Once per filling: a compaction
-# or a new session starts anew.
+# Handover to a fresh session. Claude Code compacts the context by itself at about 97 % of the
+# window, and the agent cannot see how full it is. From advice_percent on, the agent's card
+# advises a handover, and while automatic handovers are off (settings menu) a push message says
+# so once, early enough to ask for it. From threshold_percent on, with automatic handovers on, the
+# prompt below is typed into the agent by itself, also while it works (not while it waits for a
+# permission); you are told when the handover is written. Once per filling: a compaction or a new
+# session starts anew.
 handover:
+  advice_percent: 90
   threshold_percent: 95
-  prompt: "Your context is nearly full: Claude Code will compact it shortly. Write a handover document for the next session now: goal, current state, decisions made, open tasks and next steps, with the files that matter. Save it in the project and tell me its path."
+  prompt: "Your context is nearly full: Claude Code will compact it shortly. Pause your task and write a handover document for the next session now, from what you know, without reading files first: goal, current state, decisions made, open tasks and next steps, with the files that matter. Save it in the project, tell me its path, then go on with your task."
 
 # How an agent's prompt cache is shown on its card: this many minutes before it expires, its age
 # turns amber (the next message soon reads the whole context in again).
