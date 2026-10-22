@@ -17,7 +17,7 @@ from dataclasses import dataclass
 
 from agent_orc.cache import CacheState
 from agent_orc.config import KeepWarmConfig
-from agent_orc.handover import ASKED, DONE, follow_progress
+from agent_orc.handover import ASKED, DONE, follow_course
 
 SECONDS_PER_MINUTE = 60
 
@@ -40,8 +40,9 @@ class KeepWarmProgress:
 
     def follow(self, busy: bool) -> "KeepWarmProgress | None":
         """None once the user's input has ended the rest: the count starts anew."""
-        followed = follow_progress(self.progress, busy)
-        return None if followed is None else KeepWarmProgress(followed, self.pings)
+        if self.answered and busy:
+            return None
+        return KeepWarmProgress(follow_course(self.progress, busy), self.pings)
 
 
 def due(config: KeepWarmConfig, cache: CacheState | None, now: float, pings: int) -> bool:

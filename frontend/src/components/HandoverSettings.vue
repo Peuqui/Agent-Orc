@@ -4,7 +4,7 @@ import { api } from '../api'
 import { useToast } from '../composables/useToast'
 import ToggleSwitch from './ToggleSwitch.vue'
 
-// Whether the server asks idle agents with a large context for their handover by itself; kept
+// Whether the server asks resting agents with a nearly full context for their handover itself; kept
 // on the server, which does it also when no device is open.
 const toast = useToast()
 const auto = ref(false)

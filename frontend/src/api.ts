@@ -237,12 +237,12 @@ export interface AgentSession {
   scheduled: ScheduledPrompt[]
   /** Runs in a git worktree of its own (removable once ended). */
   worktree: boolean
-  /** From the configured share of the context on: hand over to a fresh session; due shortly
-   * before the cache of the resting agent expires; where a handover stands (handover.py). */
+  /** From the configured share of the context on (just below Claude Code's own compaction): hand
+   * over to a fresh session; due as soon as the agent rests; where a handover stands (handover.py). */
   handover: { recommended: boolean; due: boolean; progress: HandoverProgress | null }
   /** When the prompt cache expires: the last request (Unix seconds) plus its window; the
-   * handover is due lead_seconds before. Null until the agent has answered. */
-  cache: { last_request: number; window_seconds: number; lead_seconds: number } | null
+   * age turns amber warning_seconds before. Null until the agent has answered. */
+  cache: { last_request: number; window_seconds: number; warning_seconds: number } | null
   /** Keeping the prompt cache warm (keepwarm.py): whether the profile has it, whether it is on for
    * this agent, and the prompts typed during this rest. */
   keep_warm: { available: boolean; enabled: boolean; pings: number }

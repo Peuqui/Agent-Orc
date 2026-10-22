@@ -335,7 +335,7 @@
           "“Start” on the card: the permission mode the agent starts in – Ask, Edit (file edits without asking), Auto or Plan. Auto by default; applies from the next start, inside the agent Shift+Tab switches it.",
           "When an agent asks for permission, its card shows the command with “Allow” and “Deny”. The terminal asks the same; the first answer counts.",
           "“Changes” (branch icon, on the card and in the header of every terminal) shows what the agent changed in the project: changed, new and deleted files since the last commit; a tap shows the diff. “Open file” on a file opens it in the editor, “Open folder” the folder in the file view.",
-          "From the configured context size on (50 % by default) the card advises a handover to a fresh session, a notification says so once; “Ask for a handover” asks the agent for a handover document. The settings menu can make this automatic.",
+          "Shortly before Claude Code compacts the context by itself (from 95 % by default) the card advises a handover to a fresh session, a notification says so once as soon as the agent rests; “Ask for a handover” asks the agent for a handover document. The settings menu can make this automatic.",
           "“keep warm” (switch on the card and in the terminal’s header, off until you switch it on for that agent): a resting agent loses its prompt cache after about an hour, and the next message reads the whole context in again – slow, and it costs usage limit. With keep warm on, Agent-Orc types a tiny request into it shortly before, which it answers with one word; that extends the cache. A few requests in a row at most, then it may go cold, and your next input counts from the start. Only for agents whose profile can do it (Claude).",
           "“Start in a worktree of its own” (start dialog): the agent works in a second working copy on a new branch next to the project; once it has ended, “Remove worktree” on the card removes it again – without losing unsaved work.",
           "Restart (menu ⋮ of the card and of the agent's page) restarts the agent and resumes the conversation, e.g. when it hangs or should read changed settings. A confirmation comes first; a running answer and background tasks end. If an agent has no stored model yet (started before the choice of models), Agent-Orc asks on restart and on resume afterwards – no agent starts without a model.",
@@ -520,7 +520,7 @@
     "request": "Ask for a handover",
     "requestHint": "Types the request for a handover document into the agent",
     "auto": "Ask for handovers automatically",
-    "autoHint": "When a resting agent's context is large, Agent-Orc asks it for a handover document itself shortly before its prompt cache expires, once per rest and also when no device is open. Switched off, only a notification comes."
+    "autoHint": "When an agent's context is nearly full, Agent-Orc asks it for a handover document itself as soon as it rests – before Claude Code compacts the context, and also when no device is open. Once per filling: again only after a compaction or a restart. Switched off, only a notification comes."
   },
   "keepWarm": {
     "label": "keep warm",

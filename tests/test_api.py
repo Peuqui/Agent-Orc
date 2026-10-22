@@ -1351,7 +1351,7 @@ def answered_at(transcript: Path, at: float) -> Path:
     return transcript
 
 
-def test_handover_is_due_shortly_before_the_cache_expires(
+def test_handover_is_due_as_soon_as_a_nearly_full_agent_rests(
     client: TestClient,
     clock: FakeClock,
     home: Path,
@@ -1361,24 +1361,23 @@ def test_handover_is_due_shortly_before_the_cache_expires(
     monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
     session_id = start_shell(client, home / "projects")
     transcript = answered_at(home / "conversation.jsonl", clock())
-    report_context(session_id, 400, transcript)
+    report_context(session_id, 940, transcript)
     store_activity(session_id, busy=False)
     listed = client.get("/api/sessions").json()[0]
     assert listed["handover"] == {"recommended": False, "due": False, "progress": None}
-    lead = 10 * 60
     assert listed["cache"] == {
         "last_request": clock(),
         "window_seconds": 3600,
-        "lead_seconds": lead,
+        "warning_seconds": 10 * 60,
     }
 
-    report_context(session_id, 600, transcript)
-    assert client.get("/api/sessions").json()[0]["handover"]["recommended"] is True
-    clock.advance(49 * 60)
-    assert client.get("/api/sessions").json()[0]["handover"]["due"] is False
-    # Within the last ten minutes of the hour.
-    clock.advance(2 * 60)
-    assert client.get("/api/sessions").json()[0]["handover"]["due"] is True
+    # Beyond the threshold and resting: due at once, however warm the cache.
+    report_context(session_id, 960, transcript)
+    assert client.get("/api/sessions").json()[0]["handover"] == {
+        "recommended": True,
+        "due": True,
+        "progress": None,
+    }
     # Not into a working agent.
     store_activity(session_id, busy=True)
     assert client.get("/api/sessions").json()[0]["handover"]["due"] is False
@@ -1388,11 +1387,11 @@ def test_handover_is_due_shortly_before_the_cache_expires(
         ["tmux", "-L", socket_name, "capture-pane", "-p", "-t", f"={session_id}:"],
         capture_output=True, text=True, check=True,
     ).stdout  # fmt: skip
-    assert "handover document" in screen
+    assert "context is nearly full" in screen
     assert client.get("/api/sessions").json()[0]["handover"]["progress"] == "asked"
 
 
-def test_automatic_handover_runs_once_per_rest(
+def test_automatic_handover_runs_once_per_filling(
     config: Config, clock: FakeClock, home: Path, socket_name: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
@@ -1403,8 +1402,7 @@ def test_automatic_handover_runs_once_per_rest(
     ) as client:
         client.post("/api/login", json={"password": PASSWORD})
         session_id = start_shell(client, home / "projects")
-        # Resting for 55 minutes with a large context: due.
-        report_context(session_id, 600, answered_at(home / "conversation.jsonl", clock() - 55 * 60))
+        report_context(session_id, 960)
         store_activity(session_id, busy=False)
 
         def progress_becomes(wanted: str | None) -> bool:
@@ -1415,18 +1413,22 @@ def test_automatic_handover_runs_once_per_rest(
             return False
 
         assert progress_becomes("asked")
-        assert wait_for_text(client, session_id, "handover document")
+        assert wait_for_text(client, session_id, "context is nearly full")
         store_activity(session_id, busy=True)
         assert progress_becomes("working")
-        # Written: the agent warmed its cache doing so, but it is not asked again.
-        report_context(session_id, 600, answered_at(home / "conversation.jsonl", clock() - 55 * 60))
         store_activity(session_id, busy=False)
         assert progress_becomes("done")
+        # The user goes on with the agent, which rests again still nearly full: not asked again.
+        store_activity(session_id, busy=True)
+        time.sleep(0.5)
+        store_activity(session_id, busy=False)
         time.sleep(0.5)
         assert client.get("/api/sessions").json()[0]["handover"]["progress"] == "done"
-        # The user's next input ends it.
-        store_activity(session_id, busy=True)
+        # Compacted, the context is small again; the next filling is asked for anew.
+        report_context(session_id, 300)
         assert progress_becomes(None)
+        report_context(session_id, 960)
+        assert progress_becomes("asked")
 
 
 def test_automatic_handover_setting_is_kept(

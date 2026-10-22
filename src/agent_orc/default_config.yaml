@@ -61,14 +61,19 @@ terminal:
   text_history_lines: 5000
 
 # Handover advice: from this share of its context window on, an agent's card advises a handover
-# to a fresh session. Shortly before a resting agent's prompt cache expires, a push message says
-# so once, or, if switched on in the settings menu, the prompt below is typed into the agent by
-# itself; it is told when the handover is written.
+# to a fresh session. Claude Code compacts the context by itself at about 97 %, so the threshold
+# sits just below. As soon as the agent rests, a push message says so once, or, if switched on in
+# the settings menu, the prompt below is typed into the agent by itself (the agent cannot see how
+# full its context is); it is told when the handover is written. Once per filling: a compaction
+# or a new session starts anew.
 handover:
-  threshold_percent: 50
-  # Minutes before the cache expires (after one hour of rest, as a rule) the handover is due.
-  lead_minutes: 10
-  prompt: "Your context is getting large. Write a handover document for the next session: goal, current state, decisions made, open tasks and next steps, with the files that matter. Save it in the project and tell me its path."
+  threshold_percent: 95
+  prompt: "Your context is nearly full: Claude Code will compact it shortly. Write a handover document for the next session now: goal, current state, decisions made, open tasks and next steps, with the files that matter. Save it in the project and tell me its path."
+
+# How an agent's prompt cache is shown on its card: this many minutes before it expires, its age
+# turns amber (the next message soon reads the whole context in again).
+cache:
+  warning_minutes: 10
 
 # An agent stopped by its usage limit (Claude's StopFailure hook, see the claude profile) gets
 # this prompt once the limit is reset; its card shows the planned resume, which can be removed.
@@ -276,12 +281,13 @@ agents:
     # Usage limits (five hours, week) as Claude reports them in its status line.
     quota: claude
     # The prompt cache lasts an hour after the last request (five minutes once the account is
-    # over its quota, then nothing is typed). Switched on in the settings menu or per agent,
-    # this prompt is typed into a resting agent shortly before the hour is over: it reads the
-    # cache, which starts the hour anew. At most max_pings in a row, then the agent goes cold.
+    # over its quota, then nothing is typed). Switched on per agent (on its card), this prompt is
+    # typed into a resting agent shortly before the hour is over: it reads the cache, which
+    # starts the hour anew. At most max_pings in a row, then the agent goes cold. Claude Code
+    # compacts a large resting context by itself 55 minutes in, so the prompt comes before that.
     keep_warm:
       prompt: "Keep-alive: answer with one word only."
-      lead_minutes: 5
+      lead_minutes: 10
       max_pings: 4
     # Reasoning effort of each agent, handed over in its settings file at start.
     effort:

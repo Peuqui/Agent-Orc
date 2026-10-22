@@ -103,14 +103,20 @@ class TerminalConfig(StrictModel):
 
 
 class HandoverConfig(StrictModel):
-    """When an agent's context is large enough to advise a handover to a fresh session."""
+    """When an agent's context is full enough to advise a handover to a fresh session: just
+    below the point where Claude Code compacts it by itself (see handover.py)."""
 
     threshold_percent: int
-    # This long before a resting agent's prompt cache expires, the handover is due (written
-    # while the cache is warm; after that the next message reads it all in again).
-    lead_minutes: int
     # Typed into the agent to ask for its handover.
     prompt: str
+
+
+class CacheConfig(StrictModel):
+    """How an agent's prompt cache is shown on its card."""
+
+    # This long before the cache expires, its age turns amber: the next message soon reads the
+    # whole context in again.
+    warning_minutes: int
 
 
 class KeepWarmConfig(StrictModel):
@@ -445,6 +451,7 @@ class Config(StrictModel):
     terminal: TerminalConfig
     push: PushConfig
     handover: HandoverConfig
+    cache: CacheConfig
     limit_resume: LimitResumeConfig
     dictation: DictationConfig
     # Without it there is no Echo Dot to read answers on.

@@ -335,7 +335,7 @@
           "„Start“ auf der Karte: Freigabe-Modus, in dem der Agent startet – Fragen, Bearbeiten (Dateiänderungen ohne Nachfrage), Auto oder Planen. Voreinstellung ist Auto; gilt ab dem nächsten Start, im Agenten wechselt Shift+Tab.",
           "Fragt ein Agent um Erlaubnis, zeigt seine Karte den Befehl mit „Erlauben“ und „Ablehnen“. Im Terminal steht dieselbe Frage; wo zuerst geantwortet wird, das gilt.",
           "„Änderungen“ (Zweig-Symbol, auf der Karte und im Kopf jedes Terminals) zeigt, was der Agent im Projekt geändert hat: geänderte, neue und gelöschte Dateien seit dem letzten Commit, ein Tipp zeigt den Diff. „Datei öffnen“ an einer Datei öffnet sie im Editor, „Ordner öffnen“ den Ordner in der Dateiansicht.",
-          "Ab der eingestellten Kontextgröße (Voreinstellung 50 %) empfiehlt die Karte eine Übergabe an eine frische Sitzung, eine Benachrichtigung sagt es einmal; „Übergabe schreiben lassen“ bittet den Agenten um ein Übergabe-Dokument. Im Menü der Einstellungen lässt sich das automatisch anstoßen.",
+          "Kurz bevor Claude Code den Kontext selbst komprimiert (Voreinstellung ab 95 %), empfiehlt die Karte eine Übergabe an eine frische Sitzung, eine Benachrichtigung sagt es einmal, sobald der Agent ruht; „Übergabe schreiben lassen“ bittet den Agenten um ein Übergabe-Dokument. Im Menü der Einstellungen lässt sich das automatisch anstoßen.",
           "„warm halten“ (Schalter auf der Karte und im Kopf des Terminals, aus bis du ihn für diesen Agenten einschaltest): Ein ruhender Agent verliert nach etwa einer Stunde seinen Zwischenspeicher (Cache), und die nächste Nachricht liest den ganzen Kontext neu ein – langsam, und es kostet Nutzungsgrenze. Ist das Warmhalten an, tippt Agent-Orc ihm kurz davor eine winzige Bitte ein, auf die er mit einem Wort antwortet; das verlängert den Zwischenspeicher. Höchstens wenige Bitten hintereinander, danach darf er kalt werden, und deine nächste Eingabe zählt von vorn. Gilt nur für Agenten, deren Profil das kann (Claude).",
           "„In eigenem Worktree starten“ (Startdialog): Der Agent arbeitet in einer zweiten Arbeitskopie auf einem neuen Branch neben dem Projekt; ist er beendet, entfernt „Worktree entfernen“ auf der Karte sie wieder – ohne ungesicherte Arbeit zu verlieren.",
           "Neu starten (Menü ⋮ der Karte und der Agentenseite) startet den Agenten neu und setzt das Gespräch fort, etwa wenn er hängt oder geänderte Einstellungen lesen soll. Vorher kommt eine Rückfrage; eine laufende Antwort und Hintergrundaufgaben enden dabei. Hat ein Agent noch kein gespeichertes Modell (gestartet vor der Modellwahl), fragt Agent-Orc beim Neustart und beim Fortsetzen danach – ohne Modell startet kein Agent.",
@@ -520,7 +520,7 @@
     "request": "Übergabe schreiben lassen",
     "requestHint": "Tippt dem Agenten die Bitte um ein Übergabe-Dokument ein",
     "auto": "Übergabe automatisch anstoßen",
-    "autoHint": "Ist der Kontext eines ruhenden Agenten groß, bittet Agent-Orc ihn kurz bevor sein Zwischenspeicher abläuft selbst um ein Übergabe-Dokument, einmal je Ruhepause und auch wenn kein Gerät offen ist. Ausgeschaltet kommt dann nur eine Benachrichtigung."
+    "autoHint": "Ist der Kontext eines Agenten fast voll, bittet Agent-Orc ihn, sobald er ruht, selbst um ein Übergabe-Dokument – bevor Claude Code den Kontext komprimiert, und auch wenn kein Gerät offen ist. Einmal je Füllung: erst nach einer Kompression oder einem Neustart wieder. Ausgeschaltet kommt nur eine Benachrichtigung."
   },
   "keepWarm": {
     "label": "warm halten",

@@ -95,7 +95,7 @@ from agent_orc.events import KEEP_ALIVE_SECONDS, ChangeNotifier
 from agent_orc.handover import ADVISED as HANDOVER_ADVISED
 from agent_orc.handover import ASKED as HANDOVER_ASKED
 from agent_orc.handover import DONE as HANDOVER_DONE
-from agent_orc.handover import advise, follow_progress, read_auto, write_auto
+from agent_orc.handover import advise, follow_course, read_auto, write_auto
 from agent_orc.history import (
     CLAUDE_PROJECTS,
     CONVERSATION_SEARCHES,
@@ -836,7 +836,7 @@ def create_app(
             elif not session.running or not session_busy(session):
                 apply_effort(session, reasoning)
 
-    # Where each agent's handover stands (see handover.py), so it comes once per rest.
+    # Where each agent's handover stands (see handover.py), so it comes once per filling.
     handover_progress: dict[str, str] = {}
 
     def ask_for_handover(session: AgentSession) -> None:
@@ -844,12 +844,12 @@ def create_app(
         handover_progress[session.id] = HANDOVER_ASKED
 
     def cache_entry(cache: CacheState | None) -> dict[str, float] | None:
-        """When the cache expires (the page counts down itself) and how long before that the
-        handover is due."""
+        """When the cache expires (the page counts down itself) and how long before that its age
+        turns amber."""
         if cache is None:
             return None
-        lead = config.handover.lead_minutes * SECONDS_PER_MINUTE
-        return {**asdict(cache), "lead_seconds": lead}
+        warning = config.cache.warning_minutes * SECONDS_PER_MINUTE
+        return {**asdict(cache), "warning_seconds": warning}
 
     # The agents' switches, shared by every device. Only in memory on purpose: they end with the
     # agent's session, and no crash can leave a stale one behind (see keepwarm.py). Keeping warm
@@ -882,11 +882,16 @@ def create_app(
         for session_id in handover_progress.keys() - {s.id for s in listed}:
             del handover_progress[session_id]
         for session in listed:
+            advice = advise(session, config.handover)
+            if not advice.recommended:
+                # Compacted, started anew or ended: the next filling is asked for again.
+                handover_progress.pop(session.id, None)
+                continue
             progress = handover_progress.get(session.id)
             if progress is not None:
                 follow_handover(session, progress)
                 continue
-            if not advise(session, config.handover, agent_cache(session), clock()).due:
+            if not advice.due:
                 continue
             if auto:
                 ask_for_handover(session)
@@ -895,10 +900,7 @@ def create_app(
                 send_to_all(agent_message("handover", session.id, session.name, ""), config.push)
 
     def follow_handover(session: AgentSession, progress: str) -> None:
-        followed = follow_progress(progress, session_busy(session))
-        if followed is None:
-            del handover_progress[session.id]
-            return
+        followed = follow_course(progress, session_busy(session))
         handover_progress[session.id] = followed
         if followed == HANDOVER_DONE and progress != HANDOVER_DONE:
             message = agent_message("handover_done", session.id, session.name, "")
@@ -1446,7 +1448,7 @@ def create_app(
             "permission_mode": agent_permission_mode(session.profile, session.id),
             "worktree": is_worktree(session.path),
             "handover": {
-                **asdict(advise(session, config.handover, cache, clock())),
+                **asdict(advise(session, config.handover)),
                 "progress": handover_progress.get(session.id),
             },
             "cache": cache_entry(cache),

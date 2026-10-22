@@ -1,28 +1,25 @@
-"""Handover advice: an agent whose context is filling up should hand over to a fresh session.
+"""Handover advice: an agent whose context is nearly full should hand over to a fresh session.
 
-A large context costs on every message, the more so once the prompt cache has gone cold (after
-a pause the whole context is read in again at full price). An agent whose context is beyond
-the threshold is advised to hand over shortly before its cache expires while it rests: once
-as a push message, or, if the user switched it on, by typing the handover request into the
-agent itself, which writes it while the cache is still warm.
+Shortly before the window is full, Claude Code compacts the context by itself, and the agent
+goes on with a summary of what it knew. So an agent beyond the threshold (set just below that
+point) is advised to hand over as soon as it rests: once as a push message, or, if the user
+switched it on, by typing the handover request into the agent itself. The agent cannot see how
+full its context is; the request is its warning.
 
-Writing the handover warms the cache again; it would be due again an hour later. So a
-handover runs its course (asked, working, done) and stays done until the user's next input;
-the agent is left to go cold after that.
+A handover runs its course (asked, working, done) and stays done while the context is beyond the
+threshold, so the agent is asked once per filling; a compaction or a new session starts anew.
 """
 
 import json
 from dataclasses import dataclass
 from typing import Any
 
-from agent_orc.cache import CacheState
 from agent_orc.config import HandoverConfig
 from agent_orc.context import session_busy, session_status
 from agent_orc.sessions import AgentSession
 from agent_orc.state import state_dir, write_atomically
 
 SETTINGS_FILE = "handover.json"
-SECONDS_PER_MINUTE = 60
 PERCENT = 100
 # Where a handover stands: typed into the agent, being written, written; or only advised to
 # the user (automatic handovers switched off).
@@ -35,7 +32,7 @@ ADVISED = "advised"
 @dataclass(frozen=True)
 class HandoverAdvice:
     recommended: bool
-    # Resting, and its prompt cache expires within the lead time (or has expired).
+    # Recommended, and resting: nothing is typed into a working agent.
     due: bool
 
 
@@ -48,28 +45,20 @@ def context_percent(session: AgentSession) -> float | None:
     return percent
 
 
-def advise(
-    session: AgentSession, config: HandoverConfig, cache: CacheState | None, now: float
-) -> HandoverAdvice:
+def advise(session: AgentSession, config: HandoverConfig) -> HandoverAdvice:
     percent = context_percent(session)
     recommended = session.running and percent is not None and percent >= config.threshold_percent
-    if not recommended or cache is None or session_busy(session):
-        return HandoverAdvice(recommended=recommended, due=False)
-    remaining = cache.last_request + cache.window_seconds - now
-    return HandoverAdvice(
-        recommended=True, due=remaining < config.lead_minutes * SECONDS_PER_MINUTE
-    )
+    return HandoverAdvice(recommended=recommended, due=recommended and not session_busy(session))
 
 
-def follow_progress(progress: str, busy: bool) -> str | None:
-    """Where a handover stands as the agent works or rests; None once the user's next input
-    has ended it."""
+def follow_course(progress: str, busy: bool) -> str:
+    """Where a request typed into the agent stands as it works or rests: asked, working, done.
+    Done (or only advised) it stays; when that ends is the caller's to say."""
     if progress == ASKED:
         return WORKING if busy else ASKED
     if progress == WORKING:
         return WORKING if busy else DONE
-    # Done or only advised: whatever the agent works on next, the user gave it.
-    return None if busy else progress
+    return progress
 
 
 def read_auto() -> bool:
