@@ -96,7 +96,7 @@ watch(authenticated, (isAuthenticated) => {
       <RouterView />
     </main>
   </div>
-  <div v-else-if="authenticated" class="min-h-dvh pb-20 lg:pb-4">
+  <div v-else-if="authenticated" class="min-h-dvh pb-[calc(var(--bottom-nav-height)+1rem)]">
     <AppHeader />
     <main class="page-width py-4">
       <RouterView />

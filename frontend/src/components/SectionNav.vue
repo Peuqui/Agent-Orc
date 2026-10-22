@@ -4,8 +4,9 @@ import AppIcon from './AppIcon.vue'
 
 // The main sections as links, the one list for the page header and the workspace's header. With
 // their names as tabs; `compact` where room is short: icons, and the names only on a very wide
-// screen. Whoever places it sets how it is laid out (display), as a class.
-defineProps<{ compact?: boolean }>()
+// screen. Whoever places it sets how it is laid out (display), as a class, and may set when the names
+// show (labelClass).
+defineProps<{ compact?: boolean; labelClass?: string }>()
 </script>
 
 <template>
@@ -20,7 +21,7 @@ defineProps<{ compact?: boolean }>()
       :aria-label="$t(item.label)"
       :title="compact ? $t(item.label) : undefined"
     >
-      <AppIcon :name="item.icon" /><span :class="compact ? 'hidden 2xl:inline' : ''">{{ $t(item.label) }}</span>
+      <AppIcon :name="item.icon" /><span :class="compact ? 'hidden 2xl:inline' : labelClass">{{ $t(item.label) }}</span>
     </RouterLink>
   </nav>
 </template>

@@ -24,28 +24,32 @@ async function logout(): Promise<void> {
 
 <template>
   <header ref="header" class="sticky top-0 z-30 border-b border-slate-800 bg-slate-900/95 backdrop-blur">
-    <div class="controls-zoom page-width flex items-center justify-between gap-4 py-2">
-      <AppLogo />
-      <!-- Wide screens: sections as header tabs instead of the bottom bar. -->
-      <div class="hidden flex-1 justify-center lg:flex">
-        <SectionNav class="flex" />
-      </div>
-      <!-- Compact buttons, so the logo keeps its room on narrow screens. -->
-      <div class="flex shrink-0 items-center [&_.btn-icon]:size-8">
-        <HostSwitcher />
-        <SelectMenu
-          class="mr-1"
-          button-class="h-6 rounded-md border border-slate-700 bg-slate-800 pr-0.5 pl-1.5 text-xs text-slate-300"
-          :model-value="locale"
-          :options="LANGUAGE_OPTIONS"
-          :aria-label="$t('app.language')"
-          @update:model-value="(code) => setLocale(code as Locale)"
-        />
-        <HelpButton />
-        <SettingsMenu />
-        <button class="btn-icon" :title="$t('app.logout')" :aria-label="$t('app.logout')" @click="logout">
-          <AppIcon name="logout" />
-        </button>
+    <!-- What shows depends on the room in the controls' size (the container: the whole width, the
+         same as the bottom bar's, so that exactly one of them has the sections), not on the screen. -->
+    <div class="controls-zoom @container">
+      <div class="page-width flex items-center justify-between gap-4 py-2">
+        <AppLogo name-class="hidden @[17rem]:flex" />
+        <!-- Wide: sections as header tabs instead of the bottom bar; their names where there is room. -->
+        <div class="hidden flex-1 justify-center @5xl:flex">
+          <SectionNav class="flex" label-class="hidden @6xl:inline" />
+        </div>
+        <!-- Compact buttons, so the logo keeps its room on narrow screens. -->
+        <div class="flex shrink-0 items-center [&_.btn-icon]:size-8">
+          <HostSwitcher />
+          <SelectMenu
+            class="mr-1"
+            button-class="h-6 rounded-md border border-slate-700 bg-slate-800 pr-0.5 pl-1.5 text-xs text-slate-300"
+            :model-value="locale"
+            :options="LANGUAGE_OPTIONS"
+            :aria-label="$t('app.language')"
+            @update:model-value="(code) => setLocale(code as Locale)"
+          />
+          <HelpButton />
+          <SettingsMenu />
+          <button class="btn-icon" :title="$t('app.logout')" :aria-label="$t('app.logout')" @click="logout">
+            <AppIcon name="logout" />
+          </button>
+        </div>
       </div>
     </div>
   </header>

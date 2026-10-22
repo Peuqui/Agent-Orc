@@ -1,12 +1,15 @@
 <script setup lang="ts">
 // Imported, so the bundler emits a path that also works under a proxy sub-path.
 import iconUrl from '../../brand/icon.svg'
+
+// nameClass: when the name shows beside the icon (the page header leaves it out where room is short).
+defineProps<{ nameClass?: string }>()
 </script>
 
 <template>
   <div class="flex items-center gap-2.5">
     <img :src="iconUrl" alt="" class="size-11 sm:size-12" />
-    <div class="flex flex-col leading-none">
+    <div class="flex-col leading-none" :class="nameClass ?? 'flex'">
       <span class="text-2xl font-medium tracking-tight whitespace-nowrap text-slate-100 sm:text-3xl" aria-label="Agent-Orc">
         Agent-<span class="font-serif text-red-500 italic">Ø</span>rc
       </span>
