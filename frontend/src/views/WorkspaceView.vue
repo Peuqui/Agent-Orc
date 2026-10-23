@@ -332,12 +332,21 @@ function onFrameLoad(id: string): void {
 // not the one that happened to be there before. Done at once, as the layout has changed.
 watch(phone, showActiveColumn)
 
-// Typing goes to the active column's input field; not on touch screens, where the focus would
-// open the on-screen keyboard (a tap into the field does).
+/** Whether typing in this column's input field is what the keyboard (on-screen or hardware) reaches now. */
+function inputHasFocus(id: string): boolean {
+  const field = inputOf(id)
+  return field !== null && field !== undefined && field.ownerDocument.activeElement === field
+}
+
+// Typing goes to the active column's input field. On touch screens the focus only moves along
+// when it was in the column left (the on-screen keyboard is up for it): otherwise it would open
+// the keyboard (a tap into the field does), and after a swipe the text would land in the old column.
 watch(
   () => workspace.value.active,
-  async (id) => {
-    if (id === null || TOUCH_FIRST.matches) return
+  async (id, previousId) => {
+    if (id === null) return
+    const focusWasInPrevious = previousId !== null && inputHasFocus(previousId)
+    if (TOUCH_FIRST.matches && !focusWasInPrevious) return
     await nextTick()
     inputOf(id)?.focus()
   },
