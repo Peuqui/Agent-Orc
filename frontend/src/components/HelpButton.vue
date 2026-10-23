@@ -11,10 +11,16 @@ const { t } = useI18n()
 defineProps<{ bare?: boolean }>()
 const open = defineModel<boolean>('open', { default: false })
 
+// A hint may begin with its term in **double asterisks**; the term is set apart in amber.
+function splitTerm(text: string): { term: string; rest: string } {
+  const match = /^\*\*(.+?)\*\*/.exec(text)
+  return match ? { term: match[1], rest: text.slice(match[0].length) } : { term: '', rest: text }
+}
+
 const sections = computed(() =>
   messages.help.sections.map((section, sectionIndex) => ({
     title: t(`help.sections.${sectionIndex}.title`),
-    items: section.items.map((_item, itemIndex) => t(`help.sections.${sectionIndex}.items.${itemIndex}`)),
+    items: section.items.map((_item, itemIndex) => splitTerm(t(`help.sections.${sectionIndex}.items.${itemIndex}`))),
   })),
 )
 </script>
@@ -54,7 +60,9 @@ const sections = computed(() =>
               <span class="text-base text-orange-400">✻</span>{{ section.title }}
             </h3>
             <ul class="flex flex-col gap-1.5 pl-6 text-sm leading-relaxed text-slate-300">
-              <li v-for="item in section.items" :key="item" class="list-disc marker:text-slate-600">{{ item }}</li>
+              <li v-for="item in section.items" :key="item.term + item.rest" class="list-disc marker:text-amber-300">
+                <span v-if="item.term" class="font-medium text-amber-300">{{ item.term }}</span>{{ item.rest }}
+              </li>
             </ul>
           </section>
         </div>
