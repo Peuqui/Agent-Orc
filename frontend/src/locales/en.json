@@ -314,6 +314,7 @@
     "button": "Help: how Agent-Orc works",
     "title": "How Agent-Orc works",
     "close": "Close",
+    "contents": "Contents",
     "sections": [
       {
         "title": "Header and pages",

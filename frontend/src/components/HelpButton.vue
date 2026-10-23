@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import messages from '../locales/de.json'
 import AppIcon from './AppIcon.vue'
@@ -15,6 +15,12 @@ const open = defineModel<boolean>('open', { default: false })
 function splitTerm(text: string): { term: string; rest: string } {
   const match = /^\*\*(.+?)\*\*/.exec(text)
   return match ? { term: match[1], rest: text.slice(match[0].length) } : { term: '', rest: text }
+}
+
+const sectionElements = ref<HTMLElement[]>([])
+
+function jumpTo(index: number): void {
+  sectionElements.value[index]?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
 const sections = computed(() =>
@@ -54,7 +60,17 @@ const sections = computed(() =>
           <button class="btn-icon" :aria-label="$t('help.close')" @click="open = false">×</button>
         </div>
         <div class="min-h-0 flex-1 overflow-y-auto px-5 py-4">
-          <section v-for="section in sections" :key="section.title" class="mb-5 last:mb-0">
+          <nav class="mb-5 rounded-lg border border-amber-300/30 px-3 py-2" :aria-label="$t('help.contents')">
+            <h3 class="mb-1 text-sm font-semibold text-amber-300">{{ $t('help.contents') }}</h3>
+            <ol class="flex flex-col text-sm">
+              <li v-for="(section, index) in sections" :key="section.title">
+                <button class="w-full py-1 text-left text-slate-200 hover:text-amber-300" @click="jumpTo(index)">
+                  {{ section.title }}
+                </button>
+              </li>
+            </ol>
+          </nav>
+          <section v-for="section in sections" :key="section.title" ref="sectionElements" class="mb-5 last:mb-0">
             <h3 class="mb-2 flex items-center gap-2 text-sm font-semibold text-amber-300">
               <!-- Claude Code's orange star. -->
               <span class="text-base text-orange-400">✻</span>{{ section.title }}
