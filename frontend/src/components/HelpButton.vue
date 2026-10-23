@@ -25,6 +25,10 @@ function toggle(index: number): void {
   if (!unfolded.value.delete(index)) unfolded.value.add(index)
 }
 
+function jumpToTop(): void {
+  body.value?.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
 // Section `2` or hint `2-5` (section and position within it).
 function jumpTo(anchor: string): void {
   body.value?.querySelector(`[data-anchor="${anchor}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -64,6 +68,9 @@ const sections = computed(() =>
         <div class="flex items-center gap-2 border-b border-slate-700 px-5 py-3">
           <AppIcon name="lightbulb" class="text-amber-300" />
           <h2 class="flex-1 font-semibold text-slate-100">{{ $t('help.title') }}</h2>
+          <button class="btn-icon" :title="$t('help.toContents')" :aria-label="$t('help.toContents')" @click="jumpToTop">
+            <AppIcon name="up" />
+          </button>
           <button class="btn-icon" :aria-label="$t('help.close')" @click="open = false">×</button>
         </div>
         <div ref="body" class="min-h-0 flex-1 overflow-y-auto px-5 py-4">

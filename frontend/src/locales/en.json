@@ -315,6 +315,7 @@
     "title": "How Agent-Orc works",
     "close": "Close",
     "contents": "Contents",
+    "toContents": "To the contents",
     "sections": [
       {
         "title": "Header and pages",
