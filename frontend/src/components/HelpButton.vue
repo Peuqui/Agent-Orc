@@ -67,27 +67,27 @@ const sections = computed(() =>
           <button class="btn-icon" :aria-label="$t('help.close')" @click="open = false">×</button>
         </div>
         <div ref="body" class="min-h-0 flex-1 overflow-y-auto px-5 py-4">
-          <nav class="mb-5 rounded-lg border border-amber-300/30 px-3 py-2" :aria-label="$t('help.contents')">
-            <h3 class="mb-1 text-sm font-semibold text-amber-300">{{ $t('help.contents') }}</h3>
+          <nav class="mb-5 rounded-lg border border-red-400/40 px-3 py-2" :aria-label="$t('help.contents')">
+            <h3 class="mb-1 text-sm font-semibold text-red-400">{{ $t('help.contents') }}</h3>
             <ol class="flex flex-col text-sm">
               <li v-for="(section, index) in sections" :key="section.title">
                 <div class="flex items-center">
                   <button
-                    class="btn-icon"
+                    class="btn-icon text-red-400"
                     :aria-expanded="unfolded.has(index)"
                     :aria-label="section.title"
                     @click="toggle(index)"
                   >
                     <AppIcon name="up" class="size-4 transition-transform" :class="unfolded.has(index) ? 'rotate-180' : 'rotate-90'" />
                   </button>
-                  <button class="flex-1 py-1 text-left text-slate-200 hover:text-amber-300" @click="jumpTo(`${index}`)">
+                  <button class="flex-1 py-1 text-left font-medium text-red-400 hover:text-red-300" @click="jumpTo(`${index}`)">
                     {{ section.title }}
                   </button>
                 </div>
                 <ul v-if="unfolded.has(index)" class="mb-1 flex flex-col pl-9">
                   <template v-for="(item, itemIndex) in section.items" :key="itemIndex">
                     <li v-if="item.term">
-                      <button class="w-full py-0.5 text-left text-slate-300 hover:text-amber-300" @click="jumpTo(`${index}-${itemIndex}`)">
+                      <button class="w-full py-0.5 text-left text-amber-300 hover:text-amber-200" @click="jumpTo(`${index}-${itemIndex}`)">
                         {{ item.term }}
                       </button>
                     </li>
