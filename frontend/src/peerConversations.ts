@@ -35,6 +35,14 @@ export function groupConversations(messages: Iterable<PeerMessage>): Conversatio
   return [...conversations.values()].sort((a, b) => b.last.localeCompare(a.last))
 }
 
+/** The conversations in the order of `keys` (the order they had); those not in it (new ones) come
+ * first, in their own order. Moving a conversation's element in the page takes the cursor away
+ * from a field in it, so the list must not reorder while one is being written in. */
+export function keepOrder(conversations: Conversation[], keys: string[]): Conversation[] {
+  const place = (conversation: Conversation): number => keys.indexOf(conversation.key)
+  return [...conversations].sort((a, b) => place(a) - place(b))
+}
+
 /** Who to answer in a conversation: everyone in it but the user, or everyone for a broadcast;
  * nobody where a machine takes part (the bridge's notices), as nothing reaches it. */
 export function replyRecipients(conversation: Conversation): string[] {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, useTemplateRef } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, useTemplateRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { api } from '../api'
 import { errorText, TOAST_MILLISECONDS } from '../composables/useToast'
@@ -9,6 +9,7 @@ import { isSendKey } from '../sendKey'
 // page's foot (to whom the slot lets one choose). Enter sends, Shift+Enter breaks the line.
 // `focused` puts the cursor in the field as it appears (asked for by "Answer").
 const props = defineProps<{ recipients: string[]; placeholder: string; focused?: boolean }>()
+const emit = defineEmits<{ writing: [boolean] }>()
 const { t } = useI18n()
 
 const text = ref('')
@@ -40,6 +41,13 @@ async function send(): Promise<void> {
   }
 }
 
+// Whether the cursor is in the form (field or send button); moving between the two is no leaving.
+function onFocusout(event: FocusEvent): void {
+  if (!(event.currentTarget as HTMLElement).contains(event.relatedTarget as Node | null)) emit('writing', false)
+}
+
+onBeforeUnmount(() => emit('writing', false))
+
 function showNotice(text: string, error: boolean): void {
   clearTimeout(noticeTimer)
   notice.value = { text, error }
@@ -56,7 +64,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <form class="flex flex-col gap-2" @submit.prevent="send">
+  <form class="flex flex-col gap-2" @submit.prevent="send" @focusin="emit('writing', true)" @focusout="onFocusout">
     <p v-if="notice" class="text-sm" :class="notice.error ? 'text-red-300' : 'text-emerald-300'" role="status">
       {{ notice.text }}
     </p>
