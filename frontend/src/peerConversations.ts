@@ -21,7 +21,8 @@ function conversationKey(message: PeerMessage): string {
   return pair.join('\n')
 }
 
-/** Conversations with the latest activity first. */
+/** Conversations with the newest beginning first: one that goes on keeps its place, so the list
+ * does not move under the reader (a moved element also loses the cursor of a field in it). */
 export function groupConversations(messages: Iterable<PeerMessage>): Conversation[] {
   const conversations = new Map<string, Conversation>()
   const chronological = [...messages].sort((a, b) => a.timestamp.localeCompare(b.timestamp))
@@ -32,15 +33,7 @@ export function groupConversations(messages: Iterable<PeerMessage>): Conversatio
     conversation.last = message.timestamp
     conversations.set(key, conversation)
   }
-  return [...conversations.values()].sort((a, b) => b.last.localeCompare(a.last))
-}
-
-/** The conversations in the order of `keys` (the order they had); those not in it (new ones) come
- * first, in their own order. Moving a conversation's element in the page takes the cursor away
- * from a field in it, so the list must not reorder while one is being written in. */
-export function keepOrder(conversations: Conversation[], keys: string[]): Conversation[] {
-  const place = (conversation: Conversation): number => keys.indexOf(conversation.key)
-  return [...conversations].sort((a, b) => place(a) - place(b))
+  return [...conversations.values()].sort((a, b) => b.messages[0]!.timestamp.localeCompare(a.messages[0]!.timestamp))
 }
 
 /** Who to answer in a conversation: everyone in it but the user, or everyone for a broadcast;

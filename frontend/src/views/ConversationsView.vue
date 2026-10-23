@@ -25,7 +25,6 @@ import {
   groupConversations,
   involves,
   isMachine,
-  keepOrder,
   laneLabel,
   lanesOf,
   readableOf,
@@ -113,18 +112,9 @@ function concernsFocus(message: PeerMessage): boolean {
 }
 
 const allConversations = computed(() => groupConversations(messages.value))
-// While the cursor is in a conversation's field the list keeps its order: a new message would move
-// that conversation to the top, and the browser takes the cursor (and on a phone the keyboard)
-// away from a field whose element is moved.
-const writing = ref(false)
-const frozenOrder = ref<string[] | null>(null)
-watch(writing, (now) => {
-  frozenOrder.value = now ? allConversations.value.map((conversation) => conversation.key) : null
-})
-const conversations = computed(() => {
-  const shown = allConversations.value.filter((conversation) => conversation.messages.some(concernsFocus))
-  return frozenOrder.value === null ? shown : keepOrder(shown, frozenOrder.value)
-})
+const conversations = computed(() =>
+  allConversations.value.filter((conversation) => conversation.messages.some(concernsFocus)),
+)
 const newestFirst = computed(() => [...messages.value].sort((a, b) => b.timestamp.localeCompare(a.timestamp)))
 const timeline = computed(() => byDay(collapseRepeats(newestFirst.value.filter(concernsFocus))))
 const laneDays = computed(() => byDay(collapseRepeats(newestFirst.value)))
@@ -368,7 +358,6 @@ function replyPlaceholder(recipients: string[]): string {
               :recipients="replyRecipients(conversation)"
               :placeholder="replyPlaceholder(replyRecipients(conversation))"
               :focused="answering === conversation.key"
-              @writing="writing = $event"
               class="mt-1 [&_textarea]:scroll-mb-[calc(var(--bottom-nav-height)+var(--peers-foot-height))]"
             />
           </div>

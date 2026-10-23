@@ -10,7 +10,6 @@ import {
   groupConversations,
   involves,
   isMachine,
-  keepOrder,
   laneLabel,
   lanesOf,
   MACHINE_COLOR,
@@ -188,18 +187,13 @@ test('unread are the messages after the last one seen, without the user\'s own a
   assert.equal(unreadCount(notices!, 0), 0)
 })
 
-test('a conversation that got a new message keeps its place while the order is kept; new ones come first', () => {
-  const before = groupConversations([
-    message(1, 'A', 'B', '2026-10-23T10:00:00'),
-    message(2, 'C', 'D', '2026-10-23T10:01:00'),
-  ])
-  const keys = before.map((conversation) => conversation.key)
-  const after = groupConversations([
+test('conversations are listed by their beginning: a new message does not move one up, a new one comes first', () => {
+  const messages = [
     message(1, 'A', 'B', '2026-10-23T10:00:00'),
     message(2, 'C', 'D', '2026-10-23T10:01:00'),
     message(3, 'B', 'A', '2026-10-23T10:02:00'),
-    message(4, 'E', 'F', '2026-10-23T10:03:00'),
-  ])
-  assert.deepEqual(after.map((conversation) => conversation.members[0]), ['E', 'A', 'C'])
-  assert.deepEqual(keepOrder(after, keys).map((conversation) => conversation.members[0]), ['E', 'C', 'A'])
+  ]
+  const first = (all: ReturnType<typeof message>[]) => groupConversations(all).map((conversation) => conversation.members[0])
+  assert.deepEqual(first(messages), ['C', 'A'])
+  assert.deepEqual(first([...messages, message(4, 'E', 'F', '2026-10-23T10:03:00')]), ['E', 'C', 'A'])
 })
