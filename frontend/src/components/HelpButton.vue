@@ -17,10 +17,17 @@ function splitTerm(text: string): { term: string; rest: string } {
   return match ? { term: match[1], rest: text.slice(match[0].length) } : { term: '', rest: text }
 }
 
-const sectionElements = ref<HTMLElement[]>([])
+const body = ref<HTMLElement>()
+// Sections whose entries are unfolded in the table of contents.
+const unfolded = ref(new Set<number>())
 
-function jumpTo(index: number): void {
-  sectionElements.value[index]?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+function toggle(index: number): void {
+  if (!unfolded.value.delete(index)) unfolded.value.add(index)
+}
+
+// Section `2` or hint `2-5` (section and position within it).
+function jumpTo(anchor: string): void {
+  body.value?.querySelector(`[data-anchor="${anchor}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
 const sections = computed(() =>
@@ -59,24 +66,43 @@ const sections = computed(() =>
           <h2 class="flex-1 font-semibold text-slate-100">{{ $t('help.title') }}</h2>
           <button class="btn-icon" :aria-label="$t('help.close')" @click="open = false">×</button>
         </div>
-        <div class="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+        <div ref="body" class="min-h-0 flex-1 overflow-y-auto px-5 py-4">
           <nav class="mb-5 rounded-lg border border-amber-300/30 px-3 py-2" :aria-label="$t('help.contents')">
             <h3 class="mb-1 text-sm font-semibold text-amber-300">{{ $t('help.contents') }}</h3>
             <ol class="flex flex-col text-sm">
               <li v-for="(section, index) in sections" :key="section.title">
-                <button class="w-full py-1 text-left text-slate-200 hover:text-amber-300" @click="jumpTo(index)">
-                  {{ section.title }}
-                </button>
+                <div class="flex items-center">
+                  <button
+                    class="btn-icon"
+                    :aria-expanded="unfolded.has(index)"
+                    :aria-label="section.title"
+                    @click="toggle(index)"
+                  >
+                    <AppIcon name="up" class="size-4 transition-transform" :class="unfolded.has(index) ? 'rotate-180' : 'rotate-90'" />
+                  </button>
+                  <button class="flex-1 py-1 text-left text-slate-200 hover:text-amber-300" @click="jumpTo(`${index}`)">
+                    {{ section.title }}
+                  </button>
+                </div>
+                <ul v-if="unfolded.has(index)" class="mb-1 flex flex-col pl-9">
+                  <template v-for="(item, itemIndex) in section.items" :key="itemIndex">
+                    <li v-if="item.term">
+                      <button class="w-full py-0.5 text-left text-slate-300 hover:text-amber-300" @click="jumpTo(`${index}-${itemIndex}`)">
+                        {{ item.term }}
+                      </button>
+                    </li>
+                  </template>
+                </ul>
               </li>
             </ol>
           </nav>
-          <section v-for="section in sections" :key="section.title" ref="sectionElements" class="mb-5 last:mb-0">
+          <section v-for="(section, index) in sections" :key="section.title" :data-anchor="index" class="mb-5 last:mb-0">
             <h3 class="mb-2 flex items-center gap-2 text-sm font-semibold text-amber-300">
               <!-- Claude Code's orange star. -->
               <span class="text-base text-orange-400">✻</span>{{ section.title }}
             </h3>
             <ul class="flex flex-col gap-1.5 pl-6 text-sm leading-relaxed text-slate-300">
-              <li v-for="item in section.items" :key="item.term + item.rest" class="list-disc marker:text-amber-300">
+              <li v-for="(item, itemIndex) in section.items" :key="itemIndex" :data-anchor="`${index}-${itemIndex}`" class="list-disc marker:text-amber-300">
                 <span v-if="item.term" class="font-medium text-amber-300">{{ item.term }}</span>{{ item.rest }}
               </li>
             </ul>
