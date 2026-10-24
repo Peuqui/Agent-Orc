@@ -472,4 +472,4 @@ genauso sorgfältig verwahren wie den Login.
 
 ## Lizenz
 
-[MIT](LICENSE)
+[PolyForm Noncommercial 1.0.0](LICENSE): Herunterladen und Nutzen für jeden nichtkommerziellen Zweck frei; kommerzielle Nutzung nur mit Erlaubnis des Autors.

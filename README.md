@@ -450,4 +450,4 @@ whoever may log in to that machine over SSH with the key. Keep that key as safe 
 
 ## License
 
-[MIT](LICENSE)
+[PolyForm Noncommercial 1.0.0](LICENSE): free to download and use for any noncommercial purpose; commercial use needs the author's permission.

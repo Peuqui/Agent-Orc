@@ -7,7 +7,7 @@ name = "agent-orc"
 version = "0.1.0"
 description = "Start, watch and stop coding-agent CLI sessions (Claude Code, Codex, ...) from a mobile-friendly PWA"
 readme = "README.md"
-license = "MIT"
+license = "LicenseRef-PolyForm-Noncommercial-1.0.0"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi",
