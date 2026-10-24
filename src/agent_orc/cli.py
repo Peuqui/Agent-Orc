@@ -28,15 +28,16 @@ from agent_orc.approvals import (
 )
 from agent_orc.auth import load_credentials, new_credentials, save_credentials
 from agent_orc.backends import (
+    BACKEND_VARIABLE,
     EFFORT_VARIABLE,
     BackendError,
     backend_named,
     choose_model,
     exec_claude,
+    free_cards_message,
     levels_of,
     models_lines,
     prepare_launch,
-    run_before_start,
     split_effort,
 )
 from agent_orc.config import (
@@ -132,6 +133,18 @@ def agent_busy() -> None:
     session_id = os.environ[SESSION_ENV]
     store_activity(session_id, busy=True)
     close_session_requests(session_id)
+
+
+def agent_free_cards() -> None:
+    """Hook command (Claude: UserPromptSubmit): GPU-Orc frees the graphics cards for the model of
+    an agent on a backend (backends.py); what it did or what went wrong is shown to the user, and
+    the input goes on whatever GPU-Orc answers."""
+    if BACKEND_VARIABLE not in os.environ:
+        return
+    config = load_config(config_dir() / CONFIG_FILE_NAME)
+    message = free_cards_message(config, os.environ)
+    if message is not None:
+        print(json.dumps({"systemMessage": message}))
 
 
 def agent_compacting() -> None:
@@ -248,13 +261,7 @@ def run_backend(arguments: list[str]) -> None:
                     raise BackendError("name a model: this is not a terminal to choose in")
                 model = named or choose_model(models_lines(backend, date.today()), date.today())
                 launch = prepare_launch(
-                    name,
-                    backend,
-                    model,
-                    wanted,
-                    claude_arguments,
-                    date.today(),
-                    run_hook=run_before_start,
+                    name, backend, model, wanted, claude_arguments, date.today()
                 )
                 exec_claude(launch)
             case _:
@@ -270,6 +277,7 @@ COMMANDS = {
     "statusline": (statusline, "status line command for agent sessions (JSON on stdin)"),
     "agent-busy": (agent_busy, "hook command: the agent started working"),
     "agent-idle": (agent_idle, "hook command: the agent finished its answer"),
+    "agent-free-cards": (agent_free_cards, "hook command: free the graphics cards for the model"),
     "agent-compacting": (agent_compacting, "hook command: the agent starts shrinking its context"),
     "agent-compacted": (agent_compacted, "hook command: the agent has shrunk its context"),
     "agent-limited": (agent_limited, "hook command: the usage limit stopped the agent"),

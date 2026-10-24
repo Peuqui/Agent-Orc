@@ -231,6 +231,11 @@ agents:
         - hooks:
           - type: command
             command: agent-orc agent-busy
+          # On a backend with GPU-Orc: frees the cards for a model the server unloaded after its
+          # idle time; may wait for a speech service to finish (GPU-Orc's caller_timeout_s).
+          - type: command
+            command: agent-orc agent-free-cards
+            timeout: 900
         Stop:
         - hooks:
           - type: command

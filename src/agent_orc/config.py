@@ -416,6 +416,18 @@ class BackendModelConfig(StrictModel):
         return levels
 
 
+class GpuOrcConfig(StrictModel):
+    """GPU-Orc (github.com/Peuqui/GPU-Orc) on the machine of a backend's models. It runs beside the
+    model server, so its address is the backend's own with this port."""
+
+    port: int
+    # Which of its model servers serves the backend; needed only when it knows more than one.
+    model_server: str | None = None
+    # From another machine GPU-Orc takes requests only with its token (a file readable for you
+    # alone); on the same machine it needs none.
+    token_file: Path | None = None
+
+
 class BackendConfig(StrictModel):
     """A service that Claude Code can run on instead of Anthropic's: models on a local server
     (llama-swap, vLLM) or in a cloud (Qwen on DashScope). Used by `agent-orc backend`."""
@@ -442,9 +454,9 @@ class BackendConfig(StrictModel):
     # Where the server tells the context length of a model (max_model_len); {model} is the model.
     # Claude Code does not know the models and assumes 200k.
     context_path: str | None = None
-    # A command run before Claude Code starts, e.g. to free graphics cards; {base_url} and {model}
-    # are filled in. A failure is reported and the start goes on.
-    before_start: list[str] | None = None
+    # GPU-Orc beside the model server, asked to free the graphics cards for the model before it
+    # loads (see gpuorc.py); without it nothing is freed.
+    gpu_orc: GpuOrcConfig | None = None
     # How long Claude Code waits for an answer of the server.
     api_timeout_ms: int | None = None
 

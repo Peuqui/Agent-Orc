@@ -397,8 +397,15 @@ once its free quota has ended. The key comes from exactly one of `key`, `key_fil
 you alone, `chmod 600`) or `key_env`. Where the server reports it (vLLM: `max_model_len`), the
 context length is handed to Claude Code, which would otherwise assume 200k. Hooks of the session
 find the backend's name, its address and the model in `AGENT_ORC_BACKEND`,
-`AGENT_ORC_BACKEND_URL` and `AGENT_ORC_BACKEND_MODEL`; a command
-`before_start` runs once before the start (`{base_url}` and `{model}` filled in).
+`AGENT_ORC_BACKEND_URL` and `AGENT_ORC_BACKEND_MODEL`.
+
+With `gpu_orc: {port: 5070}` a backend asks [GPU-Orc](https://github.com/Peuqui/GPU-Orc) on the
+machine of its models to free the graphics cards for the model before it loads: at the start, and
+through the hook `agent-orc agent-free-cards` at every input (a server may have unloaded the model
+after its idle time). GPU-Orc runs beside the model server, at the backend's address with its own
+port; from another machine it needs its token (`token_file`), and `model_server` names its model
+server when it has more than one. What it did is shown; when it does not answer or the cards stay
+held, that is shown as a problem, and the start or the input goes on.
 
 ```yaml
 backends:

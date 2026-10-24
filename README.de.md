@@ -417,8 +417,16 @@ kennt); `free_until` blendet ein Modell aus, sobald sein Gratis-Kontingent endet
 kommt aus genau einem von `key`, `key_file` (nur für dich lesbar, `chmod 600`) oder `key_env`. Wo
 der Server sie meldet (vLLM: `max_model_len`), wird die Kontextlänge an Claude Code übergeben, das
 sonst 200k annähme. Hooks der Sitzung finden den Namen des Backends, seine Adresse und das
-Modell in `AGENT_ORC_BACKEND`, `AGENT_ORC_BACKEND_URL` und `AGENT_ORC_BACKEND_MODEL`; ein Befehl `before_start` läuft einmal vor
-dem Start (`{base_url}` und `{model}` eingesetzt).
+Modell in `AGENT_ORC_BACKEND`, `AGENT_ORC_BACKEND_URL` und `AGENT_ORC_BACKEND_MODEL`.
+
+Mit `gpu_orc: {port: 5070}` bittet ein Backend [GPU-Orc](https://github.com/Peuqui/GPU-Orc) auf dem
+Rechner seiner Modelle, die Grafikkarten für das Modell freizuräumen, bevor es lädt: beim Start und
+über den Hook `agent-orc agent-free-cards` bei jeder Eingabe (der Server kann das Modell nach seiner
+Leerlaufzeit entladen haben). GPU-Orc läuft neben dem Modellserver, unter der Adresse des Backends
+mit eigenem Port; von einem anderen Rechner aus braucht er sein Token (`token_file`), und
+`model_server` nennt seinen Modellserver, wenn er mehrere kennt. Was er getan hat, wird angezeigt;
+antwortet er nicht oder bleiben Karten belegt, erscheint das als Problem, und Start oder Eingabe
+gehen weiter.
 
 ```yaml
 backends:

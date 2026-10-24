@@ -269,34 +269,47 @@ def test_a_model_that_is_not_on_offer_is_refused() -> None:
         prepare_launch("local", backend(), "Qwen-Flash-1", None, [], TODAY, listing_fetch())
 
 
-def test_the_command_before_the_start_gets_the_address_and_the_model() -> None:
-    ran: list[list[str]] = []
-
-    def run_hook(command: list[str]) -> str | None:
-        ran.append(command)
-        return None
-
-    config = backend(before_start=["free-gpus", "{base_url}", "{model}"])
-    prepare_launch("local", config, "Qwen-27B-vllm", None, [], TODAY, listing_fetch(), run_hook)
-    assert ran == [["free-gpus", "http://one", "Qwen-27B-vllm"]]
-
-
-def test_a_failing_command_before_the_start_is_reported_and_the_start_goes_on(
+def test_gpu_orc_beside_the_server_frees_the_cards_before_the_start(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    config = backend(before_start=["free-gpus"])
+    asked: list[tuple[str, dict[str, Any] | None]] = []
+
+    def gpu_orc(url: str, body: dict[str, Any] | None, token: str | None, timeout: float) -> Any:
+        asked.append((url, body))
+        if body is None:
+            return {"caller_timeout_s": 690}
+        action = {"consumer": "stt-suite", "item": "gpu-worker", "outcome": "released"}
+        return {"already_running": False, "actions": [action], "free": True}
+
+    config = backend(gpu_orc={"port": 5070})
     launch = prepare_launch(
-        "local",
-        config,
-        "Qwen-27B-vllm",
-        None,
-        [],
-        TODAY,
-        listing_fetch(),
-        lambda command: "it failed",
+        "local", config, "Qwen-27B-vllm", None, [], TODAY, listing_fetch(), gpu_orc
+    )
+    assert [url for url, _ in asked] == ["http://one:5070/health", "http://one:5070/free"]
+    assert asked[1][1] is not None and asked[1][1]["model"] == "Qwen-27B-vllm"
+    assert launch.command[:3] == ["claude", "--model", "Qwen-27B-vllm"]
+    assert "GPU-Orc: stt-suite gpu-worker: released" in capsys.readouterr().err
+
+
+def test_gpu_orc_that_does_not_answer_is_told_and_the_start_goes_on(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    def silent(url: str, body: dict[str, Any] | None, token: str | None, timeout: float) -> Any:
+        raise OSError("connection refused")
+
+    config = backend(gpu_orc={"port": 5070})
+    launch = prepare_launch(
+        "local", config, "Qwen-27B-vllm", None, [], TODAY, listing_fetch(), silent
     )
     assert launch.command[:3] == ["claude", "--model", "Qwen-27B-vllm"]
-    assert "warning: it failed" in capsys.readouterr().err
+    assert "GPU-Orc: problem: GPU-Orc at http://one:5070" in capsys.readouterr().err
+
+
+def test_without_gpu_orc_nothing_is_asked() -> None:
+    def never(url: str, body: dict[str, Any] | None, token: str | None, timeout: float) -> Any:
+        raise AssertionError("asked")
+
+    prepare_launch("local", backend(), "Qwen-27B-vllm", None, [], TODAY, listing_fetch(), never)
 
 
 def test_the_model_is_chosen_by_number_or_name() -> None:

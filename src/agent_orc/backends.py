@@ -11,12 +11,10 @@ import fnmatch
 import http.client
 import json
 import os
-import shlex
-import subprocess
 import sys
 import urllib.error
 import urllib.request
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date
 from typing import Any
@@ -28,6 +26,7 @@ from agent_orc.config import (
     BackendModelConfig,
     Config,
 )
+from agent_orc.gpuorc import Request, free_for_model, request_json
 
 # What Claude Code asks for without being told (its own default).
 DEFAULT_LEVEL = "high"
@@ -239,7 +238,7 @@ def prepare_launch(
     claude_arguments: Sequence[str],
     today: date,
     fetch: Fetch = fetch_json,
-    run_hook: Callable[[list[str]], str | None] | None = None,
+    gpu_orc_request: Request = request_json,
 ) -> Launch:
     """Everything for starting Claude Code on the backend with the model."""
     key = resolve_key(backend)
@@ -248,14 +247,9 @@ def prepare_launch(
         raise BackendError(
             f"{model!r} is not on offer at {backend.label} (see `agent-orc backend models`)"
         )
-    if backend.before_start is not None and run_hook is not None:
-        command = [
-            part.replace("{base_url}", base_url).replace("{model}", model)
-            for part in backend.before_start
-        ]
-        problem = run_hook(command)
-        if problem:
-            print(f"warning: {problem}", file=sys.stderr)
+    if backend.gpu_orc is not None:
+        for line in free_for_model(backend.gpu_orc, base_url, model, gpu_orc_request):
+            print(f"GPU-Orc: {line}", file=sys.stderr)
     context = context_length(backend, base_url, model, key, fetch)
     arguments = [
         "claude",
@@ -274,15 +268,20 @@ def prepare_launch(
     )
 
 
-def run_before_start(command: list[str]) -> str | None:
-    """Run the backend's command before the start; what went wrong, if something did."""
-    try:
-        result = subprocess.run(command, capture_output=True, text=True, check=False)
-    except OSError as error:
-        return f"{shlex.join(command)} could not run: {error}"
-    if result.returncode != 0:
-        return f"{shlex.join(command)} failed ({result.returncode}): {result.stderr.strip()}"
-    return None
+def free_cards_message(
+    config: Config, environment: Mapping[str, str], request: Request = request_json
+) -> str | None:
+    """At an input of an agent on a backend with GPU-Orc: free the cards for its model, which the
+    server may have unloaded after its idle time. What to tell the user, if anything."""
+    name = environment.get(BACKEND_VARIABLE)
+    if name is None:
+        return None
+    gpu_orc = backend_named(config, name).gpu_orc
+    if gpu_orc is None:
+        return None
+    base_url, model = environment[BASE_URL_VARIABLE], environment[MODEL_VARIABLE]
+    lines = free_for_model(gpu_orc, base_url, model, request)
+    return "\n".join(f"GPU-Orc: {line}" for line in lines) or None
 
 
 def split_effort(
