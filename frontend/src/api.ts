@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import { hostOf, rootOf } from './hostPaths'
+import { answeredByProxyLogin } from './proxyLogin'
 
 /** A model a profile offers at start; the note is shown beside it (e.g. until when it is free). */
 export interface ModelChoice {
@@ -526,6 +527,13 @@ async function fetchApi(method: string, path: string, options: SendOptions = {})
   } catch (error) {
     // fetch only rejects when no HTTP response arrived at all (server down, network gone).
     throw new ApiError(0, NETWORK_ERROR, String(error), null)
+  }
+  if (answeredByProxyLogin(response.redirected, response.headers.get('Content-Type'))) {
+    // The reverse proxy's login has run out: reloading the page goes through the proxy again (the
+    // service worker does not answer navigations, vite.config.ts), which shows its login page and
+    // then sends the user back here.
+    window.location.reload()
+    throw new ApiError(0, NETWORK_ERROR, 'login of the reverse proxy has run out', null)
   }
   // Only an answer of the page's own app says whether the page is out of date: another machine's
   // app may be at another build, and from a page of its own the root's is not the page's.

@@ -36,10 +36,12 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       // Shows Agent-Orc's push messages (public/push-sw.js).
-      // Every page the app is asked for is answered with its start page, except what the server
-      // itself serves under /api (a download, a picture or a file in a tab of its own) and the apps
-      // of other machines under /hosts (each has its own start page).
-      workbox: { importScripts: ['push-sw.js'], navigateFallbackDenylist: [/\/api\//, /\/hosts\//] },
+      // Pages always come from the server, never from the cache: behind a reverse proxy with a login
+      // of its own (narnia: Authelia) only a navigation that reaches the proxy can show its login
+      // page, so the start page is neither cached nor handed out for navigations (the router works
+      // with #, the server is only ever asked for the start page). Offline the app could not reach its
+      // agents anyway; scripts and styles stay cached.
+      workbox: { importScripts: ['push-sw.js'], navigateFallback: null, globPatterns: ['**/*.{js,css}'] },
       // The manifest request must carry credentials when a reverse proxy uses HTTP basic auth.
       useCredentials: true,
       manifest: {
