@@ -29,6 +29,7 @@ const toast = useToast()
 const { locale } = useI18n()
 const answersAll = useAnswersAll(props.sessionId)
 const { sessions } = useSessions()
+const session = computed(() => sessions.value.find((candidate) => candidate.id === props.sessionId))
 const speech = useSpeech()
 const turns = ref<Turn[]>([])
 const spoken = ref<SpokenRequest[]>([])
@@ -37,7 +38,7 @@ const box = ref<HTMLElement>()
 const zoomed = ref<HTMLElement>()
 const { zoomStyle } = useViewZoom(zoomed, box)
 // The files and folders the answers name open on a click, as in the terminal.
-useAnswerFileLinks(zoomed, () => sessions.value.find((session) => session.id === props.sessionId)?.path)
+useAnswerFileLinks(zoomed, () => session.value?.path)
 let timer: number | undefined
 // What was marked as read before this view opened; what has been marked or read aloud since is in
 // `seenIds`.
@@ -105,10 +106,7 @@ const shown = computed<Shown[]>(() =>
 const everyText = computed(() => shown.value.flatMap((entry) => entry.texts))
 const unread = computed(() => everyText.value.filter((text) => isUnread(text, seenBefore.value, seenIds.value)))
 
-const agentName = computed(() => {
-  const session = sessions.value.find((candidate) => candidate.id === props.sessionId)
-  return session ? sessionName(session) : props.sessionId
-})
+const agentName = computed(() => (session.value ? sessionName(session.value) : props.sessionId))
 
 function speakable(texts: AnswerText[]): Speakable[] {
   return texts.map((text) => ({ id: text.id, text: text.text, label: agentName.value }))
@@ -265,6 +263,11 @@ function jog(lines: number): void {
           </button>
         </template>
       </template>
+      <!-- Away from the terminal, this shows that the agent is still working on an answer. -->
+      <span v-if="session?.busy" class="ml-auto flex items-center gap-1.5 text-xs text-amber-300" role="status">
+        <span class="size-3.5 animate-spin rounded-full border-2 border-amber-300 border-t-transparent" aria-hidden="true" />
+        {{ $t('sessions.working') }}
+      </span>
     </div>
     <div class="relative flex min-h-0 flex-1">
     <div
