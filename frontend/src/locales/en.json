@@ -12,8 +12,8 @@
     "files": "Files",
     "workspace": "Workspace",
     "notes": "Notes",
-    "peers": "Conversations",
-    "consumption": "Consumption",
+    "peers": "Chats",
+    "consumption": "Usage",
     "home": "To the agents page"
   },
   "common": {
@@ -320,7 +320,7 @@
       {
         "title": "Header and pages",
         "items": [
-          "The pages Agents, Workspace, Notes, Files and Consumption are tabs in the header from 1024 px width; below that (phone, tablet upright) they are in the bar at the bottom. The workspace and an agent's page have no bottom bar, so the terminal gets the room; there the tile icon at the top left opens all pages.",
+          "The pages Agents, Workspace, Notes, Files and Usage are tabs in the header from 1024 px width; below that (phone, tablet upright) they are in the bar at the bottom. The workspace and an agent's page have no bottom bar, so the terminal gets the room; there the tile icon at the top left opens all pages.",
           "**Top right**: language (DE/EN, for this device), this help (light bulb), the settings (☰) and log out.",
           "Token figures are written in the language of the interface: English k, M, B, T and Q; German Tsd., Mio., Mrd., Bio. and Brd."
         ]
@@ -419,7 +419,7 @@
         ]
       },
       {
-        "title": "Consumption",
+        "title": "Usage",
         "items": [
           "Tokens from all Claude conversations on this machine, per day, project and model, for 7, 14 or 30 days – from the terminal, VS Code and subagents too. Large figures are written in the language of the interface (k, M, B, T, Q, or in German Tsd., Mio., Mrd., Bio., Brd.)."
         ]
@@ -542,7 +542,7 @@
     "offHint": "The cache is not kept warm. Click to switch on."
   },
   "consumption": {
-    "title": "Consumption",
+    "title": "Usage",
     "days": "{count} days",
     "hint": "Tokens from all Claude conversations on all machines – from Agent-Orc, the terminal and VS Code, subagents included. The figures come from Claude's own transcripts (as the API reports them); this is not a bill.",
     "loading": "Counting …",
@@ -772,7 +772,7 @@
     "pictures": "{count} picture | {count} pictures"
   },
   "peers": {
-    "title": "Conversations",
+    "title": "Chats",
     "view": {
       "tree": "By conversation",
       "timeline": "Timeline",

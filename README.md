@@ -102,7 +102,7 @@ that run Agent-Orc can be shown in the same app, through an SSH tunnel ([Several
   terminal, a command would otherwise run at once), which beats marking exactly the right
   letters on a phone.
 
-**Conversations** (with [AI-Connect](https://github.com/Peuqui/AI-Connect), the bridge that lets agent sessions talk to each other; optional)
+**Chats** (with [AI-Connect](https://github.com/Peuqui/AI-Connect), the bridge that lets agent sessions talk to each other; optional)
 - Read along live: by conversation (a chat as in a messenger: you on the right, of two agents the
   one who began on the left, the bridge's notices small in the middle), as a timeline, or as
   lanes (a sequence diagram with an arrow per message); the agents online with their state

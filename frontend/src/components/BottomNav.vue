@@ -8,7 +8,8 @@ useHeightVariable('--bottom-nav-height', 'bar')
 
 <!-- In the controls' size, and there whether it shows depends on the room it has then (the
      container), like the tabs in the page header it stands in for. The outer bar is not zoomed:
-     its measured height is what is seen. A tab too narrow for its name shows only the icon. -->
+     its measured height is what is seen. A tab too narrow for its name shows only the icon; a name a little too long is cut
+     with an ellipsis instead of running into its neighbour. -->
 <template>
   <nav ref="bar" class="fixed inset-x-0 bottom-0 z-30">
     <div class="controls-zoom @container">
@@ -24,7 +25,7 @@ useHeightVariable('--bottom-nav-height', 'bar')
           :aria-label="$t(item.label)"
         >
           <AppIcon :name="item.icon" />
-          <span class="@max-[3.5rem]:hidden">{{ $t(item.label) }}</span>
+          <span class="max-w-full truncate px-0.5 @max-[3.5rem]:hidden">{{ $t(item.label) }}</span>
         </RouterLink>
       </div>
     </div>
