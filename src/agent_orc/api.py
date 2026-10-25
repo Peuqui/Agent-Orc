@@ -318,7 +318,11 @@ class FolderBusyError(RuntimeError):
     """An agent session runs in this folder or below it."""
 
 
-# Single place mapping domain errors to HTTP status codes.
+# Before the TTS-Suite's error code in an error answer (the page's errors.tts.<code>).
+SPEECH_SERVICE_ERROR_PREFIX = "tts."
+
+# Single place mapping domain errors to HTTP status codes (the TTS-Suite's errors keep their own
+# code: _speech_service_error).
 ERROR_STATUS: dict[type[Exception], int] = {
     OutsideScopeError: status.HTTP_403_FORBIDDEN,
     FileNotFoundError: status.HTTP_404_NOT_FOUND,
@@ -367,7 +371,6 @@ ERROR_STATUS: dict[type[Exception], int] = {
     announcing.UnknownRoomError: status.HTTP_404_NOT_FOUND,
     announcing.TextTooLongError: status.HTTP_413_CONTENT_TOO_LARGE,
     announcing.AnnounceError: status.HTTP_502_BAD_GATEWAY,
-    speech_service.SpeechServiceError: status.HTTP_502_BAD_GATEWAY,
     speech_service.NothingSwitchedOnError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     TtsChoiceInvalidError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     SharedSettingsInvalidError: status.HTTP_422_UNPROCESSABLE_CONTENT,
@@ -1222,6 +1225,7 @@ def create_app(
 
     for error_type, status_code in ERROR_STATUS.items():
         app.add_exception_handler(error_type, _error_handler(status_code))
+    app.add_exception_handler(speech_service.SpeechServiceError, _speech_service_error)
 
     def require_login(request: Request) -> None:
         if not is_logged_in(request.cookies.get(SESSION_COOKIE)):
@@ -2670,6 +2674,16 @@ def event_stream(events: AsyncGenerator[str], stopping: asyncio.Event) -> Stream
         until_stopped(events, stopping),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"},
+    )
+
+
+async def _speech_service_error(_request: Request, error: Exception) -> JSONResponse:
+    """The TTS-Suite's own error code goes on (prefixed), so the page can say what it means."""
+    # Registered for this type only; Starlette types its handlers with Exception.
+    assert isinstance(error, speech_service.SpeechServiceError)
+    return JSONResponse(
+        {"error": f"{SPEECH_SERVICE_ERROR_PREFIX}{error.code}", "detail": str(error)},
+        status_code=status.HTTP_502_BAD_GATEWAY,
     )
 
 

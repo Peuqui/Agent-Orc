@@ -206,7 +206,24 @@
     "UnknownHostError": "Diesen Rechner gibt es nicht.",
     "InvalidBaseDirError": "Das ist kein vorhandener Ordner im Home-Verzeichnis.",
     "PeerSendError": "AI-Connect hat die Nachricht nicht angenommen.",
-    "UserTokenMissingError": "AI-Connect hat noch kein User-Token. Erzeuge es im Terminal mit installer.py user-token und starte die Bridge neu."
+    "UserTokenMissingError": "AI-Connect hat noch kein User-Token. Erzeuge es im Terminal mit installer.py user-token und starte die Bridge neu.",
+    "NothingSwitchedOnError": "In den Einstellungen ist keine Engine der TTS-Suite eingeschaltet (Vorlesen → Engines des TTS-Dienstes …).",
+    "tts": {
+      "unreachable": "Die TTS-Suite antwortet nicht. Läuft der Dienst?",
+      "no_engine": "Keine der eingeschalteten Stimmen der TTS-Suite kann gerade sprechen. Schalte in den Einstellungen unter Vorlesen → Engines des TTS-Dienstes eine weitere ein. (Meldung der Suite: {detail})",
+      "starting": "Die Stimme startet gerade noch. Versuch es in ein paar Sekunden noch einmal.",
+      "overloaded": "Die Stimme hat gerade zu viele Vorlesungen auf einmal. Versuch es gleich noch einmal.",
+      "unknown_engine": "Diese Stimme gibt es in der TTS-Suite nicht mehr. Wähle die Engines in den Einstellungen neu.",
+      "unknown_host": "Den Rechner dieser Stimme kennt die TTS-Suite nicht mehr. Wähle die Engines in den Einstellungen neu.",
+      "invalid_request": "Die gewählten Engines passen nicht zur TTS-Suite. Wähle sie in den Einstellungen neu. (Meldung der Suite: {detail})",
+      "reading_aborted": "Die Vorlesung wurde abgebrochen, weil die Grafikkarte gerade für etwas anderes gebraucht wird. Du kannst die Antwort danach erneut vorlesen lassen. (Meldung der Suite: {detail})",
+      "engine_control_failed": "Die TTS-Suite konnte die Stimme nicht starten: Docker oder der Rechner der Stimme hat nicht reagiert. (Meldung der Suite: {detail})",
+      "unsupported_language": "Für diese Sprache hat die TTS-Suite keine Texte.",
+      "unauthorized": "Die TTS-Suite verlangt ein Token. Trag die Datei als token_file im Abschnitt tts_suite der Agent-Orc-Config ein.",
+      "bad_request": "Die TTS-Suite hat die Anfrage abgelehnt: {detail}",
+      "config_invalid": "Die Konfiguration der TTS-Suite ist fehlerhaft: {detail}",
+      "incomplete": "Die TTS-Suite hat mitten in einem Stück aufgehört. Lass die Antwort erneut vorlesen."
+    }
   },
   "dictation": {
     "start": "Diktat starten",

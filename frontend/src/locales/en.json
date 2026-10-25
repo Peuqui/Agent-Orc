@@ -206,7 +206,24 @@
     "UnknownHostError": "No such machine.",
     "InvalidBaseDirError": "That is not an existing folder in the home directory.",
     "PeerSendError": "AI-Connect did not take the message.",
-    "UserTokenMissingError": "AI-Connect has no user token yet. Create it in a terminal with installer.py user-token and restart the bridge."
+    "UserTokenMissingError": "AI-Connect has no user token yet. Create it in a terminal with installer.py user-token and restart the bridge.",
+    "NothingSwitchedOnError": "No engine of the TTS-Suite is switched on in the settings (Read aloud → Engines of the TTS service …).",
+    "tts": {
+      "unreachable": "The TTS-Suite does not answer. Is the service running?",
+      "no_engine": "None of the TTS-Suite voices switched on can speak right now. Switch on another one in the settings under Read aloud → Engines of the TTS service. (The suite said: {detail})",
+      "starting": "The voice is still starting. Try again in a few seconds.",
+      "overloaded": "The voice has too many readings at once right now. Try again shortly.",
+      "unknown_engine": "The TTS-Suite no longer has this voice. Choose the engines again in the settings.",
+      "unknown_host": "The TTS-Suite no longer knows the machine of this voice. Choose the engines again in the settings.",
+      "invalid_request": "The chosen engines do not fit the TTS-Suite. Choose them again in the settings. (The suite said: {detail})",
+      "reading_aborted": "The reading was stopped because the graphics card is needed for something else right now. You can have the answer read again afterwards. (The suite said: {detail})",
+      "engine_control_failed": "The TTS-Suite could not start the voice: Docker or the voice's machine did not respond. (The suite said: {detail})",
+      "unsupported_language": "The TTS-Suite has no texts for this language.",
+      "unauthorized": "The TTS-Suite wants a token. Enter its file as token_file in the tts_suite section of Agent-Orc's config.",
+      "bad_request": "The TTS-Suite refused the request: {detail}",
+      "config_invalid": "The TTS-Suite's configuration is broken: {detail}",
+      "incomplete": "The TTS-Suite stopped in the middle of a piece. Have the answer read again."
+    }
   },
   "dictation": {
     "start": "Start dictation",

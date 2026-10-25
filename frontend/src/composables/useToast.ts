@@ -25,13 +25,14 @@ function dismiss(id: number): void {
   toasts.value = toasts.value.filter((toast) => toast.id !== id)
 }
 
-/** Translate an API error by its code; unknown codes show the server's detail text. */
+/** Translate an API error by its code; unknown codes show the server's detail text. A text may
+ * name it as {detail}. */
 export function errorText(error: unknown): string {
   if (!(error instanceof ApiError)) return String(error)
   const key = `errors.${error.code}`
   if (!i18n.global.te(key)) return error.message
   const minutes = Math.ceil((error.retryAfterSeconds ?? 0) / SECONDS_PER_MINUTE)
-  return i18n.global.t(key, { minutes })
+  return i18n.global.t(key, { minutes, detail: error.message })
 }
 
 function clear(): void {

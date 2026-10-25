@@ -395,8 +395,9 @@ def test_a_service_that_refuses_is_a_bad_gateway_with_its_reason(
     client = make_client(clock, tmp_path, monkeypatch, service)
     choose(client, entry("piper"))
     answer = client.post("/api/tts/speak", json={"text": "fail", "language": "en"})
+    # The service's own code goes on, so the page can say what it means.
     assert answer.status_code == 502
-    assert "503: nobody can speak" in answer.text
+    assert answer.json() == {"error": "tts.no_engine", "detail": "nobody can speak"}
 
 
 def test_a_service_that_is_not_there_is_a_bad_gateway(
@@ -404,8 +405,11 @@ def test_a_service_that_is_not_there_is_a_bad_gateway(
 ) -> None:
     client = make_client(clock, tmp_path, monkeypatch, "http://127.0.0.1:1")
     choose(client, entry("piper"))
-    assert client.post("/api/tts/speak", json={"text": "Hi", "language": "en"}).status_code == 502
-    assert client.get("/api/tts/catalog").status_code == 502
+    for answer in (
+        client.post("/api/tts/speak", json={"text": "Hi", "language": "en"}),
+        client.get("/api/tts/catalog"),
+    ):
+        assert answer.status_code == 502 and answer.json()["error"] == "tts.unreachable"
 
 
 def test_the_token_goes_to_the_service_only_when_configured(

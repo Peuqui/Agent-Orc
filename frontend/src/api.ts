@@ -424,6 +424,8 @@ const NO_CONTENT = 204
 // Sent by the server with the id of its installed build (agent_orc.api.BUILD_ID_HEADER).
 const BUILD_ID_HEADER = 'X-Build-Id'
 export const NETWORK_ERROR = 'NetworkError'
+/** Before the TTS-Suite's own error code (agent_orc.api.SPEECH_SERVICE_ERROR_PREFIX): errors.tts.<code>. */
+export const SPEECH_SERVICE_ERROR_PREFIX = 'tts.'
 /** What a reverse proxy answers while the app behind it is down (502 Bad Gateway, 503, 504). */
 const PROXY_UNREACHABLE_STATUSES = [502, 503, 504]
 

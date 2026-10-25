@@ -20,10 +20,17 @@ FRAMES_MEDIA_TYPE = "application/x-tts-frames"
 CHUNK_BYTES = 16384
 # Not `Authorization`: a login in front of the TTS-Suite would take that header.
 TOKEN_HEADER = "X-TTS-Suite-Token"
+# The code when the service gives no answer at all (its own codes: docs/INTERFACE.md).
+UNREACHABLE = "unreachable"
 
 
 class SpeechServiceError(RuntimeError):
-    """The service cannot be reached or refused; the message is what it said."""
+    """The service cannot be reached or refused: its error code (or UNREACHABLE), and the
+    message is what it said."""
+
+    def __init__(self, code: str, detail: str) -> None:
+        super().__init__(detail)
+        self.code = code
 
 
 class NothingSwitchedOnError(ValueError):
@@ -79,13 +86,15 @@ def _open(config: TtsSuiteConfig, request: urllib.request.Request) -> HTTPRespon
     try:
         response: HTTPResponse = urllib.request.urlopen(request, timeout=config.timeout_seconds)
     except urllib.error.HTTPError as error:
-        detail = error.read().decode(errors="replace")
+        text = error.read().decode(errors="replace")
         # The service answers `{"error", "detail"}`; anything else is passed on as it came.
+        code, detail = f"http{error.code}", text
         with contextlib.suppress(ValueError, KeyError, TypeError):
-            detail = json.loads(detail)["detail"]
-        raise SpeechServiceError(f"{error.code}: {detail}") from error
+            answer = json.loads(text)
+            code, detail = answer["error"], answer["detail"]
+        raise SpeechServiceError(code, detail) from error
     except (urllib.error.URLError, TimeoutError) as error:
-        raise SpeechServiceError(str(error)) from error
+        raise SpeechServiceError(UNREACHABLE, str(error)) from error
     return response
 
 

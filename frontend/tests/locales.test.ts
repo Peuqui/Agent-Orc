@@ -44,3 +44,32 @@ test('the languages have the same texts', () => {
   assert.deepEqual(german.filter((path) => !english.includes(path)), [])
   assert.deepEqual(english.filter((path) => !german.includes(path)), [])
 })
+
+test('every way a reading can fail is explained', () => {
+  // The TTS-Suite's codes for a reading (its docs/INTERFACE.md, "The answer: frames"), and
+  // Agent-Orc's own: no answer at all, a stream broken off in the middle of a piece.
+  const codes = [
+    'no_engine',
+    'starting',
+    'overloaded',
+    'unknown_engine',
+    'unknown_host',
+    'invalid_request',
+    'reading_aborted',
+    'engine_control_failed',
+    'bad_request',
+    'config_invalid',
+    'unsupported_language',
+    'unauthorized',
+    'unreachable',
+    'incomplete',
+  ]
+  for (const locale of LOCALES) {
+    const explained = (load(locale).errors as Messages).tts as Messages
+    assert.deepEqual(
+      codes.filter((code) => typeof explained[code] !== 'string'),
+      [],
+      locale,
+    )
+  }
+})

@@ -3,7 +3,7 @@
 // see announce.py) and a TTS-Suite service (see speech_service.py) join when Agent-Orc's config has
 // them.
 import { ref } from 'vue'
-import { api } from './api'
+import { ApiError, api, SPEECH_SERVICE_ERROR_PREFIX } from './api'
 import { FrameReader } from './audioFrames'
 import { i18n } from './i18n'
 import { ReplayCache } from './replayCache'
@@ -152,11 +152,15 @@ function echo(label: string, maxChars: number): SpeechEngine {
   }
 }
 
-/** What the service says when it fails after a reading has begun: `{error, detail}`. */
-function frameError(body: Uint8Array): Error {
+/** What the service says when it fails after a reading has begun: `{error, detail}`, as the same
+ * error as one before it began (its code under errors.tts). */
+function frameError(status: number, body: Uint8Array): ApiError {
   const answer = JSON.parse(new TextDecoder().decode(body)) as { error: string; detail: string }
-  return new Error(`${answer.error}: ${answer.detail}`)
+  return new ApiError(status, SPEECH_SERVICE_ERROR_PREFIX + answer.error, answer.detail, null)
 }
+
+// Agent-Orc's own code (errors.tts) for a stream that broke off in the middle of a piece.
+const INCOMPLETE = 'incomplete'
 
 /** A piece of what the service made: audio, or a pause between two pieces. */
 type ReplayPiece = { buffer: AudioBuffer } | { pauseMs: number }
@@ -222,7 +226,7 @@ function ttsSuite(label: string): SpeechEngine {
         const { done, value } = await reader.read()
         if (done) break
         for (const { header, body } of frames.push(value)) {
-          if (header.kind === 'error') throw frameError(body)
+          if (header.kind === 'error') throw frameError(response.status, body)
           let piece: ReplayPiece
           if (header.kind === 'audio' && (header.pause_ms ?? 0) > 0) {
             piece = { pauseMs: header.pause_ms as number }
@@ -233,7 +237,9 @@ function ttsSuite(label: string): SpeechEngine {
           queue(piece)
         }
       }
-      if (frames.incomplete) throw new Error('the speech service ended in the middle of a piece')
+      if (frames.incomplete) {
+        throw new ApiError(response.status, SPEECH_SERVICE_ERROR_PREFIX + INCOMPLETE, 'the speech service ended in the middle of a piece', null)
+      }
       replays.set(key, recorded)
     }
 
