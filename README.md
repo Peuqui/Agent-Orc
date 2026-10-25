@@ -449,6 +449,12 @@ A machine controlled from another one has no login and no port at all: it listen
 socket in a folder that only its user may enter (checked at every start), and what gets in is
 whoever may log in to that machine over SSH with the key. Keep that key as safe as the login.
 
+## Star History
+
+![Star History](https://raw.githubusercontent.com/Peuqui/Traffic/main/data/Agent-Orc/star-history.svg)
+
+<sub>Recorded daily in [Peuqui/Traffic](https://github.com/Peuqui/Traffic), together with views and clones. GitHub restricted the stargazer API to repo admins on 2026-06-30, so external chart services now need a token with write access.</sub>
+
 ## License
 
 [PolyForm Noncommercial 1.0.0](LICENSE): free to download and use for any noncommercial purpose; commercial use needs the author's permission.
