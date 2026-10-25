@@ -16,9 +16,14 @@ Handed over to a fresh session (a switch next to the automatic one): the request
 write its handover to a known file and end its turn, instead of going on. An agent asked in the
 middle of its work tends to go back to it after writing; so once the file is written and settled,
 Agent-Orc interrupts it (Esc, as the user would) rather than wait for its turn to end. Then it
-types /clear (Claude Code starts a new conversation in the same folder, with CLAUDE.md and memory)
-and then the request to read the file and go on: no compaction, and the new conversation starts
-small. The conversations before stay listed for the answers view.
+types /clear (Claude Code starts a new conversation in the same folder, with CLAUDE.md and memory):
+no compaction, and the new conversation starts small. The request to read the file and go on
+must come first in it, before what any other hook wakes the agent with (AI-Connect reports a
+message that came during the handover at once). So it is left for the new conversation's
+SessionStart hook, which Claude Code runs to its end before the conversation takes anything in.
+Then Agent-Orc types the request as well: it starts the agent when nothing else woke it, and a
+model may not follow an instruction that only came from a hook. The conversations before stay
+listed for the answers view.
 """
 
 import json
@@ -51,6 +56,11 @@ ADVISED = "advised"
 # Handed over to a fresh session: /clear typed, then the request to read the handover.
 CLEARED = "cleared"
 RESUMED = "resumed"
+# The request to read the handover, left for the new conversation (a file per agent): its
+# SessionStart hook (`agent-orc agent-session-start`) puts it into the context before any turn
+# runs, so it comes first, before anything another hook wakes the agent with.
+RESUME_DIR = "handover-resume"
+TAKEN_SUFFIX = ".taken"
 
 
 @dataclass(frozen=True)
@@ -102,6 +112,41 @@ def handover_written(folder: Path, asked_at: float, now: float) -> bool:
         return False
     modified = path.stat().st_mtime
     return modified >= asked_at and now - modified >= SETTLED_SECONDS
+
+
+def _resume_file(session_id: str) -> Path:
+    return state_dir() / RESUME_DIR / session_id
+
+
+def _taken_file(session_id: str) -> Path:
+    return state_dir() / RESUME_DIR / f"{session_id}{TAKEN_SUFFIX}"
+
+
+def leave_resume_request(session_id: str, prompt: str) -> None:
+    """Just before /clear: the request to read the handover, for the new conversation's start."""
+    drop_resume_request(session_id)
+    write_atomically(_resume_file(session_id), prompt)
+
+
+def take_resume_request(session_id: str) -> str | None:
+    """At the start of a new conversation (its SessionStart hook): the request left for it, now
+    taken; None when none waits."""
+    path = _resume_file(session_id)
+    if not path.is_file():
+        return None
+    prompt = path.read_text(encoding="utf-8")
+    path.rename(_taken_file(session_id))
+    return prompt
+
+
+def resume_request_taken(session_id: str) -> bool:
+    """The new conversation has started and taken the request into its context."""
+    return _taken_file(session_id).is_file()
+
+
+def drop_resume_request(session_id: str) -> None:
+    _resume_file(session_id).unlink(missing_ok=True)
+    _taken_file(session_id).unlink(missing_ok=True)
 
 
 def follow_course(progress: str, busy: bool) -> str:

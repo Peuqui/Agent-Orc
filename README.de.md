@@ -39,8 +39,8 @@ einen SSH-Tunnel ([Mehrere Rechner](#mehrere-rechner)).
   Gesprächen; eine Übergabe-Empfehlung, sobald der Kontext eines Agenten groß wird. Auf Wunsch
   fordert Agent-Orc die Übergabe selbst an und kann an eine frische Sitzung übergeben, statt
   Claude Code komprimieren zu lassen: Der Agent schreibt `.agent-orc/handover.md` und hört auf,
-  `/clear` beginnt ein neues Gespräch im Ordner, das die Übergabe liest und weitermacht; die
-  Antworten-Ansicht zeigt beide.
+  `/clear` beginnt ein neues Gespräch im Ordner, das zuerst die Übergabe liest (vor allem, womit
+  ein anderer Hook es weckt) und weitermacht; die Antworten-Ansicht zeigt beide.
 - Hält auf Wunsch den Zwischenspeicher ruhender Agenten warm (eine winzige Bitte kurz vor dem
   Ablauf), je Agent einzuschalten, damit die nächste Nachricht ohne Wartezeit kommt. Der Schalter
   übersteht einen Neustart von Agent-Orc und endet mit der Sitzung des Agenten.

@@ -74,7 +74,10 @@ terminal:
 # the handover in {file} (.agent-orc/handover.md in the agent's folder) and the end of the turn;
 # once the file is written, Agent-Orc interrupts the agent (an agent asked in the middle of its
 # work tends to go on), /clear starts a new conversation in the folder, and resume_prompt has it
-# read the handover and go on.
+# read the handover and go on. resume_prompt comes first in the new conversation, before anything
+# another hook wakes it with: the profile's SessionStart hook agent-session-start puts it into
+# the context before any turn runs (without that hook the handover does not go on); then it is
+# typed as well, as the user's own word.
 handover:
   advice_percent: 90
   compact_percent: 97
@@ -205,7 +208,8 @@ tmux:
 # request on the agent's card too (the terminal still asks; whichever answers first decides);
 # agent-tool-done takes a request answered in the terminal off the card again, agent-limited
 # plans the resume after a usage limit, agent-compacting and agent-compacted mark an agent that
-# shrinks its context as working (no Stop follows it). All only for sessions started by Agent-Orc.
+# shrinks its context as working (no Stop follows it), agent-session-start gives a new
+# conversation after a handover its request first. All only for sessions started by Agent-Orc.
 # Claude Code on other backends than Anthropic's, run by `agent-orc backend` (profiles below). A
 # backend is a service that speaks Anthropic's Messages API: models on a server of your own
 # (llama-swap in front of llama.cpp or vLLM) or in a cloud. Nothing is shared or switched between
@@ -238,6 +242,11 @@ agents:
         type: command
         command: agent-orc statusline
       hooks:
+        SessionStart:
+        - matcher: clear
+          hooks:
+          - type: command
+            command: agent-orc agent-session-start
         UserPromptSubmit:
         - hooks:
           - type: command

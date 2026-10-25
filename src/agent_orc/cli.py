@@ -53,6 +53,7 @@ from agent_orc.context import (
     store_activity,
     store_status,
 )
+from agent_orc.handover import take_resume_request
 from agent_orc.listen import SocketFolderError, prepare_socket
 from agent_orc.push import agent_message, send_to_all
 from agent_orc.schedule import mark_limited
@@ -145,6 +146,16 @@ def agent_free_cards() -> None:
     message = free_cards_message(config, os.environ)
     if message is not None:
         print(json.dumps({"systemMessage": message}))
+
+
+def agent_session_start() -> None:
+    """Hook command (Claude: SessionStart after /clear): a handover to a fresh session left the
+    request to read the handover for this new conversation; it goes into the context before any
+    turn runs, so it comes first."""
+    prompt = take_resume_request(os.environ[SESSION_ENV])
+    if prompt is not None:
+        output = {"hookEventName": "SessionStart", "additionalContext": prompt}
+        print(json.dumps({"hookSpecificOutput": output}))
 
 
 def agent_compacting() -> None:
@@ -278,6 +289,10 @@ COMMANDS = {
     "agent-busy": (agent_busy, "hook command: the agent started working"),
     "agent-idle": (agent_idle, "hook command: the agent finished its answer"),
     "agent-free-cards": (agent_free_cards, "hook command: free the graphics cards for the model"),
+    "agent-session-start": (
+        agent_session_start,
+        "hook command: a new conversation starts (the request after a handover)",
+    ),
     "agent-compacting": (agent_compacting, "hook command: the agent starts shrinking its context"),
     "agent-compacted": (agent_compacted, "hook command: the agent has shrunk its context"),
     "agent-limited": (agent_limited, "hook command: the usage limit stopped the agent"),

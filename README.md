@@ -35,7 +35,8 @@ that run Agent-Orc can be shown in the same app, through an SSH tunnel ([Several
   conversations; a handover advice once an agent's context grows large. On request Agent-Orc asks
   for the handover itself, and can hand over to a fresh session instead of letting Claude Code
   compact: the agent writes `.agent-orc/handover.md` and stops, `/clear` starts a new conversation
-  in the folder, which reads the handover and goes on; the answers view shows both.
+  in the folder, which reads the handover first (before anything another hook wakes it with)
+  and goes on; the answers view shows both.
 - Optionally keeps the prompt cache of resting agents warm (a tiny request shortly before it
   expires), switched on per agent, so the next message needs no wait. The switch stays on across
   restarts of Agent-Orc and ends with the agent's session.

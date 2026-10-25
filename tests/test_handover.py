@@ -1,6 +1,10 @@
+import json
 import os
 from pathlib import Path
 
+import pytest
+
+from agent_orc import cli
 from agent_orc.config import HandoverConfig
 from agent_orc.handover import (
     ADVISED,
@@ -11,10 +15,14 @@ from agent_orc.handover import (
     WORKING,
     HandoverAdvice,
     assess,
+    drop_resume_request,
     follow_course,
     handover_prompt,
     handover_written,
+    leave_resume_request,
+    resume_request_taken,
 )
+from agent_orc.sessions import SESSION_ENV
 
 CONFIG = HandoverConfig(
     advice_percent=90,
@@ -66,3 +74,24 @@ def test_the_handover_counts_as_written_once_new_and_settled(tmp_path: Path) -> 
     # Written since, but just now: the agent may still be writing.
     assert not handover_written(tmp_path, asked_at=100.0, now=150.0 + SETTLED_SECONDS - 1)
     assert handover_written(tmp_path, asked_at=100.0, now=150.0 + SETTLED_SECONDS)
+
+
+def test_the_new_conversation_takes_the_request_left_for_it(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv(SESSION_ENV, "agent-1")
+    # A conversation that starts without a handover: the hook adds nothing.
+    cli.agent_session_start()
+    assert capsys.readouterr().out == ""
+    leave_resume_request("agent-1", "read it")
+    assert not resume_request_taken("agent-1")
+    cli.agent_session_start()
+    shown = json.loads(capsys.readouterr().out)
+    context = {"hookEventName": "SessionStart", "additionalContext": "read it"}
+    assert shown == {"hookSpecificOutput": context}
+    # Taken once.
+    assert resume_request_taken("agent-1")
+    cli.agent_session_start()
+    assert capsys.readouterr().out == ""
+    drop_resume_request("agent-1")
+    assert not resume_request_taken("agent-1")

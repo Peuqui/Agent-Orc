@@ -109,11 +109,14 @@ from agent_orc.handover import (
     HandoverSwitches,
     advise,
     context_percent,
+    drop_resume_request,
     follow_course,
     handover_prompt,
     handover_written,
+    leave_resume_request,
     read_handover_switches,
     read_state,
+    resume_request_taken,
     write_handover_switches,
     write_state,
 )
@@ -928,20 +931,31 @@ def create_app(
         save_handovers()
 
     def hand_over_to_fresh_session(session: AgentSession, progress: str) -> None:
-        """The handover is written and the agent's turn is over: a new conversation, then the
-        request to read the handover. One step per check, so /clear has run before the next line
-        comes. The conversation before stays listed for the answers view."""
+        """The handover is written and the agent's turn is over: a new conversation, whose
+        SessionStart hook takes the request to read the handover into its context before any turn
+        runs. Once it has, the request is typed as well, at once: it starts the agent when nothing
+        else woke it, and it comes as the user's own word, as a model may not follow an
+        instruction from a hook (seen with Haiku). One step per check. The conversation before
+        stays listed for the answers view."""
+        prompt = handover_prompt(config.handover.resume_prompt)
         if progress == HANDOVER_DONE:
+            if session_busy(session):
+                return
             transcript = session_transcript(session)
             if transcript is not None:
                 handovers.previous.setdefault(session.id, []).append(str(transcript))
+            leave_resume_request(session.id, prompt)
             sessions.type_line(session.id, CLEAR_COMMAND)
             handover_progress[session.id] = HANDOVER_CLEARED
-        else:
-            sessions.type_line(session.id, handover_prompt(config.handover.resume_prompt))
-            handover_progress[session.id] = HANDOVER_RESUMED
-            handovers.fresh.discard(session.id)
-            handovers.asked_at.pop(session.id, None)
+            return
+        if not resume_request_taken(session.id):
+            # The new conversation has not started yet.
+            return
+        sessions.type_line(session.id, prompt)
+        drop_resume_request(session.id)
+        handover_progress[session.id] = HANDOVER_RESUMED
+        handovers.fresh.discard(session.id)
+        handovers.asked_at.pop(session.id, None)
 
     def interrupt_after_handover(session: AgentSession) -> None:
         """The handover file is written while the agent works on: it went back to its task after
@@ -1005,6 +1019,7 @@ def create_app(
         listed = sessions.list()
         for session_id in handover_progress.keys() - {s.id for s in listed}:
             del handover_progress[session_id]
+            drop_resume_request(session_id)
         early_handovers.intersection_update(handover_progress)
         handovers.fresh.intersection_update(handover_progress)
         for session_id in handovers.previous.keys() - {s.id for s in listed if s.running}:
@@ -1016,7 +1031,7 @@ def create_app(
             # whatever its context reports meanwhile.
             progress = handover_progress.get(session.id)
             if session.id in handovers.fresh and progress in (HANDOVER_DONE, HANDOVER_CLEARED):
-                if session.running and not session_busy(session) and can_take_handover(session):
+                if session.running and can_take_handover(session):
                     hand_over_to_fresh_session(session, progress)
                 continue
             asked_at = handovers.asked_at.get(session.id)

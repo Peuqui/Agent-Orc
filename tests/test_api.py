@@ -30,11 +30,17 @@ from agent_orc.config import Config, DictationConfig, HostConfig, ServerConfig, 
 from agent_orc.context import store_activity, store_status
 from agent_orc.effort import agent_settings_file
 from agent_orc.events import ChangeNotifier
-from agent_orc.handover import HandoverSwitches, read_state, write_handover_switches, write_state
+from agent_orc.handover import (
+    HandoverSwitches,
+    read_state,
+    take_resume_request,
+    write_handover_switches,
+    write_state,
+)
 from agent_orc.history import claude_project_dir
 from agent_orc.listen import prepare_socket
 from agent_orc.schedule import mark_limited, read_scheduled
-from agent_orc.sessions import SESSION_ENV
+from agent_orc.sessions import SESSION_ENV, SessionManager
 from agent_orc.state import state_dir
 from agent_orc.terminal import WS_CLOSE_SERVICE_RESTART, attach_environment
 from tests.conftest import Device, FakeClock, FakePushService, FakeStt
@@ -1559,8 +1565,13 @@ def test_automatic_handover_setting_is_kept(
     assert client.get("/api/handover").json() == {**settings, "auto": True, "fresh": True}
 
 
+@pytest.mark.parametrize("woken_by_another_hook", [False, True])
 def test_a_handover_to_a_fresh_session_clears_and_has_the_new_one_read_it(
-    config: Config, clock: FakeClock, home: Path, monkeypatch: pytest.MonkeyPatch
+    config: Config,
+    clock: FakeClock,
+    home: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    woken_by_another_hook: bool,
 ) -> None:
     monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
     with automatic_handovers(config, clock, monkeypatch, auto=True, fresh=True) as client:
@@ -1579,11 +1590,28 @@ def test_a_handover_to_a_fresh_session_clears_and_has_the_new_one_read_it(
         # The agent writes it but works on (an agent asked mid-work tends to): once the file has
         # settled it is interrupted, then a new conversation and the request to read the handover.
         monkeypatch.setattr("agent_orc.handover.SETTLED_SECONDS", 0)
+        # /clear in Claude Code: the new conversation's SessionStart hook takes the request to
+        # read the handover into its context. Another hook may wake it at once (AI-Connect with a
+        # message that came during the handover): the request is typed all the same, into that
+        # turn, not held back until it ends.
+        type_line = SessionManager.type_line
+        taken: list[str | None] = []
+
+        def clear_starts_a_conversation(manager: SessionManager, session: str, line: str) -> None:
+            type_line(manager, session, line)
+            if line == "/clear":
+                taken.append(take_resume_request(session))
+                if woken_by_another_hook:
+                    store_activity(session, busy=True)
+
+        monkeypatch.setattr(SessionManager, "type_line", clear_starts_a_conversation)
         handover = home / "projects" / ".agent-orc" / "handover.md"
         handover.parent.mkdir(exist_ok=True)
         handover.write_text("# Übergabe\n", encoding="utf-8")
         assert progress_becomes(client, "resumed")
         assert wait_for_text(client, session_id, "/clear")
+        [request] = taken
+        assert request is not None and request.startswith("This goes on from a handover")
         assert wait_for_text(client, session_id, "This goes on from a handover")
         text = client.get(f"/api/sessions/{session_id}/text").json()["text"]
         assert text.index("/clear") < text.index("This goes on from a handover")
