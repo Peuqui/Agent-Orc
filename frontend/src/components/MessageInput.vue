@@ -3,7 +3,8 @@ import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } 
 import { api } from '../api'
 import { MESSAGE_FIELD_ATTRIBUTE } from '../columns'
 import { useDictation } from '../composables/useDictation'
-import { appendDictated, draftOf } from '../composables/useDrafts'
+import { appendDictated, draftOf, reloadDraft } from '../composables/useDrafts'
+import { watchTranscriptions } from '../dictationHost'
 import { useSessions } from '../composables/useSessions'
 import { useSettings } from '../composables/useSettings'
 import { useZoomFactor } from '../composables/useViewZoom'
@@ -57,6 +58,18 @@ function showEnd(): void {
 }
 
 defineExpose({ focus: () => field.value?.focus() })
+
+// A dictation of this agent can run on after its field was gone (another workspace shown): shown
+// again, the field says so and takes the text in once it is there (dictationHost.ts).
+const transcribingElsewhere = ref(false)
+let stopWatching: (() => void) | undefined
+onMounted(() => {
+  stopWatching = watchTranscriptions(props.sessionId, (running) => {
+    if (transcribingElsewhere.value && !running) reloadDraft(props.sessionId)
+    transcribingElsewhere.value = running
+  })
+})
+onBeforeUnmount(() => stopWatching?.())
 
 // Attaching a photo, screenshot or file: it is stored in the agent's folder, and its path goes
 // into the text ("@path", as Claude Code reads files), where the question is added before sending.
@@ -301,7 +314,7 @@ function onKeydown(event: KeyboardEvent): void {
       :[MESSAGE_FIELD_ATTRIBUTE]="''"
       class="input min-h-10 flex-1 resize-none py-2 field-sizing-content"
       :style="{ maxHeight: `calc(40cqh / ${zoomFactor})` }"
-      :placeholder="dictation.state === 'transcribing' ? $t('dictation.transcribing') : $t('terminal.placeholder')"
+      :placeholder="dictation.state === 'transcribing' || transcribingElsewhere ? $t('dictation.transcribing') : $t('terminal.placeholder')"
       enterkeyhint="send"
       @keydown="onKeydown"
     />
