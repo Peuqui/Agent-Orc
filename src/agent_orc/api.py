@@ -995,7 +995,7 @@ def create_app(
             saved_switches = current
 
     def reset_switches(session_id: str) -> None:
-        """Back to the defaults, for an agent that starts anew."""
+        """Back to the defaults, for a new agent (one that starts, not one that is restarted)."""
         keep_warm_enabled.discard(session_id)
         answers_summaries.discard(session_id)
         save_switches()
@@ -1768,10 +1768,9 @@ def create_app(
 
     @app.post("/api/sessions/{session_id}/restart", dependencies=authenticated)
     def restart_session(session_id: str, body: RestartRequest | None = None) -> AgentSession:
-        """The user's restart of an agent: it begins anew, with its switches at their defaults."""
-        restarted = restart_agent(session_id, body)
-        reset_switches(session_id)
-        return restarted
+        """The user's restart of an agent: it goes on with its conversation, so its switches stay
+        as they were (a new agent in the folder starts with them at their defaults)."""
+        return restart_agent(session_id, body)
 
     def apply_model(session: AgentSession, model: str, effort: str | None) -> AgentSession:
         """Typed into a running agent that can switch in place, otherwise by resuming it."""

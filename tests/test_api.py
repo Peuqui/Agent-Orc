@@ -1947,7 +1947,7 @@ def test_keep_warm_is_switched_on_and_off_per_agent(client: TestClient, home: Pa
     assert client.put("/api/sessions/nope/keep-warm", json={"enabled": True}).status_code == 404
 
 
-def test_keep_warm_is_switched_off_by_every_start_and_restart(
+def test_the_switches_stay_through_a_restart_but_not_for_a_new_agent(
     client: TestClient, home: Path
 ) -> None:
     session_id = start_shell(client, home / "projects")
@@ -1957,9 +1957,11 @@ def test_keep_warm_is_switched_off_by_every_start_and_restart(
         return bool(client.get("/api/sessions").json()[0]["keep_warm"]["enabled"])
 
     client.put(url, json={"enabled": True})
+    client.put(f"/api/sessions/{session_id}/answers-mode", json={"all_texts": False})
+    # A restart goes on with the agent's conversation: its switches stay.
     assert client.post(f"/api/sessions/{session_id}/restart").status_code == 200
-    assert not enabled()
-    client.put(url, json={"enabled": True})
+    assert enabled()
+    assert client.get("/api/sessions").json()[0]["answers_all"] is False
     assert client.delete(f"/api/sessions/{session_id}").status_code == 204
     # Same folder, same id: the new agent must not inherit the switch.
     assert start_shell(client, home / "projects") == session_id
@@ -1997,10 +1999,9 @@ def test_answers_show_every_text_until_the_agent_is_set_to_summaries(
     assert answers_all()
     assert client.put(url, json={"all_texts": False}).status_code == 204
     assert not answers_all()
-    # Every device asks the same server; a restart of the agent is back to the default.
+    # Every device asks the same server; a restart of the agent keeps it.
     assert client.post(f"/api/sessions/{session_id}/restart").status_code == 200
-    assert answers_all()
-    client.put(url, json={"all_texts": False})
+    assert not answers_all()
     assert client.delete(f"/api/sessions/{session_id}").status_code == 204
     assert start_shell(client, home / "projects") == session_id
     assert answers_all()

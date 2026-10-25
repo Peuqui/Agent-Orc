@@ -44,7 +44,8 @@ einen SSH-Tunnel ([Mehrere Rechner](#mehrere-rechner)).
   weitermacht; die Antworten-Ansicht zeigt beide.
 - Hält auf Wunsch den Zwischenspeicher ruhender Agenten warm (eine winzige Bitte kurz vor dem
   Ablauf), je Agent einzuschalten, damit die nächste Nachricht ohne Wartezeit kommt. Der Schalter
-  übersteht einen Neustart von Agent-Orc und endet mit der Sitzung des Agenten.
+  übersteht einen Neustart von Agent-Orc und des Agenten (⟳); ein neuer Agent im Ordner beginnt
+  mit ihm aus.
 - Benachrichtigungen aufs Handy oder den Rechner, wenn ein Agent fertig ist oder auf eine
   Freigabe oder Antwort wartet (Web Push, pro Gerät einschaltbar); Antippen öffnet den Agenten.
 - Der Freigabe-Modus, in dem ein Agent startet, pro Projekt (Fragen, Bearbeiten, Auto, Planen;
