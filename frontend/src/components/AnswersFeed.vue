@@ -30,6 +30,8 @@ const { locale } = useI18n()
 const answersAll = useAnswersAll(props.sessionId)
 const { sessions } = useSessions()
 const session = computed(() => sessions.value.find((candidate) => candidate.id === props.sessionId))
+// A yes or no: the sessions come anew every few seconds, and a new object would draw the list anew.
+const busy = computed(() => session.value?.busy === true)
 const speech = useSpeech()
 const turns = ref<Turn[]>([])
 const spoken = ref<SpokenRequest[]>([])
@@ -107,6 +109,23 @@ const everyText = computed(() => shown.value.flatMap((entry) => entry.texts))
 const unread = computed(() => everyText.value.filter((text) => isUnread(text, seenBefore.value, seenIds.value)))
 
 const agentName = computed(() => (session.value ? sessionName(session.value) : props.sessionId))
+
+// The list is drawn anew whenever something it shows changes (a poll, the count of new answers below
+// while scrolling); turning markdown into HTML is by far the dearest part of that, slow on an old
+// tablet, so each answer's HTML is made once.
+const htmlOf = new Map<string, string>()
+
+function answerHtml(text: AnswerText): string {
+  const markdown = answersAll.value ? text.text : summaryOf(text.text)
+  const listenButton = speech.available.value
+  const key = `${listenButton}:${markdown}`
+  let html = htmlOf.get(key)
+  if (html === undefined) {
+    html = renderMarkdown(markdown, null, listenButton)
+    htmlOf.set(key, html)
+  }
+  return html
+}
 
 function speakable(texts: AnswerText[]): Speakable[] {
   return texts.map((text) => ({ id: text.id, text: text.text, label: agentName.value }))
@@ -264,7 +283,7 @@ function jog(lines: number): void {
         </template>
       </template>
       <!-- Away from the terminal, this shows that the agent is still working on an answer. -->
-      <span v-if="session?.busy" class="ml-auto flex items-center gap-1.5 text-xs text-amber-300" role="status">
+      <span v-if="busy" class="ml-auto flex items-center gap-1.5 text-xs text-amber-300" role="status">
         <span class="size-3.5 animate-spin rounded-full border-2 border-amber-300 border-t-transparent" aria-hidden="true" />
         {{ $t('sessions.working') }}
       </span>
@@ -329,7 +348,7 @@ function jog(lines: number): void {
             <div
               class="markdown note select-text"
               @click="readAgain($event, item)"
-              v-html="renderMarkdown(answersAll ? item.text : summaryOf(item.text), null, speech.available.value)"
+              v-html="answerHtml(item)"
             />
             <div class="flex items-center gap-2 text-xs text-slate-500">
               <span>{{ formatMoment(new Date(item.time), locale) }}</span>
