@@ -2,6 +2,7 @@ import { createApp } from 'vue'
 import { registerSW } from 'virtual:pwa-register'
 import App from './App.vue'
 import { currentHost } from './api'
+import { hostTranscription } from './dictationHost'
 import { setMachine } from './composables/useWorkspaceTab'
 import { i18n } from './i18n'
 import { router } from './router'
@@ -22,6 +23,9 @@ window.addEventListener('vite:preloadError', (event) => {
   event.preventDefault()
   void reloadToNewVersion()
 })
+
+// Before a workspace column can dictate.
+hostTranscription()
 
 // Before any workspace is shown (it keeps what it remembers per machine).
 setMachine(currentHost)

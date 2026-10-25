@@ -1,5 +1,6 @@
 import { computed, onScopeDispose, ref, type UnwrapNestedRefs } from 'vue'
 import { api } from '../api'
+import { transcribeForAgent } from '../dictationHost'
 import { useSettings } from './useSettings'
 import { START_BEEP, STOP_BEEP, playBeep } from '../sounds'
 
@@ -40,6 +41,8 @@ export type DictationState = 'idle' | 'recording' | 'transcribing' | 'listening'
 export function useDictation(
   onText: (text: string) => void,
   onError: (error: unknown) => void,
+  /** The agent whose field is dictated into: transcribed on the page at the top of the tab (dictationHost.ts). */
+  sessionId?: string,
 ) {
   const state = ref<DictationState>('idle')
   // Where the STT-Suite transcribes: one setting of this device (in the settings menu), the same for every agent.
@@ -106,7 +109,7 @@ export function useDictation(
     state.value = 'transcribing'
     failedAudio.value = null
     try {
-      const { text } = await api.dictate(audio, device.value)
+      const text = sessionId === undefined ? (await api.dictate(audio, device.value)).text : await transcribeForAgent(sessionId, audio, device.value)
       sttFailed.value = false
       if (text) onText(text)
     } catch (error) {

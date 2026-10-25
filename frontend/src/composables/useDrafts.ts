@@ -26,3 +26,10 @@ export function addToDraft(sessionId: string, text: string): void {
   load(sessionId)
   setDraft(sessionId, drafts[sessionId] ? `${drafts[sessionId]}\n${text}` : text)
 }
+
+/** After what the field holds, as a dictation is. Read afresh: the page at the top of the tab puts in
+ * a dictation for a column that was closed meanwhile, whose field was typed into on its own page. */
+export function appendDictated(sessionId: string, text: string): void {
+  const held = sessionStorage.getItem(KEY_PREFIX + sessionId) ?? ''
+  setDraft(sessionId, held ? `${held} ${text}` : text)
+}

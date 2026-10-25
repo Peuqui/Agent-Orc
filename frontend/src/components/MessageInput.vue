@@ -3,7 +3,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } 
 import { api } from '../api'
 import { MESSAGE_FIELD_ATTRIBUTE } from '../columns'
 import { useDictation } from '../composables/useDictation'
-import { draftOf } from '../composables/useDrafts'
+import { appendDictated, draftOf } from '../composables/useDrafts'
 import { useSessions } from '../composables/useSessions'
 import { useSettings } from '../composables/useSettings'
 import { useZoomFactor } from '../composables/useViewZoom'
@@ -31,7 +31,7 @@ const field = ref<HTMLTextAreaElement>()
 
 const { dictationSendsAtOnce } = useSettings()
 const dictation = reactive(useDictation(async (dictated) => {
-  text.value = text.value ? `${text.value} ${dictated}` : dictated
+  appendDictated(props.sessionId, dictated)
   // Longer than the field is high: the end, where the new words are, stays in view.
   await nextTick()
   showEnd()
@@ -47,7 +47,7 @@ const dictation = reactive(useDictation(async (dictated) => {
   if (!input) return
   input.focus()
   input.setSelectionRange(input.value.length, input.value.length)
-}, toast.error))
+}, toast.error, props.sessionId))
 
 function showEnd(): void {
   const input = field.value
