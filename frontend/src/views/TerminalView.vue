@@ -38,12 +38,12 @@ import {
   useTerminalView,
 } from '../composables/useSettings'
 import { COLUMN_CLOSE_EVENT, COLUMN_FULLSCREEN_EVENT, COLUMN_SWIPE_EVENT } from '../columns'
+import { ESC } from '../keyCatalog'
 import { useTouchScroll } from '../composables/useTouchScroll'
 
 const props = defineProps<{ id: string; embedded: boolean }>()
 
 const SCROLLBACK_LINES = 5000
-const ESC = '\x1b'
 // Ctrl+letter is the letter's code minus 64 ('@'): Ctrl+C = 0x03.
 const CTRL_OFFSET = 64
 const CTRL_RANGE_END = 95
@@ -625,7 +625,7 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <MessageInput ref="messageInput" :session-id="id" />
+    <MessageInput ref="messageInput" :session-id="id" @escape="sendInput(ESC)" />
 
     <KeyBar
       v-if="settings && !fullscreen"

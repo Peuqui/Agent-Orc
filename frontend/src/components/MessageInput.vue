@@ -20,6 +20,8 @@ import DictationRetry from './DictationRetry.vue'
 import PromptTemplates from './PromptTemplates.vue'
 
 const props = defineProps<{ sessionId: string }>()
+// Esc in the field goes to the agent, as the Esc of the extra keys: it interrupts it.
+const emit = defineEmits<{ escape: [] }>()
 const { zoomFactor, zoomStyle } = useZoomFactor()
 
 const toast = useToast()
@@ -213,6 +215,13 @@ async function submit(): Promise<void> {
 }
 
 function onKeydown(event: KeyboardEvent): void {
+  // Esc means nothing in the field itself; it still closes an open menu here and cancels a
+  // composition of the on-screen keyboard (IME), so then it stays with them.
+  if (event.key === 'Escape' && !event.isComposing && !attaching.value && !templates.value?.open) {
+    event.preventDefault()
+    emit('escape')
+    return
+  }
   if (isSendKey(event)) {
     event.preventDefault()
     void submit()

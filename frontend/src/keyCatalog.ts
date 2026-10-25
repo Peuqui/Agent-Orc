@@ -3,7 +3,7 @@ import type { TerminalKey } from './api'
 // What a terminal expects for a key (xterm's sequences): the keys offered for the extra-keys
 // bar, and the sequence of a key combination pressed while recording one.
 
-const ESC = '\x1b'
+export const ESC = '\x1b'
 
 function key(label: string, send: string): TerminalKey {
   return { label, send, modifier: null, submit: false }

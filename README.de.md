@@ -168,7 +168,8 @@ einen SSH-Tunnel ([Mehrere Rechner](#mehrere-rechner)).
   über dem Eingabefeld und gehen mit der nächsten Nachricht an den Agenten.
 - Sondertasten-Leiste (Esc, Tab, Shift+Tab, Pfeile, einrastendes Strg/Alt, …) für die
   Bildschirmtastatur, frei anpassbar und mit Text-Tasten (Makros); eine Textansicht zum
-  Markieren und Kopieren, anklickbare Links.
+  Markieren und Kopieren, anklickbare Links. Esc im Eingabefeld geht ebenfalls an den Agenten
+  (unterbricht ihn), außer es schließt ein Menü des Felds.
 - Auf dem Touchscreen fokussiert ein Tipp ins Terminal es (die Sondertasten wirken), ohne die
   Bildschirmtastatur hochzuholen; der Tastaturknopf am Ende der Sondertasten-Leiste holt sie
   herauf und wieder herunter und zeigt, wann sie oben ist. In einem normalen Terminal schreibt

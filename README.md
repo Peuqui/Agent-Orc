@@ -159,7 +159,8 @@ that run Agent-Orc can be shown in the same app, through an SSH tunnel ([Several
   above the input field and goes to the agent with the next message.
 - Extra-keys bar (Esc, Tab, Shift+Tab, arrows, sticky Ctrl/Alt, …) for the on-screen keyboard,
   freely arranged and with text keys (macros); a text view for selecting and copying, clickable
-  links.
+  links. Esc pressed in the message field goes to the agent as well (it interrupts it), unless it
+  closes a menu of the field.
 - On a touch screen a tap into the terminal focuses it (so the extra keys work) without raising
   the on-screen keyboard; the keyboard button at the end of the extra-keys bar raises and lowers
   it, and shows when it is up. In a plain terminal the keyboard then types into the terminal
