@@ -12,6 +12,7 @@ import { useViewZoom } from '../composables/useViewZoom'
 import { sessionName, useSessions } from '../composables/useSessions'
 import { type Speakable, useSpeech } from '../composables/useSpeech'
 import { useToast } from '../composables/useToast'
+import { JOG_TRACK_WIDTH_PX } from '../device'
 import { formatMoment } from '../format'
 import { LISTEN_REPLAY_CLASS, renderMarkdown } from '../markdown'
 import AnswerImages from './AnswerImages.vue'
@@ -283,14 +284,6 @@ function jog(lines: number): void {
         </template>
       </template>
       <!-- Away from the terminal, this shows that the agent is still working on an answer. -->
-      <!-- The spinner alone, so the toolbar does not wrap on a phone; the word is for screen readers and on hover. -->
-      <span
-        v-if="busy"
-        class="ml-auto size-3.5 animate-spin rounded-full border-2 border-amber-300 border-t-transparent"
-        role="status"
-        :aria-label="$t('sessions.working')"
-        :title="$t('sessions.working')"
-      />
     </div>
     <div class="relative flex min-h-0 flex-1">
     <div
@@ -389,6 +382,18 @@ function jog(lines: number): void {
     >
       ↓ {{ $t('answers.newBelow', { count: unreadBelow }) }}
     </button>
+    <!-- While the agent works: laid over the upper corner of the list, clear of the jog strip, so it
+         takes no room in the toolbar (which would wrap on a phone). -->
+    <span
+      v-if="busy"
+      class="absolute top-2 z-10 flex size-6 items-center justify-center rounded-full bg-slate-900/80"
+      :style="{ right: `calc(var(--spacing) * 3 + ${JOG_TRACK_WIDTH_PX}px)` }"
+      role="status"
+      :aria-label="$t('sessions.working')"
+      :title="$t('sessions.working')"
+    >
+      <span class="size-3.5 animate-spin rounded-full border-2 border-amber-300 border-t-transparent" aria-hidden="true" />
+    </span>
     <JogScroller @scroll="jog" />
     </div>
   </div>
