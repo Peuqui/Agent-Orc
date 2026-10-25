@@ -66,6 +66,8 @@ def config(home: Path, socket_name: str) -> Config:
     raw["server"]["cookie_secure"] = False  # TestClient talks plain HTTP
     raw["files"]["base_dir"] = str(home / "projects")
     raw["tmux"]["socket_name"] = socket_name
+    # The test windows hold 1000 tokens: due from 950 on (97 % less a reserve of 20).
+    raw["handover"]["reserve_tokens"] = 20
     raw["agents"] = {
         "sleeper": {
             "label": "Sleeper",
@@ -1545,7 +1547,13 @@ def test_automatic_handover_setting_is_kept(
     client: TestClient, home: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
-    settings = {"auto": False, "fresh": False, "advice_percent": 90, "threshold_percent": 95}
+    settings = {
+        "auto": False,
+        "fresh": False,
+        "advice_percent": 90,
+        "compact_percent": 97,
+        "reserve_tokens": 20,
+    }
     assert client.get("/api/handover").json() == settings
     assert client.put("/api/handover", json={"auto": True, "fresh": True}).status_code == 204
     assert client.get("/api/handover").json() == {**settings, "auto": True, "fresh": True}
@@ -1566,9 +1574,14 @@ def test_a_handover_to_a_fresh_session_clears_and_has_the_new_one_read_it(
         # Asked to write the handover to its file and stop, not to go on.
         assert progress_becomes(client, "working")
         assert wait_for_text(client, session_id, "hand over to a fresh session")
+        assert wait_for_text(client, session_id, ".agent-orc/handover.md")
         assert not wait_for_text(client, session_id, "/clear")
-        store_activity(session_id, busy=False)
-        # Written and the turn over: a new conversation, then the request to read the handover.
+        # The agent writes it but works on (an agent asked mid-work tends to): once the file has
+        # settled it is interrupted, then a new conversation and the request to read the handover.
+        monkeypatch.setattr("agent_orc.handover.SETTLED_SECONDS", 0)
+        handover = home / "projects" / ".agent-orc" / "handover.md"
+        handover.parent.mkdir(exist_ok=True)
+        handover.write_text("# Übergabe\n", encoding="utf-8")
         assert progress_becomes(client, "resumed")
         assert wait_for_text(client, session_id, "/clear")
         assert wait_for_text(client, session_id, "This goes on from a handover")

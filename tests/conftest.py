@@ -15,6 +15,14 @@ from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 
 
+@pytest.fixture(autouse=True)
+def own_state(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Every test keeps its state apart: the server reads and writes its state files (switches,
+    handovers, approvals) at start, and must never touch those of the machine it runs on. Tests
+    that put the state elsewhere set it again after this."""
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "own-state"))
+
+
 class FakeClock:
     def __init__(self) -> None:
         self.now = 1_000_000.0

@@ -20,6 +20,9 @@ EFFORT_PLACEHOLDER = "{effort}"
 SUFFIX_PLACEHOLDER = "{suffix}"
 # The agent's own settings file (AgentProfile.settings), in its command.
 SETTINGS_PLACEHOLDER = "{settings}"
+# In the handover prompts: the file the handover goes to, in the agent's folder.
+HANDOVER_FILE_PLACEHOLDER = "{file}"
+PERCENT = 100
 CONFIG_FILE_NAME = "config.yaml"
 CREDENTIALS_FILE_NAME = "credentials.json"
 
@@ -109,22 +112,30 @@ class HandoverConfig(StrictModel):
     # From here on the card advises the handover, and a push message says so once while
     # automatic handovers are off: early enough for the user to ask for it.
     advice_percent: int
-    # From here on the handover is due: typed into the agent while automatic handovers are on.
-    threshold_percent: int
+    # Where Claude Code compacts the context by itself, as a share of the window (measured: about
+    # 97 %).
+    compact_percent: int
+    # The handover is due once fewer tokens than this are left before that point (typed into the
+    # agent while automatic handovers are on): room for the request, the document and what the agent
+    # still does meanwhile, the same whatever the size of the window (as a share it would be 20,000
+    # tokens of a million but 4,000 of 200,000).
+    reserve_tokens: int
     # Typed into the agent to ask for its handover once its context is nearly full.
     prompt: str
     # Typed into the agent when the user asks for a handover before that (the agent's menu).
     early_prompt: str
     # Instead of `prompt`, when handing over to a fresh session (a switch in the settings): the
-    # handover goes to a file the agent is told of, then it ends its turn.
+    # handover goes to {file} (in the agent's folder), then it ends its turn.
     fresh_prompt: str
-    # Typed into the new conversation after /clear: read the handover and go on.
+    # Typed into the new conversation after /clear: read {file} and go on.
     resume_prompt: str
 
     @model_validator(mode="after")
-    def advice_comes_first(self) -> Self:
-        if self.advice_percent > self.threshold_percent:
-            raise ValueError("handover: advice_percent is above threshold_percent")
+    def shares_and_reserve_fit(self) -> Self:
+        if not 0 < self.compact_percent <= PERCENT or not 0 < self.advice_percent <= PERCENT:
+            raise ValueError("handover: advice_percent and compact_percent are shares, 1 to 100")
+        if self.reserve_tokens <= 0:
+            raise ValueError("handover: reserve_tokens must be above 0")
         return self
 
 

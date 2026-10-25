@@ -212,7 +212,10 @@ export interface HandoverSettings {
   /** Hand over to a fresh session (/clear and the handover read in) instead of going on. */
   fresh: boolean
   advice_percent: number
-  threshold_percent: number
+  /** Where Claude Code compacts, as a share of the window. */
+  compact_percent: number
+  /** Due once fewer tokens than this are left before that point. */
+  reserve_tokens: number
 }
 
 export interface AgentSession {

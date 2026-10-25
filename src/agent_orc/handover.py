@@ -13,7 +13,9 @@ A handover runs its course (asked, working, done) and stays done while the conte
 advice share, so the agent is asked once per filling; a compaction or a new session starts anew.
 
 Handed over to a fresh session (a switch next to the automatic one): the request asks the agent to
-write its handover to a known file and end its turn, instead of going on. Once it has, Agent-Orc
+write its handover to a known file and end its turn, instead of going on. An agent asked in the
+middle of its work tends to go back to it after writing; so once the file is written and settled,
+Agent-Orc interrupts it (Esc, as the user would) rather than wait for its turn to end. Then it
 types /clear (Claude Code starts a new conversation in the same folder, with CLAUDE.md and memory)
 and then the request to read the file and go on: no compaction, and the new conversation starts
 small. The conversations before stay listed for the answers view.
@@ -21,9 +23,11 @@ small. The conversations before stay listed for the answers view.
 
 import json
 from dataclasses import asdict, dataclass, field
+from pathlib import Path
 from typing import Any
 
-from agent_orc.config import HandoverConfig
+from agent_orc.attachments import AGENT_ORC_DIR
+from agent_orc.config import HANDOVER_FILE_PLACEHOLDER, PERCENT, HandoverConfig
 from agent_orc.context import session_status
 from agent_orc.sessions import AgentSession
 from agent_orc.state import state_dir, write_atomically
@@ -34,7 +38,10 @@ CLEAR_COMMAND = "/clear"
 # Where each agent's handover stands, kept across restarts of the service: otherwise a restart
 # would take a handover already written for "not asked yet" and ask the same filling again.
 PROGRESS_FILE = "handover-progress.json"
-PERCENT = 100
+# Where a handover to a fresh session is written, in the agent's folder (kept out of git there).
+HANDOVER_FILE = Path(AGENT_ORC_DIR) / "handover.md"
+# Unchanged this long, the handover file counts as written: the agent's Write is done.
+SETTLED_SECONDS = 3
 # Where a handover stands: typed into the agent, being written, written; or only advised to
 # the user (automatic handovers switched off).
 ASKED = "asked"
@@ -48,28 +55,53 @@ RESUMED = "resumed"
 
 @dataclass(frozen=True)
 class HandoverAdvice:
-    # Beyond the advice share.
+    # Beyond the advice share, or due.
     recommended: bool
-    # Beyond the threshold.
+    # Fewer tokens than the reserve left before Claude Code compacts.
     due: bool
 
 
-def context_percent(session: AgentSession) -> float | None:
+def context_usage(session: AgentSession) -> tuple[int, int] | None:
+    """Tokens in the agent's context and the size of its window; None while not reported."""
     status = session_status(session)
     tokens, window = status.get("context_tokens"), status.get("context_window")
     if tokens is None or not window:
         return None
-    percent: float = tokens / window * PERCENT
-    return percent
+    return int(tokens), int(window)
+
+
+def context_percent(session: AgentSession) -> float | None:
+    usage = context_usage(session)
+    return None if usage is None else usage[0] / usage[1] * PERCENT
+
+
+def assess(tokens: int, window: int, config: HandoverConfig) -> HandoverAdvice:
+    """Due once fewer than the reserve are left before Claude Code compacts; advised from the
+    advice share on, and whenever it is due (on a small window that comes first)."""
+    due = tokens >= window * config.compact_percent / PERCENT - config.reserve_tokens
+    advised = tokens / window * PERCENT >= config.advice_percent
+    return HandoverAdvice(recommended=due or advised, due=due)
 
 
 def advise(session: AgentSession, config: HandoverConfig) -> HandoverAdvice:
-    percent = context_percent(session) if session.running else None
-    if percent is None:
+    usage = context_usage(session) if session.running else None
+    if usage is None:
         return HandoverAdvice(recommended=False, due=False)
-    return HandoverAdvice(
-        recommended=percent >= config.advice_percent, due=percent >= config.threshold_percent
-    )
+    return assess(*usage, config)
+
+
+def handover_prompt(prompt: str) -> str:
+    """A handover prompt with the file it names."""
+    return prompt.replace(HANDOVER_FILE_PLACEHOLDER, str(HANDOVER_FILE))
+
+
+def handover_written(folder: Path, asked_at: float, now: float) -> bool:
+    """The agent has written its handover since it was asked, and the file has settled."""
+    path = folder / HANDOVER_FILE
+    if not path.is_file():
+        return False
+    modified = path.stat().st_mtime
+    return modified >= asked_at and now - modified >= SETTLED_SECONDS
 
 
 def follow_course(progress: str, busy: bool) -> str:
@@ -113,6 +145,9 @@ class HandoverState:
     early: set[str] = field(default_factory=set)
     fresh: set[str] = field(default_factory=set)
     previous: dict[str, list[str]] = field(default_factory=dict)
+    # When each agent handing over to a fresh session was asked (seconds since the epoch): its
+    # handover file is new when written since.
+    asked_at: dict[str, float] = field(default_factory=dict)
 
     def as_json(self) -> str:
         return json.dumps({
@@ -120,6 +155,7 @@ class HandoverState:
             "early": sorted(self.early),
             "fresh": sorted(self.fresh),
             "previous": self.previous,
+            "asked_at": self.asked_at,
         })
 
 
@@ -134,6 +170,7 @@ def read_state() -> HandoverState:
         early=set(stored["early"]),
         fresh=set(stored["fresh"]),
         previous=dict(stored["previous"]),
+        asked_at=dict(stored["asked_at"]),
     )
 
 

@@ -37,7 +37,7 @@ async function change(current: HandoverSettings, wanted: { auto?: boolean; fresh
       <ToggleSwitch class="h-7" :checked="settings.auto" :aria-label="$t('handover.auto')" @click="change(settings, { auto: !settings.auto })" />
     </div>
     <p class="mt-1 text-xs text-slate-500">
-      {{ $t('handover.autoHint', { advice: settings.advice_percent, threshold: settings.threshold_percent }) }}
+      {{ $t('handover.autoHint', { advice: settings.advice_percent, compact: settings.compact_percent, reserve: settings.reserve_tokens.toLocaleString() }) }}
     </p>
     <div class="mt-3 flex items-center justify-between gap-2" :class="{ 'opacity-50': !settings.auto }">
       <span>{{ $t('handover.fresh') }}</span>

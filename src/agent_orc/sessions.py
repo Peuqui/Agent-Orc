@@ -333,6 +333,10 @@ class SessionManager:
     def press_enter(self, session_id: str) -> None:
         self._tmux("send-keys", "-t", exact_target(session_id), "-l", "\r")
 
+    def press_escape(self, session_id: str) -> None:
+        """Esc, as the user would press it: it interrupts the agent's turn."""
+        self._tmux("send-keys", "-t", exact_target(session_id), "Escape")
+
     def text(self, session_id: str, history_lines: int) -> str:
         """The session's screen and history as plain text; wrapped lines are joined again."""
         result = self._tmux(

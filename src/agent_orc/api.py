@@ -110,6 +110,8 @@ from agent_orc.handover import (
     advise,
     context_percent,
     follow_course,
+    handover_prompt,
+    handover_written,
     read_handover_switches,
     read_state,
     write_handover_switches,
@@ -905,7 +907,7 @@ def create_app(
         nearly_full = advise(session, settings).recommended
         fresh = nearly_full and read_handover_switches().fresh
         if fresh:
-            prompt = settings.fresh_prompt
+            prompt = handover_prompt(settings.fresh_prompt)
         else:
             prompt = settings.prompt if nearly_full else settings.early_prompt
         sessions.type_line(session.id, prompt)
@@ -916,8 +918,11 @@ def create_app(
             early_handovers.add(session.id)
         if fresh:
             handovers.fresh.add(session.id)
+            # Wall-clock time, as the handover file's own.
+            handovers.asked_at[session.id] = time.time()
         else:
             handovers.fresh.discard(session.id)
+            handovers.asked_at.pop(session.id, None)
         save_handovers()
 
     def hand_over_to_fresh_session(session: AgentSession, progress: str) -> None:
@@ -931,9 +936,20 @@ def create_app(
             sessions.type_line(session.id, CLEAR_COMMAND)
             handover_progress[session.id] = HANDOVER_CLEARED
         else:
-            sessions.type_line(session.id, config.handover.resume_prompt)
+            sessions.type_line(session.id, handover_prompt(config.handover.resume_prompt))
             handover_progress[session.id] = HANDOVER_RESUMED
             handovers.fresh.discard(session.id)
+            handovers.asked_at.pop(session.id, None)
+
+    def interrupt_after_handover(session: AgentSession) -> None:
+        """The handover file is written while the agent works on: it went back to its task after
+        writing, as an agent asked in the middle of its work tends to. Interrupted as the user
+        would, so the fresh session can start before Claude Code compacts. Claude runs no Stop hook
+        on an interrupt, so the agent counts as resting from here."""
+        sessions.press_escape(session.id)
+        store_activity(session.id, busy=False)
+        handover_progress[session.id] = HANDOVER_DONE
+        send_to_all(agent_message("handover_done", session.id, session.name, ""), config.push)
 
     def cache_entry(cache: CacheState | None) -> dict[str, float] | None:
         """When the cache expires (the page counts down itself) and how long before that its age
@@ -991,6 +1007,8 @@ def create_app(
         handovers.fresh.intersection_update(handover_progress)
         for session_id in handovers.previous.keys() - {s.id for s in listed if s.running}:
             del handovers.previous[session_id]
+        for session_id in handovers.asked_at.keys() - handovers.fresh:
+            del handovers.asked_at[session_id]
         for session in listed:
             # Handed over to a fresh session: on until the new conversation has its request,
             # whatever its context reports meanwhile.
@@ -998,6 +1016,16 @@ def create_app(
             if session.id in handovers.fresh and progress in (HANDOVER_DONE, HANDOVER_CLEARED):
                 if session.running and not session_busy(session) and can_take_handover(session):
                     hand_over_to_fresh_session(session, progress)
+                continue
+            asked_at = handovers.asked_at.get(session.id)
+            writing = progress in (HANDOVER_ASKED, HANDOVER_WORKING)
+            if (
+                writing
+                and asked_at is not None
+                and handover_written(session.path, asked_at, time.time())
+            ):
+                if session.running and can_take_handover(session):
+                    interrupt_after_handover(session)
                 continue
             # Claude Code reports no usage at times (a new turn before its first answer): not known
             # is not "small again", so the course stays as it is instead of starting anew and asking
@@ -1880,7 +1908,8 @@ def create_app(
             "auto": switches.auto,
             "fresh": switches.fresh,
             "advice_percent": config.handover.advice_percent,
-            "threshold_percent": config.handover.threshold_percent,
+            "compact_percent": config.handover.compact_percent,
+            "reserve_tokens": config.handover.reserve_tokens,
         }
 
     @app.put("/api/handover", dependencies=authenticated, status_code=status.HTTP_204_NO_CONTENT)

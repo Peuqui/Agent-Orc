@@ -63,20 +63,26 @@ terminal:
 # Handover to a fresh session. Claude Code compacts the context by itself at about 97 % of the
 # window, and the agent cannot see how full it is. From advice_percent on, the agent's card
 # advises a handover, and while automatic handovers are off (settings menu) a push message says
-# so once, early enough to ask for it. From threshold_percent on, with automatic handovers on, the
-# prompt below is typed into the agent by itself, also while it works (not while it waits for a
-# permission); you are told when the handover is written. Once per filling: a compaction or a new
+# so once, early enough to ask for it. Claude Code compacts at about compact_percent of the window;
+# once fewer than reserve_tokens are left before that, with automatic handovers on, the prompt
+# below is typed into the agent by itself, also while it works (not while it waits for a
+# permission); you are told when the handover is written. A reserve in tokens fits every window
+# (2 % of a million are 20,000 tokens, of 200,000 only 4,000); on a small window it comes before
+# advice_percent and then advises as well. Once per filling: a compaction or a new
 # session starts anew. Asked for by hand earlier (the agent's ⋮ menu), early_prompt is typed.
 # With handing over to a fresh session switched on as well (settings menu), fresh_prompt asks for
-# the handover in .agent-orc/handover.md and the end of the turn; then /clear starts a new
-# conversation in the folder, and resume_prompt has it read the handover and go on.
+# the handover in {file} (.agent-orc/handover.md in the agent's folder) and the end of the turn;
+# once the file is written, Agent-Orc interrupts the agent (an agent asked in the middle of its
+# work tends to go on), /clear starts a new conversation in the folder, and resume_prompt has it
+# read the handover and go on.
 handover:
   advice_percent: 90
-  threshold_percent: 95
+  compact_percent: 97
+  reserve_tokens: 50000
   prompt: "Your context is nearly full: Claude Code will compact it shortly. Pause your task and write a handover document for the next session now, from what you know, without reading files first: goal, current state, decisions made, open tasks and next steps, with the files that matter. Save it in the project and tell me its path. Then go on in the same turn: if the next step of your task can be done, do it, without asking and without only announcing it. If it waits for something you do not control (a peer, a running job, a time), say in one sentence \"I am waiting for …\", set a background watcher that wakes you, and only then end the turn. After the compaction, carry on with the step from the summary at once, without recapping first."
   early_prompt: "Write a handover document for the next session: goal, current state, decisions made, open tasks and next steps, with the files that matter. Save it in the project and tell me its path. Then go on in the same turn: if the next step of a task you are in the middle of can be done, do it, without asking and without only announcing it. If it waits for something you do not control (a peer, a running job, a time), say in one sentence \"I am waiting for …\", set a background watcher that wakes you, and only then end the turn."
-  fresh_prompt: "Your context is nearly full. Instead of letting Claude Code compact it, you hand over to a fresh session: write a handover document to .agent-orc/handover.md now (replace one that is there), from what you know, without reading files first: goal, current state, decisions made, open tasks and the next step, with the files that matter. Also name what runs in the background (jobs, watchers) with its command and log file, so the next session can take it up again. Then end your turn without further work: Agent-Orc starts a new session right away that goes on from the document."
-  resume_prompt: "This goes on from a handover: read .agent-orc/handover.md, the handover of your previous session in this folder, and carry on where it stopped. Set up again the background jobs and watchers it names, if they no longer run. If the next step can be done, do it, without only announcing it; if it waits for something you do not control, say in one sentence \"I am waiting for …\" and set a watcher that wakes you."
+  fresh_prompt: "Your context is nearly full. Instead of letting Claude Code compact it, you hand over to a fresh session: write a handover document to {file} now (replace one that is there), from what you know, without reading files first, and short (about one page: the next session reads the files itself): goal, current state, decisions made, open tasks and the next step, with the files that matter. Also name what runs in the background (jobs, watchers) with its command and log file, so the next session can take it up again. Then end your turn without further work: Agent-Orc starts a new session right away that goes on from the document."
+  resume_prompt: "This goes on from a handover: read {file}, the handover of your previous session in this folder, and carry on where it stopped. Set up again the background jobs and watchers it names, if they no longer run. If the next step can be done, do it, without only announcing it; if it waits for something you do not control, say in one sentence \"I am waiting for …\" and set a watcher that wakes you."
 
 # How an agent's prompt cache is shown on its card: this many minutes before it expires, its age
 # turns amber (the next message soon reads the whole context in again).
