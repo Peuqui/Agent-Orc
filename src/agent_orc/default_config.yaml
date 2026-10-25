@@ -70,8 +70,8 @@ terminal:
 handover:
   advice_percent: 90
   threshold_percent: 95
-  prompt: "Your context is nearly full: Claude Code will compact it shortly. Pause your task and write a handover document for the next session now, from what you know, without reading files first: goal, current state, decisions made, open tasks and next steps, with the files that matter. Save it in the project, tell me its path, then go on with your task."
-  early_prompt: "Write a handover document for the next session: goal, current state, decisions made, open tasks and next steps, with the files that matter. Save it in the project, tell me its path, then go on with your task, if you are in the middle of one."
+  prompt: "Your context is nearly full: Claude Code will compact it shortly. Pause your task and write a handover document for the next session now, from what you know, without reading files first: goal, current state, decisions made, open tasks and next steps, with the files that matter. Save it in the project and tell me its path. Then go on in the same turn: if the next step of your task can be done, do it, without asking and without only announcing it. If it waits for something you do not control (a peer, a running job, a time), say in one sentence \"I am waiting for …\", set a background watcher that wakes you, and only then end the turn. After the compaction, carry on with the step from the summary at once, without recapping first."
+  early_prompt: "Write a handover document for the next session: goal, current state, decisions made, open tasks and next steps, with the files that matter. Save it in the project and tell me its path. Then go on in the same turn: if the next step of a task you are in the middle of can be done, do it, without asking and without only announcing it. If it waits for something you do not control (a peer, a running job, a time), say in one sentence \"I am waiting for …\", set a background watcher that wakes you, and only then end the turn."
 
 # How an agent's prompt cache is shown on its card: this many minutes before it expires, its age
 # turns amber (the next message soon reads the whole context in again).
