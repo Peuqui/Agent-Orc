@@ -524,7 +524,9 @@
       "asked": "Übergabe angefordert",
       "working": "Übergabe läuft",
       "done": "Übergabe liegt vor",
-      "advised": "Übergabe empfohlen"
+      "advised": "Übergabe empfohlen",
+      "cleared": "Frische Sitzung beginnt",
+      "resumed": "Übergeben an frische Sitzung"
     }
   },
   "handover": {
@@ -534,7 +536,9 @@
     "waiting": "Gesperrt, solange der Agent auf eine Freigabe wartet: die Bitte würde sie beantworten",
     "asked": "Bitte um eine Übergabe an „{name}“ geschickt.",
     "auto": "Übergabe automatisch anstoßen",
-    "autoHint": "Claude Code komprimiert den Kontext bei etwa 97 % selbst, und der Agent sieht nicht, wie voll er ist. Ab {advice} % empfiehlt die Karte eine Übergabe. Eingeschaltet: Ab {threshold} % tippt Agent-Orc dem Agenten die Bitte um ein Übergabe-Dokument selbst ein, auch mitten in der Arbeit (nicht während einer offenen Freigabe). Ausgeschaltet: Ab {advice} % kommt eine Benachrichtigung, und „Übergabe schreiben lassen“ auf der Karte bittet darum. Einmal je Füllung, erst nach einer Kompression oder einem Neustart wieder; auch wenn kein Gerät offen ist."
+    "autoHint": "Claude Code komprimiert den Kontext bei etwa 97 % selbst, und der Agent sieht nicht, wie voll er ist. Ab {advice} % empfiehlt die Karte eine Übergabe. Eingeschaltet: Ab {threshold} % tippt Agent-Orc dem Agenten die Bitte um ein Übergabe-Dokument selbst ein, auch mitten in der Arbeit (nicht während einer offenen Freigabe). Ausgeschaltet: Ab {advice} % kommt eine Benachrichtigung, und „Übergabe schreiben lassen“ auf der Karte bittet darum. Einmal je Füllung, erst nach einer Kompression oder einem Neustart wieder; auch wenn kein Gerät offen ist.",
+    "fresh": "An frische Sitzung übergeben",
+    "freshHint": "Statt nach der Übergabe weiterzuarbeiten und später komprimiert zu werden, schreibt der Agent sie nach .agent-orc/handover.md und hört auf; Agent-Orc beginnt dann mit /clear ein neues Gespräch im selben Ordner und lässt es die Übergabe lesen und weitermachen. Spart die Komprimierung; die Antworten-Ansicht zeigt beide Gespräche. Nur zusammen mit der automatischen Übergabe."
   },
   "keepWarm": {
     "label": "warm halten",

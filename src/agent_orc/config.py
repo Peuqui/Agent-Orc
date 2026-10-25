@@ -115,6 +115,11 @@ class HandoverConfig(StrictModel):
     prompt: str
     # Typed into the agent when the user asks for a handover before that (the agent's menu).
     early_prompt: str
+    # Instead of `prompt`, when handing over to a fresh session (a switch in the settings): the
+    # handover goes to a file the agent is told of, then it ends its turn.
+    fresh_prompt: str
+    # Typed into the new conversation after /clear: read the handover and go on.
+    resume_prompt: str
 
     @model_validator(mode="after")
     def advice_comes_first(self) -> Self:

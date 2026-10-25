@@ -36,7 +36,7 @@ from starlette.types import Scope
 
 from agent_orc import announce as announcing
 from agent_orc import files, keepwarm, peers, speech_service
-from agent_orc.answers import read_image, read_turns
+from agent_orc.answers import Turn, read_image, read_turns
 from agent_orc.approvals import (
     ApprovalNotFoundError,
     ApprovalRequest,
@@ -104,17 +104,21 @@ from agent_orc.effort import (
 from agent_orc.events import KEEP_ALIVE_SECONDS, ChangeNotifier, until_stopped
 from agent_orc.handover import ADVISED as HANDOVER_ADVISED
 from agent_orc.handover import ASKED as HANDOVER_ASKED
-from agent_orc.handover import DONE as HANDOVER_DONE
-from agent_orc.handover import WORKING as HANDOVER_WORKING
 from agent_orc.handover import (
+    CLEAR_COMMAND,
+    HandoverSwitches,
     advise,
     context_percent,
     follow_course,
-    read_auto,
-    read_progress,
-    write_auto,
-    write_progress,
+    read_handover_switches,
+    read_state,
+    write_handover_switches,
+    write_state,
 )
+from agent_orc.handover import CLEARED as HANDOVER_CLEARED
+from agent_orc.handover import DONE as HANDOVER_DONE
+from agent_orc.handover import RESUMED as HANDOVER_RESUMED
+from agent_orc.handover import WORKING as HANDOVER_WORKING
 from agent_orc.history import (
     CLAUDE_PROJECTS,
     CONVERSATION_SEARCHES,
@@ -476,8 +480,9 @@ class PromptTemplate(BaseModel):
     text: str
 
 
-class HandoverAutoRequest(BaseModel):
+class HandoverSwitchesRequest(BaseModel):
     auto: bool
+    fresh: bool
 
 
 class KeepWarmRequest(BaseModel):
@@ -878,30 +883,57 @@ def create_app(
             elif not session.running or not session_busy(session):
                 apply_effort(session, reasoning)
 
-    # Where each agent's handover stands (see handover.py), so it comes once per filling; and the
-    # agents whose handover was asked for by hand before their context was nearly full.
-    handover_progress, early_handovers = read_progress()
-    saved_handovers = (dict(handover_progress), set(early_handovers))
+    # Where each agent's handover stands (see handover.py), so it comes once per filling; the
+    # agents whose handover was asked for by hand before their context was nearly full; those
+    # handed over to a fresh session, and their conversations before. Kept across restarts.
+    handovers = read_state()
+    handover_progress, early_handovers = handovers.progress, handovers.early
+    saved_handovers = handovers.as_json()
 
     def save_handovers() -> None:
-        """Kept across restarts (see handover.py); written only when something changed."""
+        """Written only when something changed."""
         nonlocal saved_handovers
-        current = (dict(handover_progress), set(early_handovers))
+        current = handovers.as_json()
         if current != saved_handovers:
-            write_progress(handover_progress, early_handovers)
+            write_state(handovers)
             saved_handovers = current
 
     def ask_for_handover(session: AgentSession) -> None:
-        """Nearly full, the request says so; earlier (asked for by hand) it is a plain one."""
+        """Nearly full, the request says so (and, to a fresh session, to write the handover to its
+        file and stop); earlier (asked for by hand) it is a plain one."""
         settings = config.handover
         nearly_full = advise(session, settings).recommended
-        sessions.type_line(session.id, settings.prompt if nearly_full else settings.early_prompt)
+        fresh = nearly_full and read_handover_switches().fresh
+        if fresh:
+            prompt = settings.fresh_prompt
+        else:
+            prompt = settings.prompt if nearly_full else settings.early_prompt
+        sessions.type_line(session.id, prompt)
         handover_progress[session.id] = HANDOVER_ASKED
         if nearly_full:
             early_handovers.discard(session.id)
         else:
             early_handovers.add(session.id)
+        if fresh:
+            handovers.fresh.add(session.id)
+        else:
+            handovers.fresh.discard(session.id)
         save_handovers()
+
+    def hand_over_to_fresh_session(session: AgentSession, progress: str) -> None:
+        """The handover is written and the agent's turn is over: a new conversation, then the
+        request to read the handover. One step per check, so /clear has run before the next line
+        comes. The conversation before stays listed for the answers view."""
+        if progress == HANDOVER_DONE:
+            transcript = session_transcript(session)
+            if transcript is not None:
+                handovers.previous.setdefault(session.id, []).append(str(transcript))
+            sessions.type_line(session.id, CLEAR_COMMAND)
+            handover_progress[session.id] = HANDOVER_CLEARED
+        else:
+            sessions.type_line(session.id, config.handover.resume_prompt)
+            handover_progress[session.id] = HANDOVER_RESUMED
+            handovers.fresh.discard(session.id)
 
     def cache_entry(cache: CacheState | None) -> dict[str, float] | None:
         """When the cache expires (the page counts down itself) and how long before that its age
@@ -951,12 +983,22 @@ def create_app(
         return session.running and not waiting and not session_compacting(session)
 
     def check_handovers() -> None:
-        auto = read_auto()
+        auto = read_handover_switches().auto
         listed = sessions.list()
         for session_id in handover_progress.keys() - {s.id for s in listed}:
             del handover_progress[session_id]
         early_handovers.intersection_update(handover_progress)
+        handovers.fresh.intersection_update(handover_progress)
+        for session_id in handovers.previous.keys() - {s.id for s in listed if s.running}:
+            del handovers.previous[session_id]
         for session in listed:
+            # Handed over to a fresh session: on until the new conversation has its request,
+            # whatever its context reports meanwhile.
+            progress = handover_progress.get(session.id)
+            if session.id in handovers.fresh and progress in (HANDOVER_DONE, HANDOVER_CLEARED):
+                if session.running and not session_busy(session) and can_take_handover(session):
+                    hand_over_to_fresh_session(session, progress)
+                continue
             # Claude Code reports no usage at times (a new turn before its first answer): not known
             # is not "small again", so the course stays as it is instead of starting anew and asking
             # the same filling a second time.
@@ -974,7 +1016,7 @@ def create_app(
             progress = handover_progress.get(session.id)
             if progress in (HANDOVER_ASKED, HANDOVER_WORKING):
                 follow_handover(session, progress)
-            elif progress == HANDOVER_DONE:
+            elif progress in (HANDOVER_DONE, HANDOVER_RESUMED):
                 continue
             elif auto:
                 if advice.due and can_take_handover(session):
@@ -1590,6 +1632,9 @@ def create_app(
             body.profile, path, body.resume, body.conversation, body.model, env, body.suffix
         )
         reset_switches(started.id)
+        # A new start is a new agent: no conversations of an earlier one in its answers view.
+        handovers.previous.pop(started.id, None)
+        save_handovers()
         if body.workspace is not None:
             assign_workspace(started.id, body.workspace)
         return started
@@ -1828,18 +1873,19 @@ def create_app(
 
     @app.get("/api/handover", dependencies=authenticated)
     def handover_settings() -> dict[str, Any]:
-        """Whether handovers are asked for by themselves, and from which shares of the context."""
+        """Whether handovers are asked for by themselves (and to a fresh session), and from which
+        shares of the context."""
+        switches = read_handover_switches()
         return {
-            "auto": read_auto(),
+            "auto": switches.auto,
+            "fresh": switches.fresh,
             "advice_percent": config.handover.advice_percent,
             "threshold_percent": config.handover.threshold_percent,
         }
 
-    @app.put(
-        "/api/handover/auto", dependencies=authenticated, status_code=status.HTTP_204_NO_CONTENT
-    )
-    def set_handover_auto(body: HandoverAutoRequest) -> None:
-        write_auto(body.auto)
+    @app.put("/api/handover", dependencies=authenticated, status_code=status.HTTP_204_NO_CONTENT)
+    def set_handover_switches(body: HandoverSwitchesRequest) -> None:
+        write_handover_switches(HandoverSwitches(auto=body.auto, fresh=body.fresh))
 
     @app.put(
         "/api/sessions/{session_id}/keep-warm",
@@ -1959,11 +2005,29 @@ def create_app(
         session = find_session(session_id)
         if session is None:
             raise SessionNotFoundError(session_id)
-        transcript = session_transcript(session)
-        # Only Claude's own transcripts, wherever the status document points.
-        if transcript is None or not transcript.resolve().is_relative_to(home / CLAUDE_PROJECTS):
-            return []
-        return [asdict(turn) for turn in read_turns(transcript, turns)]
+        # Newest conversation first; earlier ones (before a handover to a fresh session) fill up.
+        found: list[Turn] = []
+        for transcript in reversed(agent_transcripts(session)):
+            found = read_turns(transcript, turns - len(found)) + found
+            if len(found) >= turns:
+                break
+        return [asdict(turn) for turn in found]
+
+    def agent_transcripts(session: AgentSession) -> list[Path]:
+        """The agent's conversations, oldest first: those before a handover to a fresh session,
+        then the current one. Only Claude's own transcripts, wherever the status document points."""
+        paths = [Path(path) for path in handovers.previous.get(session.id, [])]
+        current = session_transcript(session)
+        if current is not None and current not in paths:
+            paths.append(current)
+        claude = home / CLAUDE_PROJECTS
+        return [path for path in paths if path.is_file() and path.resolve().is_relative_to(claude)]
+
+    def image_in(transcript: Path, entry_id: str, index: int) -> tuple[bytes, str] | None:
+        try:
+            return read_image(transcript, entry_id, index)
+        except FileNotFoundError:
+            return None
 
     @app.get("/api/sessions/{session_id}/images/{entry_id}/{index}", dependencies=authenticated)
     def session_image(session_id: str, entry_id: str, index: int) -> Response:
@@ -1971,10 +2035,13 @@ def create_app(
         session = find_session(session_id)
         if session is None:
             raise SessionNotFoundError(session_id)
-        transcript = session_transcript(session)
-        if transcript is None or not transcript.resolve().is_relative_to(home / CLAUDE_PROJECTS):
+        data, media_type = next(
+            (image for transcript in reversed(agent_transcripts(session))
+             if (image := image_in(transcript, entry_id, index)) is not None),
+            (None, None),
+        )
+        if data is None or media_type is None:
             raise FileNotFoundError(entry_id)
-        data, media_type = read_image(transcript, entry_id, index)
         return Response(
             data,
             media_type=media_type,

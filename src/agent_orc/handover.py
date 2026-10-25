@@ -11,10 +11,16 @@ would answer the prompt) or compacts.
 
 A handover runs its course (asked, working, done) and stays done while the context is beyond the
 advice share, so the agent is asked once per filling; a compaction or a new session starts anew.
+
+Handed over to a fresh session (a switch next to the automatic one): the request asks the agent to
+write its handover to a known file and end its turn, instead of going on. Once it has, Agent-Orc
+types /clear (Claude Code starts a new conversation in the same folder, with CLAUDE.md and memory)
+and then the request to read the file and go on: no compaction, and the new conversation starts
+small. The conversations before stay listed for the answers view.
 """
 
 import json
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass, field
 from typing import Any
 
 from agent_orc.config import HandoverConfig
@@ -23,6 +29,8 @@ from agent_orc.sessions import AgentSession
 from agent_orc.state import state_dir, write_atomically
 
 SETTINGS_FILE = "handover.json"
+# What Claude Code takes as "start a new conversation in this folder".
+CLEAR_COMMAND = "/clear"
 # Where each agent's handover stands, kept across restarts of the service: otherwise a restart
 # would take a handover already written for "not asked yet" and ask the same filling again.
 PROGRESS_FILE = "handover-progress.json"
@@ -33,6 +41,9 @@ ASKED = "asked"
 WORKING = "working"
 DONE = "done"
 ADVISED = "advised"
+# Handed over to a fresh session: /clear typed, then the request to read the handover.
+CLEARED = "cleared"
+RESUMED = "resumed"
 
 
 @dataclass(frozen=True)
@@ -71,29 +82,60 @@ def follow_course(progress: str, busy: bool) -> str:
     return progress
 
 
-def read_auto() -> bool:
-    """Whether Agent-Orc asks agents for their handover by itself (off until switched on)."""
+@dataclass(frozen=True)
+class HandoverSwitches:
+    # Agent-Orc asks agents for their handover by itself.
+    auto: bool
+    # ... and hands over to a fresh session instead of letting the agent go on.
+    fresh: bool
+
+
+def read_handover_switches() -> HandoverSwitches:
+    """Both off until switched on."""
     path = state_dir() / SETTINGS_FILE
     if not path.is_file():
-        return False
+        return HandoverSwitches(auto=False, fresh=False)
     settings: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
-    return settings["auto"] is True
+    return HandoverSwitches(auto=settings["auto"] is True, fresh=settings["fresh"] is True)
 
 
-def write_auto(auto: bool) -> None:
-    write_atomically(state_dir() / SETTINGS_FILE, json.dumps({"auto": auto}))
+def write_handover_switches(switches: HandoverSwitches) -> None:
+    write_atomically(state_dir() / SETTINGS_FILE, json.dumps(asdict(switches)))
 
 
-def read_progress() -> tuple[dict[str, str], set[str]]:
-    """Where each agent's handover stands, and the agents whose handover was asked for by hand
-    early; empty before the first one."""
+@dataclass
+class HandoverState:
+    """Where each agent's handover stands; the agents whose handover was asked for by hand early;
+    those handed over to a fresh session; and per agent the transcripts of its conversations
+    before such a handover, oldest first (for the answers view)."""
+
+    progress: dict[str, str] = field(default_factory=dict)
+    early: set[str] = field(default_factory=set)
+    fresh: set[str] = field(default_factory=set)
+    previous: dict[str, list[str]] = field(default_factory=dict)
+
+    def as_json(self) -> str:
+        return json.dumps({
+            "progress": self.progress,
+            "early": sorted(self.early),
+            "fresh": sorted(self.fresh),
+            "previous": self.previous,
+        })
+
+
+def read_state() -> HandoverState:
+    """Empty before the first handover."""
     path = state_dir() / PROGRESS_FILE
     if not path.is_file():
-        return {}, set()
+        return HandoverState()
     stored: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
-    return dict(stored["progress"]), set(stored["early"])
+    return HandoverState(
+        progress=dict(stored["progress"]),
+        early=set(stored["early"]),
+        fresh=set(stored["fresh"]),
+        previous=dict(stored["previous"]),
+    )
 
 
-def write_progress(progress: dict[str, str], early: set[str]) -> None:
-    stored = {"progress": progress, "early": sorted(early)}
-    write_atomically(state_dir() / PROGRESS_FILE, json.dumps(stored))
+def write_state(state: HandoverState) -> None:
+    write_atomically(state_dir() / PROGRESS_FILE, state.as_json())

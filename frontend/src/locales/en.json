@@ -524,7 +524,9 @@
       "asked": "handover asked",
       "working": "handover in progress",
       "done": "handover written",
-      "advised": "handover advised"
+      "advised": "handover advised",
+      "cleared": "fresh session starting",
+      "resumed": "handed over to a fresh session"
     }
   },
   "handover": {
@@ -534,7 +536,9 @@
     "waiting": "Locked while the agent waits for a permission: the request would answer it",
     "asked": "Asked “{name}” for a handover.",
     "auto": "Ask for handovers automatically",
-    "autoHint": "Claude Code compacts the context by itself at about 97 %, and the agent cannot see how full it is. From {advice} % on the card advises a handover. Switched on: from {threshold} % on Agent-Orc types the request for a handover document into the agent itself, also while it works (not while a permission is open). Switched off: from {advice} % on a notification comes, and “Ask for a handover” on the card asks for it. Once per filling, again only after a compaction or a restart; also when no device is open."
+    "autoHint": "Claude Code compacts the context by itself at about 97 %, and the agent cannot see how full it is. From {advice} % on the card advises a handover. Switched on: from {threshold} % on Agent-Orc types the request for a handover document into the agent itself, also while it works (not while a permission is open). Switched off: from {advice} % on a notification comes, and “Ask for a handover” on the card asks for it. Once per filling, again only after a compaction or a restart; also when no device is open.",
+    "fresh": "Hand over to a fresh session",
+    "freshHint": "Instead of going on after the handover and being compacted later, the agent writes it to .agent-orc/handover.md and stops; Agent-Orc then starts a new conversation in the same folder with /clear and has it read the handover and go on. Saves the compaction; the answers view shows both conversations. Only together with automatic handovers."
   },
   "keepWarm": {
     "label": "keep warm",

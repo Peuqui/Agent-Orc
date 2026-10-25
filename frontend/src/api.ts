@@ -205,10 +205,12 @@ export interface ExistingPath {
   kind: 'file' | 'folder'
 }
 
-export type HandoverProgress = 'asked' | 'working' | 'done' | 'advised'
+export type HandoverProgress = 'asked' | 'working' | 'done' | 'advised' | 'cleared' | 'resumed'
 
 export interface HandoverSettings {
   auto: boolean
+  /** Hand over to a fresh session (/clear and the handover read in) instead of going on. */
+  fresh: boolean
   advice_percent: number
   threshold_percent: number
 }
@@ -712,7 +714,7 @@ function createApi(host?: string) {
       request<void>('PUT', `sessions/${encodeURIComponent(sessionId)}/answers-mode`, { body: { all_texts: allTexts } }),
     /** Whether handovers are asked for by themselves, and from which shares of the context. */
     handover: () => request<HandoverSettings>('GET', 'handover'),
-    setHandoverAuto: (auto: boolean) => request<void>('PUT', 'handover/auto', { body: { auto } }),
+    setHandover: (auto: boolean, fresh: boolean) => request<void>('PUT', 'handover', { body: { auto, fresh } }),
     /** Takes effect at the agent's next start. */
     changePermissionMode: (sessionId: string, mode: string) =>
       request<void>('PUT', `sessions/${encodeURIComponent(sessionId)}/permission-mode`, { body: { mode } }),

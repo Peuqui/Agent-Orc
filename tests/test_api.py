@@ -30,7 +30,7 @@ from agent_orc.config import Config, DictationConfig, HostConfig, ServerConfig, 
 from agent_orc.context import store_activity, store_status
 from agent_orc.effort import agent_settings_file
 from agent_orc.events import ChangeNotifier
-from agent_orc.handover import write_auto
+from agent_orc.handover import HandoverSwitches, read_state, write_handover_switches, write_state
 from agent_orc.history import claude_project_dir
 from agent_orc.listen import prepare_socket
 from agent_orc.schedule import mark_limited, read_scheduled
@@ -1410,10 +1410,14 @@ def test_handover_is_advised_then_due_and_typed_even_into_a_working_agent(
 
 
 def automatic_handovers(
-    config: Config, clock: FakeClock, monkeypatch: pytest.MonkeyPatch, auto: bool
+    config: Config,
+    clock: FakeClock,
+    monkeypatch: pytest.MonkeyPatch,
+    auto: bool,
+    fresh: bool = False,
 ) -> TestClient:
     monkeypatch.setattr("agent_orc.api.AGENT_CHECK_SECONDS", 0.1)
-    write_auto(auto)
+    write_handover_switches(HandoverSwitches(auto=auto, fresh=fresh))
     return TestClient(create_app(config, new_credentials(PASSWORD), static_dir=None, clock=clock))
 
 
@@ -1541,10 +1545,38 @@ def test_automatic_handover_setting_is_kept(
     client: TestClient, home: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
-    settings = {"auto": False, "advice_percent": 90, "threshold_percent": 95}
+    settings = {"auto": False, "fresh": False, "advice_percent": 90, "threshold_percent": 95}
     assert client.get("/api/handover").json() == settings
-    assert client.put("/api/handover/auto", json={"auto": True}).status_code == 204
-    assert client.get("/api/handover").json() == {**settings, "auto": True}
+    assert client.put("/api/handover", json={"auto": True, "fresh": True}).status_code == 204
+    assert client.get("/api/handover").json() == {**settings, "auto": True, "fresh": True}
+
+
+def test_a_handover_to_a_fresh_session_clears_and_has_the_new_one_read_it(
+    config: Config, clock: FakeClock, home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
+    with automatic_handovers(config, clock, monkeypatch, auto=True, fresh=True) as client:
+        client.post("/api/login", json={"password": PASSWORD})
+        session_id = start_shell(client, home / "projects")
+        old = home / ".claude" / "projects" / "-p" / "old.jsonl"
+        old.parent.mkdir(parents=True)
+        old.write_text("", encoding="utf-8")
+        report_context(session_id, 960, old)
+        store_activity(session_id, busy=True)
+        # Asked to write the handover to its file and stop, not to go on.
+        assert progress_becomes(client, "working")
+        assert wait_for_text(client, session_id, "hand over to a fresh session")
+        assert not wait_for_text(client, session_id, "/clear")
+        store_activity(session_id, busy=False)
+        # Written and the turn over: a new conversation, then the request to read the handover.
+        assert progress_becomes(client, "resumed")
+        assert wait_for_text(client, session_id, "/clear")
+        assert wait_for_text(client, session_id, "This goes on from a handover")
+        text = client.get(f"/api/sessions/{session_id}/text").json()["text"]
+        assert text.index("/clear") < text.index("This goes on from a handover")
+        # The new conversation is small: the next filling starts anew.
+        report_context(session_id, 100, home / ".claude" / "projects" / "-p" / "new.jsonl")
+        assert progress_becomes(client, None)
 
 
 def test_push_subscription_and_test_message(
@@ -2542,6 +2574,46 @@ def test_answers_come_from_the_transcript_the_agent_reports(
     store_status(session_id, {"model": {"display_name": "M"}, "transcript_path": str(outside)})
     assert client.get(answers).json() == []
     assert client.get("/api/sessions/nope/answers").status_code == 404
+
+
+def test_answers_go_on_across_a_handover_to_a_fresh_session(
+    client: TestClient,
+    config: Config,
+    clock: FakeClock,
+    home: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
+    session_id = start_shell(client, home / "projects" / "a")
+    folder = home / ".claude" / "projects" / "-a"
+    folder.mkdir(parents=True)
+
+    def conversation(name: str, prompt: str, answer: str, minute: int) -> Path:
+        path = folder / name
+        lines = [
+            {"type": "user", "uuid": f"u-{name}", "timestamp": f"2026-10-25T10:{minute:02}:00Z",
+             "message": {"content": prompt}},
+            {"type": "assistant", "uuid": f"a-{name}",
+             "timestamp": f"2026-10-25T10:{minute:02}:05Z",
+             "message": {"content": [{"type": "text", "text": answer}]}},
+        ]  # fmt: skip
+        path.write_text("\n".join(json.dumps(line) for line in lines), encoding="utf-8")
+        return path
+
+    before = conversation("before.jsonl", "Frage vorher", "Antwort vorher", 0)
+    after = conversation("after.jsonl", "Lies die Übergabe", "Weiter geht's", 30)
+    store_status(session_id, {"model": {"display_name": "M"}, "transcript_path": str(after)})
+    # What Agent-Orc noted at its /clear (see handover.py).
+    state = read_state()
+    state.progress[session_id] = "resumed"
+    state.previous[session_id] = [str(before)]
+    write_state(state)
+    # A restart of the service reads it back; the answers run on over both conversations.
+    app = create_app(config, new_credentials(PASSWORD), static_dir=None, clock=clock)
+    restarted = TestClient(app)
+    restarted.post("/api/login", json={"password": PASSWORD})
+    answers = restarted.get(f"/api/sessions/{session_id}/answers").json()
+    assert [t["prompt"] for t in answers] == ["Frage vorher", "Lies die Übergabe"]
 
 
 def test_a_picture_of_a_request_is_served_from_the_transcript(
