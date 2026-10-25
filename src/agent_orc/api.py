@@ -113,6 +113,7 @@ from agent_orc.handover import (
     follow_course,
     handover_prompt,
     handover_written,
+    has_session_start_hook,
     leave_resume_request,
     read_handover_switches,
     read_state,
@@ -936,19 +937,22 @@ def create_app(
         runs. Once it has, the request is typed as well, at once: it starts the agent when nothing
         else woke it, and it comes as the user's own word, as a model may not follow an
         instruction from a hook (seen with Haiku). One step per check. The conversation before
-        stays listed for the answers view."""
+        stays listed for the answers view. An agent started without the hook gets the request
+        typed at the check after /clear."""
         prompt = handover_prompt(config.handover.resume_prompt)
+        hooked = has_session_start_hook(session.id)
         if progress == HANDOVER_DONE:
             if session_busy(session):
                 return
             transcript = session_transcript(session)
             if transcript is not None:
                 handovers.previous.setdefault(session.id, []).append(str(transcript))
-            leave_resume_request(session.id, prompt)
+            if hooked:
+                leave_resume_request(session.id, prompt)
             sessions.type_line(session.id, CLEAR_COMMAND)
             handover_progress[session.id] = HANDOVER_CLEARED
             return
-        if not resume_request_taken(session.id):
+        if hooked and not resume_request_taken(session.id):
             # The new conversation has not started yet.
             return
         sessions.type_line(session.id, prompt)

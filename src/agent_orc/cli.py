@@ -53,7 +53,7 @@ from agent_orc.context import (
     store_activity,
     store_status,
 )
-from agent_orc.handover import take_resume_request
+from agent_orc.handover import SESSION_START_SUBCOMMAND, take_resume_request
 from agent_orc.listen import SocketFolderError, prepare_socket
 from agent_orc.push import agent_message, send_to_all
 from agent_orc.schedule import mark_limited
@@ -289,7 +289,7 @@ COMMANDS = {
     "agent-busy": (agent_busy, "hook command: the agent started working"),
     "agent-idle": (agent_idle, "hook command: the agent finished its answer"),
     "agent-free-cards": (agent_free_cards, "hook command: free the graphics cards for the model"),
-    "agent-session-start": (
+    SESSION_START_SUBCOMMAND: (
         agent_session_start,
         "hook command: a new conversation starts (the request after a handover)",
     ),

@@ -36,11 +36,12 @@ einen SSH-Tunnel ([Mehrere Rechner](#mehrere-rechner)).
 - Was ein Agent im Projekt geändert hat: geänderte, neue und gelöschte Dateien mit ihrem Diff
   (git).
 - Token-Verbrauch aller Claude-Gespräche pro Tag, Projekt und Modell; Suche in früheren
-  Gesprächen; eine Übergabe-Empfehlung, sobald der Kontext eines Agenten groß wird. Auf Wunsch
-  fordert Agent-Orc die Übergabe selbst an und kann an eine frische Sitzung übergeben, statt
-  Claude Code komprimieren zu lassen: Der Agent schreibt `.agent-orc/handover.md` und hört auf,
-  `/clear` beginnt ein neues Gespräch im Ordner, das zuerst die Übergabe liest (vor allem, womit
-  ein anderer Hook es weckt) und weitermacht; die Antworten-Ansicht zeigt beide.
+  Gesprächen; eine Übergabe-Empfehlung, sobald der Kontext eines Agenten groß wird. Agent-Orc
+  fordert die Übergabe selbst an und übergibt an eine frische Sitzung, statt Claude Code
+  komprimieren zu lassen (beides von Anfang an eingeschaltet, abzuschalten im Einstellungsmenü):
+  Der Agent schreibt `.agent-orc/handover.md` und hört auf, `/clear` beginnt ein neues Gespräch
+  im Ordner, das zuerst die Übergabe liest (vor allem, womit ein anderer Hook es weckt) und
+  weitermacht; die Antworten-Ansicht zeigt beide.
 - Hält auf Wunsch den Zwischenspeicher ruhender Agenten warm (eine winzige Bitte kurz vor dem
   Ablauf), je Agent einzuschalten, damit die nächste Nachricht ohne Wartezeit kommt. Der Schalter
   übersteht einen Neustart von Agent-Orc und endet mit der Sitzung des Agenten.

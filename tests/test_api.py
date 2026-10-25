@@ -28,7 +28,7 @@ from agent_orc.approvals import Decision, close_request, open_request, wait_for_
 from agent_orc.auth import new_credentials
 from agent_orc.config import Config, DictationConfig, HostConfig, ServerConfig, default_config_text
 from agent_orc.context import store_activity, store_status
-from agent_orc.effort import agent_settings_file
+from agent_orc.effort import agent_settings_file, write_agent_settings
 from agent_orc.events import ChangeNotifier
 from agent_orc.handover import (
     HandoverSwitches,
@@ -1554,23 +1554,26 @@ def test_automatic_handover_setting_is_kept(
 ) -> None:
     monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
     settings = {
-        "auto": False,
-        "fresh": False,
+        "auto": True,
+        "fresh": True,
         "advice_percent": 90,
         "compact_percent": 97,
         "reserve_tokens": 20,
     }
     assert client.get("/api/handover").json() == settings
-    assert client.put("/api/handover", json={"auto": True, "fresh": True}).status_code == 204
-    assert client.get("/api/handover").json() == {**settings, "auto": True, "fresh": True}
+    assert client.put("/api/handover", json={"auto": False, "fresh": False}).status_code == 204
+    assert client.get("/api/handover").json() == {**settings, "auto": False, "fresh": False}
 
 
-@pytest.mark.parametrize("woken_by_another_hook", [False, True])
+@pytest.mark.parametrize(
+    ("hooked", "woken_by_another_hook"), [(True, False), (True, True), (False, False)]
+)
 def test_a_handover_to_a_fresh_session_clears_and_has_the_new_one_read_it(
     config: Config,
     clock: FakeClock,
     home: Path,
     monkeypatch: pytest.MonkeyPatch,
+    hooked: bool,
     woken_by_another_hook: bool,
 ) -> None:
     monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
@@ -1593,7 +1596,12 @@ def test_a_handover_to_a_fresh_session_clears_and_has_the_new_one_read_it(
         # /clear in Claude Code: the new conversation's SessionStart hook takes the request to
         # read the handover into its context. Another hook may wake it at once (AI-Connect with a
         # message that came during the handover): the request is typed all the same, into that
-        # turn, not held back until it ends.
+        # turn, not held back until it ends. An agent started without the hook in its settings
+        # (Claude Code reads hooks at start) gets it typed right after /clear.
+        if hooked:
+            session_start = {"type": "command", "command": "agent-orc agent-session-start"}
+            hooks = {"SessionStart": [{"matcher": "clear", "hooks": [session_start]}]}
+            write_agent_settings(session_id, {"hooks": hooks})
         type_line = SessionManager.type_line
         taken: list[str | None] = []
 
@@ -1611,7 +1619,10 @@ def test_a_handover_to_a_fresh_session_clears_and_has_the_new_one_read_it(
         assert progress_becomes(client, "resumed")
         assert wait_for_text(client, session_id, "/clear")
         [request] = taken
-        assert request is not None and request.startswith("This goes on from a handover")
+        if hooked:
+            assert request is not None and request.startswith("This goes on from a handover")
+        else:
+            assert request is None
         assert wait_for_text(client, session_id, "This goes on from a handover")
         text = client.get(f"/api/sessions/{session_id}/text").json()["text"]
         assert text.index("/clear") < text.index("This goes on from a handover")

@@ -538,7 +538,7 @@
     "auto": "Ask for handovers automatically",
     "autoHint": "Claude Code compacts the context by itself at about {compact} %, and the agent cannot see how full it is. From {advice} % on the card advises a handover. Switched on: once fewer than {reserve} tokens are left before that, Agent-Orc types the request for a handover document into the agent itself, also while it works (not while a permission is open). Switched off: from {advice} % on a notification comes, and “Ask for a handover” on the card asks for it. Once per filling, again only after a compaction or a restart; also when no device is open.",
     "fresh": "Hand over to a fresh session",
-    "freshHint": "Instead of going on after the handover and being compacted later, the agent writes it to .agent-orc/handover.md; once it is written, Agent-Orc interrupts it, starts a new conversation in the same folder with /clear and has it read the handover and go on. Saves the compaction; the answers view shows both conversations. Only together with automatic handovers."
+    "freshHint": "Instead of going on after the handover and being compacted later, the agent writes it to .agent-orc/handover.md; once it is written, Agent-Orc interrupts it, starts a new conversation in the same folder with /clear and has it read the handover and go on, before anything else it is woken with. Saves the compaction; the answers view shows both conversations. Only together with automatic handovers."
   },
   "keepWarm": {
     "label": "keep warm",

@@ -6,6 +6,7 @@ import pytest
 
 from agent_orc import cli
 from agent_orc.config import HandoverConfig
+from agent_orc.effort import write_agent_settings
 from agent_orc.handover import (
     ADVISED,
     ASKED,
@@ -19,7 +20,9 @@ from agent_orc.handover import (
     follow_course,
     handover_prompt,
     handover_written,
+    has_session_start_hook,
     leave_resume_request,
+    read_handover_switches,
     resume_request_taken,
 )
 from agent_orc.sessions import SESSION_ENV
@@ -95,3 +98,25 @@ def test_the_new_conversation_takes_the_request_left_for_it(
     assert capsys.readouterr().out == ""
     drop_resume_request("agent-1")
     assert not resume_request_taken("agent-1")
+
+
+def test_the_hook_is_known_from_the_settings_the_agent_started_with() -> None:
+    # Started without settings, or with a profile that lacks the hook.
+    assert not has_session_start_hook("agent-1")
+    idle = {"type": "command", "command": "agent-orc agent-idle"}
+    write_agent_settings("agent-1", {"hooks": {"Stop": [{"hooks": [idle]}]}})
+    assert not has_session_start_hook("agent-1")
+    # A path to the command counts as well, and a hook of another kind beside it is no problem.
+    hooks = [
+        {"type": "mcp_tool", "server": "x", "tool": "y"},
+        {"type": "command", "command": "/home/u/.local/bin/agent-orc agent-session-start"},
+    ]
+    write_agent_settings(
+        "agent-1", {"hooks": {"SessionStart": [{"matcher": "clear", "hooks": hooks}]}}
+    )
+    assert has_session_start_hook("agent-1")
+
+
+def test_handovers_are_automatic_and_fresh_until_switched_off() -> None:
+    switches = read_handover_switches()
+    assert switches.auto and switches.fresh

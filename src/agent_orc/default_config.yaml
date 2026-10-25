@@ -70,14 +70,16 @@ terminal:
 # (2 % of a million are 20,000 tokens, of 200,000 only 4,000); on a small window it comes before
 # advice_percent and then advises as well. Once per filling: a compaction or a new
 # session starts anew. Asked for by hand earlier (the agent's ⋮ menu), early_prompt is typed.
+# Both switches (automatic handovers, handing over to a fresh session) are on until switched off.
 # With handing over to a fresh session switched on as well (settings menu), fresh_prompt asks for
 # the handover in {file} (.agent-orc/handover.md in the agent's folder) and the end of the turn;
 # once the file is written, Agent-Orc interrupts the agent (an agent asked in the middle of its
 # work tends to go on), /clear starts a new conversation in the folder, and resume_prompt has it
 # read the handover and go on. resume_prompt comes first in the new conversation, before anything
 # another hook wakes it with: the profile's SessionStart hook agent-session-start puts it into
-# the context before any turn runs (without that hook the handover does not go on); then it is
-# typed as well, as the user's own word.
+# the context before any turn runs; then it is typed as well, as the user's own word. Claude Code
+# reads hooks when the agent starts: one started without the hook gets it typed right after
+# /clear.
 handover:
   advice_percent: 90
   compact_percent: 97

@@ -22,8 +22,9 @@ must come first in it, before what any other hook wakes the agent with (AI-Conne
 message that came during the handover at once). So it is left for the new conversation's
 SessionStart hook, which Claude Code runs to its end before the conversation takes anything in.
 Then Agent-Orc types the request as well: it starts the agent when nothing else woke it, and a
-model may not follow an instruction that only came from a hook. The conversations before stay
-listed for the answers view.
+model may not follow an instruction that only came from a hook. Claude Code reads hooks only when
+the agent starts: one started without the hook gets the request typed right after /clear. The
+conversations before stay listed for the answers view.
 """
 
 import json
@@ -34,6 +35,7 @@ from typing import Any
 from agent_orc.attachments import AGENT_ORC_DIR
 from agent_orc.config import HANDOVER_FILE_PLACEHOLDER, PERCENT, HandoverConfig
 from agent_orc.context import session_status
+from agent_orc.effort import agent_settings_file
 from agent_orc.sessions import AgentSession
 from agent_orc.state import state_dir, write_atomically
 
@@ -61,6 +63,11 @@ RESUMED = "resumed"
 # runs, so it comes first, before anything another hook wakes the agent with.
 RESUME_DIR = "handover-resume"
 TAKEN_SUFFIX = ".taken"
+# The hook's subcommand of agent-orc. An agent started without it in its settings (before it was
+# added to the profile, or a profile without it) gets the request typed right after /clear,
+# without its place before what other hooks wake the agent with.
+SESSION_START_SUBCOMMAND = "agent-session-start"
+SESSION_START_EVENT = "SessionStart"
 
 
 @dataclass(frozen=True)
@@ -122,6 +129,22 @@ def _taken_file(session_id: str) -> Path:
     return state_dir() / RESUME_DIR / f"{session_id}{TAKEN_SUFFIX}"
 
 
+def has_session_start_hook(session_id: str) -> bool:
+    """The agent runs with the hook that takes the request: its settings file, written before
+    every start of its process, names it."""
+    path = agent_settings_file(session_id)
+    if not path.is_file():
+        return False
+    settings: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
+    groups = settings.get("hooks", {}).get(SESSION_START_EVENT, [])
+    return any(
+        hook["command"].split()[-1] == SESSION_START_SUBCOMMAND
+        for group in groups
+        for hook in group["hooks"]
+        if hook["type"] == "command"
+    )
+
+
 def leave_resume_request(session_id: str, prompt: str) -> None:
     """Just before /clear: the request to read the handover, for the new conversation's start."""
     drop_resume_request(session_id)
@@ -168,10 +191,10 @@ class HandoverSwitches:
 
 
 def read_handover_switches() -> HandoverSwitches:
-    """Both off until switched on."""
+    """Both on until switched off."""
     path = state_dir() / SETTINGS_FILE
     if not path.is_file():
-        return HandoverSwitches(auto=False, fresh=False)
+        return HandoverSwitches(auto=True, fresh=True)
     settings: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
     return HandoverSwitches(auto=settings["auto"] is True, fresh=settings["fresh"] is True)
 
