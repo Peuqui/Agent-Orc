@@ -8,6 +8,7 @@ import pytest
 
 from agent_orc.config import AgentProfile, TerminalConfig
 from agent_orc.sessions import (
+    TMUX_ESCAPE_MS,
     AgentSession,
     MissingModelError,
     SessionAlreadyRunningError,
@@ -202,7 +203,7 @@ def test_build_command_refuses_a_missing_model() -> None:
         build_command(["x", "--model", "{model}"], "demo", None, SETTINGS)
 
 
-def test_server_passes_mouse_clipboard_and_focus_on(
+def test_server_passes_mouse_clipboard_focus_and_a_short_escape(
     manager: SessionManager, workdir: Path, socket_name: str
 ) -> None:
     manager.start("sleeper", workdir, resume=False)
@@ -210,6 +211,7 @@ def test_server_passes_mouse_clipboard_and_focus_on(
     assert tmux_query(socket_name, "show-options", "-gv", "mouse") == "on"
     assert tmux_query(socket_name, "show-options", "-gv", "set-clipboard") == "on"
     assert tmux_query(socket_name, "show-options", "-sv", "focus-events") == "on"
+    assert tmux_query(socket_name, "show-options", "-sv", "escape-time") == str(TMUX_ESCAPE_MS)
 
 
 def test_a_terminal_runs_next_to_the_folders_agent(manager: SessionManager, workdir: Path) -> None:

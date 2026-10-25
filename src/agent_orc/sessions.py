@@ -46,6 +46,9 @@ LIST_FORMAT = FIELD_SEPARATOR.join(
     ]
 )
 MILLISECONDS_PER_SECOND = 1000
+# tmux's wait after Esc for the rest of a key sequence (see SessionManager.start); a browser
+# terminal sends a sequence in one piece, so a few milliseconds are plenty.
+TMUX_ESCAPE_MS = 10
 # How often a session asked to exit is looked at.
 EXIT_POLL_SECONDS = 0.2
 # tmux reports a missing server on stderr; that state simply means "no sessions".
@@ -212,8 +215,12 @@ class SessionManager:
         # and touch scrolling in the browser terminal into scrolling the agent's history.
         # set-clipboard on lets an agent's copy (OSC 52) through to the browser's clipboard,
         # focus-events on tells the agent whether its terminal has the focus (Claude asks).
+        # escape-time: how long tmux waits after Esc for the rest of a key sequence; at its
+        # default of 500 ms a second Esc or a focus report within that time made one other key
+        # of them, and the agent never saw Esc (an interrupt that seemed to go nowhere).
         self._tmux(
             "start-server", ";",
+            "set-option", "-s", "escape-time", str(TMUX_ESCAPE_MS), ";",
             "set-option", "-g", "remain-on-exit", "on", ";",
             "set-option", "-g", "status", "off", ";",
             "set-option", "-g", "mouse", "on", ";",
