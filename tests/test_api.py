@@ -607,6 +607,9 @@ def test_serves_pwa_next_to_api(config: Config, clock: FakeClock, tmp_path: Path
     page = client.get("/")
     assert "Agent-Orc" in page.text
     assert page.headers[BUILD_ID_HEADER] == "build-1"
+    # Asked for anew each time, so no page of an older version starts from the cache.
+    assert page.headers["Cache-Control"] == "no-cache"
+    assert client.get("/", headers={"If-None-Match": page.headers["ETag"]}).status_code == 304
     me = client.get("/api/me")
     assert me.status_code == 401
     # Also on API answers, which an open app keeps polling.

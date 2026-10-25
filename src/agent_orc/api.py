@@ -4,6 +4,7 @@ import asyncio
 import hmac
 import logging
 import mimetypes
+import os
 import socket
 import subprocess
 import time
@@ -11,6 +12,7 @@ from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from dataclasses import asdict
 from datetime import datetime
+from os import PathLike
 from pathlib import Path
 from typing import Annotated, Any, BinaryIO, Literal, NamedTuple
 from urllib.parse import urlsplit
@@ -30,6 +32,7 @@ from fastapi import (
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+from starlette.types import Scope
 
 from agent_orc import announce as announcing
 from agent_orc import files, keepwarm, peers, speech_service
@@ -204,6 +207,25 @@ SESSION_COOKIE = "agent_orc_session"
 # response, so an open app notices that a newer build has been installed.
 BUILD_ID_FILE = "build-id.txt"
 BUILD_ID_HEADER = "X-Build-Id"
+
+
+class PwaFiles(StaticFiles):
+    """The built PWA. Its pages are asked for anew each time (a 304 when unchanged): with no
+    caching header, a browser keeps a page for a while by its age, and an old tablet then started
+    the workspace's columns (iframes of the start page) from the page of the version before an
+    update, whose scripts the update had removed, so the columns stayed empty."""
+
+    def file_response(
+        self,
+        full_path: PathLike[str] | str,
+        stat_result: os.stat_result,
+        scope: Scope,
+        status_code: int = 200,
+    ) -> Response:
+        response = super().file_response(full_path, stat_result, scope, status_code)
+        if Path(full_path).suffix == ".html":
+            response.headers["Cache-Control"] = "no-cache"
+        return response
 # Custom WebSocket close codes (4000-4999 are free for applications).
 WS_CLOSE_UNAUTHORIZED = 4401
 WS_CLOSE_FORBIDDEN_ORIGIN = 4403
@@ -2473,7 +2495,7 @@ def create_app(
             return response
 
         # Mounted last, so the API routes above take precedence.
-        app.mount("/", StaticFiles(directory=static_dir, html=True), name="pwa")
+        app.mount("/", PwaFiles(directory=static_dir, html=True), name="pwa")
 
     return app
 
