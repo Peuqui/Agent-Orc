@@ -22,7 +22,12 @@ fi
 
 "$REPO/deploy/preflight.sh"
 (cd frontend && npm ci && npm run build)
-[ -d "$VENV" ] || python3 -m venv "$VENV"
+# A venv without pip is the remains of a failed creation: made anew. Debian and Ubuntu ship Python
+# without what venv needs for pip (`import venv` works, creating one does not).
+if [ ! -x "$VENV/bin/pip" ] && ! python3 -m venv --clear "$VENV"; then
+    echo "Could not create $VENV: install the venv package of python3 first (Debian/Ubuntu: sudo apt install python3-venv), then run this again." >&2
+    exit 1
+fi
 "$VENV/bin/pip" install .
 mkdir -p "$BIN"
 ln -sfn "$VENV/bin/agent-orc" "$BIN/agent-orc"
