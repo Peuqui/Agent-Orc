@@ -1454,6 +1454,13 @@ def test_automatic_handover_runs_once_per_filling(
         store_activity(session_id, busy=False)
         time.sleep(0.5)
         assert client.get("/api/sessions").json()[0]["handover"]["progress"] == "done"
+        # A status without usage (a new turn before its first answer) is no new filling.
+        window = {"context_window_size": 1000}
+        store_status(session_id, {"model": {"display_name": "Opus"}, "context_window": window})
+        time.sleep(0.5)
+        report_context(session_id, 960)
+        time.sleep(0.5)
+        assert client.get("/api/sessions").json()[0]["handover"]["progress"] == "done"
         # Compacted, the context is small again; the next filling is asked for anew.
         report_context(session_id, 300)
         assert progress_becomes(client, None)

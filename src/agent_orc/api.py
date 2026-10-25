@@ -106,7 +106,7 @@ from agent_orc.handover import ADVISED as HANDOVER_ADVISED
 from agent_orc.handover import ASKED as HANDOVER_ASKED
 from agent_orc.handover import DONE as HANDOVER_DONE
 from agent_orc.handover import WORKING as HANDOVER_WORKING
-from agent_orc.handover import advise, follow_course, read_auto, write_auto
+from agent_orc.handover import advise, context_percent, follow_course, read_auto, write_auto
 from agent_orc.history import (
     CLAUDE_PROJECTS,
     CONVERSATION_SEARCHES,
@@ -933,6 +933,11 @@ def create_app(
             del handover_progress[session_id]
         early_handovers.intersection_update(handover_progress)
         for session in listed:
+            # Claude Code reports no usage at times (a new turn before its first answer): not known
+            # is not "small again", so the course stays as it is instead of starting anew and asking
+            # the same filling a second time.
+            if session.running and context_percent(session) is None:
+                continue
             advice = advise(session, config.handover)
             if not advice.recommended:
                 # Below the advice share only a handover asked for by hand runs; done, it stays
