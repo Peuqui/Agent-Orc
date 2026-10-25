@@ -1468,6 +1468,34 @@ def test_automatic_handover_runs_once_per_filling(
         assert progress_becomes(client, "asked")
 
 
+def test_a_written_handover_is_not_asked_again_after_a_restart(
+    config: Config, clock: FakeClock, home: Path, socket_name: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
+
+    def screen(session_id: str) -> str:
+        return subprocess.run(
+            ["tmux", "-L", socket_name, "capture-pane", "-p", "-t", f"={session_id}:"],
+            capture_output=True, text=True, check=True,
+        ).stdout  # fmt: skip
+
+    with automatic_handovers(config, clock, monkeypatch, auto=True) as client:
+        client.post("/api/login", json={"password": PASSWORD})
+        session_id = start_shell(client, home / "projects")
+        report_context(session_id, 960)
+        store_activity(session_id, busy=True)
+        assert progress_becomes(client, "working")
+        store_activity(session_id, busy=False)
+        assert progress_becomes(client, "done")
+        asked_once = screen(session_id)
+    # The service restarts (a deploy); the agent is still nearly full.
+    with automatic_handovers(config, clock, monkeypatch, auto=True) as client:
+        client.post("/api/login", json={"password": PASSWORD})
+        time.sleep(0.5)
+        assert client.get("/api/sessions").json()[0]["handover"]["progress"] == "done"
+        assert screen(session_id) == asked_once
+
+
 def test_an_early_handover_by_hand_is_a_plain_request_and_ends_with_the_next_input(
     config: Config, clock: FakeClock, home: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

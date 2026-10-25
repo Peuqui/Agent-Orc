@@ -106,7 +106,15 @@ from agent_orc.handover import ADVISED as HANDOVER_ADVISED
 from agent_orc.handover import ASKED as HANDOVER_ASKED
 from agent_orc.handover import DONE as HANDOVER_DONE
 from agent_orc.handover import WORKING as HANDOVER_WORKING
-from agent_orc.handover import advise, context_percent, follow_course, read_auto, write_auto
+from agent_orc.handover import (
+    advise,
+    context_percent,
+    follow_course,
+    read_auto,
+    read_progress,
+    write_auto,
+    write_progress,
+)
 from agent_orc.history import (
     CLAUDE_PROJECTS,
     CONVERSATION_SEARCHES,
@@ -871,8 +879,16 @@ def create_app(
 
     # Where each agent's handover stands (see handover.py), so it comes once per filling; and the
     # agents whose handover was asked for by hand before their context was nearly full.
-    handover_progress: dict[str, str] = {}
-    early_handovers: set[str] = set()
+    handover_progress, early_handovers = read_progress()
+    saved_handovers = (dict(handover_progress), set(early_handovers))
+
+    def save_handovers() -> None:
+        """Kept across restarts (see handover.py); written only when something changed."""
+        nonlocal saved_handovers
+        current = (dict(handover_progress), set(early_handovers))
+        if current != saved_handovers:
+            write_progress(handover_progress, early_handovers)
+            saved_handovers = current
 
     def ask_for_handover(session: AgentSession) -> None:
         """Nearly full, the request says so; earlier (asked for by hand) it is a plain one."""
@@ -884,6 +900,7 @@ def create_app(
             early_handovers.discard(session.id)
         else:
             early_handovers.add(session.id)
+        save_handovers()
 
     def cache_entry(cache: CacheState | None) -> dict[str, float] | None:
         """When the cache expires (the page counts down itself) and how long before that its age
@@ -958,6 +975,7 @@ def create_app(
             elif progress is None:
                 handover_progress[session.id] = HANDOVER_ADVISED
                 send_to_all(agent_message("handover", session.id, session.name, ""), config.push)
+        save_handovers()
 
     def runs_below_advice(session: AgentSession) -> bool:
         """Follows a handover asked for by hand below the advice share; False once it is over."""

@@ -23,6 +23,9 @@ from agent_orc.sessions import AgentSession
 from agent_orc.state import state_dir, write_atomically
 
 SETTINGS_FILE = "handover.json"
+# Where each agent's handover stands, kept across restarts of the service: otherwise a restart
+# would take a handover already written for "not asked yet" and ask the same filling again.
+PROGRESS_FILE = "handover-progress.json"
 PERCENT = 100
 # Where a handover stands: typed into the agent, being written, written; or only advised to
 # the user (automatic handovers switched off).
@@ -79,3 +82,18 @@ def read_auto() -> bool:
 
 def write_auto(auto: bool) -> None:
     write_atomically(state_dir() / SETTINGS_FILE, json.dumps({"auto": auto}))
+
+
+def read_progress() -> tuple[dict[str, str], set[str]]:
+    """Where each agent's handover stands, and the agents whose handover was asked for by hand
+    early; empty before the first one."""
+    path = state_dir() / PROGRESS_FILE
+    if not path.is_file():
+        return {}, set()
+    stored: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
+    return dict(stored["progress"]), set(stored["early"])
+
+
+def write_progress(progress: dict[str, str], early: set[str]) -> None:
+    stored = {"progress": progress, "early": sorted(early)}
+    write_atomically(state_dir() / PROGRESS_FILE, json.dumps(stored))
