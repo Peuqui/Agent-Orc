@@ -88,6 +88,11 @@ einen SSH-Tunnel ([Mehrere Rechner](#mehrere-rechner)).
 </p>
 
 **Antworten**
+
+<p align="center">
+  <img src="docs/screenshots/answers-de.png" alt="Antworten-Ansicht zweier Agenten: ihre Antworten mit Tabellen und Hörabsatz, ungelesene rot markiert, der Kreisel am Mikrofon, solange einer arbeitet" width="860">
+</p>
+
 - Ein Umschalter in jedem Terminal zeigt nur das, was der Agent geantwortet hat (pro Anfrage
   der letzte Text, auf Wunsch jeder), statt des Terminals mit Gedanken und Diffs; was du
   während einer Antwort getippt hast, und seine Bilder erscheinen auch.

@@ -82,6 +82,11 @@ that run Agent-Orc can be shown in the same app, through an SSH tunnel ([Several
 </p>
 
 **Answers**
+
+<p align="center">
+  <img src="docs/screenshots/answers-en.png" alt="Answers view of two agents: their answers with tables and the paragraph for listening, unread ones marked red, the spinner at the microphone while one is working" width="860">
+</p>
+
 - A switch in every terminal shows only what the agent answered (its last text per request, on
   request every text) instead of the terminal with its thoughts and diffs; what you typed
   during an answer and its pictures are shown too.
