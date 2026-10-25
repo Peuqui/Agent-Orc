@@ -12,7 +12,6 @@ import { useViewZoom } from '../composables/useViewZoom'
 import { sessionName, useSessions } from '../composables/useSessions'
 import { type Speakable, useSpeech } from '../composables/useSpeech'
 import { useToast } from '../composables/useToast'
-import { JOG_TRACK_WIDTH_PX } from '../device'
 import { formatMoment } from '../format'
 import { LISTEN_REPLAY_CLASS, renderMarkdown } from '../markdown'
 import AnswerImages from './AnswerImages.vue'
@@ -31,8 +30,6 @@ const { locale } = useI18n()
 const answersAll = useAnswersAll(props.sessionId)
 const { sessions } = useSessions()
 const session = computed(() => sessions.value.find((candidate) => candidate.id === props.sessionId))
-// A yes or no: the sessions come anew every few seconds, and a new object would draw the list anew.
-const busy = computed(() => session.value?.busy === true)
 const speech = useSpeech()
 const turns = ref<Turn[]>([])
 const spoken = ref<SpokenRequest[]>([])
@@ -382,18 +379,6 @@ function jog(lines: number): void {
     >
       ↓ {{ $t('answers.newBelow', { count: unreadBelow }) }}
     </button>
-    <!-- While the agent works: laid over the upper corner of the list, clear of the jog strip, so it
-         takes no room in the toolbar (which would wrap on a phone). -->
-    <span
-      v-if="busy"
-      class="absolute top-2 z-10 flex size-6 items-center justify-center rounded-full bg-slate-900/80"
-      :style="{ right: `calc(var(--spacing) * 3 + ${JOG_TRACK_WIDTH_PX}px)` }"
-      role="status"
-      :aria-label="$t('sessions.working')"
-      :title="$t('sessions.working')"
-    >
-      <span class="size-3.5 animate-spin rounded-full border-2 border-amber-300 border-t-transparent" aria-hidden="true" />
-    </span>
     <JogScroller @scroll="jog" />
     </div>
   </div>

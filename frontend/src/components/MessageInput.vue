@@ -4,6 +4,7 @@ import { api } from '../api'
 import { MESSAGE_FIELD_ATTRIBUTE } from '../columns'
 import { useDictation } from '../composables/useDictation'
 import { draftOf } from '../composables/useDrafts'
+import { useSessions } from '../composables/useSessions'
 import { useSettings } from '../composables/useSettings'
 import { useZoomFactor } from '../composables/useViewZoom'
 import { attachInOrder } from '../attachInOrder'
@@ -22,6 +23,9 @@ const props = defineProps<{ sessionId: string }>()
 const { zoomFactor, zoomStyle } = useZoomFactor()
 
 const toast = useToast()
+const { sessions } = useSessions()
+// A yes or no: the sessions come anew every few seconds, and a new object would draw anew.
+const busy = computed(() => sessions.value.find((session) => session.id === props.sessionId)?.busy === true)
 const text = draftOf(props.sessionId)
 const field = ref<HTMLTextAreaElement>()
 
@@ -266,7 +270,21 @@ function onKeydown(event: KeyboardEvent): void {
       </button>
       <template #popup><PromptTemplates ref="templates" @insert="insertTemplate" /></template>
     </AttachMenu>
-    <DictationMic :dictation="dictation" />
+    <!-- While the agent works, a small spinner at the lower right of the microphone, which sits higher
+         than the field and leaves room there: in every view, without taking room in a toolbar. -->
+    <span class="relative flex">
+      <DictationMic :dictation="dictation" />
+      <span
+        v-if="busy"
+        class="flex size-4 items-center justify-center rounded-full bg-slate-900"
+        :class="dictation.microphone ? 'pointer-events-none absolute right-0 bottom-0' : 'mx-1 self-center'"
+        role="status"
+        :aria-label="$t('sessions.working')"
+        :title="$t('sessions.working')"
+      >
+        <span class="size-3 animate-spin rounded-full border-2 border-amber-300 border-t-transparent" aria-hidden="true" />
+      </span>
+    </span>
     <!-- Grows with its content up to a share of the view (cqh is not zoomed, hence the division), so a long dictation can be read before sending. -->
     <textarea
       ref="field"
