@@ -3,6 +3,8 @@
 @theme {
   /* Inline code in answers and notes: the blue Claude Code shows files and commands in. */
   --color-code: #5ab3ff;
+  /* The spinner while an agent works: AIfred's orange, darker than the microphone's amber beside it. */
+  --color-working: #e67700;
 }
 
 /* Colour scheme follows HaemoTrace: dark slate surfaces, red accents. */

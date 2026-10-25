@@ -282,7 +282,7 @@ function onKeydown(event: KeyboardEvent): void {
         :aria-label="$t('sessions.working')"
         :title="$t('sessions.working')"
       >
-        <span class="size-3 animate-spin rounded-full border-2 border-amber-300 border-t-transparent" aria-hidden="true" />
+        <span class="size-3 animate-spin rounded-full border-2 border-working border-t-transparent" aria-hidden="true" />
       </span>
     </span>
     <!-- Grows with its content up to a share of the view (cqh is not zoomed, hence the division), so a long dictation can be read before sending. -->
