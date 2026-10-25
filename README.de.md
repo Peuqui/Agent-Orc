@@ -172,6 +172,9 @@ einen SSH-Tunnel ([Mehrere Rechner](#mehrere-rechner)).
   Bildschirmtastatur, frei anpassbar und mit Text-Tasten (Makros); eine Textansicht zum
   Markieren und Kopieren, anklickbare Links. Esc im Eingabefeld geht ebenfalls an den Agenten
   (unterbricht ihn), außer es schließt ein Menü des Felds.
+- Mit der Maus markiert Umschalt und Ziehen direkt im Terminal (einfaches Ziehen scrollt, das
+  übernimmt tmux); beim Loslassen ist es kopiert, und Strg+C bei einer Markierung kopiert ebenfalls,
+  statt den Agenten zu unterbrechen.
 - Auf dem Touchscreen fokussiert ein Tipp ins Terminal es (die Sondertasten wirken), ohne die
   Bildschirmtastatur hochzuholen; der Tastaturknopf am Ende der Sondertasten-Leiste holt sie
   herauf und wieder herunter und zeigt, wann sie oben ist. In einem normalen Terminal schreibt

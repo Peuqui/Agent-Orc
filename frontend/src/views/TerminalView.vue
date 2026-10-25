@@ -216,6 +216,25 @@ terminal.loadAddon(new WebLinksAddon())
 registerFileLinks(terminal, router, () => session.value?.path)
 // What an agent copies (OSC 52, e.g. Claude Code's copy) lands in the browser's clipboard.
 terminal.loadAddon(new ClipboardAddon())
+
+/** Text marked in the terminal (Shift and drag: past tmux, which takes the plain drag for
+ * scrolling) into the clipboard. */
+function copyMarked(): void {
+  if (terminal.hasSelection()) void copyText(terminal.getSelection(), t('terminal.copied'))
+}
+
+// Ctrl+C with text marked copies it, as in a desktop terminal, instead of interrupting the agent;
+// without a mark it stays the interrupt.
+terminal.attachCustomKeyEventHandler((event) => {
+  const copy = event.ctrlKey && !event.altKey && !event.metaKey && event.key.toLowerCase() === 'c'
+  if (!copy || !terminal.hasSelection()) return true
+  if (event.type === 'keydown') {
+    copyMarked()
+    terminal.clearSelection()
+  }
+  event.preventDefault()
+  return false
+})
 // Emoji are two cells wide in the agents' output; xterm's default (Unicode 6) counts one and
 // shifts every following character.
 terminal.loadAddon(new Unicode11Addon())
@@ -383,6 +402,8 @@ onMounted(async () => {
   // stays, so Ctrl+C copies it. A plain terminal keeps the focus where it was clicked.
   else {
     container.value.addEventListener('pointerup', () => {
+      // Marked text goes to the clipboard as the mouse is let go, as in Linux terminals.
+      copyMarked()
       if (!directTyping.value && !terminal.hasSelection()) messageInput.value?.focus()
     })
   }
