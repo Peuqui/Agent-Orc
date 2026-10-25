@@ -161,9 +161,10 @@
   .markdown code {
     @apply rounded bg-slate-800 px-1 py-0.5 font-mono text-sm;
   }
-  /* Inside a code block the text stays as it is; only code within a sentence is coloured. */
+  /* Inside a code block the text stays as it is; only code within a sentence is coloured, and a
+     click copies it (useCodeCopy); a path that opens its file says so itself, below. */
   .markdown :not(pre) > code {
-    @apply text-code;
+    @apply text-code cursor-copy;
   }
   .markdown pre {
     @apply overflow-x-auto rounded-lg bg-slate-800 p-3;

@@ -106,7 +106,8 @@ that run Agent-Orc can be shown in the same app, through an SSH tunnel ([Several
   right edge of the block, over its text; it stays there while the block scrolls sideways. One
   tap puts the block into the clipboard, without the line break at its end (pasted into a
   terminal, a command would otherwise run at once), which beats marking exactly the right
-  letters on a phone.
+  letters on a phone. Code within a sentence (the blue words) is copied by a click on it; a path
+  that names a file or folder opens it instead.
 
 **Chats** (with [AI-Connect](https://github.com/Peuqui/AI-Connect), the bridge that lets agent sessions talk to each other; optional)
 - Read along live: by conversation (a chat as in a messenger: you on the right, of two agents the

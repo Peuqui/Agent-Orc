@@ -113,7 +113,8 @@ einen SSH-Tunnel ([Mehrere Rechner](#mehrere-rechner)).
   einen Kopieren-Knopf, über dem Text des Blocks; er bleibt dort stehen, wenn der Block seitlich
   scrollt. Ein Tipp legt den Block in die Zwischenablage, ohne den Zeilenumbruch am Ende (ins
   Terminal eingefügt, würde ein Befehl sonst sofort laufen) – leichter, als am Handy genau die
-  richtigen Buchstaben zu markieren.
+  richtigen Buchstaben zu markieren. Code im Fließtext (die blauen Wörter) kopiert ein Klick darauf;
+  ein Pfad zu einer Datei oder einem Ordner öffnet stattdessen diese.
 
 **Gespräche** (mit [AI-Connect](https://github.com/Peuqui/AI-Connect), der Brücke, über die Agenten-Sitzungen miteinander sprechen; optional)
 - Live mitlesen: nach Gespräch (als Chat wie im Messenger: du rechts, von zwei Agenten der, der
