@@ -7,8 +7,8 @@
 
 [Deutsch](README.de.md)
 
-> **Status: early, but in daily use.** Tested on Linux with Claude Code; the profiles for
-> Codex and Aider are prepared but untested.
+> In daily use, tested on Linux with Claude Code; the profiles for Codex and Aider are prepared
+> but untested.
 
 Agent-Orc starts, watches and stops coding agents (Claude Code, Codex, Aider, …) on your own
 Linux machine, from a web app that works on the phone as well as on the desktop (PWA).
