@@ -247,6 +247,8 @@ class PwaFiles(StaticFiles):
         if Path(full_path).suffix == ".html":
             response.headers["Cache-Control"] = "no-cache"
         return response
+
+
 # Custom WebSocket close codes (4000-4999 are free for applications).
 WS_CLOSE_UNAUTHORIZED = 4401
 WS_CLOSE_FORBIDDEN_ORIGIN = 4403
@@ -2065,8 +2067,11 @@ def create_app(
         if session is None:
             raise SessionNotFoundError(session_id)
         data, media_type = next(
-            (image for transcript in reversed(agent_transcripts(session))
-             if (image := image_in(transcript, entry_id, index)) is not None),
+            (
+                image
+                for transcript in reversed(agent_transcripts(session))
+                if (image := image_in(transcript, entry_id, index)) is not None
+            ),
             (None, None),
         )
         if data is None or media_type is None:

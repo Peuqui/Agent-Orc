@@ -150,13 +150,15 @@ class HandoverState:
     asked_at: dict[str, float] = field(default_factory=dict)
 
     def as_json(self) -> str:
-        return json.dumps({
-            "progress": self.progress,
-            "early": sorted(self.early),
-            "fresh": sorted(self.fresh),
-            "previous": self.previous,
-            "asked_at": self.asked_at,
-        })
+        return json.dumps(
+            {
+                "progress": self.progress,
+                "early": sorted(self.early),
+                "fresh": sorted(self.fresh),
+                "previous": self.previous,
+                "asked_at": self.asked_at,
+            }
+        )
 
 
 def read_state() -> HandoverState:
