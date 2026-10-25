@@ -98,7 +98,7 @@ einen SSH-Tunnel ([Mehrere Rechner](#mehrere-rechner)).
   [TTS-Suite](https://github.com/Peuqui/TTS-Suite)-Dienst auf dem Server: die Engines, die er anbietet (auch auf
   anderen Rechnern und in der Cloud), werden in einem eigenen Fenster der Einstellungen geordnet, angeschaltet
   und mit einer Stimme versehen, und das erste Stück läuft schon, während der Rest noch entsteht; der Browser
-  spielt, was der Dienst schickt, und das Token bleibt auf dem Server. „Neue vorlesen (n)“ wird grau, wenn nichts Neues da ist, wie
+  spielt, was der Dienst schickt, und das Token bleibt auf dem Server. Der Vorlese-Knopf „Neue (n)“ wird grau, wenn nichts Neues da ist, wie
   das Häkchen daneben. Das 🔊 vor dem Hörabsatz einer Antwort ist ein Knopf, der ihn noch einmal vorliest; mit der
   TTS-Suite spielt die Wiederholung aus dem Speicher des Browsers (letzte 8 Lesungen, ein Neuladen leert ihn), ohne den
   Dienst erneut zu fragen.

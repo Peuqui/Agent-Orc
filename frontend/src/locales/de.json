@@ -721,7 +721,7 @@
     "empty": "Noch keine Antworten. Sie erscheinen, sobald der Agent etwas geschrieben hat.",
     "working": "Der Agent arbeitet noch …",
     "allHint": "Alle Texte des Agenten, auch die Zwischenkommentare",
-    "readNew": "Neue vorlesen ({count})",
+    "readNew": "Neue ({count})",
     "readNewHint": "Die noch nicht gesehenen Antworten vorlesen",
     "markAllSeen": "Alle als gelesen markieren",
     "read": "Vorlesen",
@@ -756,7 +756,7 @@
     "room": "Raum",
     "allRooms": "Alle verbundenen Räume",
     "mode": "Anzeige",
-    "modeSummaries": "Zusammenfassungen",
+    "modeSummaries": "Kurz",
     "modeAll": "Alles",
     "summariesHint": "Zu jeder Eingabe von dir nur der Hörabsatz des Agenten (nach dem Lautsprecher-Zeichen), ohne Code und Pfade",
     "pictures": "{count} Bild | {count} Bilder"

@@ -92,7 +92,7 @@ that run Agent-Orc can be shown in the same app, through an SSH tunnel ([Several
   server speaks: the engines it offers (on other machines and in the cloud, too) are put in order,
   switched on and given a voice in a window of their own in the settings, and the first piece plays
   while the rest is still being made; the browser plays what the service sends, and the token stays
-  on the server. “Read new (n)” turns grey when nothing is new, like the check mark beside it. The 🔊 in front of an answer's
+  on the server. The speaker button “New (n)” turns grey when nothing is new, like the check mark beside it. The 🔊 in front of an answer's
   paragraph for listening is a button that reads it again; with the TTS-Suite the repeat plays from the browser's memory
   (last 8 readings, emptied by a reload) without asking the service again.
 - Every code block in the answers, in notes and in the Markdown preview has a copy button at the
