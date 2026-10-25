@@ -16,7 +16,7 @@ import os
 import signal
 import time
 import uuid
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -51,6 +51,17 @@ class ApprovalRequest:
     pid: int
     # Tool and input, to recognise the tool call once it ran without the web app.
     call: str
+    # What Claude Code offers instead of asking again ("Yes, and don't ask again for ..."), as it
+    # sent them: permission update entries (addRules, setMode, addDirectories, ...). Optional in
+    # the hook input; a request without them can only be allowed or denied once.
+    suggestions: list[dict[str, Any]] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class Decision:
+    allow: bool
+    # The suggestion of the request to apply with the allowance, as Claude Code sent it.
+    suggestion: dict[str, Any] | None = None
 
 
 def approvals_dir() -> Path:
@@ -66,8 +77,8 @@ def _decision_file(request_id: str) -> Path:
 
 
 def subject_of(tool_input: dict[str, Any]) -> str:
-    for field in SUBJECT_FIELDS:
-        value = tool_input.get(field)
+    for name in SUBJECT_FIELDS:
+        value = tool_input.get(name)
         if isinstance(value, str):
             return value[:MAX_SUBJECT_CHARS]
     return json.dumps(tool_input)[:MAX_SUBJECT_CHARS]
@@ -89,6 +100,7 @@ def open_request(session: str, hook: dict[str, Any]) -> ApprovalRequest:
         description=description if isinstance(description, str) else None,
         pid=os.getpid(),
         call=call_key(hook["tool_name"], tool_input),
+        suggestions=hook.get("permission_suggestions") or [],
     )
     write_atomically(_request_file(request.id), json.dumps(asdict(request)))
     return request
@@ -99,21 +111,23 @@ def close_request(request_id: str) -> None:
     _decision_file(request_id).unlink(missing_ok=True)
 
 
-def wait_for_decision(request_id: str) -> bool:
-    """Blocks until the user decided in the web app; True allows."""
-    decision = _decision_file(request_id)
-    while not decision.is_file():
+def wait_for_decision(request_id: str) -> Decision:
+    """Blocks until the user decided in the web app."""
+    path = _decision_file(request_id)
+    while not path.is_file():
         time.sleep(DECISION_POLL_SECONDS)
-    allowed: bool = json.loads(decision.read_text(encoding="utf-8"))["allow"]
-    return allowed
+    return Decision(**json.loads(path.read_text(encoding="utf-8")))
 
 
-def hook_answer(allow: bool) -> dict[str, Any]:
-    """The PermissionRequest hook output Claude Code takes as the user's answer."""
-    decision: dict[str, str] = {"behavior": "allow" if allow else "deny"}
-    if not allow:
-        decision["message"] = DENIED_MESSAGE
-    return {"hookSpecificOutput": {"hookEventName": "PermissionRequest", "decision": decision}}
+def hook_answer(decision: Decision) -> dict[str, Any]:
+    """The PermissionRequest hook output Claude Code takes as the user's answer; a suggestion goes
+    back as Claude Code sent it, which applies it as the terminal's "don't ask again" would."""
+    answer: dict[str, Any] = {"behavior": "allow" if decision.allow else "deny"}
+    if not decision.allow:
+        answer["message"] = DENIED_MESSAGE
+    elif decision.suggestion is not None:
+        answer["updatedPermissions"] = [decision.suggestion]
+    return {"hookSpecificOutput": {"hookEventName": "PermissionRequest", "decision": answer}}
 
 
 def _hook_alive(pid: int) -> bool:
@@ -140,10 +154,18 @@ def open_requests() -> list[ApprovalRequest]:
     return [request for request in requests if _hook_alive(request.pid)]
 
 
-def decide(request_id: str, allow: bool) -> None:
-    if not _request_file(request_id).is_file():
-        raise ApprovalNotFoundError(request_id)
-    write_atomically(_decision_file(request_id), json.dumps({"allow": allow}))
+class InvalidSuggestionError(ValueError):
+    """The answer names a suggestion the request does not have, or applies one to a denial."""
+
+
+def decide(request: ApprovalRequest, allow: bool, suggestion: int | None = None) -> None:
+    """The user's answer; ``suggestion``: the index of one of the request's suggestions to apply."""
+    if not _request_file(request.id).is_file():
+        raise ApprovalNotFoundError(request.id)
+    if suggestion is not None and (not allow or not 0 <= suggestion < len(request.suggestions)):
+        raise InvalidSuggestionError(f"no suggestion {suggestion} to apply with this answer")
+    entry = None if suggestion is None else request.suggestions[suggestion]
+    write_atomically(_decision_file(request.id), json.dumps(asdict(Decision(allow, entry))))
 
 
 def _end_hook(request: ApprovalRequest) -> None:

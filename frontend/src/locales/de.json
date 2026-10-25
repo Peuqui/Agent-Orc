@@ -485,7 +485,17 @@
     "goTo": "Zum Agenten",
     "openAgent": "Zum Agenten wechseln",
     "allow": "Erlauben",
-    "deny": "Ablehnen"
+    "deny": "Ablehnen",
+    "always": "Immer: {what}",
+    "alwaysTitle": "Erlauben und künftig nicht mehr fragen, {where}",
+    "alwaysMode": "Modus „{mode}“",
+    "alwaysDirectories": "Ordner {what}",
+    "where": {
+      "session": "bis die Sitzung endet",
+      "localSettings": "in diesem Projekt (nur auf diesem Rechner)",
+      "projectSettings": "in diesem Projekt (für alle, die es nutzen)",
+      "userSettings": "in allen Projekten"
+    }
   },
   "changes": {
     "openFile": "Datei öffnen",

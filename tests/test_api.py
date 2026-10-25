@@ -24,7 +24,7 @@ from starlette.testclient import WebSocketTestSession
 from starlette.websockets import WebSocketDisconnect
 
 from agent_orc.api import BUILD_ID_FILE, BUILD_ID_HEADER, create_app
-from agent_orc.approvals import close_request, open_request, wait_for_decision
+from agent_orc.approvals import Decision, close_request, open_request, wait_for_decision
 from agent_orc.auth import new_credentials
 from agent_orc.config import Config, DictationConfig, HostConfig, ServerConfig, default_config_text
 from agent_orc.context import store_activity, store_status
@@ -1302,16 +1302,29 @@ def test_permission_request_is_answered_from_the_card(
 ) -> None:
     monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
     session_id = start_shell(client, home / "projects")
-    hook = {"tool_name": "Bash", "tool_input": {"command": "git push"}}
+    suggestion = {
+        "type": "addRules",
+        "rules": [{"toolName": "Bash", "ruleContent": "git push:*"}],
+        "behavior": "allow",
+        "destination": "localSettings",
+    }
+    hook = {
+        "tool_name": "Bash",
+        "tool_input": {"command": "git push"},
+        "permission_suggestions": [suggestion],
+    }
     request = open_request(session_id, hook)
     listed = client.get("/api/sessions").json()[0]["approvals"]
-    assert [(a["id"], a["tool"], a["subject"]) for a in listed] == [
-        (request.id, "Bash", "git push")
+    assert [(a["id"], a["tool"], a["subject"], a["suggestions"]) for a in listed] == [
+        (request.id, "Bash", "git push", [suggestion])
     ]
     url = f"/api/sessions/{session_id}/approval"
     assert client.post(url, json={"request": "other", "allow": True}).status_code == 404
-    assert client.post(url, json={"request": request.id, "allow": False}).status_code == 204
-    assert wait_for_decision(request.id) is False
+    refused = client.post(url, json={"request": request.id, "allow": False, "suggestion": 0})
+    assert refused.status_code == 422
+    answered = client.post(url, json={"request": request.id, "allow": True, "suggestion": 0})
+    assert answered.status_code == 204
+    assert wait_for_decision(request.id) == Decision(allow=True, suggestion=suggestion)
 
 
 def test_changes_of_an_agents_project(client: TestClient, home: Path) -> None:

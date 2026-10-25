@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import { type AgentSession, type Approval } from '../api'
+import { type PermissionSuggestion, suggestionText } from '../permissionSuggestions'
 import AppIcon from './AppIcon.vue'
 import { sessionName, useSessions } from '../composables/useSessions'
 import { useApi } from '../composables/useHostContext'
@@ -13,10 +15,27 @@ const emit = defineEmits<{ open: [] }>()
 const { refresh } = useSessions()
 const toast = useToast()
 const api = useApi()
+const { t } = useI18n()
 
-async function answer(approval: Approval, allow: boolean): Promise<void> {
+/** Claude Code's offers to stop asking that the web app shows, with their index in the request. */
+function offers(approval: Approval): { index: number; label: string; title: string }[] {
+  return approval.suggestions.flatMap((suggestion: PermissionSuggestion, index) => {
+    const text = suggestionText(suggestion)
+    if (text === null) return []
+    const what =
+      text.kind === 'rules'
+        ? text.text
+        : text.kind === 'mode'
+          ? t('approval.alwaysMode', { mode: t(`permission.modes.${text.mode}`) })
+          : t('approval.alwaysDirectories', { what: text.text })
+    const where = t(`approval.where.${suggestion.destination}`)
+    return [{ index, label: t('approval.always', { what }), title: t('approval.alwaysTitle', { where }) }]
+  })
+}
+
+async function answer(approval: Approval, allow: boolean, suggestion: number | null = null): Promise<void> {
   try {
-    await api.answerApproval(props.session.id, approval.id, allow)
+    await api.answerApproval(props.session.id, approval.id, allow, suggestion)
   } catch (error) {
     toast.error(error)
   }
@@ -38,8 +57,19 @@ async function answer(approval: Approval, allow: boolean): Promise<void> {
         <span v-if="approval.description" class="text-amber-300/70"> · {{ approval.description }}</span>
       </span>
       <code class="line-clamp-3 rounded bg-slate-950/60 px-2 py-1 font-mono text-xs break-all text-slate-200">{{ approval.subject }}</code>
-      <div class="flex gap-2">
+      <div class="flex flex-wrap gap-2">
         <button class="btn-primary btn-small" @click="answer(approval, true)">{{ $t('approval.allow') }}</button>
+        <!-- As the terminal's "Yes, and don't ask again for ...": the rule Claude Code proposed, applied as it would. -->
+        <button
+          v-for="offer in offers(approval)"
+          :key="offer.index"
+          type="button"
+          class="btn-secondary btn-small max-w-full text-left break-all"
+          :title="offer.title"
+          @click="answer(approval, true, offer.index)"
+        >
+          {{ offer.label }}
+        </button>
         <button class="btn-secondary btn-small" @click="answer(approval, false)">{{ $t('approval.deny') }}</button>
         <button
           v-if="named"

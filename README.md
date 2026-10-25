@@ -38,8 +38,9 @@ that run Agent-Orc can be shown in the same app, through an SSH tunnel ([Several
 - Notifications on your phone or desktop when an agent is done or waits for a permission or an
   answer (Web Push, switched on per device); tapping one opens the agent.
 - The permission mode an agent starts in, per project (ask, edit, auto, plan; auto by default).
-  When an agent asks for permission, its card shows the command with “Allow” and “Deny”; the
-  first answer counts, on the card or in the terminal.
+  When an agent asks for permission, its card shows the command with “Allow” and “Deny”, and
+  the rules Claude Code offers instead of asking again (“Always: Bash(git push:*)”, applied as
+  in the terminal); the first answer counts, on the card or in the terminal.
 - Backends: `agent-orc backend` runs Claude Code on local models (e.g. vLLM or llama-swap) or
   with other providers (e.g. Qwen on Alibaba's DashScope). The start dialog then offers the
   models and their reasoning levels, with a note per model (such as how long it is free to

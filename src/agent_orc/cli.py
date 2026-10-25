@@ -195,10 +195,10 @@ def agent_permission() -> None:
     # Claude ends the hook when the user answers in the terminal; the request goes along.
     signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
     try:
-        allow = wait_for_decision(request.id)
+        decision = wait_for_decision(request.id)
     finally:
         close_request(request.id)
-    print(json.dumps(hook_answer(allow)))
+    print(json.dumps(hook_answer(decision)))
 
 
 def agent_tool_done() -> None:

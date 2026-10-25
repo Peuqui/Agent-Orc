@@ -485,7 +485,17 @@
     "goTo": "To the agent",
     "openAgent": "Go to the agent",
     "allow": "Allow",
-    "deny": "Deny"
+    "deny": "Deny",
+    "always": "Always: {what}",
+    "alwaysTitle": "Allow and stop asking, {where}",
+    "alwaysMode": "mode “{mode}”",
+    "alwaysDirectories": "folders {what}",
+    "where": {
+      "session": "until the session ends",
+      "localSettings": "in this project (on this machine only)",
+      "projectSettings": "in this project (for everyone who uses it)",
+      "userSettings": "in all projects"
+    }
   },
   "changes": {
     "openFile": "Open file",

@@ -11,6 +11,8 @@ import pytest
 from agent_orc.approvals import (
     DENIED_MESSAGE,
     ApprovalNotFoundError,
+    Decision,
+    InvalidSuggestionError,
     approvals_dir,
     close_request,
     close_session_requests,
@@ -23,7 +25,19 @@ from agent_orc.approvals import (
 from agent_orc.sessions import SESSION_ENV
 
 TOOL_INPUT = {"command": "rm probe-file.txt", "description": "Remove the probe file"}
-HOOK_INPUT = {"hook_event_name": "PermissionRequest", "tool_name": "Bash", "tool_input": TOOL_INPUT}
+# As Claude Code sends it (hooks reference, PermissionRequest input).
+SUGGESTION = {
+    "type": "addRules",
+    "rules": [{"toolName": "Bash", "ruleContent": "rm probe-file.txt"}],
+    "behavior": "allow",
+    "destination": "localSettings",
+}
+HOOK_INPUT = {
+    "hook_event_name": "PermissionRequest",
+    "tool_name": "Bash",
+    "tool_input": TOOL_INPUT,
+    "permission_suggestions": [SUGGESTION],
+}
 WAIT_STEPS = 100
 WAIT_STEP_SECONDS = 0.05
 
@@ -48,10 +62,27 @@ def test_request_is_listed_until_closed_and_decided_once() -> None:
         "rm probe-file.txt",
         "Remove the probe file",
     )
+    assert request.suggestions == [SUGGESTION]
     close_request(request.id)
     assert open_requests() == []
     with pytest.raises(ApprovalNotFoundError):
-        decide(request.id, allow=True)
+        decide(request, allow=True)
+
+
+def test_a_request_without_suggestions_can_be_answered_once_only() -> None:
+    without = {key: value for key, value in HOOK_INPUT.items() if key != "permission_suggestions"}
+    request = open_request("garden-1", without)
+    assert request.suggestions == []
+    with pytest.raises(InvalidSuggestionError):
+        decide(request, allow=True, suggestion=0)
+
+
+def test_a_suggestion_applies_only_to_an_allowance() -> None:
+    request = open_request("garden-1", HOOK_INPUT)
+    with pytest.raises(InvalidSuggestionError):
+        decide(request, allow=False, suggestion=0)
+    with pytest.raises(InvalidSuggestionError):
+        decide(request, allow=True, suggestion=1)
 
 
 def test_request_of_a_vanished_hook_is_ignored() -> None:
@@ -64,9 +95,15 @@ def test_request_of_a_vanished_hook_is_ignored() -> None:
 
 
 def test_denial_carries_a_message() -> None:
-    answer = hook_answer(allow=False)["hookSpecificOutput"]
+    answer = hook_answer(Decision(allow=False))["hookSpecificOutput"]
     assert answer["decision"] == {"behavior": "deny", "message": DENIED_MESSAGE}
-    assert hook_answer(allow=True)["hookSpecificOutput"]["decision"] == {"behavior": "allow"}
+    allowed = hook_answer(Decision(allow=True))["hookSpecificOutput"]
+    assert allowed["decision"] == {"behavior": "allow"}
+
+
+def test_an_allowance_with_a_suggestion_hands_it_back_as_claude_sent_it() -> None:
+    answer = hook_answer(Decision(allow=True, suggestion=SUGGESTION))["hookSpecificOutput"]
+    assert answer["decision"] == {"behavior": "allow", "updatedPermissions": [SUGGESTION]}
 
 
 def start_hook(state: Path) -> subprocess.Popen[str]:
@@ -90,12 +127,21 @@ def start_hook(state: Path) -> subprocess.Popen[str]:
 
 def test_hook_answers_claude_with_the_users_decision(state: Path) -> None:
     hook = start_hook(state)
-    decide(open_requests()[0].id, allow=True)
+    decide(open_requests()[0], allow=True)
     assert hook.wait(timeout=10) == 0
     assert hook.stdout is not None
-    assert json.loads(hook.stdout.read()) == hook_answer(allow=True)
+    assert json.loads(hook.stdout.read()) == hook_answer(Decision(allow=True))
     assert open_requests() == []
     assert list(approvals_dir().iterdir()) == []
+
+
+def test_hook_applies_the_suggestion_the_user_chose(state: Path) -> None:
+    hook = start_hook(state)
+    decide(open_requests()[0], allow=True, suggestion=0)
+    assert hook.wait(timeout=10) == 0
+    assert hook.stdout is not None
+    decision = json.loads(hook.stdout.read())["hookSpecificOutput"]["decision"]
+    assert decision == {"behavior": "allow", "updatedPermissions": [SUGGESTION]}
 
 
 def test_hook_ended_by_a_signal_takes_its_request_along(state: Path) -> None:

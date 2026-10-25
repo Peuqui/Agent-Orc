@@ -37,7 +37,13 @@ from starlette.types import Scope
 from agent_orc import announce as announcing
 from agent_orc import files, keepwarm, peers, speech_service
 from agent_orc.answers import read_image, read_turns
-from agent_orc.approvals import ApprovalNotFoundError, ApprovalRequest, decide, open_requests
+from agent_orc.approvals import (
+    ApprovalNotFoundError,
+    ApprovalRequest,
+    InvalidSuggestionError,
+    decide,
+    open_requests,
+)
 from agent_orc.attachments import (
     NOTE_FILES_URL,
     UPLOADS_DIR,
@@ -320,6 +326,7 @@ ERROR_STATUS: dict[type[Exception], int] = {
     InvalidProfileChangeError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     InvalidPermissionModeError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     ApprovalNotFoundError: status.HTTP_404_NOT_FOUND,
+    InvalidSuggestionError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     ChangeNotFoundError: status.HTTP_404_NOT_FOUND,
     NotAGitRepositoryError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     InvalidBranchError: status.HTTP_422_UNPROCESSABLE_CONTENT,
@@ -475,6 +482,8 @@ class AnswersModeRequest(BaseModel):
 class ApprovalDecision(BaseModel):
     request: str
     allow: bool
+    # Index of the request's suggestion to apply ("Yes, and don't ask again"); only with allow.
+    suggestion: int | None = None
 
 
 class PermissionModeRequest(BaseModel):
@@ -1601,9 +1610,11 @@ def create_app(
     )
     def answer_approval(session_id: str, body: ApprovalDecision) -> None:
         """The user's answer to a permission request, handed to the waiting hook."""
-        if not any(r.id == body.request and r.session == session_id for r in open_requests()):
+        waiting = [r for r in open_requests() if r.id == body.request and r.session == session_id]
+        request = waiting[0] if waiting else None
+        if request is None:
             raise ApprovalNotFoundError(body.request)
-        decide(body.request, body.allow)
+        decide(request, body.allow, body.suggestion)
 
     def restart_agent(session_id: str, body: RestartRequest | None) -> AgentSession:
         """Resume the agent in its own session, ending a running answer and background tasks

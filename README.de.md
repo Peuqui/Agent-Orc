@@ -43,8 +43,9 @@ einen SSH-Tunnel ([Mehrere Rechner](#mehrere-rechner)).
   Freigabe oder Antwort wartet (Web Push, pro Gerät einschaltbar); Antippen öffnet den Agenten.
 - Der Freigabe-Modus, in dem ein Agent startet, pro Projekt (Fragen, Bearbeiten, Auto, Planen;
   Voreinstellung Auto). Fragt ein Agent um Erlaubnis, zeigt seine Karte den Befehl mit
-  „Erlauben“ und „Ablehnen“; es gilt die Antwort, die zuerst kommt, auf der Karte oder im
-  Terminal.
+  „Erlauben“ und „Ablehnen“ und dazu die Regeln, die Claude Code statt erneuter Nachfrage
+  anbietet („Immer: Bash(git push:*)“, angewandt wie im Terminal); es gilt die Antwort, die
+  zuerst kommt, auf der Karte oder im Terminal.
 - Backends: `agent-orc backend` startet Claude Code mit lokalen Modellen (z. B. vLLM oder
   llama-swap) oder bei anderen Anbietern (z. B. Qwen bei Alibabas DashScope). Der Startdialog
   bietet dann die Modelle und ihre Denkstufen an, mit einem Hinweis je Modell (etwa wie lange es

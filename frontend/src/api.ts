@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import { hostOf, rootOf } from './hostPaths'
+import type { PermissionSuggestion } from './permissionSuggestions'
 import { answeredByProxyLogin } from './proxyLogin'
 
 /** A model a profile offers at start; the note is shown beside it (e.g. until when it is free). */
@@ -185,6 +186,8 @@ export interface Approval {
   /** What the tool would do: the command, the file, ... */
   subject: string
   description: string | null
+  /** What Claude Code offers instead of asking again, as it sent them. */
+  suggestions: PermissionSuggestion[]
 }
 
 /** A prompt typed into an agent later: planned by the user, or the resume after its usage limit. */
@@ -653,9 +656,10 @@ function createApi(host?: string) {
         body: { ...reasoning, immediately },
       }),
     /** Answers a permission request in the agent's place of the terminal prompt. */
-    answerApproval: (sessionId: string, requestId: string, allow: boolean) =>
+    /** `suggestion`: index of the request's suggestion to apply with the allowance ("don't ask again"). */
+    answerApproval: (sessionId: string, requestId: string, allow: boolean, suggestion: number | null = null) =>
       request<void>('POST', `sessions/${encodeURIComponent(sessionId)}/approval`, {
-        body: { request: requestId, allow },
+        body: { request: requestId, allow, suggestion },
       }),
     changes: (sessionId: string) =>
       request<FileChange[]>('GET', `sessions/${encodeURIComponent(sessionId)}/changes`),
