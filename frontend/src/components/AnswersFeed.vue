@@ -283,10 +283,14 @@ function jog(lines: number): void {
         </template>
       </template>
       <!-- Away from the terminal, this shows that the agent is still working on an answer. -->
-      <span v-if="busy" class="ml-auto flex items-center gap-1.5 text-xs text-amber-300" role="status">
-        <span class="size-3.5 animate-spin rounded-full border-2 border-amber-300 border-t-transparent" aria-hidden="true" />
-        {{ $t('sessions.working') }}
-      </span>
+      <!-- The spinner alone, so the toolbar does not wrap on a phone; the word is for screen readers and on hover. -->
+      <span
+        v-if="busy"
+        class="ml-auto size-3.5 animate-spin rounded-full border-2 border-amber-300 border-t-transparent"
+        role="status"
+        :aria-label="$t('sessions.working')"
+        :title="$t('sessions.working')"
+      />
     </div>
     <div class="relative flex min-h-0 flex-1">
     <div
