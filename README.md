@@ -34,7 +34,8 @@ that run Agent-Orc can be shown in the same app, through an SSH tunnel ([Several
 - Token consumption of all Claude conversations per day, project and model; search in earlier
   conversations; a handover advice once an agent's context grows large.
 - Optionally keeps the prompt cache of resting agents warm (a tiny request shortly before it
-  expires), switched on per agent, so the next message needs no wait.
+  expires), switched on per agent, so the next message needs no wait. The switch stays on across
+  restarts of Agent-Orc and ends with the agent's session.
 - Notifications on your phone or desktop when an agent is done or waits for a permission or an
   answer (Web Push, switched on per device); tapping one opens the agent.
 - The permission mode an agent starts in, per project (ask, edit, auto, plan; auto by default).

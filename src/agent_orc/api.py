@@ -194,6 +194,7 @@ from agent_orc.state import (
     write_prompt_templates,
     write_tts_choices,
 )
+from agent_orc.switches import read_switches, write_switches
 from agent_orc.terminal import bridge
 from agent_orc.trash import RestoreConflictError, Trash, TrashEntryNotFoundError, home_trash_dir
 from agent_orc.trust import FOLDER_TRUST
@@ -910,17 +911,23 @@ def create_app(
         warning = config.cache.warning_minutes * SECONDS_PER_MINUTE
         return {**asdict(cache), "warning_seconds": warning}
 
-    # The agents' switches, shared by every device. Only in memory on purpose: they end with the
-    # agent's session, and no crash can leave a stale one behind (see keepwarm.py). Keeping warm
-    # is off by default, the answers show every text by default (the agents that show only the
-    # summaries are listed).
-    keep_warm_enabled: set[str] = set()
-    answers_summaries: set[str] = set()
+    # The agents' switches, shared by every device and kept across restarts (see switches.py).
+    keep_warm_enabled, answers_summaries = read_switches()
+    saved_switches = (set(keep_warm_enabled), set(answers_summaries))
+
+    def save_switches() -> None:
+        """Written only when something changed."""
+        nonlocal saved_switches
+        current = (set(keep_warm_enabled), set(answers_summaries))
+        if current != saved_switches:
+            write_switches(keep_warm_enabled, answers_summaries)
+            saved_switches = current
 
     def reset_switches(session_id: str) -> None:
         """Back to the defaults, for an agent that starts anew."""
         keep_warm_enabled.discard(session_id)
         answers_summaries.discard(session_id)
+        save_switches()
 
     def keep_warm_entry(session: AgentSession) -> dict[str, Any]:
         profile = config.agents.get(session.profile)
@@ -1003,6 +1010,7 @@ def create_app(
         running = {s.id for s in listed if s.running}
         keep_warm_enabled.intersection_update(running)
         answers_summaries.intersection_update(running)
+        save_switches()
         for session_id in keep_warm_progress.keys() - {s.id for s in listed}:
             del keep_warm_progress[session_id]
         for session in listed:
@@ -1845,6 +1853,7 @@ def create_app(
             keep_warm_enabled.add(session_id)
         else:
             keep_warm_enabled.discard(session_id)
+        save_switches()
 
     @app.put(
         "/api/sessions/{session_id}/answers-mode",
@@ -1859,6 +1868,7 @@ def create_app(
             answers_summaries.discard(session_id)
         else:
             answers_summaries.add(session_id)
+        save_switches()
 
     def session_folder(session_id: str) -> Path:
         session = find_session(session_id)

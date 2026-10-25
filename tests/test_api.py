@@ -1882,6 +1882,25 @@ def test_keep_warm_is_switched_off_by_every_start_and_restart(
     assert not enabled()
 
 
+def test_the_switches_survive_a_restart_of_the_service(
+    config: Config, clock: FakeClock, home: Path
+) -> None:
+    def started() -> TestClient:
+        app = create_app(config, new_credentials(PASSWORD), static_dir=None, clock=clock)
+        client = TestClient(app)
+        client.post("/api/login", json={"password": PASSWORD})
+        return client
+
+    client = started()
+    session_id = start_shell(client, home / "projects")
+    client.put(f"/api/sessions/{session_id}/keep-warm", json={"enabled": True})
+    client.put(f"/api/sessions/{session_id}/answers-mode", json={"all_texts": False})
+    # A deploy restarts the service; the agent runs on.
+    listed = started().get("/api/sessions").json()[0]
+    assert listed["keep_warm"]["enabled"] is True
+    assert listed["answers_all"] is False
+
+
 def test_answers_show_every_text_until_the_agent_is_set_to_summaries(
     client: TestClient, home: Path
 ) -> None:
