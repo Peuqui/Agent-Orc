@@ -42,6 +42,20 @@ function withCopyButtons(html: string): string {
   return page.body.innerHTML
 }
 
+/** Links to other sites open in a tab of their own (in the installed app: the system's browser).
+ * In the page itself they would replace the app, and in a workspace column most sites refuse to be
+ * shown inside another page ("refused to connect"). Views that handle link clicks themselves (editor,
+ * notes) are not affected. */
+function withExternalLinksOutside(html: string): string {
+  const page = new DOMParser().parseFromString(html, 'text/html')
+  for (const link of page.querySelectorAll('a[href]')) {
+    if (!isExternal(link.getAttribute('href') ?? '')) continue
+    link.setAttribute('target', '_blank')
+    link.setAttribute('rel', 'noopener noreferrer')
+  }
+  return page.body.innerHTML
+}
+
 /** The marker of the paragraph for listening, as a button that reads the paragraph again (the view answers its click). */
 export const LISTEN_REPLAY_CLASS = 'listen-replay'
 
@@ -81,6 +95,6 @@ export function renderMarkdown(text: string, filePath: string | null, listenButt
     },
   })
   const html = marked.parse(text, { async: false })
-  const page = withCopyButtons(DOMPurify.sanitize(html))
+  const page = withExternalLinksOutside(withCopyButtons(DOMPurify.sanitize(html)))
   return listenButton ? withReplayButton(page) : page
 }
