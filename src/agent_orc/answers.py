@@ -6,13 +6,12 @@ transcript is read from its end, so a long conversation costs no more than the t
 """
 
 import base64
-import json
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from agent_orc.history import lines_from_end, message_texts
+from agent_orc.history import lines_from_end, message_texts, transcript_entry
 
 # Read at most this much of the transcript's end per call (tool results can be large).
 SCAN_BYTES = 32 * 1024 * 1024
@@ -99,7 +98,9 @@ def read_turns(transcript: Path, limit: int) -> list[Turn]:
     entries: list[dict[str, Any]] = []
     prompts = 0
     for line in lines_from_end(transcript, SCAN_BYTES):
-        entry: dict[str, Any] = json.loads(line)
+        entry = transcript_entry(line, transcript)
+        if entry is None:
+            continue
         # What subagents write is not the agent's own answer; the summary of a compaction is
         # written as a user entry, but neither asked nor answered anything.
         skipped = entry.get("isSidechain") or entry.get("isCompactSummary")
@@ -167,8 +168,8 @@ def request_queued(transcript: Path) -> bool:
     # was queued at that moment can stand in the file before the request.
     turn_began: str | None = None
     for line in lines_from_end(transcript, SCAN_BYTES):
-        entry: dict[str, Any] = json.loads(line)
-        if entry.get("isSidechain"):
+        entry = transcript_entry(line, transcript)
+        if entry is None or entry.get("isSidechain"):
             continue
         if turn_began is not None and entry.get("timestamp", turn_began) < turn_began:
             break
@@ -203,8 +204,10 @@ def read_image(transcript: Path, entry_id: str, index: int) -> tuple[bytes, str]
         # Cheap check on the raw line first; the picture's data makes lines large.
         if entry_id not in line:
             continue
-        entry: dict[str, Any] = json.loads(line)
-        if entry.get("uuid") != entry_id or entry.get("type") not in ("user", "attachment"):
+        entry = transcript_entry(line, transcript)
+        if entry is None or entry.get("uuid") != entry_id:
+            continue
+        if entry.get("type") not in ("user", "attachment"):
             continue
         blocks = _image_blocks(entry)
         if index >= len(blocks):

@@ -7,14 +7,13 @@ the same message id and usage, so every message is counted once. A file is read 
 when it changed; the totals per file are kept in memory.
 """
 
-import json
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from agent_orc.history import CLAUDE_PROJECTS
+from agent_orc.history import CLAUDE_PROJECTS, transcript_entry
 
 USAGE_FIELDS = {
     "input": "input_tokens",
@@ -65,7 +64,9 @@ def _read_file(path: Path) -> Totals:
             # Cheap check first: only answers carry a usage.
             if '"usage"' not in line:
                 continue
-            entry: dict[str, Any] = json.loads(line)
+            entry = transcript_entry(line, path)
+            if entry is None:
+                continue
             message = entry.get("message") or {}
             if entry.get("type") != "assistant" or "usage" not in message or "id" not in message:
                 continue

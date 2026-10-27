@@ -75,6 +75,30 @@ def test_title_found_behind_a_line_larger_than_the_read_chunk(
     assert list_claude_conversations(tmp_path, FOLDER, clock)[0].title == "Titel"
 
 
+def test_a_line_cut_off_by_a_full_disk_is_left_out(
+    tmp_path: Path, clock: FakeClock, caplog: pytest.LogCaptureFixture
+) -> None:
+    path = write_conversation(tmp_path, FIRST, [user("Hallo")], clock.now - 3600)
+    lost = json.dumps({"type": "ai-title", "aiTitle": "Verloren"})
+    title = json.dumps({"type": "ai-title", "aiTitle": "Titel"})
+    # Claude goes on appending after a write that failed half way: the next entry shares the
+    # damaged line. It may fail again at the end.
+    with path.open("a") as file:
+        file.write('{"type": "assistant", "mess' + lost + "\n" + title + "\n" + '{"type": "us')
+    assert list_claude_conversations(tmp_path, FOLDER, clock)[0].title == "Titel"
+    assert search_claude_conversations(tmp_path, FOLDER, "verloren") == []
+    assert search_claude_conversations(tmp_path, FOLDER, "hallo")[0].matches == 1
+
+    def damaged() -> int:
+        return len([r for r in caplog.records if "damaged line" in r.getMessage()])
+
+    # Named in the log once each, though the lists read the files again and again.
+    assert damaged() == 2
+    list_claude_conversations(tmp_path, FOLDER, clock)
+    search_claude_conversations(tmp_path, FOLDER, "verloren")
+    assert damaged() == 2
+
+
 def test_recently_written_conversation_is_marked(tmp_path: Path, clock: FakeClock) -> None:
     write_conversation(tmp_path, FIRST, [user("a")], clock.now - RECENTLY_ACTIVE_SECONDS / 2)
     write_conversation(tmp_path, SECOND, [user("b")], clock.now - RECENTLY_ACTIVE_SECONDS * 2)

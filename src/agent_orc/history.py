@@ -5,6 +5,7 @@ whether it ran in a terminal, in VS Code or in Agent-Orc, so all of them are lis
 """
 
 import json
+import logging
 import re
 import shutil
 from collections.abc import Callable, Iterator
@@ -29,6 +30,10 @@ RECENTLY_ACTIVE_SECONDS = 120
 SEARCH_RESULTS = 30
 # Characters of context on each side of a hit in its excerpt.
 EXCERPT_CONTEXT_CHARS = 60
+
+logger = logging.getLogger(__name__)
+# Damaged lines already in the log: the lists read the transcripts every few seconds.
+_reported_damage: set[tuple[Path, str]] = set()
 
 
 class ConversationNotFoundError(LookupError):
@@ -75,10 +80,27 @@ def lines_from_end(path: Path, limit: int) -> Iterator[str]:
             yield rest.decode("utf-8", errors="replace")
 
 
+def transcript_entry(line: str, path: Path) -> dict[str, Any] | None:
+    """The entry a line of a transcript holds; None for a line Claude could not finish writing (a
+    full disk, a crash). Such a line can stand anywhere, as Claude goes on appending after it, and
+    it must not break every reader of the file: it is left out and named once in the log."""
+    try:
+        entry: dict[str, Any] = json.loads(line)
+    except json.JSONDecodeError:
+        damage = (path, line[:200])
+        if damage not in _reported_damage:
+            _reported_damage.add(damage)
+            logger.warning("%s: damaged line left out: %.120s", path, line)
+        return None
+    return entry
+
+
 def _first_prompt(path: Path) -> str:
     with path.open(encoding="utf-8", errors="replace") as handle:
         for line in handle:
-            entry: dict[str, Any] = json.loads(line)
+            entry = transcript_entry(line, path)
+            if entry is None:
+                continue
             content = (
                 entry.get("message", {}).get("content") if entry.get("type") == "user" else None
             )
@@ -90,7 +112,9 @@ def _first_prompt(path: Path) -> str:
 
 def _claude_title(path: Path) -> str:
     for line in lines_from_end(path, TITLE_SCAN_BYTES):
-        entry: dict[str, Any] = json.loads(line)
+        entry = transcript_entry(line, path)
+        if entry is None:
+            continue
         if entry.get("type") == CLAUDE_TITLE_ENTRY and entry.get("aiTitle"):
             return str(entry["aiTitle"])
     return _first_prompt(path)
@@ -142,7 +166,8 @@ def _project_folder(directory: Path) -> Path | None:
     for path in directory.glob("*.jsonl"):
         with path.open(encoding="utf-8", errors="replace") as handle:
             for line in handle:
-                folder = json.loads(line).get("cwd")
+                entry = transcript_entry(line, path)
+                folder = entry.get("cwd") if entry else None
                 if isinstance(folder, str):
                     return Path(folder)
     return None
@@ -266,7 +291,10 @@ def search_claude_conversations(home: Path, folder: Path, query: str) -> list[Se
                 # Cheap check on the raw line first; only lines with the words are parsed.
                 if needle not in line.casefold():
                     continue
-                for text in message_texts(json.loads(line)):
+                entry = transcript_entry(line, path)
+                if entry is None:
+                    continue
+                for text in message_texts(entry):
                     folded = text.casefold()
                     found = folded.find(needle)
                     if found < 0:

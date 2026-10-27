@@ -7,13 +7,11 @@ the cache expires one window after the last request. Answers that only read from
 write nothing, so the window comes from the newest answer that wrote to it.
 """
 
-import json
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any
 
-from agent_orc.history import lines_from_end
+from agent_orc.history import lines_from_end, transcript_entry
 
 # The newest answers are near the end; a long tool result may push them back a little.
 SCAN_BYTES = 4 * 1024 * 1024
@@ -45,7 +43,9 @@ def cache_state(transcript: Path) -> CacheState | None:
 def _read_state(transcript: Path) -> CacheState | None:
     last_request: float | None = None
     for line in lines_from_end(transcript, SCAN_BYTES):
-        entry: dict[str, Any] = json.loads(line)
+        entry = transcript_entry(line, transcript)
+        if entry is None:
+            continue
         usage = entry.get("message", {}).get("usage") if entry.get("type") == "assistant" else None
         if not usage:
             continue
