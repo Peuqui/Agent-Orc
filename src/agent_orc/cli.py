@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 import uvicorn
+from pydantic import ValidationError
 
 from agent_orc.announce import announce
 from agent_orc.answers import read_turns, request_queued
@@ -71,6 +72,17 @@ def set_password() -> None:
     path = config_dir() / CREDENTIALS_FILE_NAME
     save_credentials(path, new_credentials(password))
     print(f"Wrote {path}. All existing logins are now invalid.")
+
+
+def check_config() -> None:
+    # A new version may expect a different config: deploy runs this before the restart, so a
+    # config that no longer fits keeps the running service instead of stopping it.
+    path = config_dir() / CONFIG_FILE_NAME
+    try:
+        load_config(path)
+    except ValidationError as error:
+        sys.exit(f"{path} does not fit this version of Agent-Orc:\n{error}")
+    print(f"{path} fits this version.")
 
 
 # How long a stop waits for connections that do not end by themselves. The live streams end as
@@ -290,6 +302,7 @@ def run_backend(arguments: list[str]) -> None:
 COMMANDS = {
     "setup": (run_setup, "first-run setup: config and password in ~/.config/agent-orc/"),
     "set-password": (set_password, "change the login password"),
+    "check-config": (check_config, "check that the config fits this version (deploy runs it)"),
     "serve": (serve, "run the web server"),
     "statusline": (statusline, "status line command for agent sessions (JSON on stdin)"),
     "agent-busy": (agent_busy, "hook command: the agent started working"),

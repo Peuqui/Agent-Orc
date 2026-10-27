@@ -309,6 +309,9 @@ git pull && deploy/install.sh
 Das Skript installiert nur committeten Code und startet einen laufenden Dienst
 `agent-orc@<user>` neu; dafür braucht der Benutzer das Recht, ihn neu zu starten (z. B. per
 polkit-Regel), sonst den Dienst selbst neu starten. Laufende Agenten überstehen den Neustart.
+Vorher prüft `agent-orc check-config`, ob die Config zur neuen Version passt; passt sie nicht,
+nennt es die Abweichung und startet nicht neu, der Dienst läuft mit der alten Version weiter.
+`deploy/deploy.sh` prüft auf dem anderen Rechner ebenso.
 
 
 **Von vor dem 13. Oktober 2026:** Die Einstellung `dictation.whisper_url` in `config.yaml` heißt jetzt `dictation.stt_url` (der Dienst ist die STT-Suite); benenne sie um, sonst wird die Konfiguration abgelehnt.

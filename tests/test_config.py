@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
+from agent_orc import cli
 from agent_orc.config import config_dir, default_config_text, parse_config
 
 
@@ -57,3 +58,28 @@ def test_the_server_listens_on_a_socket_or_a_port_not_both() -> None:
         parse_config(server_section("  socket: /run/orc.sock\n  port: 8770\n"))
     with pytest.raises(ValidationError):
         parse_config(server_section("  host: 127.0.0.1\n  port: 8770\n"))
+
+
+def test_check_config_passes_a_fitting_config(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+    (tmp_path / "agent-orc").mkdir()
+    (tmp_path / "agent-orc" / "config.yaml").write_text(default_config_text(), encoding="utf-8")
+    cli.check_config()
+    assert "fits this version" in capsys.readouterr().out
+
+
+def test_check_config_names_what_no_longer_fits(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    # As on Aragon (27.10.): a key the new version dropped stops the check, not the service.
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+    (tmp_path / "agent-orc").mkdir()
+    (tmp_path / "agent-orc" / "config.yaml").write_text(
+        default_config_text() + "\nunexpected: 1\n", encoding="utf-8"
+    )
+    with pytest.raises(SystemExit) as stopped:
+        cli.check_config()
+    assert "does not fit this version" in str(stopped.value.code)
+    assert "unexpected" in str(stopped.value.code)

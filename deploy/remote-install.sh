@@ -33,6 +33,12 @@ if [ ! -f "$CONFIG" ]; then
     echo "No config yet: run 'agent-orc setup' here (ssh -t), then deploy again to start the service."
     exit 0
 fi
+# A config the new version no longer reads would stop the service at the restart; the running one
+# keeps its old code until then, so it stays up while the config is brought in line.
+if ! "$VENV/bin/agent-orc" check-config; then
+    echo "Not restarted: bring $CONFIG in line with the new version, then deploy again." >&2
+    exit 1
+fi
 # Agents keep running (KillMode=process); enable also starts it when it is not running yet.
 systemctl --user enable -q agent-orc.service
 systemctl --user restart agent-orc.service

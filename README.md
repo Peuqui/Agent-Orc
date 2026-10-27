@@ -294,6 +294,9 @@ git pull && deploy/install.sh
 The script installs only committed code and restarts a running `agent-orc@<user>` service;
 for that the user needs the right to restart it (e.g. a polkit rule), otherwise restart it
 yourself. Running agents keep running across the restart.
+Before that, `agent-orc check-config` checks that the config fits the new version; if it does not,
+it names what differs and does not restart, so the service keeps running the old version.
+`deploy/deploy.sh` checks the same on the other machine.
 
 
 **From before 13 October 2026:** the setting `dictation.whisper_url` in `config.yaml` is now `dictation.stt_url` (the service is the STT-Suite); rename it, or the config is refused.

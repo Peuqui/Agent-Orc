@@ -37,6 +37,11 @@ echo "Installed $VERSION to $VENV."
 # Agents keep running (KillMode=process); the user needs the right to restart the unit (polkit).
 UNIT="agent-orc@$(id -un).service"
 if systemctl is-active --quiet "$UNIT"; then
+    # A config the new version no longer reads would stop the service at the restart.
+    if ! "$VENV/bin/agent-orc" check-config; then
+        echo "Not restarted: bring the config in line with the new version, then run this again." >&2
+        exit 1
+    fi
     systemctl restart "$UNIT"
     echo "Restarted $UNIT."
 fi
