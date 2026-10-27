@@ -161,6 +161,13 @@ class KeepWarmConfig(StrictModel):
     max_pings: int
 
 
+class ApprovalsConfig(StrictModel):
+    """Answers to an agent's permission requests from its card (approvals.py)."""
+
+    # Sent to the agent with a denial that says what to do instead; {message}: the user's words.
+    instead_prompt: str
+
+
 class LimitResumeConfig(StrictModel):
     """Resuming an agent stopped by its usage limit once the limit is reset (schedule.py)."""
 
@@ -493,6 +500,7 @@ class Config(StrictModel):
     handover: HandoverConfig
     cache: CacheConfig
     limit_resume: LimitResumeConfig
+    approvals: ApprovalsConfig
     dictation: DictationConfig
     # Without it there is no Echo Dot to read answers on.
     announce: AnnounceConfig | None = None

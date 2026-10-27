@@ -188,6 +188,18 @@ export interface Approval {
   description: string | null
   /** What Claude Code offers instead of asking again, as it sent them. */
   suggestions: PermissionSuggestion[]
+  /** A plan approval: the plan in Markdown, approved with one of `modes` to work on in. */
+  plan: string | null
+  modes: string[]
+}
+
+/** The answer to a request: yes (maybe with a suggestion, a plan with its mode), or no with what to
+ * do instead; no without a message stops the agent, as Esc in the terminal. */
+export interface ApprovalAnswer {
+  allow: boolean
+  suggestion?: number
+  mode?: string
+  message?: string
 }
 
 /** A prompt typed into an agent later: planned by the user, or the resume after its usage limit. */
@@ -664,9 +676,9 @@ function createApi(host?: string) {
       }),
     /** Answers a permission request in the agent's place of the terminal prompt. */
     /** `suggestion`: index of the request's suggestion to apply with the allowance ("don't ask again"). */
-    answerApproval: (sessionId: string, requestId: string, allow: boolean, suggestion: number | null = null) =>
+    answerApproval: (sessionId: string, requestId: string, answer: ApprovalAnswer) =>
       request<void>('POST', `sessions/${encodeURIComponent(sessionId)}/approval`, {
-        body: { request: requestId, allow, suggestion },
+        body: { request: requestId, ...answer },
       }),
     changes: (sessionId: string) =>
       request<FileChange[]>('GET', `sessions/${encodeURIComponent(sessionId)}/changes`),

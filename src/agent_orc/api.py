@@ -38,9 +38,10 @@ from agent_orc import announce as announcing
 from agent_orc import files, keepwarm, peers, speech_service
 from agent_orc.answers import Turn, read_image, read_turns
 from agent_orc.approvals import (
+    PLAN_MODE,
     ApprovalNotFoundError,
     ApprovalRequest,
-    InvalidSuggestionError,
+    InvalidAnswerError,
     decide,
     open_requests,
 )
@@ -351,7 +352,7 @@ ERROR_STATUS: dict[type[Exception], int] = {
     InvalidProfileChangeError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     InvalidPermissionModeError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     ApprovalNotFoundError: status.HTTP_404_NOT_FOUND,
-    InvalidSuggestionError: status.HTTP_422_UNPROCESSABLE_CONTENT,
+    InvalidAnswerError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     ChangeNotFoundError: status.HTTP_404_NOT_FOUND,
     NotAGitRepositoryError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     InvalidBranchError: status.HTTP_422_UNPROCESSABLE_CONTENT,
@@ -509,6 +510,10 @@ class ApprovalDecision(BaseModel):
     allow: bool
     # Index of the request's suggestion to apply ("Yes, and don't ask again"); only with allow.
     suggestion: int | None = None
+    # The mode an approved plan lets the agent work on in; only for a plan approval.
+    mode: str | None = None
+    # With a denial: what the agent should do instead; without it, the agent stops (as on Esc).
+    message: str | None = None
 
 
 class PermissionModeRequest(BaseModel):
@@ -1651,7 +1656,9 @@ def create_app(
             # The newest answer looked at, on any device ("" none yet).
             "answers_seen": seen.get(session.id, ""),
             # Waiting for the user's answer; normally at most one, as Claude asks one at a time.
-            "approvals": [asdict(r) for r in requests if r.session == session.id],
+            "approvals": [
+                approval_entry(r, session.profile) for r in requests if r.session == session.id
+            ],
             # The slider's levels: the profile's, or those of the chosen model.
             "effort_levels": effort_levels(session.profile, session.chosen_model),
             "scheduled": [asdict(p) for p in scheduled if p.session == session.id],
@@ -1732,6 +1739,18 @@ def create_app(
         search = CONVERSATION_SEARCHES[agent.conversations.source]
         return [asdict(hit) for hit in search(home, scope.resolve(path), query)]
 
+    def plan_modes(profile_name: str) -> list[str]:
+        """The modes an approved plan can let the agent work on in: those it may start in, but
+        planning."""
+        profile = config.agents.get(profile_name)
+        if profile is None or profile.permission is None:
+            return []
+        return [mode for mode in profile.permission.modes if mode != PLAN_MODE]
+
+    def approval_entry(request: ApprovalRequest, profile_name: str) -> dict[str, Any]:
+        modes = plan_modes(profile_name) if request.plan is not None else []
+        return {**asdict(request), "modes": modes}
+
     @app.post(
         "/api/sessions/{session_id}/approval",
         dependencies=authenticated,
@@ -1743,7 +1762,15 @@ def create_app(
         request = waiting[0] if waiting else None
         if request is None:
             raise ApprovalNotFoundError(body.request)
-        decide(request, body.allow, body.suggestion)
+        session = find_session(session_id)
+        if session is None:
+            raise SessionNotFoundError(session_id)
+        if body.mode is not None and body.mode not in plan_modes(session.profile):
+            raise InvalidPermissionModeError(body.mode)
+        message = body.message
+        if message is not None:
+            message = config.approvals.instead_prompt.format(message=message)
+        decide(request, body.allow, body.suggestion, body.mode, message)
 
     def restart_agent(session_id: str, body: RestartRequest | None) -> AgentSession:
         """Resume the agent in its own session, ending a running answer and background tasks

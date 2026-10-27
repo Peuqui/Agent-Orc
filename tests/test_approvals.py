@@ -9,10 +9,10 @@ from pathlib import Path
 import pytest
 
 from agent_orc.approvals import (
-    DENIED_MESSAGE,
+    PLAN_APPROVAL_TOOL,
     ApprovalNotFoundError,
     Decision,
-    InvalidSuggestionError,
+    InvalidAnswerError,
     approvals_dir,
     close_request,
     close_session_requests,
@@ -22,6 +22,7 @@ from agent_orc.approvals import (
     open_requests,
     subject_of,
 )
+from agent_orc.context import BUSY, IDLE, activity_file, store_activity
 from agent_orc.sessions import SESSION_ENV
 
 TOOL_INPUT = {"command": "rm probe-file.txt", "description": "Remove the probe file"}
@@ -37,6 +38,13 @@ HOOK_INPUT = {
     "tool_name": "Bash",
     "tool_input": TOOL_INPUT,
     "permission_suggestions": [SUGGESTION],
+}
+# As Claude Code sends it: the plan injected from its file (hooks reference, ExitPlanMode).
+PLAN_INPUT = {"plan": "## Plan\nCreate hallo.txt.", "planFilePath": "/home/u/.claude/plans/a.md"}
+PLAN_HOOK_INPUT = {
+    "hook_event_name": "PermissionRequest",
+    "tool_name": PLAN_APPROVAL_TOOL,
+    "tool_input": PLAN_INPUT,
 }
 WAIT_STEPS = 100
 WAIT_STEP_SECONDS = 0.05
@@ -73,15 +81,15 @@ def test_a_request_without_suggestions_can_be_answered_once_only() -> None:
     without = {key: value for key, value in HOOK_INPUT.items() if key != "permission_suggestions"}
     request = open_request("garden-1", without)
     assert request.suggestions == []
-    with pytest.raises(InvalidSuggestionError):
+    with pytest.raises(InvalidAnswerError):
         decide(request, allow=True, suggestion=0)
 
 
 def test_a_suggestion_applies_only_to_an_allowance() -> None:
     request = open_request("garden-1", HOOK_INPUT)
-    with pytest.raises(InvalidSuggestionError):
+    with pytest.raises(InvalidAnswerError):
         decide(request, allow=False, suggestion=0)
-    with pytest.raises(InvalidSuggestionError):
+    with pytest.raises(InvalidAnswerError):
         decide(request, allow=True, suggestion=1)
 
 
@@ -94,16 +102,54 @@ def test_request_of_a_vanished_hook_is_ignored() -> None:
     assert open_requests() == []
 
 
-def test_denial_carries_a_message() -> None:
-    answer = hook_answer(Decision(allow=False))["hookSpecificOutput"]
-    assert answer["decision"] == {"behavior": "deny", "message": DENIED_MESSAGE}
-    allowed = hook_answer(Decision(allow=True))["hookSpecificOutput"]
-    assert allowed["decision"] == {"behavior": "allow"}
+def decision_of(decision: Decision, tool_input: dict[str, str] = TOOL_INPUT) -> dict[str, object]:
+    answer: dict[str, object] = hook_answer(decision, tool_input)["hookSpecificOutput"]["decision"]
+    return answer
+
+
+def test_a_denial_without_a_word_stops_claude_and_one_with_words_tells_it() -> None:
+    assert Decision(allow=False).stops
+    assert decision_of(Decision(allow=False)) == {"behavior": "deny", "interrupt": True}
+    instead = Decision(allow=False, message="Use git status instead.")
+    assert not instead.stops
+    assert decision_of(instead) == {"behavior": "deny", "message": "Use git status instead."}
+    assert decision_of(Decision(allow=True)) == {"behavior": "allow"}
 
 
 def test_an_allowance_with_a_suggestion_hands_it_back_as_claude_sent_it() -> None:
-    answer = hook_answer(Decision(allow=True, suggestion=SUGGESTION))["hookSpecificOutput"]
-    assert answer["decision"] == {"behavior": "allow", "updatedPermissions": [SUGGESTION]}
+    answer = decision_of(Decision(allow=True, suggestion=SUGGESTION))
+    assert answer == {"behavior": "allow", "updatedPermissions": [SUGGESTION]}
+
+
+def test_an_approved_plan_hands_its_input_back_with_the_mode() -> None:
+    answer = decision_of(Decision(allow=True, mode="acceptEdits"), PLAN_INPUT)
+    assert answer == {
+        "behavior": "allow",
+        "updatedInput": PLAN_INPUT,
+        "updatedPermissions": [
+            {"type": "setMode", "mode": "acceptEdits", "destination": "session"}
+        ],
+    }
+
+
+def test_a_plan_request_carries_the_plan_and_is_approved_with_a_mode() -> None:
+    plan = open_request("garden-1", PLAN_HOOK_INPUT)
+    assert plan.plan == PLAN_INPUT["plan"]
+    assert open_request("garden-1", HOOK_INPUT).plan is None
+    with pytest.raises(InvalidAnswerError):
+        decide(plan, allow=True)
+    decide(plan, allow=False, message="Write Servus instead.")
+
+
+def test_answers_that_do_not_fit_the_request_are_refused() -> None:
+    request = open_request("garden-1", HOOK_INPUT)
+    plan = open_request("garden-1", PLAN_HOOK_INPUT)
+    with pytest.raises(InvalidAnswerError):
+        decide(request, allow=True, mode="acceptEdits")
+    with pytest.raises(InvalidAnswerError):
+        decide(plan, allow=False, mode="acceptEdits")
+    with pytest.raises(InvalidAnswerError):
+        decide(request, allow=True, message="Fine.")
 
 
 def start_hook(state: Path) -> subprocess.Popen[str]:
@@ -130,7 +176,7 @@ def test_hook_answers_claude_with_the_users_decision(state: Path) -> None:
     decide(open_requests()[0], allow=True)
     assert hook.wait(timeout=10) == 0
     assert hook.stdout is not None
-    assert json.loads(hook.stdout.read()) == hook_answer(Decision(allow=True))
+    assert json.loads(hook.stdout.read()) == hook_answer(Decision(allow=True), TOOL_INPUT)
     assert open_requests() == []
     assert list(approvals_dir().iterdir()) == []
 
@@ -142,6 +188,19 @@ def test_hook_applies_the_suggestion_the_user_chose(state: Path) -> None:
     assert hook.stdout is not None
     decision = json.loads(hook.stdout.read())["hookSpecificOutput"]["decision"]
     assert decision == {"behavior": "allow", "updatedPermissions": [SUGGESTION]}
+
+
+def test_a_denial_that_stops_claude_lets_the_agent_rest(state: Path) -> None:
+    # Claude runs no Stop hook after it: the hook marks the agent resting itself.
+    store_activity("garden-1", busy=True)
+    hook = start_hook(state)
+    decide(open_requests()[0], allow=False, message="Remove the other file.")
+    assert hook.wait(timeout=10) == 0
+    assert activity_file("garden-1").read_text() == BUSY
+    hook = start_hook(state)
+    decide(open_requests()[0], allow=False)
+    assert hook.wait(timeout=10) == 0
+    assert activity_file("garden-1").read_text() == IDLE
 
 
 def test_hook_ended_by_a_signal_takes_its_request_along(state: Path) -> None:

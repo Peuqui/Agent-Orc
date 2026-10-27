@@ -100,6 +100,12 @@ limit_resume:
   prompt: "The usage limit has been reset. Continue where you stopped."
   delay_seconds: 60
 
+# A permission request denied on the agent's card with words what to do instead: Claude gets them
+# as the terminal words its own "No, and tell Claude what to do differently", so it takes them as
+# the user's ({message}: the user's words). A denial without words stops the agent, as Esc does.
+approvals:
+  instead_prompt: "The user doesn't want to proceed with this tool use. The tool use was rejected (eg. if it was a file edit, the new_string was NOT written to the file). To tell you how to proceed, the user said:\n{message}"
+
 # Notifications on your devices (switched on per device in the settings menu): an agent finished
 # its answer or waits for you. Needs HTTPS (or localhost) and, on iPhones, the installed app.
 push:

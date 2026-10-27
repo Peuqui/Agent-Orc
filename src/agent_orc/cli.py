@@ -204,14 +204,18 @@ def agent_waiting() -> None:
 def agent_permission() -> None:
     """Hook command (Claude: PermissionRequest): the user may answer in the web app too."""
     hook = json.load(sys.stdin)
-    request = open_request(os.environ[SESSION_ENV], hook)
+    session_id = os.environ[SESSION_ENV]
+    request = open_request(session_id, hook)
     # Claude ends the hook when the user answers in the terminal; the request goes along.
     signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
     try:
         decision = wait_for_decision(request.id)
     finally:
         close_request(request.id)
-    print(json.dumps(hook_answer(decision)))
+    # Claude runs no Stop hook when a denial stops it (seen with Claude Code 2.1.311).
+    if decision.stops:
+        store_activity(session_id, busy=False)
+    print(json.dumps(hook_answer(decision, hook["tool_input"])))
 
 
 def agent_tool_done() -> None:

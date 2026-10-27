@@ -26,7 +26,14 @@ from starlette.websockets import WebSocketDisconnect
 from agent_orc.api import BUILD_ID_FILE, BUILD_ID_HEADER, create_app
 from agent_orc.approvals import Decision, close_request, open_request, wait_for_decision
 from agent_orc.auth import new_credentials
-from agent_orc.config import Config, DictationConfig, HostConfig, ServerConfig, default_config_text
+from agent_orc.config import (
+    Config,
+    DictationConfig,
+    HostConfig,
+    ServerConfig,
+    default_config_text,
+    parse_config,
+)
 from agent_orc.context import store_activity, store_status
 from agent_orc.effort import agent_settings_file, write_agent_settings
 from agent_orc.events import ChangeNotifier
@@ -1333,6 +1340,42 @@ def test_permission_request_is_answered_from_the_card(
     answered = client.post(url, json={"request": request.id, "allow": True, "suggestion": 0})
     assert answered.status_code == 204
     assert wait_for_decision(request.id) == Decision(allow=True, suggestion=suggestion)
+    # No, and what to do instead.
+    denied = open_request(session_id, hook)
+    hint = "Push to a branch instead."
+    instead = {"request": denied.id, "allow": False, "message": hint}
+    assert client.post(url, json=instead).status_code == 204
+    told = parse_config(default_config_text()).approvals.instead_prompt.format(message=hint)
+    assert wait_for_decision(denied.id) == Decision(allow=False, message=told)
+
+
+def test_a_plan_is_approved_with_a_mode_of_the_profile(
+    client: TestClient, home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
+    body = {
+        "profile": "sleeper",
+        "path": str(home / "projects"),
+        "resume": False,
+        "effort": None,
+        "ultracode": False,
+        "conversation": None,
+    }
+    session_id = client.post("/api/sessions", json=body).json()["id"]
+    plan = {"plan": "## Plan\nCreate hallo.txt.", "planFilePath": "/p/a.md"}
+    request = open_request(session_id, {"tool_name": "ExitPlanMode", "tool_input": plan})
+    listed = client.get("/api/sessions").json()[0]["approvals"]
+    # The profile's modes, but planning.
+    assert [(a["plan"], a["modes"]) for a in listed] == [(plan["plan"], ["default"])]
+    url = f"/api/sessions/{session_id}/approval"
+    for mode in ("plan", "bypassPermissions"):
+        refused = client.post(url, json={"request": request.id, "allow": True, "mode": mode})
+        assert refused.json()["error"] == "InvalidPermissionModeError"
+    without = client.post(url, json={"request": request.id, "allow": True})
+    assert without.json()["error"] == "InvalidAnswerError"
+    approved = client.post(url, json={"request": request.id, "allow": True, "mode": "default"})
+    assert approved.status_code == 204
+    assert wait_for_decision(request.id) == Decision(allow=True, mode="default")
 
 
 def test_changes_of_an_agents_project(client: TestClient, home: Path) -> None:
