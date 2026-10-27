@@ -69,7 +69,8 @@ einen SSH-Tunnel ([Mehrere Rechner](#mehrere-rechner)).
   Fläche und lässt sich später in eine andere verschieben; ohne Fläche steht er in „Unbenannt“.
   Hat ein Agent noch kein gespeichertes Modell, fragt Agent-Orc beim Neustart und Fortsetzen danach.
 - Ein normales Terminal im Projektordner („>_“), auch neben dem laufenden Agenten, oder ohne
-  Agenten aus der Dateiansicht („Terminal hier öffnen“).
+  Agenten aus der Dateiansicht („Terminal hier öffnen“) oder neben „Neuen Agenten starten“ (im
+  Startverzeichnis).
 
 **Arbeitsflächen**
 - Mehrere Agenten als Spalten nebeneinander; Spaltenköpfe ziehen sortiert, die Trenner zwischen zwei Spalten

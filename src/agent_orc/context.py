@@ -136,6 +136,16 @@ def session_transcript(session: AgentSession) -> Path | None:
     return Path(transcript)
 
 
+def transcript_version(session: AgentSession) -> str | None:
+    """Changes with every entry the agent writes to its conversation, so a view of its answers
+    loads them again only then; None while there is no conversation (see session_transcript)."""
+    transcript = session_transcript(session)
+    if transcript is None:
+        return None
+    stat = transcript.stat()
+    return f"{stat.st_mtime_ns}-{stat.st_size}"
+
+
 def claude_rate_limits() -> dict[str, Any] | None:
     """Usage windows from the newest Claude status, e.g. {"five_hour": {"used_percentage": 5,
     "resets_at": 1791111000}, "seven_day": ...}; None until a session has reported them."""

@@ -1,9 +1,30 @@
 import { computed, ref } from 'vue'
 import { apiFor, type AgentProfile, type AgentQuota, type AgentSession } from '../api'
+import { COLUMN_TAB } from '../device'
 import { useHostContext } from './useHostContext'
 import { useToast } from './useToast'
 
 const REFRESH_MILLISECONDS = 3000
+// A workspace column is this app again, in an iframe of the page around it. That page polls this
+// machine's agents anyway and hands each answer on to its columns, so a column does not poll
+// itself: one request every few seconds instead of one per column (each keeps a phone's radio
+// awake and makes the server read every agent's state).
+const AGENTS_MESSAGE = 'agent-orc-agents'
+const APP_ROOT = new URL('./', document.baseURI).href
+
+interface AgentsMessage {
+  kind: typeof AGENTS_MESSAGE
+  app: string
+  sessions: AgentSession[]
+  quotas: AgentQuota[]
+}
+
+function handToColumns(sessions: AgentSession[], quotas: AgentQuota[]): void {
+  const message: AgentsMessage = { kind: AGENTS_MESSAGE, app: APP_ROOT, sessions, quotas }
+  for (let index = 0; index < window.frames.length; index++) {
+    window.frames[index].postMessage(message, location.origin)
+  }
+}
 
 /** The agents of one machine (this one's own for host null) with what belongs to them. */
 function createStore(host: string | null) {
@@ -22,15 +43,29 @@ function createStore(host: string | null) {
       ])
       sessions.value = currentSessions
       quotas.value = currentQuotas
+      if (host === null) handToColumns(currentSessions, currentQuotas)
     } catch (error) {
       useToast().error(error)
     }
   }
 
-  /** Poll while the app is visible; a backgrounded phone app should not keep polling. */
+  /** What the page around a column handed on (see AGENTS_MESSAGE). */
+  function takeFromPage(event: MessageEvent<AgentsMessage>): void {
+    if (event.source !== window.parent || event.origin !== location.origin) return
+    if (event.data?.kind !== AGENTS_MESSAGE || event.data.app !== APP_ROOT) return
+    sessions.value = event.data.sessions
+    quotas.value = event.data.quotas
+  }
+
+  /** Poll while the app is visible; a backgrounded phone app should not keep polling. A column of
+   * the workspace takes what its page polls. */
   function startPolling(): void {
     stopPolling()
     void refresh()
+    if (host === null && COLUMN_TAB !== null) {
+      window.addEventListener('message', takeFromPage)
+      return
+    }
     timer = window.setInterval(() => {
       if (document.visibilityState === 'visible') void refresh()
     }, REFRESH_MILLISECONDS)
@@ -38,6 +73,7 @@ function createStore(host: string | null) {
 
   function stopPolling(): void {
     window.clearInterval(timer)
+    window.removeEventListener('message', takeFromPage)
   }
 
   async function loadProfiles(): Promise<void> {

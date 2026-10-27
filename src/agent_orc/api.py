@@ -79,6 +79,7 @@ from agent_orc.context import (
     session_status,
     session_transcript,
     store_activity,
+    transcript_version,
 )
 from agent_orc.dictation import (
     Device,
@@ -1662,6 +1663,7 @@ def create_app(
             "answers_all": session.id not in answers_summaries,
             # The newest answer looked at, on any device ("" none yet).
             "answers_seen": seen.get(session.id, ""),
+            "transcript_version": transcript_version(session),
             # Waiting for the user's answer; normally at most one, as Claude asks one at a time.
             "approvals": [
                 approval_entry(r, session.profile) for r in requests if r.session == session.id

@@ -361,7 +361,7 @@
           "**Schedule a prompt** (menu ⋮ of the card and of the agent's page): plan a prompt for later, e.g. \"run the tests and report\" at 7 o'clock. It is typed in at that time, once the agent has finished; scheduled prompts show on the card and can be removed with ×.",
           "When a Claude agent runs into its usage limit, Agent-Orc schedules the resume for the next reset of the quota (yellow entry on the card). Is it still limited then, the next reset follows.",
           "**“To several”** (next to the workspaces, from two running agents on): send the same prompt to several agents, e.g. “commit and push”. With “Submit” off the text only lands in the agents’ input field, where you read it and send it yourself.",
-          "**“>_”** (card and terminal bar) opens a plain terminal in the project folder, also next to the running agent; if one runs already, it opens that one. Without an agent, open one under Files with “Open terminal here” (for the folder shown, or in a folder's menu). Start a further agent in the folder with \"Start agent here\" (with a suffix of its own), not by hand in the terminal, or Agent-Orc does not know it.",
+          "**“>_”** (card and terminal bar) opens a plain terminal in the project folder, also next to the running agent; if one runs already, it opens that one. Without an agent, open one under Files with “Open terminal here” (for the folder shown, or in a folder's menu), or with “>_” beside “Start a new agent” (in the start directory). Start a further agent in the folder with \"Start agent here\" (with a suffix of its own), not by hand in the terminal, or Agent-Orc does not know it.",
           "The ⋮ menu on the card (bottom right) and on the agent's page collects what is needed less often or has consequences: Schedule a prompt, Change model, Compact context, Clear context, Restart and, set apart and in red, Stop. What is used often stays visible: \"Terminal\" (opens the agent's page), Changes and \">_\".",
           "**Change model** (menu ⋮, only for agents with a choice of models): the agent switches the model in place where its profile allows it (Claude: /model); the conversation, a running answer and background tasks stay, only the prompt cache starts over for the new model. If it is working, the change is scheduled (yellow line with \"Discard\") and typed in after the answer. An agent that cannot do this is restarted with the model and the conversation is resumed.",
           "**Compact context and Clear context** (menu ⋮, where the profile has them; Claude: /compact and /clear): act in the running agent, without a restart. Compacting summarises the conversation, clearing forgets it; both only between two answers, the item is disabled while an answer runs. Both ask first.",
@@ -721,7 +721,8 @@
   },
   "terminalButton": {
     "title": "Terminal in this folder (no agent)",
-    "open": "Open terminal here"
+    "open": "Open terminal here",
+    "startDir": "Open a terminal in the start directory"
   },
   "keys": {
     "fold": "Fewer extra keys",

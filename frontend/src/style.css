@@ -5,6 +5,10 @@
   --color-code: #5ab3ff;
   /* The spinner while an agent works: AIfred's orange, darker than the microphone's amber beside it. */
   --color-working: #e67700;
+  /* That spinner turns in four steps a turn rather than smoothly: it shows the work just as well,
+     and the browser draws a frame per step instead of one per refresh of the display (measured
+     27.10.2026 with four workspace columns: about a quarter of the page's CPU time). */
+  --animate-tick: spin 2s steps(4) infinite;
 }
 
 /* Colour scheme follows HaemoTrace: dark slate surfaces, red accents. */

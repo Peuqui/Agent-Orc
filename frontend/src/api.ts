@@ -245,6 +245,8 @@ export interface AgentSession {
   suffix: string | null
   /** The time of the newest answer looked at, on any device ("" none yet). */
   answers_seen: string
+  /** Changes with every entry the agent writes to its conversation (null: none yet). */
+  transcript_version: string | null
   /** The folder's name, with the suffix of a further agent. */
   name: string
   /** The levels its slider offers: the profile's, or those of the chosen model. */

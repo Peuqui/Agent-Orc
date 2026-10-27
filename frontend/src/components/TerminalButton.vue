@@ -10,14 +10,15 @@ import AppIcon from './AppIcon.vue'
 // there is. What is started in it is the user's business (no second agent in the same folder).
 // agentId: the agent's session, whose workspace column the terminal opens right after; without
 // it the terminal joins the workspace at the end.
-const props = defineProps<{ path: string; agentId?: string; buttonClass: string; withLabel?: boolean }>()
+// label: what it is called where neither applies (the start directory).
+const props = defineProps<{ path: string; agentId?: string; buttonClass: string; withLabel?: boolean; label?: string }>()
 const toast = useToast()
 const api = useApi()
 const { go } = useHostLinks(useHostContext())
 const { terminalByPath, terminalProfile, refresh } = useSessions()
 const running = computed(() => terminalByPath.value.get(props.path))
 // Beside an agent it says that it is none; on its own it just opens.
-const label = computed(() => (props.agentId === undefined ? 'terminalButton.open' : 'terminalButton.title'))
+const caption = computed(() => props.label ?? (props.agentId === undefined ? 'terminalButton.open' : 'terminalButton.title'))
 
 async function open(): Promise<void> {
   if (!terminalProfile.value) return
@@ -42,10 +43,10 @@ async function open(): Promise<void> {
   <button
     v-if="terminalProfile"
     :class="buttonClass"
-    :title="$t(label)"
-    :aria-label="$t(label)"
+    :title="$t(caption)"
+    :aria-label="$t(caption)"
     @click="open"
   >
-    <AppIcon name="prompt" /><span v-if="withLabel">{{ $t(label) }}</span>
+    <AppIcon name="prompt" /><span v-if="withLabel">{{ $t(caption) }}</span>
   </button>
 </template>

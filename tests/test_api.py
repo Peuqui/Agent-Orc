@@ -2647,13 +2647,20 @@ def test_answers_come_from_the_transcript_the_agent_reports(
     monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
     session_id = start_shell(client, home / "projects" / "a")
     answers = f"/api/sessions/{session_id}/answers"
+
+    def version() -> str | None:
+        listed: str | None = client.get("/api/sessions").json()[0]["transcript_version"]
+        return listed
+
     # Before the agent has reported where its transcript is: nothing.
     assert client.get(answers).json() == []
+    assert version() is None
     transcript = home / ".claude" / "projects" / "-a" / "conversation.jsonl"
     transcript.parent.mkdir(parents=True)
     # Claude reports the path at start but creates the file with the first message only.
     store_status(session_id, {"model": {"display_name": "M"}, "transcript_path": str(transcript)})
     assert client.get(answers).json() == []
+    assert version() is None
     lines = [
         {
             "type": "user",
@@ -2668,7 +2675,11 @@ def test_answers_come_from_the_transcript_the_agent_reports(
             "message": {"content": [{"type": "text", "text": "Antwort"}]},
         },
     ]
+    transcript.write_text(json.dumps(lines[0]) + "\n", encoding="utf-8")
+    first = version()
+    # Each entry the agent writes changes it: the answers view loads again only then.
     transcript.write_text("\n".join(json.dumps(line) for line in lines), encoding="utf-8")
+    assert first is not None and version() not in (None, first)
     turns = client.get(answers).json()
     shown = [(t["prompt"], [x["text"] for x in t["texts"]]) for t in turns]
     assert shown == [("Frage", ["Antwort"])]

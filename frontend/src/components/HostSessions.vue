@@ -35,6 +35,14 @@ const { sessions, profiles, refresh, startPolling, stopPolling, loadProfiles } =
 const router = useRouter()
 const { href, go } = useHostLinks(props.host)
 const toast = useToast()
+// Where a terminal of its own opens (">_" beside "start agent"): the machine's start directory.
+const baseDir = ref<string | null>(null)
+onMounted(() => {
+  api
+    .scope()
+    .then((scope) => (baseDir.value = scope.base_dir))
+    .catch(toast.error)
+})
 // This machine's own agents are kept fresh by the app itself (App.vue).
 onMounted(() => {
   if (props.host === null) return
@@ -293,10 +301,14 @@ function resumeWith(session: AgentSession, model: string | null, effort: string 
     <!-- Named workspaces next to it: a tap opens one (its own browser tab once this one shows
          agents); the link address lets a middle click open a tab, too. -->
     <div class="mb-4 flex flex-wrap items-center gap-2">
-      <!-- A new agent starts in a folder chosen in the file view (of this machine's). -->
-      <a :href="href('/files')" class="btn-primary w-full sm:w-auto">
-        <AppIcon name="plus" />{{ $t('sessions.startNew') }}
-      </a>
+      <!-- A new agent starts in a folder chosen in the file view (of this machine's); a terminal
+           of its own opens in the start directory. -->
+      <div class="flex w-full gap-2 sm:w-auto">
+        <a :href="href('/files')" class="btn-primary flex-1">
+          <AppIcon name="plus" />{{ $t('sessions.startNew') }}
+        </a>
+        <TerminalButton v-if="baseDir" :path="baseDir" button-class="btn-secondary" label="terminalButton.startDir" />
+      </div>
       <button v-if="showUnnamed" class="btn-secondary btn-small" @click="openWorkspaceNamed(null)">
         <AppIcon name="workspace" />{{ $t('workspace.unnamed') }}
       </button>
@@ -366,7 +378,7 @@ function resumeWith(session: AgentSession, model: string | null, effort: string 
           <div class="flex shrink-0 flex-col items-end gap-1">
             <span
               v-if="session.running && session.busy"
-              class="shrink-0 animate-pulse rounded-full bg-amber-900/40 px-2.5 py-0.5 text-xs font-medium text-amber-300"
+              class="shrink-0 rounded-full bg-amber-900/40 px-2.5 py-0.5 text-xs font-medium text-amber-300"
             >
               {{ $t('sessions.working') }}
             </span>

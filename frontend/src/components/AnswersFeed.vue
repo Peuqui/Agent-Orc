@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { api, type AnswerText, type Interjection, type SpokenRequest, type Turn } from '../api'
 import { isUnread, shownTexts, spokenAs, uploadMentions } from '../answers'
@@ -24,7 +24,6 @@ import JogScroller from './JogScroller.vue'
 // or in the workspace's header) or were read aloud; any of them can be read aloud, or all that
 // follow.
 const props = withDefaults(defineProps<{ sessionId: string; turns?: number }>(), { turns: 20 })
-const POLL_MS = 4000
 const toast = useToast()
 const { locale } = useI18n()
 const answersAll = useAnswersAll(props.sessionId)
@@ -39,7 +38,6 @@ const zoomed = ref<HTMLElement>()
 const { zoomStyle } = useViewZoom(zoomed, box)
 // The files and folders the answers name open on a click, as in the terminal.
 useAnswerFileLinks(zoomed, () => session.value?.path)
-let timer: number | undefined
 // What was marked as read before this view opened; what has been marked or read aloud since is in
 // `seenIds`.
 const seenBefore = ref(seenUntil(props.sessionId))
@@ -190,15 +188,10 @@ watch(
   },
 )
 
-onMounted(() => {
-  void load()
-  timer = window.setInterval(() => {
-    if (document.visibilityState === 'visible') void load()
-  }, POLL_MS)
-})
-onBeforeUnmount(() => {
-  window.clearInterval(timer)
-})
+// Loaded again only when the agent wrote to its conversation: the agent list the app polls anyway
+// says so, instead of a request of each view every few seconds.
+onMounted(() => void load())
+watch(() => session.value?.transcript_version, () => void load())
 
 /**
  * Where the pictures of a message are served: those the transcript holds (its entry's pictures)
@@ -364,7 +357,7 @@ function jog(lines: number): void {
           </article>
         </template>
         <!-- The request being answered right now has no text yet. -->
-        <p v-if="!entry.texts.length && entry === shown.at(-1)" class="animate-pulse text-sm text-slate-500">
+        <p v-if="!entry.texts.length && entry === shown.at(-1)" class="text-sm text-slate-500">
           {{ $t('answers.working') }}
         </p>
       </section>
