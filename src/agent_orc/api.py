@@ -1121,7 +1121,9 @@ def create_app(
             busy = session_busy(session)
             progress = keep_warm_progress.get(session.id)
             if progress is not None:
-                progress = progress.follow(busy)
+                # A resting agent shrinking its context by itself is no input of the user: the
+                # count goes on.
+                progress = progress.follow(busy and not session_compacting(session))
                 if progress is None:
                     del keep_warm_progress[session.id]
                 else:

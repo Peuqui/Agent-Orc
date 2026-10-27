@@ -34,7 +34,7 @@ from agent_orc.config import (
     default_config_text,
     parse_config,
 )
-from agent_orc.context import store_activity, store_status
+from agent_orc.context import begin_compaction, end_compaction, store_activity, store_status
 from agent_orc.effort import agent_settings_file, write_agent_settings
 from agent_orc.events import ChangeNotifier
 from agent_orc.handover import (
@@ -1975,6 +1975,12 @@ def test_keep_warm_prompts_a_resting_agent_before_its_cache_expires(
         time.sleep(0.5)
         store_activity(session_id, busy=False)
         time.sleep(0.5)
+        # Claude Code shrinks the resting context by itself: no input of the user.
+        begin_compaction(session_id)
+        time.sleep(0.5)
+        end_compaction(session_id)
+        time.sleep(0.5)
+        assert client.get("/api/sessions").json()[0]["keep_warm"]["pings"] == 2
         store_activity(session_id, busy=True)
         assert pings_become(client, 0)
 
