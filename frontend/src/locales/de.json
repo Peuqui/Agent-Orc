@@ -361,7 +361,7 @@
           "**Prompt planen** (Menü ⋮ der Karte und der Agentenseite): einen Prompt für später planen, etwa „Tests laufen lassen und berichten“ um 7 Uhr. Er wird zur Zeit eingetippt, sobald der Agent fertig ist; geplante Prompts stehen auf der Karte und lassen sich mit × entfernen.",
           "Läuft ein Claude-Agent ins Nutzungslimit, plant Agent-Orc das Weitermachen zur nächsten Rücksetzung des Kontingents (gelber Eintrag auf der Karte). Ist er dann noch gesperrt, kommt der nächste Termin.",
           "**„An mehrere“** (neben den Arbeitsflächen, ab zwei laufenden Agenten): denselben Prompt an mehrere Agenten schicken, etwa „committe und pushe“. „Abschicken“ aus: der Text landet nur im Eingabefeld der Agenten, du liest ihn dort und sendest ihn selbst.",
-          "**„>_“** (Karte und Terminalleiste) öffnet ein normales Terminal im Projektordner, auch neben dem laufenden Agenten; läuft schon eins, öffnet es dieses. Ohne Agenten öffnest du eins unter Dateien mit „Terminal hier öffnen“ (für den gezeigten Ordner oder im Menü eines Ordners) oder mit „>_“ neben „Neuen Agenten starten“ (im Startverzeichnis). Einen weiteren Agenten im Ordner startest du über „Agent hier starten“ (mit eigenem Namenszusatz), nicht von Hand im Terminal, sonst kennt Agent-Orc ihn nicht.",
+          "**„>_“** (Karte und Terminalleiste) öffnet ein normales Terminal im Projektordner, auch neben dem laufenden Agenten; läuft schon eins, öffnet es dieses. Ohne Agenten öffnest du eins unter Dateien mit „Terminal hier öffnen“ (für den gezeigten Ordner oder im Menü eines Ordners); „>_“ neben „Neuen Agenten starten“ führt dorthin. Einen weiteren Agenten im Ordner startest du über „Agent hier starten“ (mit eigenem Namenszusatz), nicht von Hand im Terminal, sonst kennt Agent-Orc ihn nicht.",
           "Das Menü ⋮ auf der Karte (rechts unten) und auf der Agentenseite sammelt, was man seltener braucht oder was Folgen hat: Prompt planen, Modell wechseln, Kontext komprimieren, Kontext leeren, Neu starten und, abgesetzt und rot, Beenden. Häufiges bleibt sichtbar: „Terminal“ (öffnet die Agentenseite), Änderungen und „>_“.",
           "**Modell wechseln** (Menü ⋮, nur bei Agenten mit Modellauswahl): Der Agent wechselt das Modell im laufenden Betrieb, wo seine Profil-Einstellung das erlaubt (Claude: /model); Gespräch, laufende Antwort und Hintergrundaufgaben bleiben, nur der Prompt-Cache beginnt für das neue Modell von vorn. Arbeitet er gerade, wird der Wechsel vorgemerkt (gelbe Zeile mit „Verwerfen“) und nach der Antwort eingetippt. Kann ein Agent das nicht, startet Agent-Orc ihn mit dem Modell neu und setzt das Gespräch fort.",
           "**Kontext komprimieren und Kontext leeren** (Menü ⋮, wo das Profil sie kennt; Claude: /compact und /clear): wirken in den laufenden Agenten, ohne Neustart. Komprimieren fasst das Gespräch zusammen, Leeren vergisst es; beides nur zwischen zwei Antworten, bei laufender Antwort ist der Punkt gesperrt. Beides fragt vorher nach.",
@@ -722,7 +722,7 @@
   "terminalButton": {
     "title": "Terminal in diesem Ordner (ohne Agent)",
     "open": "Terminal hier öffnen",
-    "startDir": "Terminal im Startverzeichnis öffnen"
+    "chooseFolder": "Terminal starten: Ordner in der Dateiansicht wählen"
   },
   "keys": {
     "fold": "Weniger Sondertasten",

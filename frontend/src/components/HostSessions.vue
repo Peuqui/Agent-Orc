@@ -31,18 +31,10 @@ import { agentRoute, homeOf, openWorkspace, unnamedListed, useOtherTabs } from '
 const props = defineProps<{ host: string | null }>()
 provideHost(props.host)
 const api = apiFor(props.host)
-const { sessions, profiles, refresh, startPolling, stopPolling, loadProfiles } = useSessions(props.host)
+const { sessions, profiles, terminalProfile, refresh, startPolling, stopPolling, loadProfiles } = useSessions(props.host)
 const router = useRouter()
 const { href, go } = useHostLinks(props.host)
 const toast = useToast()
-// Where a terminal of its own opens (">_" beside "start agent"): the machine's start directory.
-const baseDir = ref<string | null>(null)
-onMounted(() => {
-  api
-    .scope()
-    .then((scope) => (baseDir.value = scope.base_dir))
-    .catch(toast.error)
-})
 // This machine's own agents are kept fresh by the app itself (App.vue).
 onMounted(() => {
   if (props.host === null) return
@@ -301,13 +293,21 @@ function resumeWith(session: AgentSession, model: string | null, effort: string 
     <!-- Named workspaces next to it: a tap opens one (its own browser tab once this one shows
          agents); the link address lets a middle click open a tab, too. -->
     <div class="mb-4 flex flex-wrap items-center gap-2">
-      <!-- A new agent starts in a folder chosen in the file view (of this machine's); a terminal
-           of its own opens in the start directory. -->
+      <!-- A new agent, and a terminal of its own, start in a folder chosen in the file view (of this
+           machine's), which has a button for each. -->
       <div class="flex w-full gap-2 sm:w-auto">
         <a :href="href('/files')" class="btn-primary flex-1">
           <AppIcon name="plus" />{{ $t('sessions.startNew') }}
         </a>
-        <TerminalButton v-if="baseDir" :path="baseDir" button-class="btn-secondary" label="terminalButton.startDir" />
+        <a
+          v-if="terminalProfile"
+          :href="href('/files')"
+          class="btn-secondary"
+          :title="$t('terminalButton.chooseFolder')"
+          :aria-label="$t('terminalButton.chooseFolder')"
+        >
+          <AppIcon name="prompt" />
+        </a>
       </div>
       <button v-if="showUnnamed" class="btn-secondary btn-small" @click="openWorkspaceNamed(null)">
         <AppIcon name="workspace" />{{ $t('workspace.unnamed') }}
