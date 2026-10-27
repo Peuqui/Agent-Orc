@@ -312,7 +312,7 @@
       "speech": "Read aloud",
       "baseDir": "Start folder",
       "push": "Notifications",
-      "handover": "Handover"
+      "handover": "Handover and keep warm"
     }
   },
   "factor": {
@@ -355,7 +355,7 @@
           "When an agent asks for permission, its card shows the command with “Allow”. Denying works with a hint what Claude should do instead, or without one, which stops Claude as Esc does. A plan is approved in a permission mode, or Claude keeps planning with a hint. The terminal asks the same; the first answer counts.",
           "**“Changes”** (branch icon, on the card and in the header of every terminal) shows what the agent changed in the project: changed, new and deleted files since the last commit; a tap shows the diff. “Open file” on a file opens it in the editor, “Open folder” the folder in the file view.",
           "Before Claude Code compacts the context by itself at about 97 %, the card advises a handover to a fresh session (from 90 % by default); “Ask for a handover” (on the card, and any time in the ⋮ menu) asks the agent for a handover document, also while it works; before the advice share with a plain request without the warning. The ☰ menu’s “Handover” shows the shares; there it can be made automatic (from 95 % by default), otherwise a notification comes.",
-          "**“keep warm”** (switch on the card and in the terminal’s header, off until you switch it on for that agent): a resting agent loses its prompt cache after about an hour, and the next message reads the whole context in again – slow, and it costs usage limit. With keep warm on, Agent-Orc types a tiny request into it shortly before, which it answers with one word; that extends the cache. A few requests in a row at most, then it may go cold, and your next input counts from the start. Only for agents whose profile can do it (Claude).",
+          "**“keep warm”** (switch on the card and in the terminal’s header, off until you switch it on for that agent): a resting agent loses its prompt cache after about an hour, and the next message reads the whole context in again – slow, and it costs usage limit. With keep warm on, Agent-Orc types a tiny request into it shortly before, which it answers with one word; that extends the cache. At most as many requests in a row as set under ☰ → Handover and keep warm, then it may go cold, and your next input counts from the start. Only for agents whose profile can do it (Claude).",
           "**“Start in a worktree of its own”** (start dialog): the agent works in a second working copy on a new branch next to the project; once it has ended, “Remove worktree” on the card removes it again – without losing unsaved work.",
           "**Restart** (menu ⋮ of the card and of the agent's page) restarts the agent and resumes the conversation, e.g. when it hangs or should read changed settings. A confirmation comes first; a running answer and background tasks end. If an agent has no stored model yet (started before the choice of models), Agent-Orc asks on restart and on resume afterwards – no agent starts without a model.",
           "**Schedule a prompt** (menu ⋮ of the card and of the agent's page): plan a prompt for later, e.g. \"run the tests and report\" at 7 o'clock. It is typed in at that time, once the agent has finished; scheduled prompts show on the card and can be removed with ×.",
@@ -566,8 +566,10 @@
   },
   "keepWarm": {
     "label": "keep warm",
-    "onHint": "The cache is kept warm ({count} requests so far in this rest). Click to switch off.",
-    "offHint": "The cache is not kept warm. Click to switch on."
+    "onHint": "The cache is kept warm ({count} of at most {max} requests so far in this rest). Click to switch off.",
+    "offHint": "The cache is not kept warm. Click to switch on.",
+    "maxPings": "Keep warm: requests in a row",
+    "maxPingsHint": "How often Agent-Orc types the tiny request into a resting agent with keep warm on before it lets it go cold; each shortly before its cache expires. Each request keeps the cache for another hour and reads the whole context from the cache for it, which counts toward the usage limits. Once the agent is cold, Claude Code compacts a large context by itself after 55 minutes. Your next input counts from the start. Applies to the agents of this machine."
   },
   "consumption": {
     "title": "Usage",

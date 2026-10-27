@@ -136,6 +136,8 @@ const speechAnnounceName = sharedSetting('speech_announce_name')
 const speechAutoRead = setting('agent-orc-speech-auto-read', false, (stored) => stored === 'true')
 /** Without a paragraph for listening, an answer is read up to this many characters. */
 const speechMaxChars = sharedSetting('speech_max_chars')
+/** Keep-warm prompts in a row while an agent of this server rests; then it goes cold. */
+const keepWarmMaxPings = sharedSetting('keep_warm_max_pings')
 
 /** Bumped when the extra keys were arranged anew: every open terminal fetches them again (the
  * arrangement itself is kept on the server, for every device). */
@@ -188,5 +190,6 @@ export function useSettings() {
     speechMaxChars,
     speechAnnounceName,
     speechAutoRead,
+    keepWarmMaxPings,
   }
 }

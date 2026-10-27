@@ -149,16 +149,14 @@ class CacheConfig(StrictModel):
 
 class KeepWarmConfig(StrictModel):
     """Keeps a resting agent's prompt cache warm by typing a tiny prompt shortly before the cache
-    expires (see keepwarm.py). Each answer that reads the cache starts its window anew."""
+    expires (see keepwarm.py). Each answer that reads the cache starts its window anew. How many
+    in a row is a setting of the menu (shared_settings.py)."""
 
     # Typed into the agent; it should answer with next to nothing.
     prompt: str
     # This long before the cache expires, the prompt is typed. It must be shorter than the
     # cache's window, or the agent would be asked again and again.
     lead_minutes: int
-    # Prompts in a row during one rest; then the agent is left to go cold. The user's next input
-    # starts the count anew.
-    max_pings: int
 
 
 class ApprovalsConfig(StrictModel):

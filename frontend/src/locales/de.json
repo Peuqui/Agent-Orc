@@ -312,7 +312,7 @@
       "speech": "Vorlesen",
       "baseDir": "Startverzeichnis",
       "push": "Benachrichtigungen",
-      "handover": "Übergabe"
+      "handover": "Übergabe und Warmhalten"
     }
   },
   "factor": {
@@ -355,7 +355,7 @@
           "Fragt ein Agent um Erlaubnis, zeigt seine Karte den Befehl mit „Erlauben“. Ablehnen geht mit einem Hinweis, was Claude anders machen soll, oder ohne, dann hält Claude an wie bei Esc. Einen Plan gibst du in einem Freigabe-Modus frei oder lässt mit einem Hinweis weiterplanen. Im Terminal steht dieselbe Frage; wo zuerst geantwortet wird, das gilt.",
           "**„Änderungen“** (Zweig-Symbol, auf der Karte und im Kopf jedes Terminals) zeigt, was der Agent im Projekt geändert hat: geänderte, neue und gelöschte Dateien seit dem letzten Commit, ein Tipp zeigt den Diff. „Datei öffnen“ an einer Datei öffnet sie im Editor, „Ordner öffnen“ den Ordner in der Dateiansicht.",
           "Bevor Claude Code den Kontext bei etwa 97 % selbst komprimiert, empfiehlt die Karte eine Übergabe an eine frische Sitzung (Voreinstellung ab 90 %); „Übergabe schreiben lassen“ (auf der Karte und jederzeit im Menü ⋮) bittet den Agenten um ein Übergabe-Dokument, auch mitten in der Arbeit; vor der Hinweis-Schwelle mit einer schlichten Bitte ohne Warnung. Im Menü ☰ unter „Übergabe“ stehen die Schwellen; dort lässt es sich automatisch anstoßen (Voreinstellung ab 95 %), sonst kommt eine Benachrichtigung.",
-          "**„warm halten“** (Schalter auf der Karte und im Kopf des Terminals, aus bis du ihn für diesen Agenten einschaltest): Ein ruhender Agent verliert nach etwa einer Stunde seinen Zwischenspeicher (Cache), und die nächste Nachricht liest den ganzen Kontext neu ein – langsam, und es kostet Nutzungsgrenze. Ist das Warmhalten an, tippt Agent-Orc ihm kurz davor eine winzige Bitte ein, auf die er mit einem Wort antwortet; das verlängert den Zwischenspeicher. Höchstens wenige Bitten hintereinander, danach darf er kalt werden, und deine nächste Eingabe zählt von vorn. Gilt nur für Agenten, deren Profil das kann (Claude).",
+          "**„warm halten“** (Schalter auf der Karte und im Kopf des Terminals, aus bis du ihn für diesen Agenten einschaltest): Ein ruhender Agent verliert nach etwa einer Stunde seinen Zwischenspeicher (Cache), und die nächste Nachricht liest den ganzen Kontext neu ein – langsam, und es kostet Nutzungsgrenze. Ist das Warmhalten an, tippt Agent-Orc ihm kurz davor eine winzige Bitte ein, auf die er mit einem Wort antwortet; das verlängert den Zwischenspeicher. Höchstens so viele Bitten hintereinander, wie unter ☰ → Übergabe und Warmhalten eingestellt, danach darf er kalt werden, und deine nächste Eingabe zählt von vorn. Gilt nur für Agenten, deren Profil das kann (Claude).",
           "**„In eigenem Worktree starten“** (Startdialog): Der Agent arbeitet in einer zweiten Arbeitskopie auf einem neuen Branch neben dem Projekt; ist er beendet, entfernt „Worktree entfernen“ auf der Karte sie wieder – ohne ungesicherte Arbeit zu verlieren.",
           "**Neu starten** (Menü ⋮ der Karte und der Agentenseite) startet den Agenten neu und setzt das Gespräch fort, etwa wenn er hängt oder geänderte Einstellungen lesen soll. Vorher kommt eine Rückfrage; eine laufende Antwort und Hintergrundaufgaben enden dabei. Hat ein Agent noch kein gespeichertes Modell (gestartet vor der Modellwahl), fragt Agent-Orc beim Neustart und beim Fortsetzen danach – ohne Modell startet kein Agent.",
           "**Prompt planen** (Menü ⋮ der Karte und der Agentenseite): einen Prompt für später planen, etwa „Tests laufen lassen und berichten“ um 7 Uhr. Er wird zur Zeit eingetippt, sobald der Agent fertig ist; geplante Prompts stehen auf der Karte und lassen sich mit × entfernen.",
@@ -566,8 +566,10 @@
   },
   "keepWarm": {
     "label": "warm halten",
-    "onHint": "Zwischenspeicher wird warm gehalten (diese Ruhepause bisher {count} Bitten). Klicken schaltet aus.",
-    "offHint": "Zwischenspeicher wird nicht warm gehalten. Klicken schaltet ein."
+    "onHint": "Zwischenspeicher wird warm gehalten (diese Ruhepause bisher {count} von höchstens {max} Bitten). Klicken schaltet aus.",
+    "offHint": "Zwischenspeicher wird nicht warm gehalten. Klicken schaltet ein.",
+    "maxPings": "Warmhalten: Bitten hintereinander",
+    "maxPingsHint": "So oft tippt Agent-Orc einem ruhenden Agenten mit eingeschaltetem Warmhalten die kleine Bitte ein, bevor er ihn kalt werden lässt; jede kurz bevor sein Zwischenspeicher abläuft. Jede Bitte hält den Zwischenspeicher eine weitere Stunde und liest dafür den ganzen Kontext aus dem Cache, das zählt auf die Nutzungsgrenzen. Ist der Agent kalt, komprimiert Claude Code einen großen Kontext nach 55 Minuten selbst. Deine nächste Eingabe zählt von vorn. Gilt für die Agenten dieses Rechners."
   },
   "consumption": {
     "title": "Verbrauch",

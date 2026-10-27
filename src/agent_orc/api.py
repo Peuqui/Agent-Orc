@@ -1005,6 +1005,9 @@ def create_app(
         answers_summaries.discard(session_id)
         save_switches()
 
+    def keep_warm_max_pings() -> int:
+        return SharedSettings.model_validate(read_settings()).keep_warm_max_pings
+
     def keep_warm_entry(session: AgentSession) -> dict[str, Any]:
         profile = config.agents.get(session.profile)
         progress = keep_warm_progress.get(session.id)
@@ -1012,6 +1015,7 @@ def create_app(
             "available": profile is not None and profile.keep_warm is not None,
             "enabled": session.id in keep_warm_enabled,
             "pings": progress.pings if progress else 0,
+            "max_pings": keep_warm_max_pings(),
         }
 
     def agent_cache(session: AgentSession) -> CacheState | None:
@@ -1112,6 +1116,7 @@ def create_app(
         save_switches()
         for session_id in keep_warm_progress.keys() - {s.id for s in listed}:
             del keep_warm_progress[session_id]
+        max_pings = keep_warm_max_pings()
         for session in listed:
             profile = config.agents.get(session.profile)
             keep_warm = profile.keep_warm if profile else None
@@ -1136,7 +1141,7 @@ def create_app(
                 continue
             pings = progress.pings if progress else 0
             if session.id in keep_warm_enabled and keepwarm.due(
-                keep_warm, agent_cache(session), clock(), pings
+                keep_warm, agent_cache(session), clock(), pings, max_pings
             ):
                 sessions.type_line(session.id, keep_warm.prompt)
                 keep_warm_progress[session.id] = keepwarm.KeepWarmProgress.typed(pings + 1)

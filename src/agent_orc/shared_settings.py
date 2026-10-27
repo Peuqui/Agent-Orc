@@ -30,6 +30,9 @@ class SharedSettings(BaseModel):
     speech_max_chars: int = Field(default=900, ge=100, le=100_000)
     # The voice chosen for an output (not the browser's: its voices are the device's own).
     speech_voices: dict[str, str] = Field(default_factory=dict)
+    # Keep-warm prompts in a row while an agent rests (keepwarm.py), each worth another hour of its
+    # cache; then it is left to go cold. The user's next input starts the count anew.
+    keep_warm_max_pings: int = Field(default=4, ge=1, le=48)
 
 
 def changed(current: dict[str, Any], change: dict[str, Any]) -> SharedSettings:

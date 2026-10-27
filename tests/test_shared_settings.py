@@ -65,6 +65,7 @@ def test_a_change_names_only_what_it_changes_and_lasts(
         {"speech_pitch": -1},
         {"speech_max_chars": 5},
         {"speech_engine": ""},
+        {"keep_warm_max_pings": 0},
     ],
 )
 def test_what_cannot_be_kept_is_refused_and_nothing_changes(

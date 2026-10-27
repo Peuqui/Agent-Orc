@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { api, type HandoverSettings } from '../api'
+import { useSettings } from '../composables/useSettings'
 import { useToast } from '../composables/useToast'
 import ToggleSwitch from './ToggleSwitch.vue'
 
@@ -8,6 +9,7 @@ import ToggleSwitch from './ToggleSwitch.vue'
 // the server, which does it also when no device is open. The shares come from its config.
 const toast = useToast()
 const settings = ref<HandoverSettings | null>(null)
+const { keepWarmMaxPings } = useSettings()
 
 onMounted(async () => {
   try {
@@ -44,5 +46,10 @@ async function change(current: HandoverSettings, wanted: { auto?: boolean; fresh
       <ToggleSwitch class="h-7" :checked="settings.fresh" :aria-label="$t('handover.fresh')" @click="change(settings, { fresh: !settings.fresh })" />
     </div>
     <p class="mt-1 text-xs text-slate-500">{{ $t('handover.freshHint') }}</p>
+    <label class="mt-4 flex flex-col gap-1 border-t border-slate-700 pt-3">
+      {{ $t('keepWarm.maxPings') }}
+      <input v-model.number="keepWarmMaxPings" type="number" min="1" max="48" step="1" class="input text-sm text-slate-200" />
+    </label>
+    <p class="mt-1 text-xs text-slate-500">{{ $t('keepWarm.maxPingsHint') }}</p>
   </div>
 </template>

@@ -198,7 +198,7 @@ def config(home: Path, socket_name: str) -> Config:
             "start": ["sh", "-c", "echo READY; exec cat"],
             "resume": ["true"],
             "terminal": True,
-            "keep_warm": {"prompt": "Keep-alive: one word.", "lead_minutes": 5, "max_pings": 2},
+            "keep_warm": {"prompt": "Keep-alive: one word.", "lead_minutes": 5},
         },
     }
     return Config.model_validate(raw)
@@ -1931,13 +1931,15 @@ def test_keep_warm_prompts_a_resting_agent_before_its_cache_expires(
         create_app(config, new_credentials(PASSWORD), static_dir=None, clock=clock)
     ) as client:
         client.post("/api/login", json={"password": PASSWORD})
+        client.patch("/api/settings", json={"keep_warm_max_pings": 2})
         session_id = start_shell(client, home / "projects")
         transcript = home / "conversation.jsonl"
         # Resting for 57 minutes: within the last five of the hour.
         report_context(session_id, 100, answered_at(transcript, clock() - 57 * 60))
         store_activity(session_id, busy=False)
         entry = client.get("/api/sessions").json()[0]["keep_warm"]
-        assert entry == {"available": True, "enabled": False, "pings": 0}
+        # The most in a row comes from the shared settings of the menu.
+        assert entry == {"available": True, "enabled": False, "pings": 0, "max_pings": 2}
 
         # Off until switched on: nothing is typed.
         time.sleep(0.5)

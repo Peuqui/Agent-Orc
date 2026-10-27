@@ -3,7 +3,8 @@ from agent_orc.config import KeepWarmConfig
 from agent_orc.handover import ASKED, DONE, WORKING
 from agent_orc.keepwarm import KeepWarmProgress, due
 
-CONFIG = KeepWarmConfig(prompt="Keep-alive", lead_minutes=5, max_pings=3)
+CONFIG = KeepWarmConfig(prompt="Keep-alive", lead_minutes=5)
+MAX_PINGS = 3
 HOUR = 3600
 NOW = 1_000_000.0
 
@@ -13,24 +14,24 @@ def cache_ending_in(seconds: float, window: int = HOUR) -> CacheState:
 
 
 def test_due_within_the_lead_time_of_a_living_cache() -> None:
-    assert due(CONFIG, cache_ending_in(299), NOW, pings=0)
-    assert not due(CONFIG, cache_ending_in(301), NOW, pings=0)
+    assert due(CONFIG, cache_ending_in(299), NOW, pings=0, max_pings=MAX_PINGS)
+    assert not due(CONFIG, cache_ending_in(301), NOW, pings=0, max_pings=MAX_PINGS)
 
 
 def test_not_due_for_an_expired_cache_or_without_one() -> None:
     # Reading an expired cache in again is what the next message does; no reason to pay it now.
-    assert not due(CONFIG, cache_ending_in(-1), NOW, pings=0)
-    assert not due(CONFIG, None, NOW, pings=0)
+    assert not due(CONFIG, cache_ending_in(-1), NOW, pings=0, max_pings=MAX_PINGS)
+    assert not due(CONFIG, None, NOW, pings=0, max_pings=MAX_PINGS)
 
 
 def test_not_due_after_the_pings_in_a_row() -> None:
-    assert due(CONFIG, cache_ending_in(100), NOW, pings=2)
-    assert not due(CONFIG, cache_ending_in(100), NOW, pings=3)
+    assert due(CONFIG, cache_ending_in(100), NOW, pings=2, max_pings=MAX_PINGS)
+    assert not due(CONFIG, cache_ending_in(100), NOW, pings=3, max_pings=MAX_PINGS)
 
 
 def test_not_due_when_the_window_is_no_longer_than_the_lead_time() -> None:
     # Five minutes of window (the account is over its quota): it would be due all the time.
-    assert not due(CONFIG, cache_ending_in(100, window=300), NOW, pings=0)
+    assert not due(CONFIG, cache_ending_in(100, window=300), NOW, pings=0, max_pings=MAX_PINGS)
 
 
 def test_a_prompt_runs_its_course_and_the_users_input_ends_the_rest() -> None:

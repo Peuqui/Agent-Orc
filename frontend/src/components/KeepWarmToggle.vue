@@ -33,7 +33,7 @@ async function toggle(): Promise<void> {
     ]"
     :aria-pressed="keepWarm.enabled"
     :aria-label="$t('keepWarm.label')"
-    :title="$t(keepWarm.enabled ? 'keepWarm.onHint' : 'keepWarm.offHint', { count: keepWarm.pings })"
+    :title="$t(keepWarm.enabled ? 'keepWarm.onHint' : 'keepWarm.offHint', { count: keepWarm.pings, max: keepWarm.max_pings })"
     @click.stop="toggle"
     @pointerdown.stop
   >

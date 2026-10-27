@@ -272,7 +272,7 @@ export interface AgentSession {
   cache: { last_request: number; window_seconds: number; warning_seconds: number } | null
   /** Keeping the prompt cache warm (keepwarm.py): whether the profile has it, whether it is on for
    * this agent, and the prompts typed during this rest. */
-  keep_warm: { available: boolean; enabled: boolean; pings: number }
+  keep_warm: { available: boolean; enabled: boolean; pings: number; max_pings: number }
   /** The answers show every text the agent wrote (the default), not only the summaries. Kept by
    * the server for every device, until the agent's session ends. */
   answers_all: boolean
@@ -511,6 +511,7 @@ export interface SharedSettings {
   speech_announce_name: boolean
   speech_max_chars: number
   speech_voices: Record<string, string>
+  keep_warm_max_pings: number
 }
 
 interface SendOptions {
