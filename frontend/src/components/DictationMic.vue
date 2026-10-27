@@ -6,21 +6,13 @@ import AppIcon from './AppIcon.vue'
 
 // The microphone, large where it is pressed with a finger. Where the STT-Suite listens (CPU or GPU) and whether a
 // dictation goes to the agent at once are set in the settings menu; only the GPU is shown here, as a small
-// mark, since it is the exception. Without it the microphone listens through the browser.
+// mark, since it is the exception. With the browser chosen, or without a service, it listens through the browser.
 const props = defineProps<{ dictation: Dictation }>()
-const active = computed(
-  () =>
-    props.dictation.state === 'recording' ||
-    (props.dictation.stt === false && props.dictation.state === 'listening'),
-)
-const busy = computed(
-  () =>
-    props.dictation.state === 'transcribing' ||
-    (props.dictation.stt === true && props.dictation.state === 'listening'),
-)
+const active = computed(() => props.dictation.state === 'recording' || props.dictation.state === 'listening')
+const busy = computed(() => props.dictation.state === 'transcribing')
 // The GPU is shown while the service has a model there and the dictation may use it (GPU or automatic).
 const onGpu = computed(
-  () => props.dictation.stt === true && props.dictation.device !== 'cpu' && props.dictation.gpuLoaded,
+  () => props.dictation.engine === 'stt-suite' && props.dictation.device !== 'cpu' && props.dictation.gpuLoaded,
 )
 </script>
 

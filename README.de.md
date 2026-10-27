@@ -173,7 +173,8 @@ einen SSH-Tunnel ([Mehrere Rechner](#mehrere-rechner)).
 - Ein normales Eingabefeld unter dem Terminal, damit Handytastatur, Autokorrektur und Diktat
   funktionieren; Enter sendet, Shift+Enter macht eine neue Zeile.
 - Diktat über eine lokale [STT-Suite](https://github.com/Peuqui/STT-Suite) (GPU oder CPU,
-  Engine pro Gerät wählbar, z. B. Parakeet oder Whisper) oder die Spracherkennung des Browsers.
+  Engine pro Gerät wählbar, z. B. Parakeet oder Whisper) oder die Spracherkennung des Browsers, je Gerät
+  wählbar im Einstellungsmenü.
 - Prompt-Vorlagen für häufige Anweisungen, mit einem Tipp im Eingabefeld.
 - Foto, Screenshot (aus der Galerie, am Rechner direkt vom Bildschirm oder einfach mit Strg+V
   eingefügt) oder Datei anhängen: Sie landen im Projektordner, erscheinen als kleine Vorschau

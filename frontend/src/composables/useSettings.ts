@@ -84,6 +84,11 @@ const terminalFont = setting<TerminalFont>(
   (stored) => stored as TerminalFont,
 )
 
+/** What recognises the dictations on this device: the STT-Suite, or the browser's own recognition, which depends
+ * on the browser (Chrome sends the audio to Google, Firefox has none). */
+export type DictationEngine = 'stt-suite' | 'browser'
+const dictationEngine = setting<DictationEngine>('agent-orc-dictation-engine', 'stt-suite', (stored) => stored as DictationEngine)
+
 // What is the same on every device lives on the server (shared_settings.py, useSharedSettings.ts); what depends on
 // the device itself (fonts, scrolling, the browser's voices, the columns) is kept here, in the browser.
 
@@ -181,6 +186,7 @@ export function useSettings() {
     stepControlsScale,
     terminalFont,
     dictationSendsAtOnce,
+    dictationEngine,
     dictationDevice,
     extraKeysUnfolded,
     extraKeysVersion,

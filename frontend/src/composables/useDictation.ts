@@ -1,7 +1,7 @@
 import { computed, onScopeDispose, ref, type UnwrapNestedRefs } from 'vue'
 import { api } from '../api'
 import { transcribeForAgent } from '../dictationHost'
-import { useSettings } from './useSettings'
+import { useSettings, type DictationEngine } from './useSettings'
 import { START_BEEP, STOP_BEEP, playBeep } from '../sounds'
 
 // Recording formats the STT-Suite is fed with (agent_orc.dictation.AUDIO_SUFFIXES),
@@ -18,6 +18,7 @@ interface SpeechRecognitionLike {
   onend: (() => void) | null
   start(): void
   stop(): void
+  abort(): void
 }
 type SpeechResults = ArrayLike<ArrayLike<{ transcript: string }> & { isFinal: boolean }>
 type SpeechRecognitionClass = new () => SpeechRecognitionLike
@@ -28,14 +29,15 @@ const speechWindow = window as unknown as {
 }
 // Chrome has it (sending the audio to Google), Firefox does not.
 const BrowserRecognition = speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition
+export const hasBrowserRecognition = BrowserRecognition !== undefined
 
 export type DictationState = 'idle' | 'recording' | 'transcribing' | 'listening'
 
 /**
- * Speech input. With an STT-Suite service the browser records and the service transcribes on the
- * device the user picked; the browser's own recognition is then only offered after the service
- * failed, as a separate button pressed deliberately. Without an STT-Suite service the microphone
- * uses the browser's recognition directly.
+ * Speech input, through the engine chosen for this device in the settings menu. With the STT-Suite the
+ * browser records and the service transcribes on the device the user picked; with the browser chosen, or
+ * without an STT-Suite service, the browser's own recognition listens. Either way the microphone button
+ * starts and ends a dictation, and its text comes as one piece at the end.
  */
 
 export function useDictation(
@@ -45,8 +47,8 @@ export function useDictation(
   sessionId?: string,
 ) {
   const state = ref<DictationState>('idle')
-  // Where the STT-Suite transcribes: one setting of this device (in the settings menu), the same for every agent.
-  const { dictationDevice: device } = useSettings()
+  // What recognises (this device's choice) and where the STT-Suite transcribes (the same on every device).
+  const { dictationDevice: device, dictationEngine } = useSettings()
   // Unknown until the server's settings have arrived.
   const stt = ref<boolean | null>(null)
   // Whether the service has a model on the GPU: asked at the start and after every dictation, which is
@@ -57,18 +59,27 @@ export function useDictation(
   let unloadCheck: ReturnType<typeof setTimeout> | undefined
   onScopeDispose(() => clearTimeout(unloadCheck))
   const language = ref('')
-  const sttFailed = ref(false)
   // Kept when the STT-Suite failed, so the dictation is not lost: it can be sent again, e.g. on the CPU.
   const failedAudio = ref<Blob | null>(null)
   let recorder: MediaRecorder | null = null
   let recognition: SpeechRecognitionLike | null = null
+  // Only the microphone button (or an error) ends listening: the browser stops by itself after a silence and is
+  // started again then, so a pause to think does not end the dictation. What was heard comes as one text at the end.
+  let ending = false
+  let heard: string[] = []
+  onScopeDispose(() => {
+    ending = true
+    heard = []
+    recognition?.abort()
+  })
 
-  const hasBrowserRecognition = BrowserRecognition !== undefined
+  // What the microphone uses; null until the server's settings have arrived.
+  const engine = computed<DictationEngine | null>(() => {
+    if (stt.value === null) return null
+    return stt.value ? dictationEngine.value : 'browser'
+  })
   const microphone = computed(
-    () => stt.value === true || (stt.value === false && hasBrowserRecognition),
-  )
-  const browserFallback = computed(
-    () => stt.value === true && sttFailed.value && hasBrowserRecognition,
+    () => engine.value === 'stt-suite' || (engine.value === 'browser' && hasBrowserRecognition),
   )
 
   function refreshService(): Promise<void> {
@@ -110,10 +121,8 @@ export function useDictation(
     failedAudio.value = null
     try {
       const text = sessionId === undefined ? (await api.dictate(audio, device.value)).text : await transcribeForAgent(sessionId, audio, device.value)
-      sttFailed.value = false
       if (text) onText(text)
     } catch (error) {
-      sttFailed.value = true
       failedAudio.value = audio
       onError(error)
     } finally {
@@ -124,23 +133,37 @@ export function useDictation(
 
   function startListening(): void {
     if (BrowserRecognition === undefined) return
-    recognition = new BrowserRecognition()
-    recognition.lang = language.value
-    recognition.continuous = true
-    recognition.interimResults = false
-    recognition.onresult = (event) => {
+    const listener = new BrowserRecognition()
+    listener.lang = language.value
+    listener.continuous = true
+    listener.interimResults = false
+    listener.onresult = (event) => {
       for (let index = event.resultIndex; index < event.results.length; index++) {
         const result = event.results[index]
-        if (result.isFinal) onText(result[0].transcript.trim())
+        if (result.isFinal) heard.push(result[0].transcript.trim())
       }
     }
-    recognition.onerror = (event) => onError(new Error(event.error))
-    // Also when the browser stops by itself after a silence.
-    recognition.onend = () => {
+    // "no-speech" is a silence before anything was said: it ends like any other silence.
+    listener.onerror = (event) => {
+      if (event.error === 'no-speech') return
+      ending = true
+      onError(new Error(event.error))
+    }
+    listener.onend = () => {
+      if (!ending) {
+        listener.start()
+        return
+      }
+      recognition = null
       playBeep(STOP_BEEP)
       state.value = 'idle'
+      const text = heard.filter(Boolean).join(' ')
+      heard = []
+      if (text) onText(text)
     }
-    recognition.start()
+    recognition = listener
+    ending = false
+    listener.start()
     playBeep(START_BEEP)
     state.value = 'listening'
   }
@@ -150,15 +173,12 @@ export function useDictation(
     if (failedAudio.value !== null && state.value === 'idle') void transcribe(failedAudio.value)
   }
 
-  /** Browser recognition: start, or stop until pressed again. */
-  function toggleBrowser(): void {
-    if (state.value === 'listening') recognition?.stop()
-    else if (state.value === 'idle') startListening()
-  }
-
-  /** Microphone button: the STT-Suite when there is a service, else the browser's recognition. */
+  /** Microphone button: the engine chosen (the browser's recognition without a service). */
   function toggleMicrophone(): void {
-    if (stt.value === false) toggleBrowser()
+    if (state.value === 'listening') {
+      ending = true
+      recognition?.stop()
+    } else if (state.value === 'idle' && engine.value === 'browser') startListening()
     else if (state.value === 'recording') {
       playBeep(STOP_BEEP)
       recorder?.stop()
@@ -169,13 +189,11 @@ export function useDictation(
     state,
     device,
     gpuLoaded,
-    stt,
+    engine,
     microphone,
-    browserFallback,
     failedAudio,
     retry,
     toggleMicrophone,
-    toggleBrowser,
   }
 }
 

@@ -163,7 +163,8 @@ that run Agent-Orc can be shown in the same app, through an SSH tunnel ([Several
 - A plain input field below the terminal, so phone keyboards, autocorrect and dictation work;
   Enter sends, Shift+Enter starts a new line.
 - Dictation through a local [STT-Suite](https://github.com/Peuqui/STT-Suite) service (GPU or CPU,
-  engine chosen per device, e.g. Parakeet or Whisper) or the browser's own speech recognition.
+  engine chosen per device, e.g. Parakeet or Whisper) or the browser's own speech recognition, chosen per
+  device in the settings menu.
 - Prompt templates for frequent instructions, one tap into the input field.
 - Attach a photo, a screenshot (from the gallery, captured from the screen on the desktop, or
   simply pasted with Ctrl+V) or a file: it lands in the project folder, shows as a small preview
