@@ -16,7 +16,7 @@ from typing import Any
 import uvicorn
 
 from agent_orc.announce import announce
-from agent_orc.answers import read_turns
+from agent_orc.answers import read_turns, request_queued
 from agent_orc.api import create_app
 from agent_orc.approvals import (
     close_answered,
@@ -173,7 +173,9 @@ def agent_idle() -> None:
     """Hook command (Claude: Stop): the agent finished its answer; tells the user's devices."""
     hook = json.load(sys.stdin)
     session_id = os.environ[SESSION_ENV]
-    store_activity(session_id, busy=False)
+    # Something queued during the answer starts the next one right away: the agent works on.
+    if not request_queued(Path(hook["transcript_path"])):
+        store_activity(session_id, busy=False)
     close_session_requests(session_id)
     # Absent when the answer ended without text (e.g. interrupted).
     answer = hook.get("last_assistant_message") or ""

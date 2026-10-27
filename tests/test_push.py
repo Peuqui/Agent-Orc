@@ -9,6 +9,7 @@ import yaml
 
 from agent_orc import cli
 from agent_orc.config import PushConfig, default_config_text
+from agent_orc.context import BUSY, IDLE, activity_file, store_activity
 from agent_orc.push import (
     MAX_TEXT_CHARS,
     VAPID_KEY_FILE,
@@ -91,9 +92,18 @@ def test_hooks_store_the_activity_and_notify(
     phone = Device(f"{push_service.url}/phone")
     add_subscription(phone.subscription)
 
-    stop = {"cwd": "/w/garden-planner", "last_assistant_message": "Two beds are free."}
+    transcript = tmp_path / "t.jsonl"
+    request = {"type": "user", "timestamp": "2026-10-27T07:00:00.000Z", "origin": {"kind": "human"}}
+    transcript.write_text(json.dumps(request) + "\n")
+    stop = {
+        "cwd": "/w/garden-planner",
+        "transcript_path": str(transcript),
+        "last_assistant_message": "Two beds are free.",
+    }
+    store_activity("garden-1", busy=True)
     monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(stop)))
     cli.agent_idle()
+    assert activity_file("garden-1").read_text() == IDLE
     notification = {"cwd": "/w/garden-planner", "message": "Claude needs your permission"}
     monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(notification)))
     cli.agent_waiting()
@@ -102,3 +112,12 @@ def test_hooks_store_the_activity_and_notify(
     assert done == agent_message("done", "garden-1", "garden-planner", "Two beds are free.")
     assert waiting["kind"] == "waiting"
     assert waiting["text"] == "Claude needs your permission"
+
+    # Typed while the agent answered: Claude takes it right after the Stop hook, the agent works on.
+    store_activity("garden-1", busy=True)
+    queued = {"type": "queue-operation", "operation": "enqueue", "content": "And the roses?"}
+    with transcript.open("a") as file:
+        file.write(json.dumps(queued) + "\n")
+    monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(stop)))
+    cli.agent_idle()
+    assert activity_file("garden-1").read_text() == BUSY

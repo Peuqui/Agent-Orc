@@ -5,7 +5,7 @@ from typing import Any
 
 import pytest
 
-from agent_orc.answers import read_image, read_turns
+from agent_orc.answers import read_image, read_turns, request_queued
 
 
 def entry(kind: str, uuid: str, content: Any, **extra: Any) -> dict[str, Any]:
@@ -120,6 +120,51 @@ def test_what_is_typed_but_not_yet_taken_shows_as_waiting(tmp_path: Path) -> Non
     turns = read_turns(write(tmp_path / "t.jsonl", entries), limit=10)
     waiting = [(i.text, i.pending) for i in turns[0].interjections]
     assert waiting == [("Noch nicht angekommen", True)]
+
+
+def test_a_request_queued_during_the_answer_is_found(tmp_path: Path) -> None:
+    answer = [
+        queue("enqueue", "q1", "Frage"),
+        queue("dequeue", "q2"),
+        entry("user", "u3", "Frage", origin={"kind": "human"}),
+        entry("assistant", "a4", [{"type": "text", "text": "Ich arbeite."}]),
+    ]
+    assert not request_queued(write(tmp_path / "a.jsonl", answer))
+    # Handed to the running answer: nothing waits.
+    handed = [*answer, queue("enqueue", "q5", "Einwand"), queue("remove", "q6", "Einwand")]
+    assert not request_queued(write(tmp_path / "h.jsonl", handed))
+    # Typed and not yet taken: the next request waits.
+    typed = [*answer, queue("enqueue", "q5", "Nächste Frage")]
+    assert request_queued(write(tmp_path / "t.jsonl", typed))
+
+
+def test_only_the_queue_since_the_answer_began_counts(tmp_path: Path) -> None:
+    # Left over from an earlier conversation that ended before taking it.
+    left_over = queue("enqueue", "q1", "Vergessen")
+    sent_while_resting = [left_over, entry("user", "u2", "Frage", origin={"kind": "human"})]
+    assert not request_queued(write(tmp_path / "r.jsonl", sent_while_resting))
+    taken_from_queue = [left_over, queue("enqueue", "q2", "Frage"), queue("dequeue", "q3")]
+    assert not request_queued(write(tmp_path / "q.jsonl", taken_from_queue))
+    # Tool results and subagents start no request.
+    working = [
+        *sent_while_resting,
+        entry("user", "u3", [{"type": "tool_result", "content": "ok"}]),
+        entry("user", "u4", "Auftrag", isSidechain=True, origin={"kind": "human"}),
+        queue("enqueue", "q5", "Nächste Frage"),
+    ]
+    assert request_queued(write(tmp_path / "w.jsonl", working))
+
+
+def test_what_was_queued_as_the_answer_began_counts_though_written_before(tmp_path: Path) -> None:
+    # Claude writes a notification queued while it takes a request before that request.
+    entries = [
+        queue("enqueue", "q1", "Nachricht eines Peers"),
+        queue("dequeue", "q2"),
+        queue("enqueue", "q4", "<task-notification>"),
+        entry("user", "u3", "Nachricht eines Peers", origin={"kind": "peer"}),
+        entry("assistant", "a5", [{"type": "text", "text": "Gelesen."}]),
+    ]
+    assert request_queued(write(tmp_path / "t.jsonl", entries))
 
 
 def test_a_withdrawn_message_is_not_shown(tmp_path: Path) -> None:

@@ -158,6 +158,32 @@ def _queue_operation(entry: dict[str, Any], waiting: list[dict[str, Any]]) -> No
             waiting.remove(taken)
 
 
+def request_queued(transcript: Path) -> bool:
+    """Whether something queued during the answer that just ended waits to be taken: typed by the
+    user or a notification. Claude takes it as a request of its own right after this answer, and
+    for typed text without running UserPromptSubmit again (it ran when the text was queued)."""
+    since_turn_began: list[dict[str, Any]] = []
+    # The turn began with a request taken from the queue, or with one sent while it rested. What
+    # was queued at that moment can stand in the file before the request.
+    turn_began: str | None = None
+    for line in lines_from_end(transcript, SCAN_BYTES):
+        entry: dict[str, Any] = json.loads(line)
+        if entry.get("isSidechain"):
+            continue
+        if turn_began is not None and entry.get("timestamp", turn_began) < turn_began:
+            break
+        if entry.get("type") == "queue-operation":
+            if entry.get("operation") == "dequeue":
+                break
+            since_turn_began.append(entry)
+        elif entry.get("type") == "user" and "origin" in entry and turn_began is None:
+            turn_began = entry["timestamp"]
+    waiting: list[dict[str, Any]] = []
+    for entry in reversed(since_turn_began):
+        _queue_operation(entry, waiting)
+    return bool(waiting)
+
+
 # Pictures shown in the answers; anything else in a transcript is not served.
 IMAGE_TYPES = ("image/png", "image/jpeg", "image/gif", "image/webp")
 

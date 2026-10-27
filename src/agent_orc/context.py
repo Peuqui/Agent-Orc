@@ -11,7 +11,9 @@ The same document carries the account's usage limits (five hours, week); they ho
 session alike, so the most recently reported ones are the current ones.
 
 Whether the agent is working comes from Claude's hooks: UserPromptSubmit runs
-`agent-orc agent-busy`, Stop runs `agent-orc agent-idle`.
+`agent-orc agent-busy`, Stop runs `agent-orc agent-idle`. Text typed while the agent works runs
+UserPromptSubmit when it is queued; if it is taken as a request of its own after the answer, no
+hook marks that start, so agent-idle leaves such an agent working.
 """
 
 import json
