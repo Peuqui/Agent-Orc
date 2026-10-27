@@ -359,6 +359,11 @@ function connect(): void {
   socket.onopen = () => {
     connected.value = true
     reconnecting.value = false
+    // The terminal may have been fitted again while the socket was still connecting (the layout
+    // settles after the first fit), and send() drops that resize. tmux would then draw for the
+    // size in the address: with one row too many, the browser scrolls a line at the full redraw
+    // and every later update lands one row too low.
+    send({ type: 'resize', cols: terminal.cols, rows: terminal.rows })
     // An agent's typing goes to our input field first: dictation tools work there, not in the
     // terminal's own input; a plain terminal is typed into directly. In the workspace only the
     // active column takes the focus. Not on touch screens: the focus would raise the on-screen
