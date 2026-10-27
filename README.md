@@ -61,7 +61,8 @@ that run Agent-Orc can be shown in the same app, through an SSH tunnel ([Several
 - Every card has a workspace field: an agent joins the workspace chosen at start and can be
   moved to another later; one without a workspace stands in “Default”. An agent that has no
   stored model is asked for one when it is restarted or resumed.
-- A plain terminal in the project folder (“>_”), also next to the running agent.
+- A plain terminal in the project folder (“>_”), also next to the running agent, or without an
+  agent from the file view (“Open terminal here”).
 
 **Workspaces**
 - Several agents side by side as columns; drag the column heads to sort them and the dividers

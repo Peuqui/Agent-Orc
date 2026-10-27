@@ -12,6 +12,7 @@ import { COLUMN_TAB } from '../device'
 import FilePane from '../components/FilePane.vue'
 import InputDialog from '../components/InputDialog.vue'
 import StartAgentDialog from '../components/StartAgentDialog.vue'
+import TerminalButton from '../components/TerminalButton.vue'
 import TrashPanel from '../components/TrashPanel.vue'
 import { loadTabState } from '../composables/useWorkspaceTab'
 import { useCopyText } from '../composables/useCopyText'
@@ -223,7 +224,7 @@ function onAgentStarted(): void {
       </div>
 
       <!-- They act on the view last clicked (the one marked when there are two). -->
-      <div class="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div class="mb-4 grid grid-cols-2 gap-2" :class="inColumn ? 'sm:grid-cols-4' : 'sm:grid-cols-5'">
         <button class="btn-secondary" @click="dialog = { kind: 'newFolder' }">
           <AppIcon name="plus" />{{ $t('files.newFolder') }}
         </button>
@@ -250,7 +251,8 @@ function onAgentStarted(): void {
         <button v-if="!inColumn" class="btn-secondary" :class="dual ? '!text-amber-300' : ''" :aria-pressed="dual" @click="toggleDual">
           <AppIcon name="workspace" />{{ $t(dual ? 'files.oneView' : 'files.twoViews') }}
         </button>
-        <button class="btn-primary col-span-2 sm:col-span-1" @click="dialog = { kind: 'agent', path: activePath }">
+        <TerminalButton :path="activePath" button-class="btn-secondary" with-label />
+        <button class="btn-primary" :class="inColumn ? '' : 'col-span-2 sm:col-span-1'" @click="dialog = { kind: 'agent', path: activePath }">
           <AppIcon name="play" />{{ $t('files.startAgent') }}
         </button>
       </div>
@@ -341,6 +343,7 @@ function onAgentStarted(): void {
         >
           <AppIcon name="play" />{{ $t('files.startAgent') }}
         </button>
+        <TerminalButton v-if="dialog.entry.is_dir" :path="dialog.entry.path" button-class="btn-secondary" with-label />
         <a v-if="!dialog.entry.is_dir" class="btn-secondary" :href="rawFileUrl(dialog.entry.path, true)">
           <AppIcon name="download" />{{ $t('editor.download') }}
         </a>
