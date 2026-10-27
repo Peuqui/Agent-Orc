@@ -151,8 +151,13 @@ export function useDictation(
     }
     listener.onend = () => {
       if (!ending) {
-        listener.start()
-        return
+        try {
+          listener.start()
+          return
+        } catch (error) {
+          // Some browsers start only from a tap (Safari), which the restart is not: the dictation ends here.
+          onError(error)
+        }
       }
       recognition = null
       playBeep(STOP_BEEP)

@@ -28,8 +28,8 @@ onMounted(async () => {
 
 <template>
   <div>
-    <!-- Offered with a service only: without one the browser listens anyway. Also on a device without the
-         browser's recognition, so the STT-Suite can be chosen again from there. -->
+    <!-- Offered with a service only: without one the browser listens anyway. Where the browser has no
+         recognition of its own, "Browser" cannot be chosen. -->
     <div v-if="stt" class="text-sm text-slate-300">
       <div class="flex items-center justify-between gap-2">
         <span>{{ $t('settings.dictationEngine') }}</span>
@@ -37,8 +37,9 @@ onMounted(async () => {
           <button
             v-for="choice in (['stt-suite', 'browser'] as const)"
             :key="choice"
-            class="px-2 py-1"
+            class="px-2 py-1 disabled:opacity-40"
             :class="dictationEngine === choice ? 'segment-on' : 'text-slate-400'"
+            :disabled="choice === 'browser' && !hasBrowserRecognition"
             @click="dictationEngine = choice"
           >
             {{ $t(`settings.dictationEngine_${choice}`) }}
@@ -46,9 +47,7 @@ onMounted(async () => {
         </div>
       </div>
       <p class="mt-1 text-xs text-slate-500">{{ $t('settings.dictationEngineHint') }}</p>
-      <p v-if="dictationEngine === 'browser' && !hasBrowserRecognition" class="mt-1 text-xs text-amber-300">
-        {{ $t('settings.dictationEngineMissing') }}
-      </p>
+      <p v-if="!hasBrowserRecognition" class="mt-1 text-xs text-slate-500">{{ $t('settings.dictationEngineMissing') }}</p>
     </div>
     <div v-if="usesService && service" class="mt-4 text-sm text-slate-300">
       <span>{{ $t('settings.dictationService') }}</span>
