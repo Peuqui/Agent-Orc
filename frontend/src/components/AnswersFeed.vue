@@ -39,39 +39,19 @@ const zoomed = ref<HTMLElement>()
 const { zoomStyle } = useViewZoom(zoomed, box)
 // The files and folders the answers name open on a click, as in the terminal.
 useAnswerFileLinks(zoomed, () => session.value?.path)
-// What was marked as read before this view opened; what has been marked or read aloud since is in
-// `seenIds`.
-const seenBefore = ref(seenUntil(props.sessionId))
-const seenIds = ref(new Set<string>())
+// Read up to this time, the same in every view and on every device (the server keeps one time per agent).
+const seen = computed(() => seenUntil(props.sessionId))
 
-// The newest time this view marked itself: only what goes beyond it was seen elsewhere.
-let markedHere = ''
-
-function markSeenHere(id: string): void {
-  seenIds.value.add(id)
-  const text = everyText.value.find((candidate) => candidate.id === id)
-  if (!text) return
-  if (text.time > markedHere) markedHere = text.time
-  markSeen(props.sessionId, text.time)
-}
-
+/** An answer read to its end counts as read, and so do the older ones. */
 function markReadAloud(item: Speakable): void {
-  markSeenHere(item.id)
+  const text = everyText.value.find((candidate) => candidate.id === item.id)
+  if (text) markSeen(props.sessionId, text.time)
 }
 
-// Another view or device (a column, another tab, the workspace's speaker, the phone) has seen or
-// read answers of this agent. What this view marked itself does not count here: looking at the
-// newest answer must not make the older ones above it read.
-watch(
-  () => seenUntil(props.sessionId),
-  (elsewhere) => {
-    if (elsewhere > seenBefore.value && elsewhere > markedHere) seenBefore.value = elsewhere
-  },
-)
-
-/** Everything there is counts as read, without reading it aloud or scrolling through it. */
+/** Everything there is counts as read, without reading it aloud. */
 function markAllSeen(): void {
-  for (const text of unread.value) markSeenHere(text.id)
+  const newest = unread.value.at(-1)
+  if (newest) markSeen(props.sessionId, newest.time)
 }
 
 /** A click on an answer marks it and every one above it (the older ones) as read: one reads from
@@ -80,7 +60,7 @@ function markAllSeen(): void {
 function markUpTo(event: MouseEvent, clicked: AnswerText): void {
   if ((event.target as Element).closest('button, a, input, select, textarea, audio, .file-link')) return
   if (window.getSelection()?.isCollapsed === false) return
-  for (const text of unread.value) if (text.time <= clicked.time) markSeenHere(text.id)
+  markSeen(props.sessionId, clicked.time)
 }
 
 interface Shown {
@@ -103,7 +83,7 @@ const shown = computed<Shown[]>(() =>
   }),
 )
 const everyText = computed(() => shown.value.flatMap((entry) => entry.texts))
-const unread = computed(() => everyText.value.filter((text) => isUnread(text, seenBefore.value, seenIds.value)))
+const unread = computed(() => everyText.value.filter((text) => isUnread(text, seen.value)))
 
 const agentName = computed(() => (session.value ? sessionName(session.value) : props.sessionId))
 
@@ -328,10 +308,10 @@ function jog(lines: number): void {
             :data-anchor="item.id"
             class="card flex flex-col gap-2 p-3"
             :class="[
-              isUnread(item, seenBefore, seenIds) ? 'border-l-4 border-l-red-500 pl-[calc(0.75rem-3px)]' : '',
+              isUnread(item, seen) ? 'border-l-4 border-l-red-500 pl-[calc(0.75rem-3px)]' : '',
               speech.playing.value === item.id ? 'ring-1 ring-amber-500 bg-slate-800/70' : '',
             ]"
-            :title="isUnread(item, seenBefore, seenIds) ? $t('answers.clickToMark') : undefined"
+            :title="isUnread(item, seen) ? $t('answers.clickToMark') : undefined"
             @click="markUpTo($event, item)"
           >
             <div

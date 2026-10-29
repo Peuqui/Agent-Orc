@@ -71,10 +71,9 @@ test('a request is marked as spoken by the latest one sent before it with the sa
   assert.equal(spokenAs(turn, [spoken('c', '2026-10-07T10:01:00+00:00'), spoken('d', '2026-10-07T10:00:04+00:00', 'etwas anderes')]), undefined)
 })
 
-test('a text is new until it was seen or read aloud', () => {
+test('a text is new until it or a newer one was seen', () => {
   const written = text('b', '2026-10-06T10:00:05Z')
-  assert.equal(isUnread(written, '2026-10-06T10:00:01Z', new Set()), true)
-  assert.equal(isUnread(written, '2026-10-06T10:00:05Z', new Set()), false)
-  assert.equal(isUnread(written, '2026-10-06T10:00:01Z', new Set(['b'])), false)
-  assert.equal(isUnread(written, '2026-10-06T10:00:01Z', new Set(['a'])), true)
+  assert.equal(isUnread(written, '2026-10-06T10:00:01Z'), true)
+  assert.equal(isUnread(written, '2026-10-06T10:00:05Z'), false)
+  assert.equal(isUnread(written, '2026-10-06T10:00:09Z'), false)
 })

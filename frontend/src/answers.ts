@@ -18,14 +18,15 @@ export function shownTexts(turn: Turn, all: boolean): AnswerText[] {
   })
 }
 
-/** New to the reader: written after the time seen, and not read aloud since. */
-export function isUnread(text: AnswerText, seen: string, read: ReadonlySet<string>): boolean {
-  return text.time > seen && !read.has(text.id)
+/** New to the reader: written after the time seen (an ISO time, which compares as text). Seeing or
+ * reading an answer marks it and every older one: the server keeps one time per agent. */
+export function isUnread(text: AnswerText, seen: string): boolean {
+  return text.time > seen
 }
 
-/** The shown texts written after `seen` (an ISO time, which compares as text), in the order written. */
+/** The shown texts written after `seen`, in the order written. */
 export function unreadTexts(turns: Turn[], all: boolean, seen: string): AnswerText[] {
-  return turns.flatMap((turn) => shownTexts(turn, all)).filter((text) => text.time > seen)
+  return turns.flatMap((turn) => shownTexts(turn, all)).filter((text) => isUnread(text, seen))
 }
 
 // A picture attached in Agent-Orc is stored in the agent's folder and its path goes into the
