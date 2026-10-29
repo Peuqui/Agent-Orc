@@ -23,7 +23,7 @@ function pick(id: string): void {
   <DropdownMenu v-model:open="picking" right panel-class="flex w-64 flex-col gap-1 p-2">
     <template #trigger="{ toggle }">
       <button
-        class="flex size-8 items-center justify-center rounded-md border border-slate-600 text-slate-300 hover:bg-slate-700"
+        class="flex size-8 items-center justify-center rounded-md border border-line-strong text-soft hover:bg-raised"
         :aria-label="$t('workspace.add')"
         :title="$t('workspace.add')"
         @click="toggle"
@@ -34,13 +34,13 @@ function pick(id: string): void {
     <button
       v-for="{ session, livesIn } in candidates"
       :key="session.id"
-      class="rounded-md px-3 py-2 text-left hover:bg-slate-700"
+      class="rounded-md px-3 py-2 text-left hover:bg-raised"
       @click="pick(session.id)"
     >
       {{ sessionName(session) }}
-      <span v-if="livesIn" class="text-xs text-slate-500"> · {{ $t('workspace.movesFrom', { name: livesIn }) }}</span>
+      <span v-if="livesIn" class="text-xs text-muted"> · {{ $t('workspace.movesFrom', { name: livesIn }) }}</span>
     </button>
-    <p v-if="candidates.length === 0" class="px-3 py-2 text-sm text-slate-500">{{ $t('workspace.allOpen') }}</p>
+    <p v-if="candidates.length === 0" class="px-3 py-2 text-sm text-muted">{{ $t('workspace.allOpen') }}</p>
     <RouterLink :to="{ path: '/files', query: { workspace: '1' } }" class="btn-primary mt-1">
       <AppIcon name="plus" />{{ $t('sessions.startNew') }}
     </RouterLink>

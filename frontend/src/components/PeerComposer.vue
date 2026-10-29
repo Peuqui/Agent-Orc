@@ -57,7 +57,7 @@ onMounted(() => {
 
 <template>
   <form class="flex flex-col gap-2" @submit.prevent="send">
-    <p v-if="notice" class="text-sm" :class="notice.error ? 'text-red-300' : 'text-emerald-300'" role="status">
+    <p v-if="notice" class="text-sm" :class="notice.error ? 'text-accent-300' : 'text-ok-300'" role="status">
       {{ notice.text }}
     </p>
     <slot />

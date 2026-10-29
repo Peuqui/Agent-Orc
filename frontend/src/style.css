@@ -1,21 +1,19 @@
 @import "tailwindcss";
+@import "./theme.css";
 
 @theme {
-  /* Inline code in answers and notes: the blue Claude Code shows files and commands in. */
-  --color-code: #5ab3ff;
-  /* The spinner while an agent works: AIfred's orange, darker than the microphone's amber beside it. */
-  --color-working: #e67700;
-  /* That spinner turns in four steps a turn rather than smoothly: it shows the work just as well,
-     and the browser draws a frame per step instead of one per refresh of the display (measured
-     27.10.2026 with four workspace columns: about a quarter of the page's CPU time). */
+  /* The spinner while an agent works turns in four steps a turn rather than smoothly: it shows
+     the work just as well, and the browser draws a frame per step instead of one per refresh of
+     the display (measured 27.10.2026 with four workspace columns: about a quarter of the page's
+     CPU time). */
   --animate-tick: spin 2s steps(4) infinite;
 }
 
-/* Colour scheme follows HaemoTrace: dark slate surfaces, red accents. */
+/* The colours are in theme.css. */
 @layer base {
   html,
   body {
-    @apply bg-slate-900 text-slate-100 antialiased;
+    @apply bg-page text-bright antialiased;
     -webkit-tap-highlight-color: transparent;
   }
 
@@ -47,7 +45,7 @@
 
   /* Where the keyboard is: the red of the active navigation text, softer than the browser's white ring. */
   :focus-visible {
-    outline: 2px solid var(--color-red-400);
+    outline: 2px solid var(--color-accent-400);
     outline-offset: 2px;
   }
 
@@ -78,13 +76,13 @@
 }
 
 @utility card {
-  @apply rounded-xl border border-slate-700 bg-slate-800;
+  @apply rounded-xl border border-line bg-panel;
 }
 
 /* Width of the page content and the header above it, kept in one place so they line up. */
 /* The chosen one of a row of choices (CPU or GPU, summaries or all): amber, like the headings. */
 @utility segment-on {
-  @apply bg-amber-500/15 text-amber-300 ring-1 ring-amber-500 ring-inset;
+  @apply bg-highlight-500/15 text-highlight-300 ring-1 ring-highlight-500 ring-inset;
 }
 
 @utility page-width {
@@ -93,7 +91,7 @@
 
 /* A wide row that opens something: it lights up under the pointer and when pressed. */
 @utility press-row {
-  @apply rounded-md hover:bg-slate-700/40 active:bg-slate-700/70;
+  @apply rounded-md hover:bg-raised/40 active:bg-raised/70;
 }
 
 @utility btn {
@@ -111,23 +109,23 @@
 }
 
 @utility btn-primary {
-  @apply btn bg-red-600 text-white hover:bg-red-500 active:bg-red-700;
+  @apply btn bg-accent-600 text-on-color hover:bg-accent-500 active:bg-accent-700;
 }
 
 @utility btn-secondary {
-  @apply btn border border-slate-600 bg-slate-700 text-slate-100 hover:bg-slate-600;
+  @apply btn border border-line-strong bg-raised text-bright hover:bg-raised-strong;
 }
 
 @utility btn-danger {
-  @apply btn border border-red-700 bg-red-900/40 text-red-300 hover:bg-red-900/70;
+  @apply btn border border-accent-700 bg-accent-900/40 text-accent-300 hover:bg-accent-900/70;
 }
 
 @utility btn-icon {
-  @apply inline-flex size-11 items-center justify-center rounded-lg text-slate-300 hover:bg-slate-700 disabled:opacity-30 disabled:hover:bg-transparent;
+  @apply inline-flex size-11 items-center justify-center rounded-lg text-soft hover:bg-raised disabled:opacity-30 disabled:hover:bg-transparent;
 }
 
 @utility input {
-  @apply min-h-11 w-full rounded-lg border border-slate-600 bg-slate-900 px-3 text-slate-100 placeholder:text-slate-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 focus:outline-none;
+  @apply min-h-11 w-full rounded-lg border border-line-strong bg-page px-3 text-bright placeholder:text-muted focus:border-accent-500 focus:ring-1 focus:ring-accent-500 focus:outline-none;
 }
 
 /* A Markdown file shown as a page (EditorView, markdown.ts). */
@@ -135,23 +133,23 @@
   /* Long paths, addresses and inline code break at the edge instead of widening the page (in a
      narrow answers column a single one made the whole list scroll sideways). */
   .markdown {
-    @apply leading-relaxed text-slate-200 wrap-anywhere;
+    @apply leading-relaxed text-main wrap-anywhere;
   }
   .markdown > * + * {
     @apply mt-3;
   }
   .markdown h1 {
-    @apply border-b border-slate-700 pb-1 text-2xl font-semibold text-slate-100;
+    @apply border-b border-line pb-1 text-2xl font-semibold text-bright;
   }
   .markdown h2 {
-    @apply mt-6 border-b border-slate-800 pb-1 text-xl font-semibold text-slate-100;
+    @apply mt-6 border-b border-line-subtle pb-1 text-xl font-semibold text-bright;
   }
   .markdown h3,
   .markdown h4 {
-    @apply mt-5 text-lg font-semibold text-slate-100;
+    @apply mt-5 text-lg font-semibold text-bright;
   }
   .markdown a {
-    @apply text-sky-400 underline;
+    @apply text-info-400 underline;
   }
   .markdown ul {
     @apply list-disc pl-6;
@@ -163,7 +161,7 @@
     @apply mt-1;
   }
   .markdown code {
-    @apply rounded bg-slate-800 px-1 py-0.5 font-mono text-sm;
+    @apply rounded bg-panel px-1 py-0.5 font-mono text-sm;
   }
   /* Inside a code block the text stays as it is; only code within a sentence is coloured, and a
      click copies it (useCodeCopy); a path that opens its file says so itself, below. */
@@ -171,7 +169,7 @@
     @apply text-code cursor-copy;
   }
   .markdown pre {
-    @apply overflow-x-auto rounded-lg bg-slate-800 p-3;
+    @apply overflow-x-auto rounded-lg bg-panel p-3;
   }
   /* The copy button of a code block sits at the block's right edge, over the text: the block
      scrolls sideways, the button stays. */
@@ -179,7 +177,7 @@
     @apply relative;
   }
   .markdown .code-copy {
-    @apply absolute top-1.5 right-1.5 flex size-9 items-center justify-center rounded-md border border-slate-600 bg-slate-700/90 text-slate-200 hover:bg-slate-600;
+    @apply absolute top-1.5 right-1.5 flex size-9 items-center justify-center rounded-md border border-line-strong bg-raised/90 text-main hover:bg-raised-strong;
   }
   .markdown .code-copy svg {
     @apply size-5;
@@ -189,30 +187,30 @@
   }
   /* The marker of the paragraph for listening reads it again on a click. */
   .markdown .listen-replay {
-    @apply mr-1 cursor-pointer rounded-md px-1 hover:bg-slate-700;
+    @apply mr-1 cursor-pointer rounded-md px-1 hover:bg-raised;
   }
   /* A file or folder an agent names, which opens on a click (useAnswerFileLinks). */
   .markdown code.file-link {
-    @apply cursor-pointer underline decoration-dotted underline-offset-2 hover:bg-slate-700;
+    @apply cursor-pointer underline decoration-dotted underline-offset-2 hover:bg-raised;
   }
   .markdown blockquote {
-    @apply border-l-4 border-slate-600 pl-3 text-slate-400;
+    @apply border-l-4 border-line-strong pl-3 text-dim;
   }
   .markdown table {
     @apply block overflow-x-auto border-collapse;
   }
   .markdown th,
   .markdown td {
-    @apply border border-slate-700 px-2 py-1 text-left;
+    @apply border border-line px-2 py-1 text-left;
   }
   .markdown img {
     @apply max-w-full;
   }
   /* A picture in a note is a thumbnail; a click opens it at full size. */
   .markdown.note img {
-    @apply max-h-64 cursor-zoom-in rounded-lg border border-slate-700;
+    @apply max-h-64 cursor-zoom-in rounded-lg border border-line;
   }
   .markdown hr {
-    @apply border-slate-700;
+    @apply border-line;
   }
 }

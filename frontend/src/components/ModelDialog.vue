@@ -120,24 +120,24 @@ function confirm(): void {
 
 <template>
   <BaseDialog :title="title" @close="emit('close')">
-    <p v-if="!switching" class="mb-4 text-slate-300">{{ message }}</p>
-    <label v-if="chooseProfile && agentChoices.length > 1" class="mb-4 flex flex-col gap-1 text-sm text-slate-400">
+    <p v-if="!switching" class="mb-4 text-soft">{{ message }}</p>
+    <label v-if="chooseProfile && agentChoices.length > 1" class="mb-4 flex flex-col gap-1 text-sm text-dim">
       {{ $t('agent.profile') }}
       <SelectMenu
         v-model="chosenProfile"
         :options="agentChoices.map((choice) => ({ value: choice.name, label: choice.label }))"
-        button-class="input text-sm text-slate-200"
+        button-class="input text-sm text-main"
       />
     </label>
     <p
       v-if="switching"
-      class="mb-4 rounded-md border border-amber-700 bg-amber-950/40 px-3 py-2 text-sm text-amber-200"
+      class="mb-4 rounded-md border border-highlight-700 bg-highlight-950/40 px-3 py-2 text-sm text-highlight-200"
     >
       {{ $t(carriesConversation ? 'restart.profileCarries' : 'restart.profileFresh', { agent: targetProfile?.label }) }}
     </p>
-    <label v-if="offersModels" class="mb-5 flex flex-col gap-1 text-sm text-slate-400">
+    <label v-if="offersModels" class="mb-5 flex flex-col gap-1 text-sm text-dim">
       {{ $t('agent.model') }}
-      <SelectMenu v-model="model" :options="modelOptions(models, modelNote)" button-class="input text-sm text-slate-200" />
+      <SelectMenu v-model="model" :options="modelOptions(models, modelNote)" button-class="input text-sm text-main" />
     </label>
     <ReasoningControl v-if="asksEffort" v-model="reasoning" :levels="levels" :ultracode-offered="false" class="mb-5" />
     <div class="flex justify-end gap-2">

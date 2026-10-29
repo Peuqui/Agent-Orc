@@ -197,12 +197,12 @@ defineExpose({ reload, clearSelection, selectAll, pickFiles: () => fileInput.val
 </script>
 
 <template>
-  <section class="min-w-0 rounded-lg" :class="marked ? 'ring-2 ring-amber-500/60 ring-offset-4 ring-offset-slate-900' : ''" @pointerdown.capture="emit('activate')">
+  <section class="min-w-0 rounded-lg" :class="marked ? 'ring-2 ring-highlight-500/60 ring-offset-4 ring-offset-page' : ''" @pointerdown.capture="emit('activate')">
     <div class="mb-3 flex items-center gap-2">
       <button class="btn-icon" :disabled="!canGoUp" :aria-label="$t('files.up')" @click="emit('navigate', parentPath(path))">
         <AppIcon name="up" />
       </button>
-      <h1 class="min-w-0 flex-1 truncate font-mono text-sm text-slate-300" :title="path">{{ relativePath }}</h1>
+      <h1 class="min-w-0 flex-1 truncate font-mono text-sm text-soft" :title="path">{{ relativePath }}</h1>
       <button v-if="entries.length > 0" class="btn-secondary btn-small shrink-0" @click="selected.size === entries.length ? clearSelection() : selectAll()">
         {{ selected.size === entries.length ? $t('files.clearSelection') : $t('files.selectAll') }}
       </button>
@@ -211,25 +211,25 @@ defineExpose({ reload, clearSelection, selectAll, pickFiles: () => fileInput.val
     <input ref="fileInput" type="file" multiple class="hidden" @change="onFilesPicked" />
     <input ref="folderInput" type="file" webkitdirectory class="hidden" @change="onFolderPicked" />
 
-    <p v-if="upload" class="mb-3 text-sm text-amber-300" role="status">{{ $t('files.uploading', upload) }}</p>
+    <p v-if="upload" class="mb-3 text-sm text-highlight-300" role="status">{{ $t('files.uploading', upload) }}</p>
 
     <!-- The drop area: the list (and room below a short one); only it lights up. -->
     <div class="relative min-h-40" @dragover="onDragOver" @dragleave="onDragLeave" @drop="onDrop">
       <div
         v-if="dropping"
-        class="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-lg border-2 border-dashed border-amber-400 bg-slate-900/85 px-4 text-center text-sm text-amber-300"
+        class="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-lg border-2 border-dashed border-highlight-400 bg-page/85 px-4 text-center text-sm text-highlight-300"
         :class="overFolder ? 'opacity-0' : ''"
       >
         {{ $t(dropping === 'files' ? 'files.dropHere' : 'files.moveHere') }}
       </div>
-      <p v-if="!loaded" class="card p-6 text-center text-slate-400">{{ $t('files.loading') }}</p>
-      <p v-else-if="entries.length === 0" class="card p-6 text-center text-slate-400">{{ $t('files.empty') }}</p>
-      <ul v-else class="card divide-y divide-slate-700">
+      <p v-if="!loaded" class="card p-6 text-center text-dim">{{ $t('files.loading') }}</p>
+      <p v-else-if="entries.length === 0" class="card p-6 text-center text-dim">{{ $t('files.empty') }}</p>
+      <ul v-else class="card divide-y divide-line">
         <li
           v-for="entry in sortedEntries"
           :key="entry.path"
           class="flex items-center"
-          :class="overFolder === entry.path ? 'bg-amber-900/40' : selected.has(entry.path) ? 'bg-slate-700/40' : ''"
+          :class="overFolder === entry.path ? 'bg-highlight-900/40' : selected.has(entry.path) ? 'bg-raised/40' : ''"
           draggable="true"
           @dragstart="startDrag($event, entry)"
           @dragover="onFolderDragOver($event, entry)"
@@ -238,19 +238,19 @@ defineExpose({ reload, clearSelection, selectAll, pickFiles: () => fileInput.val
           <label class="flex min-h-14 cursor-pointer items-center pr-1 pl-3" :title="$t('files.select', { name: entry.name })">
             <input
               type="checkbox"
-              class="size-4 accent-amber-500"
+              class="size-4 accent-highlight-500"
               :checked="selected.has(entry.path)"
               :aria-label="$t('files.select', { name: entry.name })"
               @change="toggle(entry)"
             />
           </label>
           <button class="flex min-h-14 min-w-0 flex-1 items-center gap-3 px-3 text-left" @click="openEntry(entry)">
-            <AppIcon :name="entry.is_dir ? 'folder' : 'file'" :class="entry.is_dir ? 'text-red-400' : 'text-slate-500'" />
+            <AppIcon :name="entry.is_dir ? 'folder' : 'file'" :class="entry.is_dir ? 'text-accent-400' : 'text-muted'" />
             <span class="min-w-0 flex-1">
               <span class="block truncate">{{ entry.name }}</span>
-              <span class="block text-xs text-slate-500">
+              <span class="block text-xs text-muted">
                 <template v-if="sessionByPath.has(entry.path)">
-                  <span class="font-medium text-red-400">● {{ $t('files.agentRunning') }}</span>
+                  <span class="font-medium text-accent-400">● {{ $t('files.agentRunning') }}</span>
                 </template>
                 <template v-else>
                   {{ formatDate(new Date(entry.modified * MILLISECONDS_PER_SECOND), locale) }}

@@ -1,0 +1,114 @@
+/* The app's colours, named by what they do: the one place to change them. Tailwind turns each
+   --color-<name> into its classes (text-<name>, bg-<name>, border-<name>, ...; with /40 for
+   opacity). The components use only these names, never a palette colour (slate-700, amber-300).
+
+   A theme is a further block that sets these variables anew, e.g.
+     :root[data-theme='light'] { --color-page: ...; --color-bright: ...; }
+   The values here are the dark default (dark slate surfaces, red accents, as HaemoTrace). */
+
+/* static: every variable is in the page, also those no class uses (the terminal's, read by script),
+   so a theme can set them and a script can read them. */
+@theme static {
+  /* Surfaces, from the deepest to the highest. */
+  --color-sunken: var(--color-slate-950);
+  --color-page: var(--color-slate-900);
+  --color-panel: var(--color-slate-800);
+  --color-raised: var(--color-slate-700);
+  --color-raised-strong: var(--color-slate-600);
+  /* Behind a dialog or a picture shown large (with opacity). */
+  --color-backdrop: var(--color-black);
+  /* A PDF page: paper is white in every theme. */
+  --color-paper: var(--color-white);
+
+  /* Lines: borders, dividers, rings. */
+  --color-line-subtle: var(--color-slate-800);
+  --color-line: var(--color-slate-700);
+  --color-line-strong: var(--color-slate-600);
+  --color-line-stronger: var(--color-slate-500);
+
+  /* Text, from the most to the least prominent. */
+  --color-bright: var(--color-slate-100);
+  --color-main: var(--color-slate-200);
+  --color-soft: var(--color-slate-300);
+  --color-dim: var(--color-slate-400);
+  /* Explanations under a setting or field: to be read, so not as faint as `muted` (with slate-500
+     they were hard to read on a panel: contrast 3.1 to 1, now 5.7). */
+  --color-hint: var(--color-slate-400);
+  /* Side matters: times, placeholders, what is switched off. */
+  --color-muted: var(--color-slate-500);
+  --color-faint: var(--color-slate-600);
+  /* On a coloured surface: the red buttons, the switch's knob. */
+  --color-on-color: var(--color-white);
+  /* On the highlight colour (an amber badge). */
+  --color-on-highlight: var(--color-slate-900);
+
+  /* The accent: buttons to act, the active navigation, focus, errors. */
+  --color-accent-200: var(--color-red-200);
+  --color-accent-300: var(--color-red-300);
+  --color-accent-400: var(--color-red-400);
+  --color-accent-500: var(--color-red-500);
+  --color-accent-600: var(--color-red-600);
+  --color-accent-700: var(--color-red-700);
+  --color-accent-900: var(--color-red-900);
+  --color-accent-950: var(--color-red-950);
+
+  /* Highlight: what is on, chosen, new or asks for attention. */
+  --color-highlight-100: var(--color-amber-100);
+  --color-highlight-200: var(--color-amber-200);
+  --color-highlight-300: var(--color-amber-300);
+  --color-highlight-400: var(--color-amber-400);
+  --color-highlight-500: var(--color-amber-500);
+  --color-highlight-600: var(--color-amber-600);
+  --color-highlight-700: var(--color-amber-700);
+  --color-highlight-900: var(--color-amber-900);
+  --color-highlight-950: var(--color-amber-950);
+
+  /* Information: links in messages, counts, a peer's own messages. */
+  --color-info-200: var(--color-sky-200);
+  --color-info-300: var(--color-sky-300);
+  --color-info-400: var(--color-sky-400);
+  --color-info-500: var(--color-sky-500);
+  --color-info-600: var(--color-sky-600);
+  --color-info-700: var(--color-sky-700);
+  --color-info-900: var(--color-sky-900);
+  --color-info-950: var(--color-sky-950);
+
+  /* Fine: online, warm, agreed. */
+  --color-ok-300: var(--color-emerald-300);
+  --color-ok-400: var(--color-emerald-400);
+  --color-ok-700: var(--color-emerald-700);
+
+  /* Changes: added lines and files, the head of a changed block; enough room left in a usage window. */
+  --color-added-300: var(--color-green-300);
+  --color-added-500: var(--color-green-500);
+  --color-added-900: var(--color-green-900);
+  --color-added-950: var(--color-green-950);
+  --color-hunk: var(--color-cyan-400);
+
+  /* Inline code in answers and notes: the blue Claude Code shows files and commands in. */
+  --color-code: #5ab3ff;
+  /* The spinner while an agent works: AIfred's orange, darker than the microphone's amber beside it. */
+  --color-working: #e67700;
+  /* Claude Code's ✻ before the sections of the help. */
+  --color-claude: var(--color-orange-400);
+  /* The glowing line between the machines of the agent list. */
+  --color-glow-line: #f59e0b;
+  --color-glow: rgb(251 191 36 / 0.7);
+
+  /* A colour for each agent and user in the conversations: none of the state colours (accent,
+     highlight, ok), so a name is not taken for a state. */
+  --color-peer-1: var(--color-sky-400);
+  --color-peer-2: var(--color-violet-400);
+  --color-peer-3: var(--color-orange-400);
+  --color-peer-4: var(--color-teal-300);
+  --color-peer-5: var(--color-pink-400);
+  --color-peer-6: var(--color-lime-400);
+  --color-peer-7: var(--color-indigo-300);
+  --color-peer-8: var(--color-yellow-200);
+
+  /* The terminal (xterm.js takes them as values, see TerminalView). */
+  --color-terminal-background: #0f172a;
+  --color-terminal-foreground: #f1f5f9;
+  --color-terminal-cursor: #ef4444;
+  --color-terminal-selection: #7f1d1d;
+}

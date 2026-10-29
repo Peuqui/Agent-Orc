@@ -129,18 +129,18 @@ async function reset(): Promise<void> {
 <template>
   <BaseDialog :title="$t('keysEditor.title')" @close="emit('close')">
     <div class="flex max-h-[calc(65dvh/var(--controls-zoom))] flex-col gap-4 overflow-y-auto text-sm">
-      <p class="text-xs text-slate-500">{{ $t('keysEditor.hint') }}</p>
+      <p class="text-xs text-hint">{{ $t('keysEditor.hint') }}</p>
       <div v-for="(row, index) in rows" :key="index" class="flex flex-col gap-1">
-        <span class="text-xs text-slate-400">{{ $t('keysEditor.row', { number: index + 1 }) }}</span>
-        <div class="flex flex-wrap items-center gap-1 rounded-lg border border-slate-700 p-1">
+        <span class="text-xs text-dim">{{ $t('keysEditor.row', { number: index + 1 }) }}</span>
+        <div class="flex flex-wrap items-center gap-1 rounded-lg border border-line p-1">
           <span
             v-for="item in row"
             :key="item.uid"
             :data-key="item.uid"
-            class="flex cursor-grab touch-pan-y items-center gap-1 rounded-md bg-slate-800 py-1 pr-1 pl-2 select-none [-webkit-touch-callout:none]"
+            class="flex cursor-grab touch-pan-y items-center gap-1 rounded-md bg-panel py-1 pr-1 pl-2 select-none [-webkit-touch-callout:none]"
             :class="[
-              item.key.submit ? 'text-amber-300' : 'text-slate-200',
-              drag?.active && drag.target === item.uid && drag.id !== item.uid ? 'ring-2 ring-amber-400' : '',
+              item.key.submit ? 'text-highlight-300' : 'text-main',
+              drag?.active && drag.target === item.uid && drag.id !== item.uid ? 'ring-2 ring-highlight-400' : '',
               drag?.active && drag.id === item.uid ? 'opacity-50' : '',
             ]"
             :title="item.key.submit ? $t('keysEditor.macroTitle', { text: item.key.send }) : undefined"
@@ -154,7 +154,7 @@ async function reset(): Promise<void> {
             {{ item.key.label }}
             <button
               data-no-drag
-              class="px-1 text-slate-500 hover:text-slate-200"
+              class="px-1 text-muted hover:text-main"
               :aria-label="$t('keysEditor.remove')"
               @click="remove(item.uid)"
             >
@@ -164,8 +164,8 @@ async function reset(): Promise<void> {
           <!-- Dropped here, a key goes to the end of this row (also into an empty one). -->
           <span
             :data-key="`${ROW_END}${index}`"
-            class="min-w-12 flex-1 rounded-md border border-dashed px-2 py-1 text-center text-xs text-slate-600"
-            :class="drag?.active && drag.target === `${ROW_END}${index}` ? 'border-amber-400' : 'border-slate-700'"
+            class="min-w-12 flex-1 rounded-md border border-dashed px-2 py-1 text-center text-xs text-faint"
+            :class="drag?.active && drag.target === `${ROW_END}${index}` ? 'border-highlight-400' : 'border-line'"
           >
             {{ $t('keysEditor.rowEnd') }}
           </span>
@@ -173,14 +173,14 @@ async function reset(): Promise<void> {
       </div>
       <button class="btn-secondary btn-small self-start" @click="rows.push([])">+ {{ $t('keysEditor.addRow') }}</button>
 
-      <div class="flex flex-col gap-2 border-t border-slate-700 pt-3">
-        <span class="font-medium text-slate-300">{{ $t('keysEditor.add') }}</span>
+      <div class="flex flex-col gap-2 border-t border-line pt-3">
+        <span class="font-medium text-soft">{{ $t('keysEditor.add') }}</span>
         <div v-for="group in KEY_CATALOG" :key="group.group" class="flex flex-wrap items-center gap-1">
-          <span class="w-full text-xs text-slate-500">{{ $t(group.group) }}</span>
+          <span class="w-full text-xs text-muted">{{ $t(group.group) }}</span>
           <button
             v-for="key in group.keys"
             :key="key.label"
-            class="rounded-md bg-slate-800 px-2 py-1 text-slate-200 hover:bg-slate-700"
+            class="rounded-md bg-panel px-2 py-1 text-main hover:bg-raised"
             @click="add(key)"
           >
             {{ key.label }}
@@ -191,14 +191,14 @@ async function reset(): Promise<void> {
         </button>
       </div>
 
-      <form class="flex flex-col gap-2 border-t border-slate-700 pt-3" @submit.prevent="addMacro">
-        <span class="font-medium text-slate-300">{{ $t('keysEditor.macro') }}</span>
-        <p class="text-xs text-slate-500">{{ $t('keysEditor.macroHint') }}</p>
+      <form class="flex flex-col gap-2 border-t border-line pt-3" @submit.prevent="addMacro">
+        <span class="font-medium text-soft">{{ $t('keysEditor.macro') }}</span>
+        <p class="text-xs text-hint">{{ $t('keysEditor.macroHint') }}</p>
         <div class="flex gap-2">
           <input v-model="macroLabel" class="input w-24 text-sm" :placeholder="$t('keysEditor.macroLabel')" required />
           <input v-model="macroText" class="input min-w-0 flex-1 text-sm" :placeholder="$t('keysEditor.macroText')" required />
         </div>
-        <label class="flex items-center gap-2 text-slate-300">
+        <label class="flex items-center gap-2 text-soft">
           <input v-model="macroSubmit" type="checkbox" class="size-4" />{{ $t('keysEditor.macroSubmit') }}
         </label>
         <button type="submit" class="btn-secondary btn-small self-start" :disabled="!macroLabel.trim() || !macroText">

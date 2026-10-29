@@ -37,7 +37,7 @@ async function sendTest(): Promise<void> {
 </script>
 
 <template>
-  <div class="text-sm text-slate-300">
+  <div class="text-sm text-soft">
     <div class="flex items-center justify-between gap-2">
       <span>{{ $t('push.title') }}</span>
       <ToggleSwitch
@@ -49,7 +49,7 @@ async function sendTest(): Promise<void> {
         @click="toggle"
       />
     </div>
-    <p class="mt-1 text-xs text-slate-500">
+    <p class="mt-1 text-xs text-hint">
       {{ pushSupported ? $t('push.hint') : $t('push.unsupported') }}
     </p>
     <button v-if="subscribed" class="btn-secondary btn-small mt-2" @click="sendTest">

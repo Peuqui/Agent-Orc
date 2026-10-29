@@ -126,7 +126,7 @@ onBeforeUnmount(() => {
       @click="toggle"
     >
       <span class="min-w-0 truncate">{{ chosen?.label ?? '' }}</span>
-      <AppIcon name="chevron" class="size-4 text-slate-400" />
+      <AppIcon name="chevron" class="size-4 text-dim" />
     </button>
     <Teleport to="body">
       <div
@@ -145,8 +145,8 @@ onBeforeUnmount(() => {
           role="option"
           :aria-selected="option.value === modelValue"
           :disabled="option.disabled"
-          class="rounded-md px-3 py-2 text-left text-sm hover:bg-slate-700 focus:bg-slate-700 focus:outline-none disabled:text-slate-500 disabled:hover:bg-transparent"
-          :class="option.value === modelValue ? 'text-amber-300' : 'text-slate-200'"
+          class="rounded-md px-3 py-2 text-left text-sm hover:bg-raised focus:bg-raised focus:outline-none disabled:text-muted disabled:hover:bg-transparent"
+          :class="option.value === modelValue ? 'text-highlight-300' : 'text-main'"
           @click="choose(option)"
         >
           {{ option.label }}

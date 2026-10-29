@@ -153,17 +153,17 @@ function lastLine(conversation: Conversation): { text: string; tags: HandshakeTa
   return { text: `${laneLabel(last.from)}: ${clip(text, LAST_LINE_CHARS, 1)}`, tags }
 }
 const laneColumns = computed(() => ({ gridTemplateColumns: `repeat(${lanes.value.length}, minmax(0, 1fr))` }))
-const chosenClass = 'border-sky-500 bg-sky-900/40 text-sky-200'
+const chosenClass = 'border-info-500 bg-info-900/40 text-info-200'
 
 // What a peer does, as AI-Connect's hooks in its session report it.
 const STATE_COLORS: Record<string, string> = {
-  busy: 'text-amber-400',
-  waiting: 'text-red-400',
-  idle: 'text-emerald-400',
+  busy: 'text-highlight-400',
+  waiting: 'text-accent-400',
+  idle: 'text-ok-400',
 }
 
 // A peer whose session reports nothing (no AI-Connect hooks).
-const NO_STATE_COLOR = 'text-slate-500'
+const NO_STATE_COLOR = 'text-muted'
 
 function stateColor(peer: Peer): string {
   return STATE_COLORS[peer.state ?? ''] ?? NO_STATE_COLOR
@@ -211,15 +211,15 @@ function replyPlaceholder(recipients: string[]): string {
   <section class="flex flex-col gap-4">
     <!-- Stays below the app's header while the conversations scroll; in the lanes view it carries
          the lanes' names, so they stay readable over every arrow. -->
-    <div class="sticky top-(--app-header-height) z-20 -mx-4 -mt-4 bg-slate-900 px-4 pt-4 pb-1">
+    <div class="sticky top-(--app-header-height) z-20 -mx-4 -mt-4 bg-page px-4 pt-4 pb-1">
       <div class="flex flex-wrap items-center gap-2">
         <h1 class="flex-1 text-lg font-semibold">{{ $t('peers.title') }}</h1>
-        <div v-if="configured" class="flex overflow-hidden rounded-md border border-slate-600 text-sm">
+        <div v-if="configured" class="flex overflow-hidden rounded-md border border-line-strong text-sm">
           <button
             v-for="mode in ['tree', 'timeline', 'lanes'] as const"
             :key="mode"
             class="px-3 py-1"
-            :class="view === mode ? 'segment-on' : 'text-slate-400 hover:bg-slate-700'"
+            :class="view === mode ? 'segment-on' : 'text-dim hover:bg-raised'"
             @click="view = mode"
           >
             {{ $t(`peers.view.${mode}`) }}
@@ -228,14 +228,14 @@ function replyPlaceholder(recipients: string[]): string {
       </div>
       <div
         v-if="view === 'lanes' && lanes.length"
-        class="mt-3 -mb-1 grid gap-1 rounded-t-xl border-x border-t border-slate-700 bg-slate-800 px-3 py-2"
+        class="mt-3 -mb-1 grid gap-1 rounded-t-xl border-x border-t border-line bg-panel px-3 py-2"
         :style="laneColumns"
       >
         <button
           v-for="lane in lanes"
           :key="lane"
           type="button"
-          class="truncate rounded text-center text-xs font-medium hover:bg-slate-700/60"
+          class="truncate rounded text-center text-xs font-medium hover:bg-raised/60"
           :class="[colorOf(lane), focus === lane ? 'underline underline-offset-4' : focus !== null ? 'opacity-50' : '']"
           :title="`${lane} · ${$t('peers.focus')}`"
           :aria-pressed="focus === lane"
@@ -246,7 +246,7 @@ function replyPlaceholder(recipients: string[]): string {
       </div>
     </div>
 
-    <p v-if="configured === false" class="card p-6 text-center text-slate-400">{{ $t('peers.notConfigured') }}</p>
+    <p v-if="configured === false" class="card p-6 text-center text-dim">{{ $t('peers.notConfigured') }}</p>
     <template v-else-if="configured">
       <div v-if="sortedPeers.length" class="flex flex-wrap gap-2 text-xs">
         <span
@@ -266,8 +266,8 @@ function replyPlaceholder(recipients: string[]): string {
           </button>
           <button
             type="button"
-            class="border-l border-current/40 py-0.5 pr-2 pl-1.5 hover:bg-slate-700/60"
-            :class="{ 'bg-slate-600': recipients.includes(peer.name) }"
+            class="border-l border-current/40 py-0.5 pr-2 pl-1.5 hover:bg-raised/60"
+            :class="{ 'bg-raised-strong': recipients.includes(peer.name) }"
             :title="$t('peers.writeTo', { name: peer.name })"
             :aria-label="$t('peers.writeTo', { name: peer.name })"
             :aria-pressed="recipients.includes(peer.name)"
@@ -287,17 +287,17 @@ function replyPlaceholder(recipients: string[]): string {
           {{ focus }} ✕
         </button>
       </div>
-      <p v-if="sortedPeers.length" class="-mt-2 flex flex-wrap gap-x-3 text-xs text-slate-500">
+      <p v-if="sortedPeers.length" class="-mt-2 flex flex-wrap gap-x-3 text-xs text-muted">
         <span v-for="(color, state) in STATE_COLORS" :key="state"><span :class="color">●</span> {{ $t(`peers.state.${state}`) }}</span>
         <span><span :class="NO_STATE_COLOR">●</span> {{ $t('peers.state.none') }}</span>
       </p>
 
-      <p v-if="streamError" class="card border-amber-700 p-3 text-sm text-amber-300">
+      <p v-if="streamError" class="card border-highlight-700 p-3 text-sm text-highlight-300">
         {{ $t(`peers.streamError.${streamError}`) }}
       </p>
 
-      <p v-if="!historyLoaded && !streamError" class="card p-6 text-center text-slate-400">{{ $t('peers.loading') }}</p>
-      <p v-else-if="historyLoaded && !messages.length" class="card p-6 text-center text-slate-400">
+      <p v-if="!historyLoaded && !streamError" class="card p-6 text-center text-dim">{{ $t('peers.loading') }}</p>
+      <p v-else-if="historyLoaded && !messages.length" class="card p-6 text-center text-dim">
         {{ $t('peers.empty') }}
       </p>
 
@@ -313,24 +313,24 @@ function replyPlaceholder(recipients: string[]): string {
               <span class="flex items-baseline gap-2">
                 <span class="min-w-0 flex-1 text-sm font-medium break-words">
                   <span :class="colorOf(conversation.members[0])">{{ conversation.members[0] }}</span>
-                  <span class="text-amber-400">{{ conversation.members[1] === EVERYONE ? ' → ' : ' ↔ ' }}</span>
+                  <span class="text-highlight-400">{{ conversation.members[1] === EVERYONE ? ' → ' : ' ↔ ' }}</span>
                   <span :class="colorOf(conversation.members[1])">{{
                     conversation.members[1] === EVERYONE ? $t('peers.everyone') : conversation.members[1]
                   }}</span>
                 </span>
                 <span
                   v-if="unread(conversation) && !openConversations.has(conversation.key)"
-                  class="rounded-full bg-sky-600 px-1.5 text-xs font-medium text-white"
+                  class="rounded-full bg-info-600 px-1.5 text-xs font-medium text-on-color"
                   :title="$t('peers.unread', { count: unread(conversation) })"
                 >
                   {{ unread(conversation) }}
                 </span>
               </span>
-              <span class="text-xs text-slate-500">
+              <span class="text-xs text-muted">
                 {{ $t('peers.count', { count: conversation.messages.length }) }} ·
                 {{ formatMoment(new Date(conversation.last), locale) }}
               </span>
-              <span v-if="!openConversations.has(conversation.key)" class="mt-0.5 flex items-baseline gap-2 text-sm text-slate-400">
+              <span v-if="!openConversations.has(conversation.key)" class="mt-0.5 flex items-baseline gap-2 text-sm text-dim">
                 <template v-for="line in [lastLine(conversation)]" :key="conversation.key">
                   <span class="min-w-0 truncate">{{ line.text }}</span>
                   <PeerHandshake :tags="line.tags" />
@@ -346,7 +346,7 @@ function replyPlaceholder(recipients: string[]): string {
               {{ $t('peers.answer') }}
             </button>
           </div>
-          <div v-if="openConversations.has(conversation.key)" class="border-t border-slate-700 px-3 pb-3">
+          <div v-if="openConversations.has(conversation.key)" class="border-t border-line px-3 pb-3">
             <template v-for="day in chatOf(conversation)" :key="day.key">
               <PeerDay :date="day.date" />
               <div class="flex flex-col">
@@ -376,14 +376,14 @@ function replyPlaceholder(recipients: string[]): string {
       <PeerLanes v-else :days="laneDays" :focus="focus" :lanes="lanes" :columns="laneColumns" class="-mt-4 rounded-t-none border-t-0" />
 
       <!-- Flush with the bottom (above the phone's bottom bar), so nothing scrolls by below it. -->
-      <div ref="foot" class="sticky bottom-(--bottom-nav-height) z-20 -mx-4 -mb-4 border-t border-slate-800 bg-slate-900 px-4 py-2">
+      <div ref="foot" class="sticky bottom-(--bottom-nav-height) z-20 -mx-4 -mb-4 border-t border-line-subtle bg-page px-4 py-2">
         <PeerComposer :recipients="recipients" :placeholder="$t('peers.asUser', { name: userName })">
           <div class="flex items-center gap-1.5 overflow-x-auto text-xs whitespace-nowrap [scrollbar-width:none]">
-            <span class="text-slate-500">{{ $t('peers.to') }}</span>
+            <span class="text-muted">{{ $t('peers.to') }}</span>
             <button
               type="button"
               class="rounded-full border px-2 py-0.5"
-              :class="recipients.includes(EVERYONE) ? chosenClass : 'border-slate-600 text-slate-400'"
+              :class="recipients.includes(EVERYONE) ? chosenClass : 'border-line-strong text-dim'"
               @click="toggleRecipient(EVERYONE)"
             >
               {{ $t('peers.everyone') }}
@@ -393,7 +393,7 @@ function replyPlaceholder(recipients: string[]): string {
               :key="peer.name"
               type="button"
               class="rounded-full border px-2 py-0.5"
-              :class="recipients.includes(peer.name) ? chosenClass : 'border-slate-600 text-slate-400'"
+              :class="recipients.includes(peer.name) ? chosenClass : 'border-line-strong text-dim'"
               :title="peerTitle(peer)"
               @click="toggleRecipient(peer.name)"
             >
@@ -404,7 +404,7 @@ function replyPlaceholder(recipients: string[]): string {
               v-for="name in offlineRecipients"
               :key="name"
               type="button"
-              class="rounded-full border border-dashed border-sky-500 px-2 py-0.5 text-sky-200"
+              class="rounded-full border border-dashed border-info-500 px-2 py-0.5 text-info-200"
               :title="$t('peers.offline')"
               @click="toggleRecipient(name)"
             >

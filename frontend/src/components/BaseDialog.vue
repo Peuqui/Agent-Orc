@@ -51,7 +51,7 @@ onBeforeUnmount(() => resizes.disconnect())
        become the frame "fixed" positions refer to, and the dialog would end up inside it. -->
   <Teleport to="body">
     <div
-      class="controls-zoom fixed inset-0 z-40 flex justify-center bg-black/60"
+      class="controls-zoom fixed inset-0 z-40 flex justify-center bg-backdrop/60"
       data-modal
       :class="anchor ? '' : tall ? 'items-center' : 'items-end sm:items-center'"
       @click.self="emit('close')"
@@ -71,7 +71,7 @@ onBeforeUnmount(() => resizes.disconnect())
         role="dialog"
         :aria-label="title"
       >
-        <h2 class="mb-4 shrink-0 text-lg font-semibold text-amber-400">{{ title }}</h2>
+        <h2 class="mb-4 shrink-0 text-lg font-semibold text-highlight-400">{{ title }}</h2>
         <!-- With `tall` the content fills what is left of the card, so that its own list can scroll. -->
         <div :class="tall ? 'flex min-h-0 flex-1 flex-col' : ''"><slot /></div>
       </div>

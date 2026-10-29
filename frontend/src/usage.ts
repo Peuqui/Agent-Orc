@@ -20,12 +20,12 @@ export function contextLevel(percent: number, handoverDue: boolean): UsageLevel 
 /** Colour classes for a usage level: bar (background), text and ring (SVG stroke). */
 export function usageTone(level: UsageLevel): { bar: string; text: string; ring: string } {
   if (level === 'critical') {
-    return { bar: 'bg-red-500', text: 'text-red-400', ring: 'stroke-red-500' }
+    return { bar: 'bg-accent-500', text: 'text-accent-400', ring: 'stroke-accent-500' }
   }
   // Warning in the amber of the "working" badge.
   if (level === 'warn') {
-    return { bar: 'bg-amber-500', text: 'text-amber-400', ring: 'stroke-amber-300' }
+    return { bar: 'bg-highlight-500', text: 'text-highlight-400', ring: 'stroke-highlight-300' }
   }
   // The context ring is coloured from the start, like Claude Code's.
-  return { bar: 'bg-slate-400', text: 'text-slate-400', ring: 'stroke-green-500' }
+  return { bar: 'bg-dim', text: 'text-dim', ring: 'stroke-added-500' }
 }

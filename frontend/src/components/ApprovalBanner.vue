@@ -47,7 +47,7 @@ const waiting = computed(() =>
       :key="session.id"
       :session="session"
       named
-      class="w-full max-w-xl rounded-lg bg-slate-900 shadow-xl"
+      class="w-full max-w-xl rounded-lg bg-page shadow-xl"
       @open="router.push(agentRoute(workspaces, session.id))"
     />
   </div>

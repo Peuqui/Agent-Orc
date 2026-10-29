@@ -15,9 +15,9 @@ defineProps<{ compact?: boolean; labelClass?: string }>()
       v-for="item in NAV_ITEMS"
       :key="item.to"
       :to="item.to"
-      class="flex items-center gap-2 rounded-lg text-sm text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+      class="flex items-center gap-2 rounded-lg text-sm text-dim hover:bg-panel hover:text-main"
       :class="compact ? 'p-2 2xl:px-4' : 'px-4 py-2'"
-      active-class="!bg-slate-800 !text-red-400"
+      active-class="!bg-panel !text-accent-400"
       :aria-label="$t(item.label)"
       :title="compact ? $t(item.label) : undefined"
     >

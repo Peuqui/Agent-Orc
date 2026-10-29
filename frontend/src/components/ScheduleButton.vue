@@ -58,11 +58,11 @@ async function plan(): Promise<void> {
   <BaseDialog v-if="planning" :title="$t('schedule.title')" @close="((planning = false), emit('done'))">
     <form class="flex flex-col gap-3" @submit.prevent="plan">
       <textarea v-model="text" rows="4" class="input text-sm" :placeholder="$t('schedule.text')" required />
-      <label class="flex flex-col gap-1 text-sm text-slate-300">
+      <label class="flex flex-col gap-1 text-sm text-soft">
         {{ $t('schedule.at') }}
         <input v-model="when" type="datetime-local" class="input" required />
       </label>
-      <p class="text-xs text-slate-500">{{ $t('schedule.hint') }}</p>
+      <p class="text-xs text-hint">{{ $t('schedule.hint') }}</p>
       <div class="flex gap-2">
         <button type="submit" class="btn-primary flex-1" :disabled="!text.trim() || !when">
           {{ $t('schedule.plan') }}

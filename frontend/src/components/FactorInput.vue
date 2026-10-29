@@ -31,7 +31,7 @@ function leave(event: Event): void {
     type="text"
     inputmode="decimal"
     autocomplete="off"
-    class="input text-sm text-slate-200"
+    class="input text-sm text-main"
     :value="shown"
     :placeholder="placeholder"
     @change="leave"

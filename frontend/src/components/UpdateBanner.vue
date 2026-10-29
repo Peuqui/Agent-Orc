@@ -17,7 +17,7 @@ watch(newVersion, (available) => {
 <template>
   <button
     v-if="newVersion && !embedded"
-    class="fixed inset-x-0 top-0 z-50 bg-red-700 px-4 py-2 text-center text-sm font-medium text-white"
+    class="fixed inset-x-0 top-0 z-50 bg-accent-700 px-4 py-2 text-center text-sm font-medium text-on-color"
     @click="reloadToNewVersion"
   >
     {{ $t('app.newVersion') }}

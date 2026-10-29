@@ -33,18 +33,18 @@ const { zoomStyle } = useViewZoom(zoomed)
         <!-- A thin line that runs out to both ends by its opacity, with a glow that follows it (drop-shadow, so it shines in the middle only). -->
         <div
           v-if="index > 0"
-          class="my-8 h-[1.5px] bg-[linear-gradient(90deg,transparent,#f59e0b_50%,transparent)] [filter:drop-shadow(0_0_4px_rgba(251,191,36,0.7))]"
+          class="my-8 h-[1.5px] bg-[linear-gradient(90deg,transparent,var(--color-glow-line)_50%,transparent)] [filter:drop-shadow(0_0_4px_var(--color-glow))]"
           aria-hidden="true"
         />
         <div class="mb-3 flex items-center gap-2">
-          <h2 class="text-sm font-semibold text-amber-400">{{ machine.name }}</h2>
-          <span class="text-xs" :class="machine.state === 'online' ? 'text-emerald-400' : 'text-slate-500'">
+          <h2 class="text-sm font-semibold text-highlight-400">{{ machine.name }}</h2>
+          <span class="text-xs" :class="machine.state === 'online' ? 'text-ok-400' : 'text-muted'">
             ● {{ $t(`hosts.short.${machine.state}`) }}
           </span>
         </div>
       </template>
       <HostSessions v-if="machine.state === 'online'" :host="machine.host" />
-      <p v-else class="card p-4 text-sm text-slate-400">{{ $t(`hosts.reason.${machine.state}`) }}</p>
+      <p v-else class="card p-4 text-sm text-dim">{{ $t(`hosts.reason.${machine.state}`) }}</p>
     </section>
   </section>
 </template>

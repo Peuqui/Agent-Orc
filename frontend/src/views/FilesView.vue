@@ -202,7 +202,7 @@ function onAgentStarted(): void {
     <div ref="zoomed" class="min-w-0" :style="zoomStyle">
       <div
         class="mb-3 flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm"
-        :class="unlocked ? 'border-red-700 bg-red-950/60 text-red-200' : 'border-slate-700 text-slate-400'"
+        :class="unlocked ? 'border-accent-700 bg-accent-950/60 text-accent-200' : 'border-line text-dim'"
       >
         <span class="flex min-w-0 items-center gap-2" :title="scope?.base_dir">
           <AppIcon :name="unlocked ? 'unlock' : 'lock'" />
@@ -236,19 +236,19 @@ function onAgentStarted(): void {
             </button>
           </template>
           <button
-            class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-slate-200 hover:bg-slate-700"
+            class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-main hover:bg-raised"
             @click="((uploadMenuOpen = false), panes[activeView]?.pickFiles())"
           >
             <AppIcon name="file" />{{ $t('files.chooseFiles') }}
           </button>
           <button
-            class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-slate-200 hover:bg-slate-700"
+            class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-main hover:bg-raised"
             @click="((uploadMenuOpen = false), panes[activeView]?.pickFolder())"
           >
             <AppIcon name="folder" />{{ $t('files.chooseFolder') }}
           </button>
         </DropdownMenu>
-        <button v-if="!inColumn" class="btn-secondary" :class="dual ? '!text-amber-300' : ''" :aria-pressed="dual" @click="toggleDual">
+        <button v-if="!inColumn" class="btn-secondary" :class="dual ? '!text-highlight-300' : ''" :aria-pressed="dual" @click="toggleDual">
           <AppIcon name="workspace" />{{ $t(dual ? 'files.oneView' : 'files.twoViews') }}
         </button>
         <TerminalButton :path="activePath" button-class="btn-secondary" with-label />
@@ -258,12 +258,12 @@ function onAgentStarted(): void {
       </div>
 
       <div class="mb-3 flex flex-wrap items-center gap-1.5 text-sm" role="group" :aria-label="$t('files.sortBy')">
-        <span class="mr-1 text-slate-500">{{ $t('files.sortBy') }}</span>
+        <span class="mr-1 text-muted">{{ $t('files.sortBy') }}</span>
         <button
           v-for="key in SORT_KEYS"
           :key="key"
           class="btn-secondary btn-small"
-          :class="sort.key === key ? '!text-amber-300' : ''"
+          :class="sort.key === key ? '!text-highlight-300' : ''"
           :aria-pressed="sort.key === key"
           @click="sortBy(key)"
         >
@@ -274,11 +274,11 @@ function onAgentStarted(): void {
       <!-- What is selected in the view last clicked. -->
       <div
         v-if="selected.length > 0"
-        class="mb-3 flex flex-wrap items-center gap-1.5 rounded-lg border border-amber-700 bg-amber-950/30 px-3 py-2 text-sm"
+        class="mb-3 flex flex-wrap items-center gap-1.5 rounded-lg border border-highlight-700 bg-highlight-950/30 px-3 py-2 text-sm"
         role="toolbar"
         :aria-label="$t('files.selectedCount', { count: selected.length })"
       >
-        <span class="mr-2 font-medium text-amber-200">{{ $t('files.selectedCount', { count: selected.length }) }}</span>
+        <span class="mr-2 font-medium text-highlight-200">{{ $t('files.selectedCount', { count: selected.length }) }}</span>
         <button class="btn-secondary btn-small" @click="copyPaths(selected.map((entry) => entry.path))">
           <AppIcon name="copy" />{{ $t(selected.length === 1 ? 'files.copyPath' : 'files.copyPaths') }}
         </button>

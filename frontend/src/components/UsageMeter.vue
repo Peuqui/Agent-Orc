@@ -25,7 +25,7 @@ const room = computed(() => props.roomOf ?? 'window')
 </script>
 
 <template>
-  <span class="inline-flex shrink-0 items-center gap-1.5 text-xs whitespace-nowrap text-slate-400" :title="title">
+  <span class="inline-flex shrink-0 items-center gap-1.5 text-xs whitespace-nowrap text-dim" :title="title">
     <ContextRing :percent="percent" :level="level" />
     <span v-if="detail" :class="DETAIL_SHOWN[room]">{{ detail }}</span>
     <span :class="detail ? PERCENT_HIDDEN[room] : ''">{{ Math.round(percent) }} %</span>

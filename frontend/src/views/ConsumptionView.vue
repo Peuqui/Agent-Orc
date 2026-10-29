@@ -99,51 +99,51 @@ function dayLabel(day: string): string {
   <section ref="zoomed" class="flex flex-col gap-4" :style="zoomStyle">
     <div class="flex flex-wrap items-center gap-2">
       <h1 class="flex-1 text-lg font-semibold">{{ $t('consumption.title') }}</h1>
-      <div class="flex overflow-hidden rounded-md border border-slate-600 text-sm">
+      <div class="flex overflow-hidden rounded-md border border-line-strong text-sm">
         <button
           v-for="days_ in PERIODS"
           :key="days_"
           class="px-3 py-1"
-          :class="period === days_ ? 'segment-on' : 'text-slate-400 hover:bg-slate-700'"
+          :class="period === days_ ? 'segment-on' : 'text-dim hover:bg-raised'"
           @click="period = days_"
         >
           {{ $t('consumption.days', { count: days_ }) }}
         </button>
       </div>
     </div>
-    <p class="text-xs text-slate-500">{{ $t('consumption.hint') }}</p>
+    <p class="text-xs text-hint">{{ $t('consumption.hint') }}</p>
     <div v-if="machines.length > 1 || unreachable.length" class="flex flex-wrap items-center gap-2 text-sm">
       <button
         v-for="choice in [ALL, ...machines]"
         :key="choice"
         class="rounded-full border px-3 py-0.5"
-        :class="shown === choice ? 'border-amber-500 bg-amber-900/30 text-amber-300' : 'border-slate-600 text-slate-400 hover:bg-slate-800'"
+        :class="shown === choice ? 'border-highlight-500 bg-highlight-900/30 text-highlight-300' : 'border-line-strong text-dim hover:bg-panel'"
         @click="shown = choice"
       >
         {{ choice === ALL ? $t('consumption.allMachines') : choice }}
       </button>
-      <span v-for="name in unreachable" :key="name" class="text-xs text-slate-500">{{ $t('consumption.unreachable', { name }) }}</span>
+      <span v-for="name in unreachable" :key="name" class="text-xs text-muted">{{ $t('consumption.unreachable', { name }) }}</span>
     </div>
-    <p v-if="!loaded" class="card p-6 text-center text-slate-400">{{ $t('consumption.loading') }}</p>
+    <p v-if="!loaded" class="card p-6 text-center text-dim">{{ $t('consumption.loading') }}</p>
     <template v-else>
       <div v-if="overall" class="card grid grid-cols-2 gap-3 p-4 text-sm sm:grid-cols-5">
         <div v-for="kind in [...KINDS, 'messages'] as const" :key="kind">
-          <div class="text-xs text-slate-500">{{ $t(`consumption.kind.${kind}`) }}</div>
-          <div class="text-lg font-semibold text-slate-100">{{ formatTokens(overall[kind]) }}</div>
+          <div class="text-xs text-muted">{{ $t(`consumption.kind.${kind}`) }}</div>
+          <div class="text-lg font-semibold text-bright">{{ formatTokens(overall[kind]) }}</div>
         </div>
       </div>
 
       <div class="card p-4">
-        <h2 class="mb-3 text-sm font-semibold text-slate-300">{{ $t('consumption.perDay') }}</h2>
+        <h2 class="mb-3 text-sm font-semibold text-soft">{{ $t('consumption.perDay') }}</h2>
         <div class="flex h-40 items-end gap-1">
           <div v-for="day in days" :key="day" class="flex h-full min-w-0 flex-1 flex-col justify-end" :title="`${day}: ${formatTokens(perDay.get(day) ? total(perDay.get(day)!) : 0)}`">
             <div
-              class="rounded-t bg-red-500/70"
+              class="rounded-t bg-accent-500/70"
               :style="{ height: `${((perDay.get(day) ? total(perDay.get(day)!) : 0) / highest) * 100}%` }"
             />
           </div>
         </div>
-        <div class="mt-1 flex gap-1 text-[10px] text-slate-500">
+        <div class="mt-1 flex gap-1 text-[10px] text-muted">
           <span v-for="day in days" :key="day" class="min-w-0 flex-1 truncate text-center">{{ dayLabel(day) }}</span>
         </div>
       </div>
@@ -153,10 +153,10 @@ function dayLabel(day: string): string {
         :key="table.key"
         class="card overflow-x-auto p-4"
       >
-        <h2 class="mb-2 text-sm font-semibold text-slate-300">{{ $t(`consumption.${table.key}`) }}</h2>
+        <h2 class="mb-2 text-sm font-semibold text-soft">{{ $t(`consumption.${table.key}`) }}</h2>
         <table class="w-full text-sm">
           <thead>
-            <tr class="text-left text-xs text-slate-500">
+            <tr class="text-left text-xs text-muted">
               <th class="py-1 pr-3 font-normal">{{ $t(`consumption.${table.key}Column`) }}</th>
               <th v-for="kind in [...KINDS, 'messages'] as const" :key="kind" class="py-1 pl-3 text-right font-normal">
                 {{ $t(`consumption.kind.${kind}`) }}
@@ -164,9 +164,9 @@ function dayLabel(day: string): string {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="[name, sums] in table.rows" :key="name" class="border-t border-slate-700">
-              <td class="max-w-48 truncate py-1 pr-3 text-slate-200">{{ name }}</td>
-              <td v-for="kind in [...KINDS, 'messages'] as const" :key="kind" class="py-1 pl-3 text-right text-slate-300 tabular-nums">
+            <tr v-for="[name, sums] in table.rows" :key="name" class="border-t border-line">
+              <td class="max-w-48 truncate py-1 pr-3 text-main">{{ name }}</td>
+              <td v-for="kind in [...KINDS, 'messages'] as const" :key="kind" class="py-1 pl-3 text-right text-soft tabular-nums">
                 {{ formatTokens(sums[kind]) }}
               </td>
             </tr>

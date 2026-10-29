@@ -33,8 +33,8 @@ const choosing = ref(false)
     <DropdownMenu v-model:open="choosing" class="min-w-0 flex-1" panel-class="flex w-64 flex-col gap-1 p-2">
       <template #trigger="{ toggle }">
         <button
-          class="flex w-full min-w-0 items-center gap-1 rounded-md px-2 py-1 text-left hover:bg-slate-800"
-          :class="name === null ? 'text-slate-400' : 'font-semibold text-amber-300'"
+          class="flex w-full min-w-0 items-center gap-1 rounded-md px-2 py-1 text-left hover:bg-panel"
+          :class="name === null ? 'text-dim' : 'font-semibold text-highlight-300'"
           :aria-label="$t('workspace.others')"
           :title="$t('workspace.others')"
           @click="toggle"
@@ -46,7 +46,7 @@ const choosing = ref(false)
       <WorkspaceNameField
         v-model="nameInput"
         class="w-full"
-        input-class="rounded-md border border-slate-600 px-2 py-1 text-sm text-slate-100 placeholder:text-slate-500 focus:bg-slate-800"
+        input-class="rounded-md border border-line-strong px-2 py-1 text-sm text-bright placeholder:text-muted focus:bg-panel"
         :placeholder="$t('workspace.unnamed')"
         :hint="$t('workspace.nameHint')"
         :deletable="false"
@@ -55,7 +55,7 @@ const choosing = ref(false)
       <template v-for="other in order" :key="other ?? ''">
         <button
           v-if="other !== name"
-          class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-slate-300 hover:bg-slate-700"
+          class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-soft hover:bg-raised"
           @click="((choosing = false), jumpToWorkspace(router, other))"
         >
           <AppIcon name="workspace" />{{ other ?? $t('workspace.unnamed') }}
@@ -63,14 +63,14 @@ const choosing = ref(false)
       </template>
       <button
         v-if="!order.includes(null)"
-        class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-slate-400 hover:bg-slate-700"
+        class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-dim hover:bg-raised"
         @click="((choosing = false), jumpToWorkspace(router, null))"
       >
         <AppIcon name="plus" />{{ $t('workspace.new') }}
       </button>
       <button
         v-if="name !== null"
-        class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-red-400 hover:bg-slate-700"
+        class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-accent-400 hover:bg-raised"
         @click="((choosing = false), emit('delete'))"
       >
         <AppIcon name="trash" />{{ $t('workspace.delete') }}
@@ -85,7 +85,7 @@ const choosing = ref(false)
       <!-- A new workspace starts unnamed; this is not the "+" that adds an agent (right); it stays in view while the tabs scroll. -->
       <button
         v-if="!order.includes(null)"
-        class="ml-2 flex shrink-0 items-center gap-1 rounded-md border border-dashed border-slate-600 px-2 py-1 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+        class="ml-2 flex shrink-0 items-center gap-1 rounded-md border border-dashed border-line-strong px-2 py-1 text-dim hover:bg-panel hover:text-bright"
         :title="$t('workspace.new')"
         :aria-label="$t('workspace.new')"
         @click="jumpToWorkspace(router, null)"
@@ -98,7 +98,7 @@ const choosing = ref(false)
             v-if="tab === name"
             v-model="nameInput"
             class="shrink-0"
-            input-class="rounded-md border border-amber-400/70 px-2 py-1 text-sm text-slate-100 placeholder:text-slate-300 field-sizing-content"
+            input-class="rounded-md border border-highlight-400/70 px-2 py-1 text-sm text-bright placeholder:text-soft field-sizing-content"
             :placeholder="$t('workspace.unnamed')"
             :hint="$t('workspace.nameHint')"
             :deletable="name !== null"
@@ -108,14 +108,14 @@ const choosing = ref(false)
           <a
             v-else
             :href="router.resolve(workspaceRoute(tab)).href"
-            class="flex shrink-0 items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-sm text-slate-300 hover:bg-slate-800 hover:text-slate-100"
+            class="flex shrink-0 items-center gap-1 rounded-md border border-line px-2 py-1 text-sm text-soft hover:bg-panel hover:text-bright"
             :data-workspace-drop="tab ?? ''"
-            :class="dropTarget === WORKSPACE_DROP + (tab ?? '') ? 'ring-2 ring-amber-400 ring-inset' : ''"
+            :class="dropTarget === WORKSPACE_DROP + (tab ?? '') ? 'ring-2 ring-highlight-400 ring-inset' : ''"
             :title="tab !== null && otherTabs.has(tab) ? $t('workspace.openElsewhere') : $t('workspace.switchHere')"
             @click.prevent="jumpToWorkspace(router, tab)"
           >
             {{ tab ?? $t('workspace.unnamed') }}
-            <AppIcon v-if="tab !== null && otherTabs.has(tab)" name="external" class="size-3.5 text-slate-500" />
+            <AppIcon v-if="tab !== null && otherTabs.has(tab)" name="external" class="size-3.5 text-muted" />
           </a>
         </template>
       </nav>

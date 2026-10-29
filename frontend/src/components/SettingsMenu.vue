@@ -61,11 +61,11 @@ function openTts(): void {
       </button>
     </template>
     <div class="flex flex-col">
-      <h2 class="px-2 pt-1 pb-2 text-sm font-semibold text-amber-400">{{ $t('settings.title') }}</h2>
+      <h2 class="px-2 pt-1 pb-2 text-sm font-semibold text-highlight-400">{{ $t('settings.title') }}</h2>
       <button
         v-for="entry in SECTIONS"
         :key="entry.id"
-        class="rounded-md px-2 py-2 text-left text-sm text-slate-200 hover:bg-slate-700"
+        class="rounded-md px-2 py-2 text-left text-sm text-main hover:bg-raised"
         @click="choose(entry.id)"
       >
         {{ $t(`settings.sections.${entry.id}`) }}

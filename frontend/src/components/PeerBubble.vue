@@ -25,22 +25,22 @@ const hasMore = computed(() => preview.value !== readable.value.text || message.
 const time = computed(() => formatTimeSpan(new Date(props.entry.run.first), new Date(props.entry.run.last), locale.value))
 
 const BUBBLE_CLASSES = {
-  left: 'mr-auto rounded-bl-sm bg-slate-700/70',
-  right: 'ml-auto rounded-br-sm bg-sky-900/60',
+  left: 'mr-auto rounded-bl-sm bg-raised/70',
+  right: 'ml-auto rounded-br-sm bg-info-900/60',
 }
 </script>
 
 <template>
   <div
     v-if="entry.side === 'center'"
-    class="mx-auto mt-2 max-w-[90%] rounded-md bg-slate-900/60 px-3 py-1 text-center text-xs text-slate-400"
+    class="mx-auto mt-2 max-w-[90%] rounded-md bg-page/60 px-3 py-1 text-center text-xs text-dim"
   >
-    <span class="mr-1 text-slate-500" :title="message.from">{{ laneLabel(message.from) }}:</span>
+    <span class="mr-1 text-muted" :title="message.from">{{ laneLabel(message.from) }}:</span>
     <span class="break-words whitespace-pre-wrap select-text">{{ open ? readable.text : preview }}</span>
-    <button v-if="hasMore" type="button" class="ml-1 text-sky-300 hover:underline" @click="open = !open">
+    <button v-if="hasMore" type="button" class="ml-1 text-info-300 hover:underline" @click="open = !open">
       {{ open ? $t('peers.less') : $t('peers.more') }}
     </button>
-    <span class="ml-1 text-slate-500">
+    <span class="ml-1 text-muted">
       · <template v-if="entry.run.count > 1">{{ $t('peers.times', { count: entry.run.count }) }} · </template>{{ time }}
     </span>
   </div>
@@ -48,14 +48,14 @@ const BUBBLE_CLASSES = {
     <div v-if="entry.showName" class="text-xs font-medium" :class="colorOf(message.from)" :title="message.from">
       {{ laneLabel(message.from) }}
     </div>
-    <p v-if="readable.text" class="text-sm break-words whitespace-pre-wrap text-slate-100 select-text">{{ open ? readable.text : preview }}</p>
+    <p v-if="readable.text" class="text-sm break-words whitespace-pre-wrap text-bright select-text">{{ open ? readable.text : preview }}</p>
     <pre
       v-if="open && message.context"
-      class="mt-2 max-h-80 overflow-auto rounded bg-slate-900 p-2 text-xs whitespace-pre-wrap text-slate-400 select-text"
+      class="mt-2 max-h-80 overflow-auto rounded bg-page p-2 text-xs whitespace-pre-wrap text-dim select-text"
       >{{ message.context }}</pre
     >
-    <div class="mt-0.5 flex items-baseline justify-end gap-2 text-[0.7rem] text-slate-400">
-      <button v-if="hasMore" type="button" class="mr-auto text-sky-300 hover:underline" @click="open = !open">
+    <div class="mt-0.5 flex items-baseline justify-end gap-2 text-[0.7rem] text-dim">
+      <button v-if="hasMore" type="button" class="mr-auto text-info-300 hover:underline" @click="open = !open">
         {{ open ? $t('peers.less') : $t('peers.more') }}
       </button>
       <PeerHandshake :tags="readable.tags" />

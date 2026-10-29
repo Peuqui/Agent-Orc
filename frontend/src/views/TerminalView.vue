@@ -107,7 +107,7 @@ const actionsMenu = ref<HTMLElement>()
 useDismiss(actionsMenu, () => actionsOpen.value, () => (actionsOpen.value = false))
 const actionClass = computed(() =>
   phone.value
-    ? 'flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-slate-300 hover:bg-slate-700'
+    ? 'flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-soft hover:bg-raised'
     : 'btn-icon',
 )
 
@@ -193,6 +193,10 @@ const followFullscreen = (event: Event): void => {
 }
 window.addEventListener(COLUMN_FULLSCREEN_EVENT, followFullscreen)
 
+// xterm.js draws on a canvas and takes its colours as values: they come from the theme (theme.css).
+const themeStyle = getComputedStyle(document.documentElement)
+const themeColor = (name: string) => themeStyle.getPropertyValue(`--color-terminal-${name}`).trim()
+
 const terminal = new Terminal({
   fontSize: fontSize.value,
   lineHeight: lineHeight.value,
@@ -202,10 +206,10 @@ const terminal = new Terminal({
   // The unicode API of the addon below is still marked as proposed.
   allowProposedApi: true,
   theme: {
-    background: '#0f172a',
-    foreground: '#f1f5f9',
-    cursor: '#ef4444',
-    selectionBackground: '#7f1d1d',
+    background: themeColor('background'),
+    foreground: themeColor('foreground'),
+    cursor: themeColor('cursor'),
+    selectionBackground: themeColor('selection'),
   },
 })
 const fit = new FitAddon()
@@ -454,13 +458,13 @@ onBeforeUnmount(() => {
 
 <template>
   <!-- A size container, so the message field caps its height at a share of this view (cqh). -->
-  <div class="flex h-full flex-col bg-slate-900 [container-type:size]">
+  <div class="flex h-full flex-col bg-page [container-type:size]">
     <!-- Compact buttons on phones, so name and all buttons fit in one row; in a column too narrow
          for the state and the buttons together (a long cache age) the buttons go to a second row
          instead of being cut off at the right. -->
     <header
       v-if="!fullscreen"
-      class="controls-zoom flex flex-wrap items-center gap-1 border-b border-slate-600 px-1 py-1 max-md:[&_.btn-icon]:size-8"
+      class="controls-zoom flex flex-wrap items-center gap-1 border-b border-line-strong px-1 py-1 max-md:[&_.btn-icon]:size-8"
     >
       <button
         v-if="!embedded"
@@ -483,17 +487,17 @@ onBeforeUnmount(() => {
       <!-- Next to the context: how warm its prompt cache is (also in a workspace column without name). -->
       <CacheAge v-if="session?.running" :session="session" compact class="ml-2" />
       <KeepWarmToggle v-if="session?.running" :session="session" compact class="ml-1" />
-      <h1 class="ml-2 min-w-0 flex-1 truncate font-semibold text-amber-300">{{ ownTab ? name : '' }}</h1>
+      <h1 class="ml-2 min-w-0 flex-1 truncate font-semibold text-highlight-300">{{ ownTab ? name : '' }}</h1>
       <!-- The agent's own terminal, or only what it answered (each agent keeps its own choice on this device). -->
       <div
         v-if="session && !session.terminal"
-        class="flex shrink-0 overflow-hidden rounded-md border border-slate-600"
+        class="flex shrink-0 overflow-hidden rounded-md border border-line-strong"
         role="group"
         :title="$t('answers.viewHint')"
       >
         <button
-          class="flex size-8 items-center justify-center hover:bg-slate-700"
-          :class="terminalView === 'terminal' ? 'bg-slate-700 text-amber-300' : 'text-slate-400'"
+          class="flex size-8 items-center justify-center hover:bg-raised"
+          :class="terminalView === 'terminal' ? 'bg-raised text-highlight-300' : 'text-dim'"
           :aria-label="$t('answers.terminal')"
           :title="$t('answers.terminal')"
           @click="terminalView = 'terminal'"
@@ -501,8 +505,8 @@ onBeforeUnmount(() => {
           <AppIcon name="agents" class="size-4" />
         </button>
         <button
-          class="flex size-8 items-center justify-center hover:bg-slate-700"
-          :class="terminalView === 'answers' ? 'bg-slate-700 text-amber-300' : 'text-slate-400'"
+          class="flex size-8 items-center justify-center hover:bg-raised"
+          :class="terminalView === 'answers' ? 'bg-raised text-highlight-300' : 'text-dim'"
           :aria-label="$t('answers.title')"
           :title="$t('answers.title')"
           @click="terminalView = 'answers'"
@@ -567,7 +571,7 @@ onBeforeUnmount(() => {
           <!-- On phones the agent's own actions follow in this menu; on computers they have a
                menu of their own. An ended agent only offers to stop (remove) it. -->
           <template v-if="phone && session?.running">
-            <hr class="my-1 border-slate-700" />
+            <hr class="my-1 border-line" />
             <AgentActions :session="session" @stop="((actionsOpen = false), (stopping = true))" @done="actionsOpen = false" />
           </template>
           <button
@@ -606,15 +610,15 @@ onBeforeUnmount(() => {
       @close="stopping = false"
     />
 
-    <div v-if="plainText !== null" class="fixed inset-0 z-40 flex flex-col bg-slate-900">
-      <header class="flex items-center gap-2 border-b border-slate-800 px-2 py-1">
+    <div v-if="plainText !== null" class="fixed inset-0 z-40 flex flex-col bg-page">
+      <header class="flex items-center gap-2 border-b border-line-subtle px-2 py-1">
         <h2 class="flex-1 font-semibold">{{ $t('terminal.plainText') }}</h2>
         <button class="btn-primary min-h-10 px-3" @click="copyPlainText">{{ $t('terminal.copyAll') }}</button>
         <button class="btn-secondary min-h-10 px-3" @click="plainText = null">{{ $t('terminal.close') }}</button>
       </header>
       <pre
         ref="plainTextBox"
-        class="flex-1 overflow-auto p-3 font-mono whitespace-pre-wrap break-words text-slate-200 select-text"
+        class="flex-1 overflow-auto p-3 font-mono whitespace-pre-wrap break-words text-main select-text"
         :style="{ fontSize: `${fontSize}px` }"
         >{{ plainText }}</pre
       >
@@ -626,7 +630,7 @@ onBeforeUnmount(() => {
       <!-- Over the terminal, which stays as it is underneath (no resize when switching back). -->
       <div
         v-if="terminalView === 'answers' && session && !session.terminal"
-        class="absolute inset-0 z-10 flex flex-col bg-slate-900"
+        class="absolute inset-0 z-10 flex flex-col bg-page"
         @pointerup="focusFieldAfterClick"
       >
         <AnswersFeed :session-id="id" />
@@ -637,14 +641,14 @@ onBeforeUnmount(() => {
       <ApprovalRequests
         v-if="session"
         :session="session"
-        class="absolute bottom-3 left-3 z-20 max-h-[60%] overflow-y-auto rounded-lg bg-slate-900 shadow-xl"
+        class="absolute bottom-3 left-3 z-20 max-h-[60%] overflow-y-auto rounded-lg bg-page shadow-xl"
         :style="{ right: `calc(var(--spacing) * 3 + ${JOG_TRACK_WIDTH_PX}px)` }"
       />
       <div
         v-if="!connected"
-        class="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-900/85"
+        class="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-page/85"
       >
-        <p class="text-slate-300">
+        <p class="text-soft">
           {{ $t(reconnecting ? 'terminal.reconnecting' : 'terminal.disconnected') }}
         </p>
         <button v-if="!reconnecting" class="btn-primary" @click="connect">{{ $t('terminal.reconnect') }}</button>

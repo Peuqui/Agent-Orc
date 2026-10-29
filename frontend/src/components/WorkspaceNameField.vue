@@ -23,7 +23,7 @@ const emit = defineEmits<{ rename: []; delete: [] }>()
     />
     <button
       v-if="deletable"
-      class="absolute right-1 flex size-5 items-center justify-center rounded text-slate-500 hover:text-slate-200"
+      class="absolute right-1 flex size-5 items-center justify-center rounded text-muted hover:text-main"
       :aria-label="$t('workspace.delete')"
       :title="$t('workspace.delete')"
       @click="emit('delete')"

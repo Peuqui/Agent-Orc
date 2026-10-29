@@ -33,7 +33,7 @@ watch(() => [props.text, props.lines], measure, { flush: 'post' })
 <template>
   <div>
     <p ref="box" class="break-words whitespace-pre-wrap" :style="expanded ? undefined : folded">{{ text }}</p>
-    <button v-if="overflowing" type="button" class="mt-1 text-xs text-slate-500 underline" @click="expanded = !expanded">
+    <button v-if="overflowing" type="button" class="mt-1 text-xs text-muted underline" @click="expanded = !expanded">
       {{ expanded ? $t('answers.less') : $t('answers.more') }}
     </button>
   </div>

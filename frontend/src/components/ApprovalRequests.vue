@@ -69,19 +69,19 @@ async function answer(approval: Approval, decision: ApprovalAnswer): Promise<voi
     <div
       v-for="approval in session.approvals"
       :key="approval.id"
-      class="controls-zoom flex flex-col gap-2 rounded-lg border border-amber-600 bg-amber-950/40 px-3 py-2 text-sm"
+      class="controls-zoom flex flex-col gap-2 rounded-lg border border-highlight-600 bg-highlight-950/40 px-3 py-2 text-sm"
     >
-      <span v-if="named" class="font-semibold text-amber-100">{{ sessionName(session) }}</span>
+      <span v-if="named" class="font-semibold text-highlight-100">{{ sessionName(session) }}</span>
       <template v-if="approval.plan !== null">
-        <span class="text-amber-200">{{ $t('approval.plan') }}</span>
-        <div class="markdown note max-h-72 overflow-y-auto rounded bg-slate-950/60 px-2 py-1 select-text" v-html="renderMarkdown(approval.plan, null)" />
+        <span class="text-highlight-200">{{ $t('approval.plan') }}</span>
+        <div class="markdown note max-h-72 overflow-y-auto rounded bg-sunken/60 px-2 py-1 select-text" v-html="renderMarkdown(approval.plan, null)" />
       </template>
       <template v-else>
-        <span class="text-amber-200">
+        <span class="text-highlight-200">
           {{ $t('approval.asks', { tool: approval.tool }) }}
-          <span v-if="approval.description" class="text-amber-300/70"> · {{ approval.description }}</span>
+          <span v-if="approval.description" class="text-highlight-300/70"> · {{ approval.description }}</span>
         </span>
-        <code class="line-clamp-3 rounded bg-slate-950/60 px-2 py-1 font-mono text-xs break-all text-slate-200">{{ approval.subject }}</code>
+        <code class="line-clamp-3 rounded bg-sunken/60 px-2 py-1 font-mono text-xs break-all text-main">{{ approval.subject }}</code>
       </template>
       <div class="flex flex-wrap gap-2">
         <!-- A plan goes ahead in one of the modes the agent may run in, as the terminal offers them. -->

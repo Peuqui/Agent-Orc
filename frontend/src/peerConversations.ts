@@ -57,19 +57,19 @@ export function lanesOf(messages: Iterable<PeerMessage>): string[] {
 }
 
 // A colour for each agent and user, the same in every view: its name, its lane and its arrows.
-// None of the state colours (amber, red, emerald), so a name is not taken for a state.
+// Their colours are in theme.css (peer-1 ...).
 const PEER_COLORS = [
-  'text-sky-400',
-  'text-violet-400',
-  'text-orange-400',
-  'text-teal-300',
-  'text-pink-400',
-  'text-lime-400',
-  'text-indigo-300',
-  'text-yellow-200',
+  'text-peer-1',
+  'text-peer-2',
+  'text-peer-3',
+  'text-peer-4',
+  'text-peer-5',
+  'text-peer-6',
+  'text-peer-7',
+  'text-peer-8',
 ]
 // The machines' notices step back.
-export const MACHINE_COLOR = 'text-slate-500'
+export const MACHINE_COLOR = 'text-muted'
 
 /** Each lane's colour, by its place among the lanes; more lanes than colours share them. */
 export function colorsOf(lanes: string[]): Map<string, string> {

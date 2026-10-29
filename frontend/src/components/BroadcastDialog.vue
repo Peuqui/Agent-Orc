@@ -48,15 +48,15 @@ async function send(): Promise<void> {
         <label
           v-for="session in running"
           :key="session.id"
-          class="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-slate-700"
+          class="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-raised"
         >
           <input v-model="chosen" type="checkbox" :value="session.id" class="size-4" />
           <span class="font-medium">{{ sessionName(session) }}</span>
-          <span v-if="session.busy" class="text-xs text-amber-300">{{ $t('sessions.working') }}</span>
+          <span v-if="session.busy" class="text-xs text-highlight-300">{{ $t('sessions.working') }}</span>
         </label>
       </div>
       <textarea v-model="text" rows="4" class="input text-sm" :placeholder="$t('broadcast.text')" required />
-      <ToggleSwitch class="h-7 self-start text-sm text-slate-300" :checked="submit" @click="submit = !submit">
+      <ToggleSwitch class="h-7 self-start text-sm text-soft" :checked="submit" @click="submit = !submit">
         {{ $t('broadcast.submit') }}
       </ToggleSwitch>
       <div class="flex gap-2">

@@ -15,7 +15,7 @@ const filled = computed(() => (props.percent / 100) * CIRCUMFERENCE)
 
 <template>
   <svg class="size-4 shrink-0 -rotate-90" viewBox="0 0 18 18" aria-hidden="true">
-    <circle cx="9" cy="9" :r="RADIUS" fill="none" stroke-width="3" class="stroke-slate-700" />
+    <circle cx="9" cy="9" :r="RADIUS" fill="none" stroke-width="3" class="stroke-line" />
     <circle
       cx="9"
       cy="9"

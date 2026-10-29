@@ -42,11 +42,11 @@ function detail(window: QuotaWindow): string {
     <div
       v-for="quota in reported"
       :key="quota.profile"
-      class="mx-auto flex w-fit max-w-[38rem] items-center rounded-md border border-slate-600 py-1"
+      class="mx-auto flex w-fit max-w-[38rem] items-center rounded-md border border-line-strong py-1"
       :title="$t('quota.title', { agent: quota.label })"
     >
       <!-- The bars, in wide places; rings stand in elsewhere. -->
-      <div class="hidden min-w-0 divide-x divide-slate-600 @[34rem]:flex">
+      <div class="hidden min-w-0 divide-x divide-line-strong @[34rem]:flex">
         <UsageBar
           v-for="(usage, name) in quota.windows"
           :key="name"
@@ -56,7 +56,7 @@ function detail(window: QuotaWindow): string {
           :reset="resetText(usage)"
         />
       </div>
-      <div class="flex divide-x divide-slate-600 @[34rem]:hidden">
+      <div class="flex divide-x divide-line-strong @[34rem]:hidden">
         <UsageMeter
           v-for="(usage, name) in quota.windows"
           :key="name"

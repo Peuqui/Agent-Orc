@@ -247,28 +247,28 @@ function onKeydown(event: KeyboardEvent): void {
   <!-- Over the whole page while files are dragged onto it. -->
   <div
     v-if="draggingFiles"
-    class="pointer-events-none fixed inset-0 z-50 flex items-center justify-center border-4 border-dashed border-red-400 bg-slate-900/70 p-4 text-center text-lg font-semibold"
+    class="pointer-events-none fixed inset-0 z-50 flex items-center justify-center border-4 border-dashed border-accent-400 bg-page/70 p-4 text-center text-lg font-semibold"
   >
     {{ $t('attach.drop') }}
   </div>
-  <div class="border-t border-slate-800">
+  <div class="border-t border-line-subtle">
   <div v-if="attachments.length" class="flex flex-wrap gap-2 px-2 pt-2">
     <div v-for="(attachment, index) in attachments" :key="attachment.path" class="relative" :title="attachment.name">
       <img
         v-if="attachment.preview"
         :src="attachment.preview"
         :alt="attachment.name"
-        class="size-14 rounded-md border border-slate-600 object-cover"
+        class="size-14 rounded-md border border-line-strong object-cover"
       />
       <div
         v-else
-        class="flex h-14 max-w-40 items-center gap-1.5 rounded-md border border-slate-600 bg-slate-800 px-2 text-xs text-slate-300"
+        class="flex h-14 max-w-40 items-center gap-1.5 rounded-md border border-line-strong bg-panel px-2 text-xs text-soft"
       >
         <AppIcon name="file" /><span class="truncate">{{ attachment.name }}</span>
       </div>
       <button
         type="button"
-        class="absolute -top-1.5 -right-1.5 flex size-5 items-center justify-center rounded-full bg-slate-900 text-xs text-slate-300 ring-1 ring-slate-600 hover:text-white"
+        class="absolute -top-1.5 -right-1.5 flex size-5 items-center justify-center rounded-full bg-page text-xs text-soft ring-1 ring-line-strong hover:text-on-color"
         :aria-label="$t('attach.remove')"
         :title="$t('attach.remove')"
         @click="removeAttachment(index)"
@@ -288,7 +288,7 @@ function onKeydown(event: KeyboardEvent): void {
       @close="closeMenus"
       @files="(files) => attachInOrder(files, attachFile)"
     >
-      <button type="button" class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-slate-700" @click="showTemplates">
+      <button type="button" class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-raised" @click="showTemplates">
         <AppIcon name="template" />{{ $t('templates.title') }}
       </button>
       <template #popup><PromptTemplates ref="templates" @insert="insertTemplate" /></template>
@@ -299,7 +299,7 @@ function onKeydown(event: KeyboardEvent): void {
       <DictationMic :dictation="dictation" />
       <span
         v-if="busy"
-        class="flex size-4 items-center justify-center rounded-full bg-slate-900"
+        class="flex size-4 items-center justify-center rounded-full bg-page"
         :class="dictation.microphone ? 'pointer-events-none absolute right-0 bottom-0' : 'mx-1 self-center'"
         role="status"
         :aria-label="$t('sessions.working')"

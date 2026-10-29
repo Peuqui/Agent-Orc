@@ -55,20 +55,20 @@ async function save(): Promise<void> {
         v-for="template in templates"
         :key="template.label"
         type="button"
-        class="flex flex-col items-start rounded-md px-3 py-2 text-left hover:bg-slate-700"
+        class="flex flex-col items-start rounded-md px-3 py-2 text-left hover:bg-raised"
         @click="use(template)"
       >
-        <span class="text-sm text-slate-100">{{ template.label }}</span>
-        <span class="line-clamp-1 text-xs text-slate-500">{{ template.text }}</span>
+        <span class="text-sm text-bright">{{ template.label }}</span>
+        <span class="line-clamp-1 text-xs text-muted">{{ template.text }}</span>
       </button>
-      <p v-if="templates.length === 0" class="px-3 py-2 text-sm text-slate-500">{{ $t('templates.none') }}</p>
+      <p v-if="templates.length === 0" class="px-3 py-2 text-sm text-muted">{{ $t('templates.none') }}</p>
       <button type="button" class="btn-secondary btn-small mt-1" @click="manage">
         <AppIcon name="pencil" />{{ $t('templates.manage') }}
       </button>
     </div>
     <BaseDialog v-if="editing" :title="$t('templates.manage')" @close="editing = null">
       <div class="flex max-h-[60dvh] flex-col gap-3 overflow-y-auto">
-        <div v-for="(template, index) in editing" :key="index" class="flex flex-col gap-1 rounded-lg border border-slate-700 p-2">
+        <div v-for="(template, index) in editing" :key="index" class="flex flex-col gap-1 rounded-lg border border-line p-2">
           <div class="flex items-center gap-2">
             <input v-model="template.label" class="input min-w-0 flex-1 text-sm" :placeholder="$t('templates.label')" />
             <button type="button" class="btn-icon size-8" :aria-label="$t('templates.remove')" @click="editing.splice(index, 1)">×</button>

@@ -76,18 +76,18 @@ async function toggle(path: string): Promise<void> {
 const STATUS_KEYS: Record<string, string> = { M: 'modified', A: 'added', D: 'deleted', R: 'renamed', '??': 'new' }
 
 function lineClass(line: string): string {
-  if (line.startsWith('+++') || line.startsWith('---')) return 'text-slate-500'
-  if (line.startsWith('+')) return 'bg-green-950/60 text-green-300'
-  if (line.startsWith('-')) return 'bg-red-950/60 text-red-300'
-  if (line.startsWith('@@')) return 'text-cyan-400'
-  if (line.startsWith('diff ') || line.startsWith('index ')) return 'text-slate-500'
-  return 'text-slate-300'
+  if (line.startsWith('+++') || line.startsWith('---')) return 'text-muted'
+  if (line.startsWith('+')) return 'bg-added-950/60 text-added-300'
+  if (line.startsWith('-')) return 'bg-accent-950/60 text-accent-300'
+  if (line.startsWith('@@')) return 'text-hunk'
+  if (line.startsWith('diff ') || line.startsWith('index ')) return 'text-muted'
+  return 'text-soft'
 }
 </script>
 
 <template>
-  <div class="flex h-full flex-col bg-slate-900">
-    <header class="flex items-center gap-1 border-b border-slate-800 px-1 py-1">
+  <div class="flex h-full flex-col bg-page">
+    <header class="flex items-center gap-1 border-b border-line-subtle px-1 py-1">
       <button class="btn-icon" :aria-label="$t('terminal.back')" @click="router.back()">
         <AppIcon name="up" class="-rotate-90" />
       </button>
@@ -98,25 +98,25 @@ function lineClass(line: string): string {
     </header>
 
     <main ref="scroller" class="min-h-0 flex-1 overflow-y-auto p-2">
-      <p v-if="notARepository" class="p-6 text-center text-slate-400">{{ $t('changes.notARepository') }}</p>
-      <p v-else-if="files?.length === 0" class="p-6 text-center text-slate-400">{{ $t('changes.none') }}</p>
+      <p v-if="notARepository" class="p-6 text-center text-dim">{{ $t('changes.notARepository') }}</p>
+      <p v-else-if="files?.length === 0" class="p-6 text-center text-dim">{{ $t('changes.none') }}</p>
       <ul v-else-if="files" ref="zoomed" class="flex flex-col gap-1" :style="zoomStyle">
         <li v-for="file in files" :key="file.path" class="card overflow-hidden">
-          <div class="flex items-center hover:bg-slate-700">
+          <div class="flex items-center hover:bg-raised">
           <button class="flex min-w-0 flex-1 items-center gap-2 py-2 pl-3 text-left text-sm" @click="toggle(file.path)">
             <span
               class="w-20 shrink-0 rounded px-1.5 py-0.5 text-center text-xs"
               :class="{
-                'bg-green-900/50 text-green-300': file.status === '??' || file.status === 'A',
-                'bg-red-900/50 text-red-300': file.status === 'D',
-                'bg-amber-900/50 text-amber-300': file.status === 'M' || file.status === 'R',
-                'bg-slate-700 text-slate-300': !STATUS_KEYS[file.status],
+                'bg-added-900/50 text-added-300': file.status === '??' || file.status === 'A',
+                'bg-accent-900/50 text-accent-300': file.status === 'D',
+                'bg-highlight-900/50 text-highlight-300': file.status === 'M' || file.status === 'R',
+                'bg-raised text-soft': !STATUS_KEYS[file.status],
               }"
             >
               {{ STATUS_KEYS[file.status] ? $t(`changes.status.${STATUS_KEYS[file.status]}`) : file.status }}
             </span>
-            <span class="min-w-0 flex-1 truncate font-mono text-xs text-slate-200">{{ file.path }}</span>
-            <AppIcon name="up" class="size-4 shrink-0 text-slate-500 transition-transform" :class="open === file.path ? '' : 'rotate-180'" />
+            <span class="min-w-0 flex-1 truncate font-mono text-xs text-main">{{ file.path }}</span>
+            <AppIcon name="up" class="size-4 shrink-0 text-muted transition-transform" :class="open === file.path ? '' : 'rotate-180'" />
           </button>
           <button
             v-if="existing[file.path]"
@@ -128,13 +128,13 @@ function lineClass(line: string): string {
             <AppIcon name="external" />
           </button>
           </div>
-          <div v-if="open === file.path" class="overflow-x-auto border-t border-slate-700 bg-slate-950/60">
-            <p v-if="!diffs.has(file.path)" class="p-3 text-xs text-slate-500">{{ $t('changes.loading') }}</p>
+          <div v-if="open === file.path" class="overflow-x-auto border-t border-line bg-sunken/60">
+            <p v-if="!diffs.has(file.path)" class="p-3 text-xs text-muted">{{ $t('changes.loading') }}</p>
             <pre
               v-else
               class="py-2 font-mono text-xs leading-relaxed"
             ><span v-for="(line, index) in diffs.get(file.path)!.text.split('\n')" :key="index" class="block px-3 whitespace-pre" :class="lineClass(line)">{{ line || ' ' }}</span></pre>
-            <p v-if="diffs.get(file.path)?.truncated" class="px-3 pb-2 text-xs text-amber-300">{{ $t('changes.truncated') }}</p>
+            <p v-if="diffs.get(file.path)?.truncated" class="px-3 pb-2 text-xs text-highlight-300">{{ $t('changes.truncated') }}</p>
           </div>
         </li>
       </ul>

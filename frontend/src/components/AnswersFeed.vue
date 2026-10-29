@@ -197,13 +197,13 @@ function jog(lines: number): void {
 
 <template>
   <div class="flex min-h-0 flex-1 flex-col">
-    <div class="controls-zoom flex flex-wrap items-center gap-1.5 border-b border-slate-700 px-2 py-1.5">
+    <div class="controls-zoom flex flex-wrap items-center gap-1.5 border-b border-line px-2 py-1.5">
       <!-- What is shown now is highlighted: a summary for each message of yours, or every text. -->
-      <div class="flex overflow-hidden rounded-md border border-slate-600 text-xs" role="group" :aria-label="$t('answers.mode')">
+      <div class="flex overflow-hidden rounded-md border border-line-strong text-xs" role="group" :aria-label="$t('answers.mode')">
         <button
           type="button"
           class="px-2.5 py-1.5"
-          :class="!answersAll ? 'segment-on' : 'text-slate-400 hover:bg-slate-700'"
+          :class="!answersAll ? 'segment-on' : 'text-dim hover:bg-raised'"
           :aria-pressed="!answersAll"
           :title="$t('answers.summariesHint')"
           @click="answersAll = false"
@@ -212,8 +212,8 @@ function jog(lines: number): void {
         </button>
         <button
           type="button"
-          class="border-l border-slate-600 px-2.5 py-1.5"
-          :class="answersAll ? 'segment-on' : 'text-slate-400 hover:bg-slate-700'"
+          class="border-l border-line-strong px-2.5 py-1.5"
+          :class="answersAll ? 'segment-on' : 'text-dim hover:bg-raised'"
           :aria-pressed="answersAll"
           :title="$t('answers.allHint')"
           @click="answersAll = true"
@@ -267,14 +267,14 @@ function jog(lines: number): void {
     >
     <!-- Scaled as a whole (the device's size for views), so all sizes keep their proportions. -->
     <div ref="zoomed" class="flex flex-col gap-4" :style="zoomStyle">
-      <p v-if="loaded && !turns.length" class="text-slate-400">{{ $t('answers.empty') }}</p>
+      <p v-if="loaded && !turns.length" class="text-dim">{{ $t('answers.empty') }}</p>
       <section v-for="entry in shown" :key="entry.turn.id" class="flex flex-col gap-2">
         <!-- What the user asked: a few lines, more on a click. -->
-        <div :data-anchor="entry.turn.id" class="rounded-lg border-l-4 border-sky-700/70 bg-sky-950/40 px-3 py-2 text-sm text-slate-300">
+        <div :data-anchor="entry.turn.id" class="rounded-lg border-l-4 border-info-700/70 bg-info-950/40 px-3 py-2 text-sm text-soft">
           <FoldedText v-if="uploadMentions(entry.turn.prompt).text" :text="uploadMentions(entry.turn.prompt).text" :lines="USER_LINES" />
           <AnswerImages :urls="pictureUrls(entry.turn.id, entry.turn.prompt, entry.turn.images)" />
           <!-- Said on the Echo: as the recognition heard it, to compare with the recording. -->
-          <div v-if="spokenAs(entry.turn, spoken)" class="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+          <div v-if="spokenAs(entry.turn, spoken)" class="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted">
             <AppIcon name="mic" />
             <span>{{ $t('answers.spoken', { heard: spokenAs(entry.turn, spoken)?.heard }) }}</span>
             <audio
@@ -291,12 +291,12 @@ function jog(lines: number): void {
           <div
             v-if="item.kind === 'user'"
             :data-anchor="item.id"
-            class="ml-4 rounded-lg border-l-4 border-sky-700/70 bg-sky-950/40 px-3 py-2 text-sm text-slate-300"
+            class="ml-4 rounded-lg border-l-4 border-info-700/70 bg-info-950/40 px-3 py-2 text-sm text-soft"
             :class="item.pending ? 'opacity-60' : ''"
           >
             <FoldedText v-if="uploadMentions(item.text).text" :text="uploadMentions(item.text).text" :lines="USER_LINES" />
             <AnswerImages :urls="pictureUrls(item.id, item.text, item.images)" />
-            <p class="mt-1 text-xs text-slate-500">
+            <p class="mt-1 text-xs text-muted">
               {{ $t('answers.interjection') }} · {{ formatMoment(new Date(item.time), locale) }}
               <span v-if="item.pending"> · {{ $t('answers.pending') }}</span>
             </p>
@@ -308,8 +308,8 @@ function jog(lines: number): void {
             :data-anchor="item.id"
             class="card flex flex-col gap-2 p-3"
             :class="[
-              isUnread(item, seen) ? 'border-l-4 border-l-red-500 pl-[calc(0.75rem-3px)]' : '',
-              speech.playing.value === item.id ? 'ring-1 ring-amber-500 bg-slate-800/70' : '',
+              isUnread(item, seen) ? 'border-l-4 border-l-accent-500 pl-[calc(0.75rem-3px)]' : '',
+              speech.playing.value === item.id ? 'ring-1 ring-highlight-500 bg-panel/70' : '',
             ]"
             :title="isUnread(item, seen) ? $t('answers.clickToMark') : undefined"
             @click="markUpTo($event, item)"
@@ -319,7 +319,7 @@ function jog(lines: number): void {
               @click="readAgain($event, item)"
               v-html="answerHtml(item)"
             />
-            <div class="flex items-center gap-2 text-xs text-slate-500">
+            <div class="flex items-center gap-2 text-xs text-muted">
               <span>{{ formatMoment(new Date(item.time), locale) }}</span>
               <template v-if="speech.available.value">
                 <button
@@ -346,7 +346,7 @@ function jog(lines: number): void {
           </article>
         </template>
         <!-- The request being answered right now has no text yet. -->
-        <p v-if="!entry.texts.length && entry === shown.at(-1)" class="text-sm text-slate-500">
+        <p v-if="!entry.texts.length && entry === shown.at(-1)" class="text-sm text-muted">
           {{ $t('answers.working') }}
         </p>
       </section>

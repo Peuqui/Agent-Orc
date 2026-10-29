@@ -29,7 +29,7 @@ async function toggle(): Promise<void> {
     class="shrink-0 rounded-full border text-xs whitespace-nowrap"
     :class="[
       compact ? 'p-1' : 'px-2',
-      keepWarm.enabled ? 'border-amber-300 text-amber-300' : 'border-slate-600 text-slate-500',
+      keepWarm.enabled ? 'border-highlight-300 text-highlight-300' : 'border-line-strong text-muted',
     ]"
     :aria-pressed="keepWarm.enabled"
     :aria-label="$t('keepWarm.label')"

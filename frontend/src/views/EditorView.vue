@@ -202,8 +202,8 @@ onBeforeUnmount(() => view?.destroy())
 </script>
 
 <template>
-  <div class="flex h-full flex-col bg-slate-900">
-    <header class="flex items-center gap-1 border-b border-slate-800 px-1 py-1">
+  <div class="flex h-full flex-col bg-page">
+    <header class="flex items-center gap-1 border-b border-line-subtle px-1 py-1">
       <button
         class="btn-icon"
         :aria-label="$t('terminal.back')"
@@ -212,7 +212,7 @@ onBeforeUnmount(() => view?.destroy())
         <AppIcon name="up" class="-rotate-90" />
       </button>
       <h1 class="min-w-0 flex-1 truncate font-semibold">
-        {{ name }}<span v-if="dirty" class="text-red-400"> ●</span>
+        {{ name }}<span v-if="dirty" class="text-accent-400"> ●</span>
       </h1>
       <button
         v-if="kind === 'markdown'"
@@ -271,12 +271,12 @@ onBeforeUnmount(() => view?.destroy())
       <a class="btn-secondary" :href="rawFileUrl(path, true)"><AppIcon name="download" />{{ $t('editor.download') }}</a>
     </div>
     <div v-if="kind === 'binary'" class="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
-      <p class="text-slate-300">{{ $t('editor.notText') }}</p>
+      <p class="text-soft">{{ $t('editor.notText') }}</p>
       <a class="btn-primary" :href="rawFileUrl(path, true)"><AppIcon name="download" />{{ $t('editor.download') }}</a>
     </div>
 
     <BaseDialog v-if="dialog === 'conflict'" :title="$t('editor.conflictTitle')" @close="dialog = null">
-      <p class="mb-5 text-slate-300">{{ $t('errors.FileConflictError') }}</p>
+      <p class="mb-5 text-soft">{{ $t('errors.FileConflictError') }}</p>
       <div class="flex flex-col gap-2">
         <button class="btn-secondary" @click="reload">{{ $t('editor.reload') }}</button>
         <button class="btn-danger" @click="overwrite">{{ $t('editor.overwrite') }}</button>

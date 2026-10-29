@@ -31,21 +31,21 @@ function changeScrollLines(delta: number): void {
 
 <template>
   <div>
-    <div class="flex items-center justify-between gap-2 text-sm text-slate-300">
+    <div class="flex items-center justify-between gap-2 text-sm text-soft">
       <span>{{ $t('settings.font') }}</span>
-      <div class="flex overflow-hidden rounded-md border border-slate-600 text-xs">
+      <div class="flex overflow-hidden rounded-md border border-line-strong text-xs">
         <button
           v-for="(_family, font) in TERMINAL_FONTS"
           :key="font"
           class="px-2 py-1"
-          :class="terminalFont === font ? 'segment-on' : 'text-slate-400'"
+          :class="terminalFont === font ? 'segment-on' : 'text-dim'"
           @click="terminalFont = font"
         >
           {{ FONT_NAMES[font] }}
         </button>
       </div>
     </div>
-    <div class="mt-4 flex items-center justify-between gap-2 text-sm text-slate-300">
+    <div class="mt-4 flex items-center justify-between gap-2 text-sm text-soft">
       <span>{{ $t('settings.fontSize') }}</span>
       <div class="flex items-center gap-1">
         <button class="btn-icon size-7" :aria-label="$t('settings.less')" @click="stepFontSize(-1)">A−</button>
@@ -53,8 +53,8 @@ function changeScrollLines(delta: number): void {
         <button class="btn-icon size-7" :aria-label="$t('settings.more')" @click="stepFontSize(1)">A+</button>
       </div>
     </div>
-    <p class="mt-1 mb-3 text-xs text-slate-500">{{ $t('settings.fontSizeHint') }}</p>
-    <div class="flex items-center justify-between gap-2 text-sm text-slate-300">
+    <p class="mt-1 mb-3 text-xs text-hint">{{ $t('settings.fontSizeHint') }}</p>
+    <div class="flex items-center justify-between gap-2 text-sm text-soft">
       <span>{{ $t('settings.viewFontSize') }}</span>
       <div class="flex items-center gap-1">
         <button class="btn-icon size-7" :aria-label="$t('settings.less')" @click="stepViewFontSize(-1)">A−</button>
@@ -62,8 +62,8 @@ function changeScrollLines(delta: number): void {
         <button class="btn-icon size-7" :aria-label="$t('settings.more')" @click="stepViewFontSize(1)">A+</button>
       </div>
     </div>
-    <p class="mt-1 mb-3 text-xs text-slate-500">{{ $t('settings.viewFontSizeHint') }}</p>
-    <div class="flex items-center justify-between gap-2 text-sm text-slate-300">
+    <p class="mt-1 mb-3 text-xs text-hint">{{ $t('settings.viewFontSizeHint') }}</p>
+    <div class="flex items-center justify-between gap-2 text-sm text-soft">
       <span>{{ $t('settings.controlsScale') }}</span>
       <div class="flex items-center gap-1">
         <button class="btn-icon size-7" :aria-label="$t('settings.less')" @click="stepControlsScale(-1)">A−</button>
@@ -71,8 +71,8 @@ function changeScrollLines(delta: number): void {
         <button class="btn-icon size-7" :aria-label="$t('settings.more')" @click="stepControlsScale(1)">A+</button>
       </div>
     </div>
-    <p class="mt-1 mb-3 text-xs text-slate-500">{{ $t('settings.controlsScaleHint') }}</p>
-    <div class="flex items-center justify-between gap-2 text-sm text-slate-300">
+    <p class="mt-1 mb-3 text-xs text-hint">{{ $t('settings.controlsScaleHint') }}</p>
+    <div class="flex items-center justify-between gap-2 text-sm text-soft">
       <span>{{ $t('settings.scrollLines') }}</span>
       <div class="flex items-center gap-1">
         <button class="btn-icon size-7" :aria-label="$t('settings.less')" @click="changeScrollLines(-1)">−</button>
@@ -80,8 +80,8 @@ function changeScrollLines(delta: number): void {
         <button class="btn-icon size-7" :aria-label="$t('settings.more')" @click="changeScrollLines(1)">+</button>
       </div>
     </div>
-    <p class="mt-1 text-xs text-slate-500">{{ $t('settings.scrollLinesHint') }}</p>
-    <div class="mt-4 flex items-center justify-between gap-2 text-sm text-slate-300">
+    <p class="mt-1 text-xs text-hint">{{ $t('settings.scrollLinesHint') }}</p>
+    <div class="mt-4 flex items-center justify-between gap-2 text-sm text-soft">
       <span>{{ $t('settings.lineHeight') }}</span>
       <div class="flex items-center gap-1">
         <button class="btn-icon size-7" :aria-label="$t('settings.less')" @click="changeLineHeight(-LINE_HEIGHT_STEP)">−</button>
@@ -89,7 +89,7 @@ function changeScrollLines(delta: number): void {
         <button class="btn-icon size-7" :aria-label="$t('settings.more')" @click="changeLineHeight(LINE_HEIGHT_STEP)">+</button>
       </div>
     </div>
-    <p class="mt-1 text-xs text-slate-500">{{ $t('settings.lineHeightHint') }}</p>
+    <p class="mt-1 text-xs text-hint">{{ $t('settings.lineHeightHint') }}</p>
 
     <button class="btn-secondary btn-small mt-4 w-full justify-center" @click="$emit('keys')">
       {{ $t('settings.keys') }}

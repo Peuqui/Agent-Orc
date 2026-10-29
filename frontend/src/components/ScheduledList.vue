@@ -35,7 +35,7 @@ async function cancel(prompt: ScheduledPrompt): Promise<void> {
       v-for="prompt in prompts"
       :key="prompt.id"
       class="flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm"
-      :class="prompt.reason === 'limit' ? 'border-amber-700 bg-amber-950/40 text-amber-200' : 'border-slate-700 text-slate-300'"
+      :class="prompt.reason === 'limit' ? 'border-highlight-700 bg-highlight-950/40 text-highlight-200' : 'border-line text-soft'"
     >
       <AppIcon name="clock" class="shrink-0" />
       <span class="shrink-0 font-medium">
@@ -49,7 +49,7 @@ async function cancel(prompt: ScheduledPrompt): Promise<void> {
         {{ prompt.reason === 'limit' ? $t('schedule.limit') : prompt.text }}
       </span>
       <button
-        class="shrink-0 px-1 text-slate-500 hover:text-slate-200"
+        class="shrink-0 px-1 text-muted hover:text-main"
         :aria-label="$t('schedule.cancel')"
         :title="$t('schedule.cancel')"
         @click="cancel(prompt)"

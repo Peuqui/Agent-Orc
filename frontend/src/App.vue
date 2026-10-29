@@ -74,7 +74,7 @@ watch(authenticated, (isAuthenticated) => {
 
 <template>
   <div v-if="unreachable" class="flex min-h-dvh flex-col items-center justify-center gap-4 px-4">
-    <p class="text-slate-300">{{ $t('errors.NetworkError') }}</p>
+    <p class="text-soft">{{ $t('errors.NetworkError') }}</p>
     <button class="btn-primary" @click="checkLogin">{{ $t('app.retry') }}</button>
   </div>
   <LoginView v-else-if="authenticated === false" />
@@ -86,11 +86,11 @@ watch(authenticated, (isAuthenticated) => {
     <component :is="Component" :key="route.meta.perQuery ? route.fullPath : route.path" />
   </RouterView>
   <div v-else-if="authenticated && columnTab" class="min-h-dvh">
-    <header class="flex items-center gap-1 border-b border-slate-800 px-1 py-1">
+    <header class="flex items-center gap-1 border-b border-line-subtle px-1 py-1">
       <button class="btn-icon" :aria-label="$t('app.backToTerminal')" @click="backToTerminal">
         <AppIcon name="up" class="-rotate-90" />
       </button>
-      <span class="text-sm text-slate-300">{{ $t('app.backToTerminal') }}</span>
+      <span class="text-sm text-soft">{{ $t('app.backToTerminal') }}</span>
     </header>
     <main class="px-3 py-3">
       <RouterView />

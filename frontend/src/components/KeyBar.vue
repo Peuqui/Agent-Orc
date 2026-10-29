@@ -29,7 +29,7 @@ function press(key: TerminalKey): void {
 <template>
   <!-- pointerdown.prevent keeps the focus (and so the on-screen keyboard) where it is.
        Wide screens (landscape, desktop) put all rows side by side to save height. -->
-  <div class="controls-zoom flex flex-col gap-1 border-t border-slate-800 bg-slate-900 px-1 py-1 md:flex-row">
+  <div class="controls-zoom flex flex-col gap-1 border-t border-line-subtle bg-page px-1 py-1 md:flex-row">
     <div v-for="(row, index) in shownRows" :key="index" class="flex flex-1 gap-1">
       <button
         v-for="key in row"
@@ -37,8 +37,8 @@ function press(key: TerminalKey): void {
         class="h-10 min-w-0 flex-1 rounded-md text-sm font-medium select-none"
         :class="
           key.modifier && active.has(key.modifier)
-            ? 'bg-red-600 text-white'
-            : 'bg-slate-800 text-slate-200 active:bg-slate-600'
+            ? 'bg-accent-600 text-on-color'
+            : 'bg-panel text-main active:bg-raised-strong'
         "
         @pointerdown.prevent
         @click="press(key)"
@@ -47,8 +47,8 @@ function press(key: TerminalKey): void {
       </button>
       <button
         v-if="index === 0 && TOUCH_FIRST.matches"
-        class="flex h-10 w-8 shrink-0 items-center justify-center rounded-md select-none hover:bg-slate-800"
-        :class="keyboardUp ? 'text-amber-300' : 'text-slate-400'"
+        class="flex h-10 w-8 shrink-0 items-center justify-center rounded-md select-none hover:bg-panel"
+        :class="keyboardUp ? 'text-highlight-300' : 'text-dim'"
         :aria-label="$t(keyboardUp ? 'keys.hideKeyboard' : 'keys.showKeyboard')"
         :title="$t(keyboardUp ? 'keys.hideKeyboard' : 'keys.showKeyboard')"
         :aria-pressed="keyboardUp"
@@ -59,7 +59,7 @@ function press(key: TerminalKey): void {
       </button>
       <button
         v-if="index === 0 && rows.length > 1"
-        class="flex h-10 w-8 shrink-0 items-center justify-center rounded-md text-slate-400 select-none hover:bg-slate-800"
+        class="flex h-10 w-8 shrink-0 items-center justify-center rounded-md text-dim select-none hover:bg-panel"
         :aria-label="$t(extraKeysUnfolded ? 'keys.fold' : 'keys.unfold')"
         :title="$t(extraKeysUnfolded ? 'keys.fold' : 'keys.unfold')"
         @pointerdown.prevent

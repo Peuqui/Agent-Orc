@@ -23,9 +23,9 @@ function recipient(to: string): string {
 </script>
 
 <template>
-  <article class="border-t border-slate-700/60 py-2 first:border-t-0">
+  <article class="border-t border-line/60 py-2 first:border-t-0">
     <button type="button" class="press-row -mx-1 block w-[calc(100%+0.5rem)] px-1 text-left" :aria-expanded="open" @click="open = !open">
-      <div class="flex flex-wrap items-baseline gap-x-2 text-xs text-slate-500">
+      <div class="flex flex-wrap items-baseline gap-x-2 text-xs text-muted">
         <span>{{ formatTimeSpan(new Date(run.first), new Date(run.last), locale) }}</span>
         <!-- Short names (without the host); the whole name on hover. -->
         <span :class="colorOf(run.message.from)" :title="run.message.from">{{ laneLabel(run.message.from) }}</span>
@@ -38,16 +38,16 @@ function recipient(to: string): string {
       <p
         v-if="!open"
         class="mt-0.5 text-sm break-words"
-        :class="isMachine(run.message.from) ? 'text-slate-400' : 'text-slate-200'"
+        :class="isMachine(run.message.from) ? 'text-dim' : 'text-main'"
       >
         {{ clip(readable.text, FIRST_LINE_CHARS, 1) }}
       </p>
     </button>
     <template v-if="open">
-      <p class="mt-0.5 text-sm break-words whitespace-pre-wrap text-slate-200 select-text">{{ readable.text }}</p>
+      <p class="mt-0.5 text-sm break-words whitespace-pre-wrap text-main select-text">{{ readable.text }}</p>
       <pre
         v-if="run.message.context"
-        class="mt-2 max-h-80 overflow-auto rounded bg-slate-900 p-2 text-xs whitespace-pre-wrap text-slate-400 select-text"
+        class="mt-2 max-h-80 overflow-auto rounded bg-page p-2 text-xs whitespace-pre-wrap text-dim select-text"
         >{{ run.message.context }}</pre
       >
     </template>

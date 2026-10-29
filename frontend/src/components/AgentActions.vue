@@ -15,7 +15,7 @@ const props = defineProps<{ session: AgentSession }>()
 const emit = defineEmits<{ stop: []; done: [] }>()
 const { profiles } = useSessions()
 const itemClass =
-  'flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-slate-300 hover:bg-slate-700 disabled:opacity-40'
+  'flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-soft hover:bg-raised disabled:opacity-40'
 const profile = computed(() => profiles.value.find((p) => p.name === props.session.profile))
 // There is something to change: models to choose from, or another agent to switch to.
 const canChange = computed(
@@ -39,8 +39,8 @@ const canChange = computed(
   />
   <HandoverButton v-if="!session.terminal" :session="session" :button-class="itemClass" @done="emit('done')" />
   <RestartButton :session="session" :button-class="itemClass" with-label @done="emit('done')" />
-  <hr class="my-1 border-slate-700" />
-  <button :class="`${itemClass} !text-red-400`" @click="emit('stop')">
+  <hr class="my-1 border-line" />
+  <button :class="`${itemClass} !text-accent-400`" @click="emit('stop')">
     <AppIcon name="stop" />{{ $t('sessions.stop') }}
   </button>
 </template>

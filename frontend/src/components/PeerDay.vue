@@ -9,7 +9,7 @@ const { locale, t } = useI18n()
 
 <template>
   <div class="relative my-2 flex justify-center">
-    <span class="rounded-full bg-slate-900 px-3 py-0.5 text-xs text-slate-400">
+    <span class="rounded-full bg-page px-3 py-0.5 text-xs text-dim">
       {{ formatDay(date, locale, { today: t('peers.today'), yesterday: t('peers.yesterday') }) }}
     </span>
   </div>

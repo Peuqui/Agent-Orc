@@ -119,7 +119,7 @@ async function save(): Promise<void> {
 <template>
   <BaseDialog :title="$t('ttsSettings.title')" tall @close="emit('close')">
     <div class="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto text-sm">
-      <p class="text-xs text-slate-500">{{ $t('ttsSettings.hint') }}</p>
+      <p class="text-xs text-hint">{{ $t('ttsSettings.hint') }}</p>
       <div class="flex items-center justify-between gap-2" :title="$t('ttsSettings.preferLoadedHint')">
         <span>{{ $t('ttsSettings.preferLoaded') }}</span>
         <ToggleSwitch :checked="choices.prefer_loaded" @click="choices.prefer_loaded = !choices.prefer_loaded">
@@ -135,9 +135,9 @@ async function save(): Promise<void> {
           v-for="entry in choices.entries"
           :key="placeOf(entry)"
           :data-place="placeOf(entry)"
-          class="flex cursor-grab touch-pan-y flex-col gap-2 rounded-lg border border-slate-700 bg-slate-800/60 p-2 select-none [-webkit-touch-callout:none]"
+          class="flex cursor-grab touch-pan-y flex-col gap-2 rounded-lg border border-line bg-panel/60 p-2 select-none [-webkit-touch-callout:none]"
           :class="[
-            drag?.active && drag.target === placeOf(entry) && drag.id !== placeOf(entry) ? 'ring-2 ring-amber-400' : '',
+            drag?.active && drag.target === placeOf(entry) && drag.id !== placeOf(entry) ? 'ring-2 ring-highlight-400' : '',
             drag?.active && drag.id === placeOf(entry) ? 'opacity-50' : '',
           ]"
           @pointerdown="reorder.onPointerDown($event, placeOf(entry))"
@@ -149,29 +149,29 @@ async function save(): Promise<void> {
         >
           <div class="flex items-center justify-between gap-2">
             <div class="min-w-0">
-              <div class="truncate font-medium" :class="entry.enabled && entry.offered ? 'text-slate-200' : 'text-slate-500'">
+              <div class="truncate font-medium" :class="entry.enabled && entry.offered ? 'text-main' : 'text-muted'">
                 {{ label(entry) }}
               </div>
-              <div class="truncate text-xs text-amber-400">{{ where(entry) }}</div>
+              <div class="truncate text-xs text-highlight-400">{{ where(entry) }}</div>
             </div>
-            <span v-if="unreachable(entry)" class="shrink-0 text-amber-400" :title="$t('ttsSettings.unreachable')" aria-hidden="false">⚠</span>
-            <span v-if="!entry.offered" class="shrink-0 text-xs text-amber-400">{{ $t('ttsSettings.notOffered') }}</span>
+            <span v-if="unreachable(entry)" class="shrink-0 text-highlight-400" :title="$t('ttsSettings.unreachable')" aria-hidden="false">⚠</span>
+            <span v-if="!entry.offered" class="shrink-0 text-xs text-highlight-400">{{ $t('ttsSettings.notOffered') }}</span>
             <ToggleSwitch v-else data-no-drag :checked="entry.enabled" @click="entry.enabled = !entry.enabled">
               <span class="sr-only">{{ $t('ttsSettings.on') }}</span>
             </ToggleSwitch>
           </div>
           <div data-no-drag class="flex flex-col gap-1">
-            <SelectMenu v-model="entry.unit" :options="unitOptions" button-class="input text-sm text-slate-200" :aria-label="$t('ttsSettings.unitLabel')" />
+            <SelectMenu v-model="entry.unit" :options="unitOptions" button-class="input text-sm text-main" :aria-label="$t('ttsSettings.unitLabel')" />
             <SelectMenu
               v-if="(voices[entry.engine]?.length ?? 0) > 0"
               v-model="choices.voices[entry.engine]"
               :options="voiceOptions(entry.engine)"
-              button-class="input text-sm text-slate-200"
+              button-class="input text-sm text-main"
               :aria-label="$t('ttsSettings.voiceLabel')"
             />
             <!-- Speed and pitch of the engine: empty leaves them to the service (what is set for the voice there). -->
             <div class="flex gap-2">
-              <label class="flex min-w-0 flex-1 flex-col gap-0.5 text-xs text-slate-400">
+              <label class="flex min-w-0 flex-1 flex-col gap-0.5 text-xs text-dim">
                 {{ $t('ttsSettings.speed') }}
                 <FactorInput
                   :model-value="choices.tuning[entry.engine]?.speed ?? null"
@@ -179,7 +179,7 @@ async function save(): Promise<void> {
                   @update:model-value="setTuning(entry.engine, 'speed', $event)"
                 />
               </label>
-              <label class="flex min-w-0 flex-1 flex-col gap-0.5 text-xs text-slate-400">
+              <label class="flex min-w-0 flex-1 flex-col gap-0.5 text-xs text-dim">
                 {{ $t('ttsSettings.pitch') }}
                 <FactorInput
                   :model-value="choices.tuning[entry.engine]?.pitch ?? null"
@@ -191,8 +191,8 @@ async function save(): Promise<void> {
           </div>
         </li>
       </ul>
-      <p v-if="!loaded" class="text-xs text-slate-500">{{ $t('ttsSettings.loading') }}</p>
-      <p v-if="nothingOn" class="text-xs text-amber-400">{{ $t('ttsSettings.nothingOn') }}</p>
+      <p v-if="!loaded" class="text-xs text-muted">{{ $t('ttsSettings.loading') }}</p>
+      <p v-if="nothingOn" class="text-xs text-highlight-400">{{ $t('ttsSettings.nothingOn') }}</p>
     </div>
     <div class="mt-4 flex shrink-0 gap-2">
       <button class="btn-primary flex-1" :disabled="!loaded" @click="save">{{ $t('common.save') }}</button>

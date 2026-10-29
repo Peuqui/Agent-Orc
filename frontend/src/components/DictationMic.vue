@@ -21,7 +21,7 @@ const onGpu = computed(
     <button
       type="button"
       class="btn-icon"
-      :class="[TOUCH_FIRST.matches ? 'size-14' : 'size-11', active ? 'animate-pulse text-red-500' : 'text-amber-300', { 'opacity-50': busy }]"
+      :class="[TOUCH_FIRST.matches ? 'size-14' : 'size-11', active ? 'animate-pulse text-accent-500' : 'text-highlight-300', { 'opacity-50': busy }]"
       :disabled="busy"
       :aria-label="active ? $t('dictation.stop') : $t('dictation.start')"
       :title="active ? $t('dictation.stop') : $t('dictation.start')"
@@ -31,7 +31,7 @@ const onGpu = computed(
     </button>
     <span
       v-if="onGpu"
-      class="pointer-events-none absolute -top-0.5 -right-0.5 rounded border border-amber-500 px-1 text-[0.55rem] leading-3.5 font-semibold text-amber-300"
+      class="pointer-events-none absolute -top-0.5 -right-0.5 rounded border border-highlight-500 px-1 text-[0.55rem] leading-3.5 font-semibold text-highlight-300"
       :title="$t('settings.dictationDeviceGpu')"
     >
       GPU

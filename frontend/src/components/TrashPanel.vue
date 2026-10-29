@@ -65,7 +65,7 @@ onMounted(load)
 <template>
   <details
     class="card"
-    :class="dragOver ? 'ring-2 ring-red-400 ring-inset' : ''"
+    :class="dragOver ? 'ring-2 ring-accent-400 ring-inset' : ''"
     :open="open"
     @toggle="open = ($event.target as HTMLDetailsElement).open"
     @dragover.prevent="dragOver = true"
@@ -74,22 +74,22 @@ onMounted(load)
   >
     <summary class="flex cursor-pointer items-center gap-2 px-4 py-3 font-semibold select-none">
       <AppIcon name="trash" />{{ $t('trash.title') }}
-      <span class="text-sm font-normal text-slate-400">{{ entries.length }}</span>
+      <span class="text-sm font-normal text-dim">{{ entries.length }}</span>
     </summary>
-    <div class="flex flex-col gap-3 border-t border-slate-700 p-3">
-      <p class="text-xs text-slate-500">{{ $t('trash.dropHint') }}</p>
+    <div class="flex flex-col gap-3 border-t border-line p-3">
+      <p class="text-xs text-hint">{{ $t('trash.dropHint') }}</p>
       <button v-if="entries.length > 0" class="btn-danger btn-small w-full" @click="dialog = { kind: 'empty' }">
         {{ $t('trash.emptyAll') }}
       </button>
-      <p v-if="entries.length === 0" class="py-2 text-center text-sm text-slate-400">{{ $t('trash.empty') }}</p>
+      <p v-if="entries.length === 0" class="py-2 text-center text-sm text-dim">{{ $t('trash.empty') }}</p>
       <ul v-else class="flex flex-col gap-2">
-        <li v-for="entry in entries" :key="entry.id" class="rounded-lg border border-slate-700 p-2">
+        <li v-for="entry in entries" :key="entry.id" class="rounded-lg border border-line p-2">
           <div class="flex items-start gap-2">
-            <AppIcon :name="entry.is_dir ? 'folder' : 'file'" class="mt-0.5 shrink-0 text-slate-500" />
+            <AppIcon :name="entry.is_dir ? 'folder' : 'file'" class="mt-0.5 shrink-0 text-muted" />
             <div class="min-w-0">
               <p class="truncate text-sm font-medium">{{ baseName(entry.original_path) }}</p>
-              <p class="truncate text-xs text-slate-500" :title="entry.original_path">{{ entry.original_path }}</p>
-              <p class="text-xs text-slate-400">
+              <p class="truncate text-xs text-muted" :title="entry.original_path">{{ entry.original_path }}</p>
+              <p class="text-xs text-dim">
                 {{ $t('trash.deletedAt', { date: formatDate(new Date(entry.deleted_at), locale) }) }}
               </p>
             </div>

@@ -39,14 +39,14 @@ function arrow(message: PeerMessage) {
   <div class="card px-3 pb-2">
     <div class="relative">
       <div class="pointer-events-none absolute inset-0 grid" :style="columns" aria-hidden="true">
-        <div v-for="lane in lanes" :key="lane" class="mx-auto w-px bg-slate-600/60" />
+        <div v-for="lane in lanes" :key="lane" class="mx-auto w-px bg-raised-strong/60" />
       </div>
       <template v-for="day in days" :key="day.key">
         <PeerDay :date="day.date" />
         <div
           v-for="run in day.runs"
           :key="run.message.id"
-          class="relative border-b border-slate-700/50 pt-2 transition-opacity last:border-b-0"
+          class="relative border-b border-line/50 pt-2 transition-opacity last:border-b-0"
           :class="{ 'opacity-30': focus !== null && !involves(run.message, focus) }"
         >
           <div class="relative h-3" :class="colorOf(run.message.from)" aria-hidden="true">
@@ -73,13 +73,13 @@ function arrow(message: PeerMessage) {
                   v-for="(_lane, index) in lanes"
                   v-show="index !== shape.from"
                   :key="index"
-                  class="absolute top-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-current bg-slate-800"
+                  class="absolute top-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-current bg-panel"
                   :style="{ left: `${middle(index)}%` }"
                 />
               </template>
             </template>
           </div>
-          <PeerMessageItem :run="run" class="relative border-t-0 bg-slate-800/90 pt-1" />
+          <PeerMessageItem :run="run" class="relative border-t-0 bg-panel/90 pt-1" />
         </div>
       </template>
     </div>

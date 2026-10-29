@@ -383,7 +383,7 @@ function firstLine(note: Note): string {
       </template>
     </div>
 
-    <p v-if="current === null" class="text-slate-400">{{ $t('notes.empty') }}</p>
+    <p v-if="current === null" class="text-dim">{{ $t('notes.empty') }}</p>
 
     <!-- Wide: list and note side by side; while editing the note itself has two columns (text and
          view), so below xl the list steps aside, as on phones. -->
@@ -398,10 +398,10 @@ function firstLine(note: Note): string {
             <AppIcon name="folder" />
           </button>
         </div>
-        <p v-if="!noteCount" class="text-sm text-slate-500">{{ $t('notes.emptyNotebook') }}</p>
-        <p v-else-if="!sections.length" class="text-sm text-slate-500">{{ $t('notes.noMatch') }}</p>
+        <p v-if="!noteCount" class="text-sm text-muted">{{ $t('notes.emptyNotebook') }}</p>
+        <p v-else-if="!sections.length" class="text-sm text-muted">{{ $t('notes.noMatch') }}</p>
         <div v-for="section in sections" :key="section.folder ?? 'loose'" class="flex flex-col gap-1">
-          <div v-if="section.folder !== null" class="flex items-center gap-1 text-sm text-slate-400">
+          <div v-if="section.folder !== null" class="flex items-center gap-1 text-sm text-dim">
             <AppIcon name="folder" />
             <span class="flex-1 truncate font-medium">{{ section.name }}</span>
             <button class="btn-icon" :title="$t('notes.renameFolder')" :aria-label="$t('notes.renameFolder')" @click="dialog = { kind: 'renameFolder', folder: section.folder }">
@@ -415,11 +415,11 @@ function firstLine(note: Note): string {
             v-for="entry in section.entries"
             :key="entry.index"
             class="card flex flex-col items-start px-3 py-2 text-left"
-            :class="selection?.folder === section.folder && selection?.index === entry.index ? 'ring-2 ring-red-500' : ''"
+            :class="selection?.folder === section.folder && selection?.index === entry.index ? 'ring-2 ring-accent-500' : ''"
             @click="select(section.folder, entry.index)"
           >
             <span class="w-full truncate font-medium">{{ entry.note.title || $t('notes.untitled') }}</span>
-            <span class="w-full truncate text-xs text-slate-500">{{ firstLine(entry.note) }}</span>
+            <span class="w-full truncate text-xs text-muted">{{ firstLine(entry.note) }}</span>
           </button>
         </div>
       </div>
@@ -439,7 +439,7 @@ function firstLine(note: Note): string {
             <AppIcon name="send" />{{ $t('notes.send') }}
           </button>
           <SelectMenu
-            button-class="h-9 rounded-lg border border-slate-600 bg-slate-800 px-2 text-sm text-slate-200"
+            button-class="h-9 rounded-lg border border-line-strong bg-panel px-2 text-sm text-main"
             :model-value="String(selection?.folder ?? '')"
             :options="folderOptions"
             :aria-label="$t('notes.folder')"
@@ -490,7 +490,7 @@ function firstLine(note: Note): string {
               @paste="onPaste"
             />
           </div>
-          <div class="markdown note min-w-0 min-h-[20dvh]" :class="editing ? 'max-md:hidden md:border-l md:border-slate-700 md:pl-4' : ''" v-html="html" @click="onViewClick" />
+          <div class="markdown note min-w-0 min-h-[20dvh]" :class="editing ? 'max-md:hidden md:border-l md:border-line md:pl-4' : ''" v-html="html" @click="onViewClick" />
         </div>
         <!-- The PDFs of the note, with a preview, below its text. -->
         <PdfPreview v-for="pdf in pdfs" :key="pdf.url" :url="pdf.url" :name="pdf.name" />

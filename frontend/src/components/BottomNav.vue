@@ -14,14 +14,14 @@ useHeightVariable('--bottom-nav-height', 'bar')
   <nav ref="bar" class="fixed inset-x-0 bottom-0 z-30">
     <div class="controls-zoom @container">
       <div
-        class="grid auto-cols-fr grid-flow-col border-t border-slate-800 bg-slate-900/95 pb-[calc(env(safe-area-inset-bottom)/var(--controls-zoom))] backdrop-blur @5xl:hidden"
+        class="grid auto-cols-fr grid-flow-col border-t border-line-subtle bg-page/95 pb-[calc(env(safe-area-inset-bottom)/var(--controls-zoom))] backdrop-blur @5xl:hidden"
       >
         <RouterLink
           v-for="item in NAV_ITEMS"
           :key="item.to"
           :to="item.to"
-          class="@container flex min-h-14 flex-col items-center justify-center gap-0.5 text-xs text-slate-400"
-          active-class="!text-red-400"
+          class="@container flex min-h-14 flex-col items-center justify-center gap-0.5 text-xs text-dim"
+          active-class="!text-accent-400"
           :aria-label="$t(item.label)"
         >
           <AppIcon :name="item.icon" />

@@ -23,7 +23,7 @@ async function logout(): Promise<void> {
 </script>
 
 <template>
-  <header ref="header" class="sticky top-0 z-30 border-b border-slate-800 bg-slate-900/95 backdrop-blur">
+  <header ref="header" class="sticky top-0 z-30 border-b border-line-subtle bg-page/95 backdrop-blur">
     <!-- What shows depends on the room in the controls' size (the container: the whole width, the
          same as the bottom bar's, so that exactly one of them has the sections), not on the screen. -->
     <div class="controls-zoom @container">
@@ -38,7 +38,7 @@ async function logout(): Promise<void> {
           <HostSwitcher />
           <SelectMenu
             class="mr-1"
-            button-class="h-6 rounded-md border border-slate-700 bg-slate-800 pr-0.5 pl-1.5 text-xs text-slate-300"
+            button-class="h-6 rounded-md border border-line bg-panel pr-0.5 pl-1.5 text-xs text-soft"
             :model-value="locale"
             :options="LANGUAGE_OPTIONS"
             :aria-label="$t('app.language')"

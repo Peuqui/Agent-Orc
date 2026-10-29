@@ -12,8 +12,8 @@ const { toasts, dismiss } = useToast()
       class="w-full max-w-md rounded-lg border px-4 py-3 text-left text-sm shadow-lg"
       :class="
         toast.kind === 'error'
-          ? 'border-red-700 bg-red-950 text-red-200'
-          : 'border-slate-600 bg-slate-800 text-slate-100'
+          ? 'border-accent-700 bg-accent-950 text-accent-200'
+          : 'border-line-strong bg-panel text-bright'
       "
       @click="dismiss(toast.id)"
     >

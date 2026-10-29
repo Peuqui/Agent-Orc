@@ -21,8 +21,8 @@ onMounted(() => field.value?.focus())
 <template>
   <BaseDialog :title="title" @close="emit('close')">
     <form @submit.prevent="value && emit('submit', value)">
-      <p v-if="hint" class="mb-4 text-sm text-slate-400">{{ hint }}</p>
-      <label class="mb-1 block text-sm text-slate-400" for="dialog-input">{{ label }}</label>
+      <p v-if="hint" class="mb-4 text-sm text-hint">{{ hint }}</p>
+      <label class="mb-1 block text-sm text-dim" for="dialog-input">{{ label }}</label>
       <input
         id="dialog-input"
         ref="field"

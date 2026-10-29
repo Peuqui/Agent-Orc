@@ -23,9 +23,9 @@ const label = computed(() => {
 })
 const tone = computed(() => {
   const cache = props.session.cache
-  if (props.session.busy || cache === null || remaining.value === null) return 'text-slate-400'
-  if (remaining.value <= 0) return 'text-red-400'
-  return remaining.value <= cache.warning_seconds ? 'text-amber-300' : 'text-emerald-400'
+  if (props.session.busy || cache === null || remaining.value === null) return 'text-dim'
+  if (remaining.value <= 0) return 'text-accent-400'
+  return remaining.value <= cache.warning_seconds ? 'text-highlight-300' : 'text-ok-400'
 })
 const handover = computed(() => {
   const progress = props.session.handover.progress
@@ -43,6 +43,6 @@ const title = computed(() => {
 
 <template>
   <span v-if="label" class="flex shrink-0 items-center gap-1 text-xs whitespace-nowrap" :class="tone" :title="title">
-    <span aria-hidden="true">●</span>{{ label }}<span v-if="handover && !compact" class="text-slate-400">· {{ handover }}</span>
+    <span aria-hidden="true">●</span>{{ label }}<span v-if="handover && !compact" class="text-dim">· {{ handover }}</span>
   </span>
 </template>

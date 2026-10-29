@@ -68,7 +68,7 @@ async function toggle(): Promise<void> {
     <div class="flex flex-wrap items-center gap-2 text-sm">
       <AppIcon name="file" />
       <span class="min-w-0 flex-1 truncate font-medium">{{ name }}</span>
-      <span v-if="pageCount" class="text-slate-400">{{ $t('notes.pdf.pages', { count: pageCount }) }}</span>
+      <span v-if="pageCount" class="text-dim">{{ $t('notes.pdf.pages', { count: pageCount }) }}</span>
       <button v-if="pageCount > 1" type="button" class="btn-secondary btn-small" @click="toggle">
         {{ expanded ? $t('notes.pdf.fewer') : $t('notes.pdf.all') }}
       </button>
@@ -77,13 +77,13 @@ async function toggle(): Promise<void> {
       </a>
     </div>
     <!-- Without the first page's canvas there is nothing to draw it on; the others follow on request. -->
-    <canvas data-page="1" class="w-full rounded border border-slate-700 bg-white" />
+    <canvas data-page="1" class="w-full rounded border border-line bg-paper" />
     <template v-if="expanded">
       <canvas
         v-for="page in pageCount - 1"
         :key="page + 1"
         :data-page="page + 1"
-        class="w-full rounded border border-slate-700 bg-white"
+        class="w-full rounded border border-line bg-paper"
       />
     </template>
   </div>

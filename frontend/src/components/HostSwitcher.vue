@@ -72,7 +72,7 @@ function choose(name: string): void {
     <template #trigger="{ toggle }">
       <button
         ref="trigger"
-        class="mr-1 flex h-6 items-center gap-0.5 rounded-md border border-amber-500 bg-slate-800 pr-0.5 pl-1.5 text-xs text-amber-300"
+        class="mr-1 flex h-6 items-center gap-0.5 rounded-md border border-highlight-500 bg-panel pr-0.5 pl-1.5 text-xs text-highlight-300"
         :aria-label="$t('hosts.machine')"
         :title="chosen"
         @click="toggle"
@@ -83,8 +83,8 @@ function choose(name: string): void {
     <button
       v-for="choice in choices"
       :key="choice.name"
-      class="rounded-md px-3 py-2 text-left text-sm hover:bg-slate-700 disabled:text-slate-500 disabled:hover:bg-transparent"
-      :class="choice.name === chosen ? 'text-amber-300' : 'text-slate-300'"
+      class="rounded-md px-3 py-2 text-left text-sm hover:bg-raised disabled:text-muted disabled:hover:bg-transparent"
+      :class="choice.name === chosen ? 'text-highlight-300' : 'text-soft'"
       :disabled="!choice.up"
       @click="choose(choice.name)"
     >

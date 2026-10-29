@@ -5,8 +5,8 @@ import type { HandshakeTag } from '../peerConversations'
 defineProps<{ tags: HandshakeTag[] }>()
 
 const MARKS: Record<HandshakeTag, { symbol: string; classes: string }> = {
-  LGTM: { symbol: '✓', classes: 'border-emerald-700 text-emerald-300' },
-  CONTINUE: { symbol: '↻', classes: 'border-amber-700 text-amber-300' },
+  LGTM: { symbol: '✓', classes: 'border-ok-700 text-ok-300' },
+  CONTINUE: { symbol: '↻', classes: 'border-highlight-700 text-highlight-300' },
 }
 </script>
 

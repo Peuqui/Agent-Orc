@@ -17,7 +17,7 @@ const fileInput = ref<HTMLInputElement>()
 // Capturing the screen is a desktop browser feature; phone browsers have none.
 const screenCaptureSupported = typeof navigator.mediaDevices?.getDisplayMedia === 'function'
 const SCREENSHOT_NAME = 'screenshot.png'
-const ITEM_CLASS = 'flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-slate-700'
+const ITEM_CLASS = 'flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-raised'
 
 
 function choose(input: HTMLInputElement | undefined): void {

@@ -7,7 +7,7 @@ const emit = defineEmits<{ confirm: []; close: [] }>()
 
 <template>
   <BaseDialog :title="title" @close="emit('close')">
-    <p class="mb-5 text-slate-300">{{ message }}</p>
+    <p class="mb-5 text-soft">{{ message }}</p>
     <div class="flex justify-end gap-2">
       <button class="btn-secondary" @click="emit('close')">{{ $t('common.cancel') }}</button>
       <button :class="danger ? 'btn-danger' : 'btn-primary'" @click="emit('confirm')">

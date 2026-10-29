@@ -103,14 +103,14 @@ onMounted(load)
   <details class="card mt-4" :open="open" @toggle="open = ($event.target as HTMLDetailsElement).open">
     <summary class="flex cursor-pointer items-center gap-2 px-4 py-3 font-semibold select-none">
       <AppIcon name="answers" />{{ $t('cleanup.title') }}
-      <span class="text-sm font-normal text-slate-400">{{ everyConversation.length }} · {{ formatSize(totalBytes) }}</span>
+      <span class="text-sm font-normal text-dim">{{ everyConversation.length }} · {{ formatSize(totalBytes) }}</span>
     </summary>
-    <div class="flex flex-col gap-3 border-t border-slate-700 p-3">
-      <p class="text-xs text-slate-500">{{ $t('cleanup.hint') }}</p>
-      <p v-if="everyConversation.length === 0" class="py-2 text-center text-sm text-slate-400">{{ $t('cleanup.empty') }}</p>
+    <div class="flex flex-col gap-3 border-t border-line p-3">
+      <p class="text-xs text-hint">{{ $t('cleanup.hint') }}</p>
+      <p v-if="everyConversation.length === 0" class="py-2 text-center text-sm text-dim">{{ $t('cleanup.empty') }}</p>
       <template v-else>
         <div class="flex flex-wrap items-center gap-2 text-sm">
-          <label class="flex items-center gap-1.5 text-slate-300">
+          <label class="flex items-center gap-1.5 text-soft">
             {{ $t('cleanup.olderThan') }}
             <input v-model.number="olderThanDays" type="number" min="0" class="input w-20 text-sm" />
             {{ $t('cleanup.days') }}
@@ -120,8 +120,8 @@ onMounted(load)
         <button class="btn-danger btn-small w-full" :disabled="chosen.length === 0" @click="confirming = true">
           {{ $t('cleanup.deleteChosen', { count: chosen.length, size: formatSize(chosenBytes) }) }}
         </button>
-        <section v-for="project in projects" :key="project.directory" class="rounded-lg border border-slate-700">
-          <label class="flex items-start gap-2 border-b border-slate-700 p-2">
+        <section v-for="project in projects" :key="project.directory" class="rounded-lg border border-line">
+          <label class="flex items-start gap-2 border-b border-line p-2">
             <input
               type="checkbox"
               class="mt-1"
@@ -130,7 +130,7 @@ onMounted(load)
             />
             <span class="min-w-0">
               <span class="block truncate text-sm font-medium">{{ baseName(project.folder) }}</span>
-              <span class="block truncate text-xs text-slate-500" :title="project.folder">{{ project.folder }}</span>
+              <span class="block truncate text-xs text-muted" :title="project.folder">{{ project.folder }}</span>
             </span>
           </label>
           <ul>
@@ -145,9 +145,9 @@ onMounted(load)
                 />
                 <span class="min-w-0">
                   <span class="block truncate text-sm">{{ conversation.title || conversation.id }}</span>
-                  <span class="block text-xs text-slate-400">
+                  <span class="block text-xs text-dim">
                     {{ formatDate(new Date(conversation.modified * 1000), locale) }} · {{ formatSize(conversation.size) }}
-                    <span v-if="conversation.in_use" class="text-amber-300"> · {{ $t('cleanup.inUse') }}</span>
+                    <span v-if="conversation.in_use" class="text-highlight-300"> · {{ $t('cleanup.inUse') }}</span>
                   </span>
                 </span>
               </label>

@@ -415,7 +415,7 @@ function deleteThis(): void {
 
 <template>
   <!-- Shown once the workspaces have arrived, so nothing flashes up that is replaced a moment later. -->
-  <div class="flex h-full flex-col bg-slate-900">
+  <div class="flex h-full flex-col bg-page">
     <template v-if="loaded">
       <ConfirmDialog
         v-if="deleting"
@@ -429,7 +429,7 @@ function deleteThis(): void {
       <!-- Compact buttons below md, so name, workspaces and usage fit on a phone. -->
       <header
         v-if="!fullscreen"
-        class="controls-zoom flex flex-wrap items-center gap-1 border-b border-slate-800 px-1 py-1 max-md:[&_.btn-icon]:size-8"
+        class="controls-zoom flex flex-wrap items-center gap-1 border-b border-line-subtle px-1 py-1 max-md:[&_.btn-icon]:size-8"
       >
         <!-- No bottom bar in full screen: home is the agents page, the other pages are one tap on. -->
         <RouterLink to="/sessions" class="btn-icon" :aria-label="$t('nav.home')" :title="$t('nav.home')">
@@ -466,7 +466,7 @@ function deleteThis(): void {
           <button
             v-if="speech.available.value"
             class="btn-icon relative"
-            :class="speechAutoRead ? '!text-amber-300 ring-1 ring-amber-500' : ''"
+            :class="speechAutoRead ? '!text-highlight-300 ring-1 ring-highlight-500' : ''"
             :aria-pressed="speechAutoRead"
             :aria-label="$t('answers.autoRead')"
             :title="$t('answers.autoRead')"
@@ -476,7 +476,7 @@ function deleteThis(): void {
             <AppIcon name="speaker" />
             <span
               class="absolute right-0.5 bottom-0.5 rounded px-[3px] text-[9px] leading-tight font-bold"
-              :class="speechAutoRead ? 'bg-amber-500 text-slate-900' : 'bg-slate-600 text-slate-200'"
+              :class="speechAutoRead ? 'bg-highlight-500 text-on-highlight' : 'bg-raised-strong text-main'"
               aria-hidden="true"
             >A</span>
           </button>
@@ -486,7 +486,7 @@ function deleteThis(): void {
             <button class="btn-icon" :aria-label="$t('answers.pause')" :title="$t('answers.pause')" @click="speech.togglePause">
               <AppIcon :name="speech.paused.value ? 'play' : 'pause'" />
             </button>
-            <button class="btn-icon text-red-400" :aria-label="$t('answers.stop')" :title="$t('answers.stop')" @click="speech.stop">
+            <button class="btn-icon text-accent-400" :aria-label="$t('answers.stop')" :title="$t('answers.stop')" @click="speech.stop">
               <AppIcon name="stop" />
             </button>
           </template>
@@ -515,10 +515,10 @@ function deleteThis(): void {
               </button>
             </template>
             <button
-              class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-slate-300 hover:bg-slate-700"
+              class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-soft hover:bg-raised"
               @click="((moreOpen = false), (helpOpen = true))"
             >
-              <AppIcon name="lightbulb" class="text-amber-300" />{{ $t('help.button') }}
+              <AppIcon name="lightbulb" class="text-highlight-300" />{{ $t('help.button') }}
             </button>
           </DropdownMenu>
           <!-- Which machine's workspaces: the same menu as in every other page's header. -->
@@ -531,7 +531,7 @@ function deleteThis(): void {
       <!-- The way back from fullscreen, small in the corner above the columns. -->
       <button
         v-if="fullscreen"
-        class="fixed top-1 right-1 z-40 flex size-8 items-center justify-center rounded-md border border-slate-600 bg-slate-900/80 text-slate-300"
+        class="fixed top-1 right-1 z-40 flex size-8 items-center justify-center rounded-md border border-line-strong bg-page/80 text-soft"
         :aria-label="$t('workspace.leaveFullscreen')"
         :title="$t('workspace.leaveFullscreen')"
         @click="fullscreen = false"
@@ -539,7 +539,7 @@ function deleteThis(): void {
         <AppIcon name="shrink" class="size-4" />
       </button>
 
-      <p v-if="ready && workspace.tabs.length === 0" class="p-6 text-center text-slate-400">{{ $t('workspace.empty') }}</p>
+      <p v-if="ready && workspace.tabs.length === 0" class="p-6 text-center text-dim">{{ $t('workspace.empty') }}</p>
 
       <!-- One scrolling row; 100cqw is its width, so N columns fill it exactly. -->
       <div
@@ -559,10 +559,10 @@ function deleteThis(): void {
             :key="`head-${id}`"
             ref="heads"
             :data-tab-id="id"
-            class="controls-zoom flex cursor-grab touch-pan-x snap-start items-center gap-1 border-b-2 bg-slate-900 py-1 pl-2 text-sm select-none [-webkit-touch-callout:none]"
+            class="controls-zoom flex cursor-grab touch-pan-x snap-start items-center gap-1 border-b-2 bg-page py-1 pl-2 text-sm select-none [-webkit-touch-callout:none]"
             :class="[
-              workspace.active === id ? 'border-red-500 text-slate-100' : 'border-slate-800 text-slate-400',
-              drag?.active && drag.target === id && drag.id !== id ? 'ring-2 ring-amber-400 ring-inset' : '',
+              workspace.active === id ? 'border-accent-500 text-bright' : 'border-line-subtle text-dim',
+              drag?.active && drag.target === id && drag.id !== id ? 'ring-2 ring-highlight-400 ring-inset' : '',
               drag?.active && drag.id === id ? 'opacity-50' : '',
             ]"
             :style="{ gridColumn: column(id), gridRow: '1' }"
@@ -579,7 +579,7 @@ function deleteThis(): void {
               {{ tabName(id) }}
             </button>
             <button
-              class="px-2 text-slate-500 hover:text-slate-200"
+              class="px-2 text-muted hover:text-main"
               :aria-label="$t('workspace.close')"
               data-no-drag
               @click="store.removeTab(id)"
@@ -595,7 +595,7 @@ function deleteThis(): void {
             :data-active="workspace.active === id"
             :src="frameUrl(id)"
             :title="tabName(id)"
-            class="h-full snap-start bg-slate-900"
+            class="h-full snap-start bg-page"
             :class="showTabs && id !== workspace.tabs.at(-1) ? 'w-[calc(100%-var(--divider-width))]' : 'w-full'"
             :style="{ gridColumn: column(id), gridRow: '2' }"
             allow="microphone; clipboard-write"
@@ -608,8 +608,8 @@ function deleteThis(): void {
           <div
             v-for="id in showTabs ? workspace.tabs.slice(0, -1) : []"
             :key="`divider-${id}`"
-            class="relative z-10 w-(--divider-width) cursor-col-resize touch-none justify-self-end border-r border-slate-700 hover:bg-red-500/30 pointer-coarse:bg-slate-700/40 pointer-coarse:after:absolute pointer-coarse:after:inset-y-0 pointer-coarse:after:left-full pointer-coarse:after:w-7 pointer-coarse:after:content-['']"
-            :class="{ 'bg-red-500/40': widths.resize.value?.id === id }"
+            class="relative z-10 w-(--divider-width) cursor-col-resize touch-none justify-self-end border-r border-line hover:bg-accent-500/30 pointer-coarse:bg-raised/40 pointer-coarse:after:absolute pointer-coarse:after:inset-y-0 pointer-coarse:after:left-full pointer-coarse:after:w-7 pointer-coarse:after:content-['']"
+            :class="{ 'bg-accent-500/40': widths.resize.value?.id === id }"
             :style="{ gridColumn: column(id), gridRow: '1 / span 2' }"
             :title="$t('workspace.resize')"
             @pointerdown="widths.onDividerPointerDown($event, id)"

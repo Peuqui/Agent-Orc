@@ -315,15 +315,15 @@ function resumeWith(session: AgentSession, model: string | null, effort: string 
       <span v-for="workspace in workspaceNames" :key="workspace" class="card flex items-center">
         <a
           :href="href({ path: '/workspace', query: { name: workspace } })"
-          class="flex items-center gap-1.5 py-1.5 pl-3 text-sm hover:text-slate-100"
+          class="flex items-center gap-1.5 py-1.5 pl-3 text-sm hover:text-bright"
           :title="elsewhere(workspace) ? $t('workspace.openElsewhere') : undefined"
           @click.prevent="openWorkspaceNamed(workspace)"
         >
           <AppIcon name="workspace" />{{ workspace }}
-          <AppIcon v-if="elsewhere(workspace)" name="external" class="size-3.5 text-slate-500" />
+          <AppIcon v-if="elsewhere(workspace)" name="external" class="size-3.5 text-muted" />
         </a>
         <button
-          class="px-2.5 py-1.5 text-slate-500 hover:text-slate-200"
+          class="px-2.5 py-1.5 text-muted hover:text-main"
           :aria-label="$t('workspace.delete')"
           :title="$t('workspace.delete')"
           @click="deletingWorkspace = workspace"
@@ -340,7 +340,7 @@ function resumeWith(session: AgentSession, model: string | null, effort: string 
       </button>
       <BroadcastButton />
     </div>
-    <p v-if="sorted.length === 0" class="card p-6 text-center text-slate-400">{{ $t('sessions.empty') }}</p>
+    <p v-if="sorted.length === 0" class="card p-6 text-center text-dim">{{ $t('sessions.empty') }}</p>
 
     <!-- As many cards side by side as fit, before the page has to scroll; one column on phones.
          Below 24rem the row with context, effort and ultracode would wrap. -->
@@ -352,7 +352,7 @@ function resumeWith(session: AgentSession, model: string | null, effort: string 
         :data-session="session.id"
         class="card flex touch-pan-y flex-col gap-2 px-4 py-3 select-none [-webkit-touch-callout:none]"
         :class="[
-          drag?.active && drag.target === cardKey(session) && drag.id !== cardKey(session) ? 'ring-2 ring-amber-400' : '',
+          drag?.active && drag.target === cardKey(session) && drag.id !== cardKey(session) ? 'ring-2 ring-highlight-400' : '',
           drag?.active && drag.id === cardKey(session) ? 'opacity-50' : '',
         ]"
         @pointerdown="reorder.onPointerDown($event, cardKey(session))"
@@ -367,10 +367,10 @@ function resumeWith(session: AgentSession, model: string | null, effort: string 
             <h2 class="font-semibold">{{ sessionName(session) }}</h2>
             <CacheAge v-if="session.running" :session="session" />
             <KeepWarmToggle v-if="session.running" :session="session" />
-            <span class="min-w-0 truncate text-xs text-slate-500">{{ session.path }}</span>
-            <span class="text-sm text-slate-400">
+            <span class="min-w-0 truncate text-xs text-muted">{{ session.path }}</span>
+            <span class="text-sm text-dim">
               {{ labels.get(session.profile) ?? session.profile }}
-              <span v-if="session.model" class="text-slate-500"> · {{ session.model }}</span>
+              <span v-if="session.model" class="text-muted"> · {{ session.model }}</span>
             </span>
           </div>
           <!-- Status and the mode the next start uses, on the right: the action row below stays
@@ -378,14 +378,14 @@ function resumeWith(session: AgentSession, model: string | null, effort: string 
           <div class="flex shrink-0 flex-col items-end gap-1">
             <span
               v-if="session.running && session.busy"
-              class="shrink-0 rounded-full bg-amber-900/40 px-2.5 py-0.5 text-xs font-medium text-amber-300"
+              class="shrink-0 rounded-full bg-highlight-900/40 px-2.5 py-0.5 text-xs font-medium text-highlight-300"
             >
               {{ $t('sessions.working') }}
             </span>
             <span
               v-else
               class="shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium"
-              :class="session.running ? 'bg-red-900/40 text-red-300' : 'bg-slate-700 text-slate-300'"
+              :class="session.running ? 'bg-accent-900/40 text-accent-300' : 'bg-raised text-soft'"
             >
               {{
                 session.running
@@ -395,9 +395,9 @@ function resumeWith(session: AgentSession, model: string | null, effort: string 
                     : $t('sessions.exited', { code: session.exit_status })
               }}
             </span>
-            <label v-if="workspaces" class="flex items-center gap-1 text-xs text-slate-400" :title="$t('sessions.workspace')">
+            <label v-if="workspaces" class="flex items-center gap-1 text-xs text-dim" :title="$t('sessions.workspace')">
               <SelectMenu
-                button-class="h-7 rounded-lg border border-slate-600 bg-slate-800 pr-1 pl-1.5 text-xs text-slate-200"
+                button-class="h-7 rounded-lg border border-line-strong bg-panel pr-1 pl-1.5 text-xs text-main"
                 :model-value="workspaceOf(session.id)"
                 :options="workspaceOptions"
                 :aria-label="$t('sessions.workspace')"
@@ -406,11 +406,11 @@ function resumeWith(session: AgentSession, model: string | null, effort: string 
             </label>
             <label
               v-if="permissionModes.get(session.profile)?.length"
-              class="flex items-center gap-1 text-xs text-slate-400"
+              class="flex items-center gap-1 text-xs text-dim"
               :title="$t('permission.title')"
             >
               <SelectMenu
-                button-class="h-7 rounded-lg border border-slate-600 bg-slate-800 pr-1 pl-1.5 text-xs text-slate-200"
+                button-class="h-7 rounded-lg border border-line-strong bg-panel pr-1 pl-1.5 text-xs text-main"
                 :model-value="session.permission_mode"
                 :options="(permissionModes.get(session.profile) ?? []).map((mode) => ({ value: mode, label: permissionLabel(mode) }))"
                 :aria-label="$t('permission.label')"
@@ -441,7 +441,7 @@ function resumeWith(session: AgentSession, model: string | null, effort: string 
         <!-- The context is nearly full: a handover before Claude Code compacts it (also while it works). -->
         <div
           v-if="session.handover.recommended"
-          class="flex flex-wrap items-center gap-2 rounded-lg border border-amber-700 bg-amber-950/40 px-3 py-2 text-sm text-amber-200"
+          class="flex flex-wrap items-center gap-2 rounded-lg border border-highlight-700 bg-highlight-950/40 px-3 py-2 text-sm text-highlight-200"
         >
           <span class="flex-1">{{ $t('handover.advice', { percent: contextPercent(session) }) }}</span>
           <button class="btn-secondary btn-small" :title="$t('handover.requestHint')" @click="requestHandover(session)">
@@ -451,7 +451,7 @@ function resumeWith(session: AgentSession, model: string | null, effort: string 
         <ApprovalRequests :session="session" />
         <div
           v-if="session.effort_pending"
-          class="flex flex-wrap items-center gap-2 rounded-lg border border-amber-700 bg-amber-950/40 px-3 py-2 text-sm text-amber-200"
+          class="flex flex-wrap items-center gap-2 rounded-lg border border-highlight-700 bg-highlight-950/40 px-3 py-2 text-sm text-highlight-200"
         >
           <span class="flex-1">
             {{
@@ -476,7 +476,7 @@ function resumeWith(session: AgentSession, model: string | null, effort: string 
         </div>
         <div
           v-if="session.pending_model"
-          class="flex flex-wrap items-center gap-2 rounded-lg border border-amber-700 bg-amber-950/40 px-3 py-2 text-sm text-amber-200"
+          class="flex flex-wrap items-center gap-2 rounded-lg border border-highlight-700 bg-highlight-950/40 px-3 py-2 text-sm text-highlight-200"
         >
           <span class="flex-1">{{ $t('sessions.modelPending', { model: session.pending_model }) }}</span>
           <button class="btn min-h-9" @click="discardPendingModel(session)">
@@ -544,7 +544,7 @@ function resumeWith(session: AgentSession, model: string | null, effort: string 
     </ul>
 
     <BaseDialog v-if="effortChange" :title="$t('agent.effort')" @close="cancelEffort">
-      <p class="mb-5 text-slate-300">
+      <p class="mb-5 text-soft">
         {{
           $t(effortMessage(effortChange.session), {
             name: sessionName(effortChange.session),

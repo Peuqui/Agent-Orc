@@ -48,41 +48,41 @@ watch(speechEngine, loadChoices)
 </script>
 
 <template>
-  <div v-if="speech.available.value" class="flex flex-col gap-3 text-sm text-slate-300">
-    <label v-if="speechEngines.length > 1" class="flex flex-col gap-1 text-slate-400">
+  <div v-if="speech.available.value" class="flex flex-col gap-3 text-sm text-soft">
+    <label v-if="speechEngines.length > 1" class="flex flex-col gap-1 text-dim">
       {{ $t('answers.engine') }}
       <SelectMenu
         v-model="speechEngine"
         :options="speechEngines.map((engine) => ({ value: engine.id, label: engine.label }))"
-        button-class="input text-sm text-slate-200"
+        button-class="input text-sm text-main"
       />
     </label>
     <button v-if="speech.engine.value?.hasSettings" class="btn-secondary btn-small w-full justify-center" @click="emit('configure')">
       {{ $t('ttsSettings.open') }}
     </button>
-    <label v-else class="flex flex-col gap-1 text-slate-400">
+    <label v-else class="flex flex-col gap-1 text-dim">
       {{ $t(choiceLabel) }}
-      <SelectMenu v-model="choice" :options="choiceOptions" button-class="input text-sm text-slate-200" />
+      <SelectMenu v-model="choice" :options="choiceOptions" button-class="input text-sm text-main" />
     </label>
     <div v-if="speech.engine.value?.usesTempo" class="flex flex-col gap-1">
       <div class="flex gap-2">
-        <label class="flex min-w-0 flex-1 flex-col gap-0.5 text-slate-400">
+        <label class="flex min-w-0 flex-1 flex-col gap-0.5 text-dim">
           {{ $t('answers.tempo') }}
           <FactorInput v-model="speechRate" :placeholder="tempoPlaceholder" />
         </label>
-        <label class="flex min-w-0 flex-1 flex-col gap-0.5 text-slate-400">
+        <label class="flex min-w-0 flex-1 flex-col gap-0.5 text-dim">
           {{ $t('answers.pitch') }}
           <FactorInput v-model="speechPitch" :placeholder="tempoPlaceholder" />
         </label>
       </div>
-      <p class="text-xs text-slate-500">{{ $t(forService ? 'answers.tempoPitchHintService' : 'answers.tempoPitchHintBrowser') }}</p>
+      <p class="text-xs text-hint">{{ $t(forService ? 'answers.tempoPitchHintService' : 'answers.tempoPitchHintBrowser') }}</p>
     </div>
-    <ToggleSwitch class="h-7 self-start text-slate-300" :checked="speechAnnounceName" @click="speechAnnounceName = !speechAnnounceName">
+    <ToggleSwitch class="h-7 self-start text-soft" :checked="speechAnnounceName" @click="speechAnnounceName = !speechAnnounceName">
       {{ $t('answers.announceName') }}
     </ToggleSwitch>
-    <label class="flex flex-col gap-1 text-slate-400">
+    <label class="flex flex-col gap-1 text-dim">
       {{ $t('answers.maxChars') }}
-      <input v-model.number="speechMaxChars" type="number" min="100" step="100" class="input text-sm text-slate-200" />
+      <input v-model.number="speechMaxChars" type="number" min="100" step="100" class="input text-sm text-main" />
     </label>
   </div>
 </template>

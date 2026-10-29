@@ -177,35 +177,35 @@ async function start(resume: boolean, conversation: string | null = null): Promi
 
 <template>
   <BaseDialog :title="$t('agent.title', { name: baseName(path) })" @close="emit('close')">
-    <label v-if="needsSuffix" class="mb-5 flex flex-col gap-1 text-sm text-slate-400">
+    <label v-if="needsSuffix" class="mb-5 flex flex-col gap-1 text-sm text-dim">
       {{ $t('agent.suffix') }}
       <span class="flex items-center gap-1">
-        <span class="font-mono text-slate-200">{{ baseName(path) }}-</span>
+        <span class="font-mono text-main">{{ baseName(path) }}-</span>
         <!-- Required: the dialog cannot start the agent until the name is its own. -->
         <input v-model="suffix" class="input min-w-0 flex-1 font-mono text-sm" :placeholder="$t('agent.suffixPlaceholder')" />
       </span>
-      <span class="text-xs" :class="suffixTaken ? 'text-red-400' : 'text-slate-500'">
+      <span class="text-xs" :class="suffixTaken ? 'text-accent-400' : 'text-hint'">
         {{ suffixTaken ? $t('agent.suffixTaken') : $t('agent.suffixHint') }}
       </span>
     </label>
     <fieldset class="mb-5 flex flex-col gap-2">
-      <legend class="mb-2 text-sm text-slate-400">{{ $t('agent.profile') }}</legend>
+      <legend class="mb-2 text-sm text-dim">{{ $t('agent.profile') }}</legend>
       <label
         v-for="profile in profiles"
         :key="profile.name"
         class="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border px-3"
-        :class="selected === profile.name ? 'border-red-500 bg-red-900/20' : 'border-slate-600'"
+        :class="selected === profile.name ? 'border-accent-500 bg-accent-900/20' : 'border-line-strong'"
       >
-        <input v-model="selected" type="radio" :value="profile.name" class="accent-red-500" />
+        <input v-model="selected" type="radio" :value="profile.name" class="accent-accent-500" />
         {{ profile.label }}
       </label>
     </fieldset>
-    <p v-if="profile?.hint" class="mb-4 rounded-lg border border-amber-700 bg-amber-950/40 px-3 py-2 text-sm text-amber-200">
+    <p v-if="profile?.hint" class="mb-4 rounded-lg border border-highlight-700 bg-highlight-950/40 px-3 py-2 text-sm text-highlight-200">
       {{ profile.hint }}
     </p>
-    <label v-if="profile?.models" class="mb-5 flex flex-col gap-1 text-sm text-slate-400">
+    <label v-if="profile?.models" class="mb-5 flex flex-col gap-1 text-sm text-dim">
       {{ $t('agent.model') }}
-      <SelectMenu v-model="model" :options="modelOptions(models, modelNote)" button-class="input text-sm text-slate-200" />
+      <SelectMenu v-model="model" :options="modelOptions(models, modelNote)" button-class="input text-sm text-main" />
     </label>
     <ReasoningControl
       v-if="effortLevels.length"
@@ -214,17 +214,17 @@ async function start(resume: boolean, conversation: string | null = null): Promi
       :ultracode-offered="profile?.ultracode ?? false"
       class="mb-5"
     />
-    <label class="mb-5 flex flex-col gap-1 text-sm text-slate-400">
+    <label class="mb-5 flex flex-col gap-1 text-sm text-dim">
       {{ $t('agent.workspace') }}
-      <SelectMenu v-model="workspaceTarget" :options="workspaceOptions" button-class="input text-sm text-slate-200" />
+      <SelectMenu v-model="workspaceTarget" :options="workspaceOptions" button-class="input text-sm text-main" />
     </label>
     <div class="mb-5 flex flex-col gap-2">
-      <ToggleSwitch class="h-7 self-start text-sm text-slate-300" :checked="inWorktree" @click="inWorktree = !inWorktree">
+      <ToggleSwitch class="h-7 self-start text-sm text-soft" :checked="inWorktree" @click="inWorktree = !inWorktree">
         {{ $t('agent.inWorktree') }}
       </ToggleSwitch>
       <template v-if="inWorktree">
         <input v-model="branch" class="input font-mono text-sm" :aria-label="$t('agent.branch')" :placeholder="$t('agent.branch')" />
-        <p class="text-xs text-slate-500">{{ $t('agent.worktreeHint', { name: `${baseName(path)}.worktrees/${branch}` }) }}</p>
+        <p class="text-xs text-hint">{{ $t('agent.worktreeHint', { name: `${baseName(path)}.worktrees/${branch}` }) }}</p>
       </template>
     </div>
     <div class="flex flex-col gap-2">
@@ -237,8 +237,8 @@ async function start(resume: boolean, conversation: string | null = null): Promi
       </button>
       <button class="btn" @click="emit('close')">{{ $t('common.cancel') }}</button>
     </div>
-    <div v-if="conversations.length" class="mt-5 border-t border-slate-700 pt-4">
-      <h3 class="mb-2 text-sm text-slate-400">{{ $t('agent.earlier') }}</h3>
+    <div v-if="conversations.length" class="mt-5 border-t border-line pt-4">
+      <h3 class="mb-2 text-sm text-dim">{{ $t('agent.earlier') }}</h3>
       <input
         v-model="query"
         type="search"
@@ -247,18 +247,18 @@ async function start(resume: boolean, conversation: string | null = null): Promi
         :aria-label="$t('agent.searchConversations')"
       />
       <ul v-if="hits" class="flex max-h-64 flex-col gap-1 overflow-y-auto">
-        <li v-if="hits.length === 0" class="px-3 py-2 text-sm text-slate-500">{{ $t('agent.noHits') }}</li>
+        <li v-if="hits.length === 0" class="px-3 py-2 text-sm text-muted">{{ $t('agent.noHits') }}</li>
         <li v-for="hit in hits" :key="hit.id">
           <button
-            class="flex w-full flex-col items-start gap-0.5 rounded-lg px-3 py-2 text-left hover:bg-slate-700"
+            class="flex w-full flex-col items-start gap-0.5 rounded-lg px-3 py-2 text-left hover:bg-raised"
             :disabled="busy || !nameReady"
             @click="start(true, hit.id)"
           >
-            <span class="w-full truncate text-sm text-slate-100">{{ hit.title || $t('agent.untitled') }}</span>
-            <span class="line-clamp-2 text-xs text-slate-400">
-              {{ marked(hit.excerpt)[0] }}<mark class="rounded bg-amber-400/30 px-0.5 text-amber-200">{{ marked(hit.excerpt)[1] }}</mark>{{ marked(hit.excerpt)[2] }}
+            <span class="w-full truncate text-sm text-bright">{{ hit.title || $t('agent.untitled') }}</span>
+            <span class="line-clamp-2 text-xs text-dim">
+              {{ marked(hit.excerpt)[0] }}<mark class="rounded bg-highlight-400/30 px-0.5 text-highlight-200">{{ marked(hit.excerpt)[1] }}</mark>{{ marked(hit.excerpt)[2] }}
             </span>
-            <span class="text-xs text-slate-500">
+            <span class="text-xs text-muted">
               {{ formatDate(new Date(hit.modified * MILLISECONDS_PER_SECOND), locale) }}
               · {{ $t('agent.hitCount', { count: hit.matches }) }}
             </span>
@@ -268,17 +268,17 @@ async function start(resume: boolean, conversation: string | null = null): Promi
       <ul v-else class="flex max-h-64 flex-col gap-1 overflow-y-auto">
         <li v-for="conversation in conversations" :key="conversation.id">
           <button
-            class="flex w-full flex-col items-start rounded-lg px-3 py-2 text-left hover:bg-slate-700"
+            class="flex w-full flex-col items-start rounded-lg px-3 py-2 text-left hover:bg-raised"
             :disabled="busy || !nameReady"
             @click="start(true, conversation.id)"
           >
-            <span class="w-full truncate text-sm text-slate-100">
+            <span class="w-full truncate text-sm text-bright">
               {{ conversation.title || $t('agent.untitled') }}
             </span>
-            <span class="text-xs text-slate-500">
+            <span class="text-xs text-muted">
               {{ formatDate(new Date(conversation.modified * MILLISECONDS_PER_SECOND), locale) }}
               · {{ formatSize(conversation.size) }}
-              <span v-if="conversation.recently_active" class="text-amber-400">
+              <span v-if="conversation.recently_active" class="text-highlight-400">
                 · {{ $t('agent.recentlyActive') }}
               </span>
             </span>

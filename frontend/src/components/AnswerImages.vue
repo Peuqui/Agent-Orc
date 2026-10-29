@@ -16,7 +16,7 @@ function openPicture(address: string): void {
   <div v-if="urls.length" class="mt-2 flex flex-col gap-2">
     <button
       type="button"
-      class="flex w-fit items-center gap-1.5 rounded-md border border-slate-600 px-2 py-0.5 text-xs text-slate-300 hover:bg-slate-700"
+      class="flex w-fit items-center gap-1.5 rounded-md border border-line-strong px-2 py-0.5 text-xs text-soft hover:bg-raised"
       :aria-expanded="open"
       @click="open = !open"
     >
@@ -29,7 +29,7 @@ function openPicture(address: string): void {
         :src="url"
         :alt="$t('answers.picture')"
         loading="lazy"
-        class="h-20 w-28 shrink-0 cursor-zoom-in rounded border border-slate-600 object-cover"
+        class="h-20 w-28 shrink-0 cursor-zoom-in rounded border border-line-strong object-cover"
         @click="openPicture(url)"
       />
     </div>
