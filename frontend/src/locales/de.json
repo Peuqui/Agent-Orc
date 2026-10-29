@@ -307,7 +307,7 @@
     "dictationDevice_auto": "Automatik",
     "dictationDeviceGpu": "Ein Modell ist auf der GPU geladen",
     "dictationSendsAtOnce": "Diktat sofort senden",
-    "dictationSendsAtOnceHint": "Die Aufnahme geht nach dem Erkennen gleich an den Agenten, ohne Druck auf Senden; ein Entwurf im Feld geht mit. Gilt für alle Geräte.",
+    "dictationSendsAtOnceHint": "Die Aufnahme geht nach dem Erkennen gleich an den Agenten, ohne Druck auf Senden; ein Entwurf im Feld geht mit. Ein durch einen Fehler abgebrochenes Diktat bleibt zum Prüfen im Feld. Gilt für alle Geräte.",
     "sections": {
       "display": "Anzeige",
       "dictation": "Diktat",

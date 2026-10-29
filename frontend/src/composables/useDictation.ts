@@ -41,7 +41,9 @@ export type DictationState = 'idle' | 'recording' | 'transcribing' | 'listening'
  */
 
 export function useDictation(
-  onText: (text: string) => void,
+  /** `interrupted`: the dictation ended by an error, so what came is maybe not all that was said: it is never
+   * sent without the user seeing it. */
+  onText: (text: string, interrupted: boolean) => void,
   onError: (error: unknown) => void,
   /** The agent whose field is dictated into: transcribed on the page at the top of the tab (dictationHost.ts). */
   sessionId?: string,
@@ -66,6 +68,7 @@ export function useDictation(
   // Only the microphone button (or an error) ends listening: the browser stops by itself after a silence and is
   // started again then, so a pause to think does not end the dictation. What was heard comes as one text at the end.
   let ending = false
+  let interrupted = false
   let heard: string[] = []
   onScopeDispose(() => {
     ending = true
@@ -121,7 +124,7 @@ export function useDictation(
     failedAudio.value = null
     try {
       const text = sessionId === undefined ? (await api.dictate(audio, device.value)).text : await transcribeForAgent(sessionId, audio, device.value)
-      if (text) onText(text)
+      if (text) onText(text, false)
     } catch (error) {
       failedAudio.value = audio
       onError(error)
@@ -147,6 +150,7 @@ export function useDictation(
     listener.onerror = (event) => {
       if (event.error === 'no-speech') return
       ending = true
+      interrupted = true
       onError(new Error(event.error))
     }
     listener.onend = () => {
@@ -156,6 +160,7 @@ export function useDictation(
           return
         } catch (error) {
           // Some browsers start only from a tap (Safari), which the restart is not: the dictation ends here.
+          interrupted = true
           onError(error)
         }
       }
@@ -164,10 +169,11 @@ export function useDictation(
       state.value = 'idle'
       const text = heard.filter(Boolean).join(' ')
       heard = []
-      if (text) onText(text)
+      if (text) onText(text, interrupted)
     }
     recognition = listener
     ending = false
+    interrupted = false
     listener.start()
     playBeep(START_BEEP)
     state.value = 'listening'

@@ -33,12 +33,13 @@ const text = draftOf(props.sessionId)
 const field = ref<HTMLTextAreaElement>()
 
 const { dictationSendsAtOnce } = useSettings()
-const dictation = reactive(useDictation(async (dictated) => {
+const dictation = reactive(useDictation(async (dictated, interrupted) => {
   appendDictated(props.sessionId, dictated)
   // Longer than the field is high: the end, where the new words are, stays in view.
   await nextTick()
   showEnd()
-  if (dictationSendsAtOnce.value) {
+  // An interrupted dictation stays in the field: what was recognised before the error is for the user to check.
+  if (dictationSendsAtOnce.value && !interrupted) {
     await submit()
     return
   }

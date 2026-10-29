@@ -307,7 +307,7 @@
     "dictationDevice_auto": "Automatic",
     "dictationDeviceGpu": "A model is loaded on the GPU",
     "dictationSendsAtOnce": "Send a dictation at once",
-    "dictationSendsAtOnceHint": "The recording goes to the agent as soon as it is recognised, without pressing send; a draft in the field goes with it. For every device.",
+    "dictationSendsAtOnceHint": "The recording goes to the agent as soon as it is recognised, without pressing send; a draft in the field goes with it. A dictation cut off by an error stays in the field to be checked. For every device.",
     "sections": {
       "display": "Display",
       "dictation": "Dictation",
