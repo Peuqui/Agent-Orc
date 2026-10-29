@@ -25,11 +25,11 @@ export function focusApproval(page: Document | null | undefined): boolean {
   return first !== null && first !== undefined
 }
 
-/** A context menu asked for from the keyboard (the Menu key, Shift+F10), not by a click: it has no
- * pointer. Its event comes on Windows when the key is let go, so the key itself is not watched. The
- * event can come from a column's window, whose PointerEvent is another one (no instanceof). */
-export function menuFromKeyboard(event: Event): boolean {
-  return 'pointerId' in event && event.pointerId === -1
+/** A context menu asked for from the keyboard (the Menu key, Shift+F10), not by a click: no mouse
+ * button pressed it (-1; a right click is 2). Its event comes on Windows when the key is let go,
+ * so the key itself is not watched. */
+export function menuFromKeyboard(event: MouseEvent): boolean {
+  return event.button === -1
 }
 
 /** A sideways swipe in the terminal; detail: 1 next column, -1 previous. */
