@@ -96,7 +96,7 @@ onBeforeUnmount(stop)
   >
     <div class="absolute inset-y-2 left-1/2 w-0.5 -translate-x-1/2 rounded-full bg-raised" />
     <div
-      class="absolute top-1/2 left-1/2 h-12 w-full -translate-x-1/2 -translate-y-1/2 rounded-full border border-line-stronger bg-raised-strong"
+      class="absolute top-1/2 left-1/2 h-12 w-full -translate-x-1/2 -translate-y-1/2 rounded-full border border-line-strong bg-raised-strong"
       :class="{ 'border-highlight-300 bg-highlight-300/30': pulling }"
       :style="{ marginTop: `${offset}px` }"
     />

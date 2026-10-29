@@ -195,7 +195,7 @@ window.addEventListener(COLUMN_FULLSCREEN_EVENT, followFullscreen)
 
 // xterm.js draws on a canvas and takes its colours as values: they come from the theme (theme.css).
 const themeStyle = getComputedStyle(document.documentElement)
-const themeColor = (name: string) => themeStyle.getPropertyValue(`--color-terminal-${name}`).trim()
+const themeColor = (name: string) => themeStyle.getPropertyValue(`--color-${name}`).trim()
 
 const terminal = new Terminal({
   fontSize: fontSize.value,
@@ -206,10 +206,10 @@ const terminal = new Terminal({
   // The unicode API of the addon below is still marked as proposed.
   allowProposedApi: true,
   theme: {
-    background: themeColor('background'),
-    foreground: themeColor('foreground'),
-    cursor: themeColor('cursor'),
-    selectionBackground: themeColor('selection'),
+    background: themeColor('page'),
+    foreground: themeColor('bright'),
+    cursor: themeColor('accent-500'),
+    selectionBackground: themeColor('accent-900'),
   },
 })
 const fit = new FitAddon()

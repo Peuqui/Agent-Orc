@@ -27,5 +27,5 @@ export function usageTone(level: UsageLevel): { bar: string; text: string; ring:
     return { bar: 'bg-highlight-500', text: 'text-highlight-400', ring: 'stroke-highlight-300' }
   }
   // The context ring is coloured from the start, like Claude Code's.
-  return { bar: 'bg-dim', text: 'text-dim', ring: 'stroke-added-500' }
+  return { bar: 'bg-dim', text: 'text-dim', ring: 'stroke-ok-400' }
 }

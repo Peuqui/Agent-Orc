@@ -77,8 +77,8 @@ const STATUS_KEYS: Record<string, string> = { M: 'modified', A: 'added', D: 'del
 
 function lineClass(line: string): string {
   if (line.startsWith('+++') || line.startsWith('---')) return 'text-muted'
-  if (line.startsWith('+')) return 'bg-added-950/60 text-added-300'
-  if (line.startsWith('-')) return 'bg-accent-950/60 text-accent-300'
+  if (line.startsWith('+')) return 'bg-ok-900/60 text-ok-300'
+  if (line.startsWith('-')) return 'bg-accent-900/60 text-accent-300'
   if (line.startsWith('@@')) return 'text-hunk'
   if (line.startsWith('diff ') || line.startsWith('index ')) return 'text-muted'
   return 'text-soft'
@@ -107,7 +107,7 @@ function lineClass(line: string): string {
             <span
               class="w-20 shrink-0 rounded px-1.5 py-0.5 text-center text-xs"
               :class="{
-                'bg-added-900/50 text-added-300': file.status === '??' || file.status === 'A',
+                'bg-ok-900/50 text-ok-300': file.status === '??' || file.status === 'A',
                 'bg-accent-900/50 text-accent-300': file.status === 'D',
                 'bg-highlight-900/50 text-highlight-300': file.status === 'M' || file.status === 'R',
                 'bg-raised text-soft': !STATUS_KEYS[file.status],

@@ -153,7 +153,7 @@ function lastLine(conversation: Conversation): { text: string; tags: HandshakeTa
   return { text: `${laneLabel(last.from)}: ${clip(text, LAST_LINE_CHARS, 1)}`, tags }
 }
 const laneColumns = computed(() => ({ gridTemplateColumns: `repeat(${lanes.value.length}, minmax(0, 1fr))` }))
-const chosenClass = 'border-info-500 bg-info-900/40 text-info-200'
+const chosenClass = 'border-info-400 bg-info-900/40 text-info-300'
 
 // What a peer does, as AI-Connect's hooks in its session report it.
 const STATE_COLORS: Record<string, string> = {
@@ -404,7 +404,7 @@ function replyPlaceholder(recipients: string[]): string {
               v-for="name in offlineRecipients"
               :key="name"
               type="button"
-              class="rounded-full border border-dashed border-info-500 px-2 py-0.5 text-info-200"
+              class="rounded-full border border-dashed border-info-400 px-2 py-0.5 text-info-300"
               :title="$t('peers.offline')"
               @click="toggleRecipient(name)"
             >

@@ -270,7 +270,7 @@ function jog(lines: number): void {
       <p v-if="loaded && !turns.length" class="text-dim">{{ $t('answers.empty') }}</p>
       <section v-for="entry in shown" :key="entry.turn.id" class="flex flex-col gap-2">
         <!-- What the user asked: a few lines, more on a click. -->
-        <div :data-anchor="entry.turn.id" class="rounded-lg border-l-4 border-info-700/70 bg-info-950/40 px-3 py-2 text-sm text-soft">
+        <div :data-anchor="entry.turn.id" class="rounded-lg border-l-4 border-info-600/70 bg-info-900/40 px-3 py-2 text-sm text-soft">
           <FoldedText v-if="uploadMentions(entry.turn.prompt).text" :text="uploadMentions(entry.turn.prompt).text" :lines="USER_LINES" />
           <AnswerImages :urls="pictureUrls(entry.turn.id, entry.turn.prompt, entry.turn.images)" />
           <!-- Said on the Echo: as the recognition heard it, to compare with the recording. -->
@@ -291,7 +291,7 @@ function jog(lines: number): void {
           <div
             v-if="item.kind === 'user'"
             :data-anchor="item.id"
-            class="ml-4 rounded-lg border-l-4 border-info-700/70 bg-info-950/40 px-3 py-2 text-sm text-soft"
+            class="ml-4 rounded-lg border-l-4 border-info-600/70 bg-info-900/40 px-3 py-2 text-sm text-soft"
             :class="item.pending ? 'opacity-60' : ''"
           >
             <FoldedText v-if="uploadMentions(item.text).text" :text="uploadMentions(item.text).text" :lines="USER_LINES" />

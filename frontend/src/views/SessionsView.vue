@@ -33,7 +33,7 @@ const { zoomStyle } = useViewZoom(zoomed)
         <!-- A thin line that runs out to both ends by its opacity, with a glow that follows it (drop-shadow, so it shines in the middle only). -->
         <div
           v-if="index > 0"
-          class="my-8 h-[1.5px] bg-[linear-gradient(90deg,transparent,var(--color-glow-line)_50%,transparent)] [filter:drop-shadow(0_0_4px_var(--color-glow))]"
+          class="my-8 h-[1.5px] bg-[linear-gradient(90deg,transparent,var(--color-highlight-500)_50%,transparent)] [filter:drop-shadow(0_0_4px_color-mix(in_oklab,var(--color-highlight-400)_70%,transparent))]"
           aria-hidden="true"
         />
         <div class="mb-3 flex items-center gap-2">

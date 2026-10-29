@@ -202,7 +202,7 @@ function onAgentStarted(): void {
     <div ref="zoomed" class="min-w-0" :style="zoomStyle">
       <div
         class="mb-3 flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm"
-        :class="unlocked ? 'border-accent-700 bg-accent-950/60 text-accent-200' : 'border-line text-dim'"
+        :class="unlocked ? 'border-accent-700 bg-accent-900/60 text-accent-300' : 'border-line text-dim'"
       >
         <span class="flex min-w-0 items-center gap-2" :title="scope?.base_dir">
           <AppIcon :name="unlocked ? 'unlock' : 'lock'" />

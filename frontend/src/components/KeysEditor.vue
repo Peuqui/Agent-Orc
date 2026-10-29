@@ -164,7 +164,7 @@ async function reset(): Promise<void> {
           <!-- Dropped here, a key goes to the end of this row (also into an empty one). -->
           <span
             :data-key="`${ROW_END}${index}`"
-            class="min-w-12 flex-1 rounded-md border border-dashed px-2 py-1 text-center text-xs text-faint"
+            class="min-w-12 flex-1 rounded-md border border-dashed px-2 py-1 text-center text-xs text-muted"
             :class="drag?.active && drag.target === `${ROW_END}${index}` ? 'border-highlight-400' : 'border-line'"
           >
             {{ $t('keysEditor.rowEnd') }}
