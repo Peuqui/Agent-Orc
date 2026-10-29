@@ -50,6 +50,8 @@ export const ICONS = {
   peers: 'M3 4h12v8H8l-3 3v-3H3z M18 8h3v9h-2v3l-3-3h-6v-2',
   pause: 'M8 5v14 M16 5v14',
   speaker: 'M4 10v4h3l5 4V6l-5 4z M16 9a4 4 0 0 1 0 6',
+  // The speaker with an arrow down: reads this answer and the ones after it.
+  speakerFrom: 'M3 9v4h2.5l4 3.5V5.5l-4 3.5z M17 5v12 M13.5 13.5L17 17l3.5-3.5',
   menu: 'M4 6h16 M4 12h16 M4 18h16',
   mic: 'M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3z M5 11a7 7 0 0 0 14 0 M12 18v3',
   check: 'M5 12l5 5 9-10',

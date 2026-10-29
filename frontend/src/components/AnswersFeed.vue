@@ -342,15 +342,22 @@ function jog(lines: number): void {
               <template v-if="speech.available.value">
                 <button
                   type="button"
-                  class="btn-secondary btn-small ml-auto"
+                  class="btn-secondary btn-small-icon ml-auto"
                   :class="speech.playing.value === item.id ? 'animate-pulse' : ''"
                   :title="$t('answers.readThis')"
+                  :aria-label="$t('answers.readThis')"
                   @click="void speech.play(speakable([item]), markReadAloud)"
                 >
-                  <AppIcon name="speaker" />{{ $t('answers.read') }}
+                  <AppIcon name="speaker" />
                 </button>
-                <button type="button" class="btn-secondary btn-small" :title="$t('answers.readFromHereHint')" @click="readFrom(item)">
-                  {{ $t('answers.readFromHere') }}
+                <button
+                  type="button"
+                  class="btn-secondary btn-small-icon"
+                  :title="$t('answers.readFromHereHint')"
+                  :aria-label="$t('answers.readFromHereHint')"
+                  @click="readFrom(item)"
+                >
+                  <AppIcon name="speakerFrom" />
                 </button>
               </template>
             </div>
