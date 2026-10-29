@@ -382,7 +382,6 @@
           "**„+“** fügt einen laufenden Agenten als Spalte hinzu, „− n +“ legt fest, wie viele Spalten den Bildschirm füllen.",
           "Spaltenkopf ziehen sortiert die Spalten; auf den Namen einer anderen Arbeitsfläche oben fallen lassen verschiebt den Agenten dorthin.",
           "Der Trenner zwischen zwei Spalten verschiebt ihre Grenze: Ziehen (am Touch-Bildschirm genügt Berühren und Schieben, kein langes Drücken), und was die eine Spalte gewinnt, verliert die andere, die Breite aller zusammen bleibt. Doppelklick auf den Trenner macht diese zwei Spalten wieder gleich breit; der Knopf mit den zwei Pfeilen neben „− n +“ (erscheint, sobald eine Breite verändert ist) setzt alle zurück. Die Breiten sind nur auf diesem Gerät gespeichert, da Bildschirme verschieden sind.",
-          "**Tastenkürzel am Rechner**: Alt+Umschalt+1 … 9 springt in die Spalte, Alt+Umschalt+← / → zur vorigen oder nächsten Arbeitsfläche. Die Menü-Taste (oder Umschalt+F10) springt zur nächsten Spalte, deren Agent um eine Freigabe bittet, auf ihren ersten Knopf; Tab wechselt zwischen den Knöpfen, Enter wählt, Esc geht ohne Entscheidung zurück zur Eingabe. Ein weiterer Druck bringt die nächste Anfrage. Wo die Tastatur steht, zeigt ein bernsteinfarbener Rahmen.",
           "Am Handy zeigt die Arbeitsfläche eine Spalte auf einmal; seitlich im Terminal wischen holt die nächste (nach links) oder vorige (nach rechts), senkrecht wischen scrollt.",
           "**Kachel-Symbol oben links**: alle Seiten (Agenten, Dateien, Verbrauch …) – die Arbeitsfläche hat keine Leiste unten, damit das Terminal den Platz bekommt.",
           "**Vollbild** (Symbol mit vier Ecken): nur noch Terminal und Eingabefeld, wo möglich auch ohne Browserleisten; der kleine Knopf oben rechts holt alles zurück.",
@@ -441,6 +440,18 @@
         "title": "Verbrauch",
         "items": [
           "Tokens aus allen Claude-Gesprächen auf diesem Rechner, pro Tag, Projekt und Modell, für 7, 14 oder 30 Tage – auch aus dem Terminal, VS Code und von Hilfsagenten. Große Zahlen stehen in der Sprache der Oberfläche (Tsd., Mio., Mrd., Bio., Brd. beziehungsweise k, M, B, T, Q)."
+        ]
+      },
+      {
+        "title": "Tastenkürzel",
+        "items": [
+          "**Spalten und Arbeitsflächen**: Alt+Umschalt+1 … 9 springt in diese Spalte der Arbeitsfläche, Alt+Umschalt+← / → zur vorigen oder nächsten Arbeitsfläche (am Ende geht es von vorn weiter). Strg+Ziffer geht nicht, die behält der Browser für seine Tabs.",
+          "**Freigaben**: Die Menü-Taste (mit dem Listen-Symbol, links neben der rechten Strg-Taste; ohne sie Umschalt+F10) springt zur nächsten Spalte, deren Agent um eine Freigabe bittet, auf ihren ersten Knopf („Erlauben“ oder die Freigabe des Plans). Ein weiterer Druck bringt die nächste Anfrage; wartet keine, kommt eine kurze Meldung. Tab und Umschalt+Tab wechseln zwischen den Knöpfen und dem Feld für den Hinweis, Enter wählt, Esc geht ohne Entscheidung zurück zur Eingabe. Die Anfrage holt sich die Tastatur nicht selbst, damit ein Enter beim Tippen nichts erlaubt. Wo die Tastatur steht, zeigt ein bernsteinfarbener Rahmen.",
+          "**Eingabefeld unten**: Enter sendet, Umschalt+Enter macht eine neue Zeile; ein Wort, das die Bildschirmtastatur noch zusammensetzt, geht nicht halb fertig raus. Esc schickt Esc an den Agenten (wie im Terminal: er hält an), außer ein Menü des Felds (Anhänge, Vorlagen) ist offen, dann schließt Esc nur das. Im Feld für Nachrichten an andere Agenten (Gespräche) sendet Enter ebenso.",
+          "**Terminal**: Die Tasten gehen an den Agenten oder die Shell (Tab, Umschalt+Tab, Pfeile, Strg+R …). Strg+C kopiert, solange Text markiert ist; ohne Markierung unterbricht es wie gewohnt. Was im Terminal fehlt (Esc, Tab, Strg am Handy), bietet die Tastenleiste darunter.",
+          "**Fenster und Menüs**: Esc schließt ein Fenster, ein Menü und die Hilfe. In Auswahllisten wählen ↑ / ↓ einen Eintrag, Pos1 / Ende den ersten oder letzten, Enter übernimmt, Esc schließt ohne Wahl. Im Namensfeld einer Arbeitsfläche übernimmt Enter den Namen.",
+          "**Datei-Editor**: Die üblichen Kürzel des Editors (CodeMirror): Tab und Umschalt+Tab rücken ein und aus, Strg+Z macht rückgängig, Strg+Y oder Strg+Umschalt+Z wieder her, Strg+F sucht, Strg+D wählt das nächste gleiche Wort dazu.",
+          "**Dateien**: Ziehen verschiebt Dateien und Ordner in einen anderen Ordner; mit gedrückter Strg-Taste beim Loslassen wird kopiert."
         ]
       },
       {

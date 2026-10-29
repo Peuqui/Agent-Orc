@@ -382,7 +382,6 @@
           "**“+”** adds a running agent as a column, “− n +” sets how many columns fill the screen.",
           "Dragging a column head sorts the columns; dropped on the name of another workspace at the top, it moves the agent there.",
           "The divider between two columns moves their boundary: drag it (a touch is enough, no long press) and what one column gains the other loses, so the width of all columns together stays. A double click on the divider makes these two columns equal again; the button with the two arrows next to “− n +” (it appears once a width was changed) resets all. The widths are kept on this device only, as screens differ.",
-          "**Shortcuts on a computer**: Alt+Shift+1 … 9 jumps to that column, Alt+Shift+← / → to the previous or next workspace. The Menu key (or Shift+F10) jumps to the next column whose agent asks for a permission, onto its first button; Tab moves between the buttons, Enter chooses, Esc goes back to typing without deciding. Another press brings the next request. An amber frame shows where the keyboard is.",
           "On a phone the workspace shows one column at a time; a sideways swipe in the terminal brings the next (to the left) or previous one (to the right), up and down scrolls.",
           "**Tile icon at the top left**: all pages (agents, files, consumption …) – the workspace has no bar at the bottom, so the terminal gets the room.",
           "**Fullscreen** (four-corner icon): terminal and input field only, where possible without the browser bars too; the small button at the top right brings everything back.",
@@ -441,6 +440,18 @@
         "title": "Usage",
         "items": [
           "Tokens from all Claude conversations on this machine, per day, project and model, for 7, 14 or 30 days – from the terminal, VS Code and subagents too. Large figures are written in the language of the interface (k, M, B, T, Q, or in German Tsd., Mio., Mrd., Bio., Brd.)."
+        ]
+      },
+      {
+        "title": "Keyboard shortcuts",
+        "items": [
+          "**Columns and workspaces**: Alt+Shift+1 … 9 jumps to that column of the workspace, Alt+Shift+← / → to the previous or next workspace (going round at the ends). Ctrl+digit cannot be used, the browser keeps it for its tabs.",
+          "**Permissions**: The Menu key (with the list symbol, left of the right Ctrl key; without it Shift+F10) jumps to the next column whose agent asks for a permission, onto its first button (“Allow” or approving the plan). Another press brings the next request; if none waits, a short notice comes. Tab and Shift+Tab move between the buttons and the field for a note, Enter chooses, Esc goes back to typing without deciding. A request does not take the keyboard by itself, so an Enter while typing allows nothing. An amber frame shows where the keyboard is.",
+          "**Input field at the bottom**: Enter sends, Shift+Enter starts a new line; a word the on-screen keyboard is still composing is not sent half done. Esc sends Esc to the agent (as in the terminal: it stops), unless a menu of the field (attachments, templates) is open, which Esc then only closes. In the field for messages to other agents (Conversations) Enter sends as well.",
+          "**Terminal**: The keys go to the agent or the shell (Tab, Shift+Tab, arrows, Ctrl+R …). Ctrl+C copies while text is marked; without a mark it interrupts as usual. What the terminal lacks (Esc, Tab, Ctrl on a phone) is in the key bar below it.",
+          "**Windows and menus**: Esc closes a window, a menu and the help. In selection lists ↑ / ↓ pick an entry, Home / End the first or last, Enter takes it, Esc closes without a choice. In the name field of a workspace Enter takes the name.",
+          "**File editor**: The editor’s usual keys (CodeMirror): Tab and Shift+Tab indent and outdent, Ctrl+Z undoes, Ctrl+Y or Ctrl+Shift+Z redoes, Ctrl+F searches, Ctrl+D adds the next equal word to the selection.",
+          "**Files**: Dragging moves files and folders into another folder; holding Ctrl when letting go copies them."
         ]
       },
       {
