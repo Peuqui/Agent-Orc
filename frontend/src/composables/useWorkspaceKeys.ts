@@ -1,13 +1,15 @@
 import { onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
+import { menuFromKeyboard } from '../columns'
 import { jumpToWorkspace } from './useWorkspaceTab'
 
 // Desktop shortcuts: Alt+Shift+1…9 goes to that column, Alt+Shift+←/→ to the previous or next
-// workspace. Ctrl+digits cannot be used: the browser keeps them for its own tabs.
+// workspace. Ctrl+digits cannot be used: the browser keeps them for its own tabs. The Menu key
+// (or Shift+F10) goes to the next permission request waiting; the terminal has no use for it.
 const COLUMN_KEYS = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9']
 const WORKSPACE_STEPS: Record<string, number> = { ArrowLeft: -1, ArrowRight: 1 }
 
-/** Listens on this page; the returned handler also goes on each column's page, where typing
+/** Listens on this page; the returned function listens on a column's page too, where typing
  * mostly happens (its shortcuts are caught there, before the terminal). */
 export function useWorkspaceKeys(options: {
   tabs: () => string[]
@@ -15,7 +17,8 @@ export function useWorkspaceKeys(options: {
   order: () => (string | null)[]
   name: () => string | null
   goToColumn: (id: string) => void
-}): (event: KeyboardEvent) => void {
+  nextApproval: () => void
+}): (page: Window) => void {
   const router = useRouter()
 
   function onShortcut(event: KeyboardEvent): void {
@@ -38,7 +41,21 @@ export function useWorkspaceKeys(options: {
     }
   }
 
-  window.addEventListener('keydown', onShortcut, true)
-  onBeforeUnmount(() => window.removeEventListener('keydown', onShortcut, true))
-  return onShortcut
+  function onMenu(event: MouseEvent): void {
+    if (!menuFromKeyboard(event)) return
+    event.preventDefault()
+    options.nextApproval()
+  }
+
+  function listenOn(page: Window): void {
+    page.addEventListener('keydown', onShortcut, true)
+    page.addEventListener('contextmenu', onMenu, true)
+  }
+
+  listenOn(window)
+  onBeforeUnmount(() => {
+    window.removeEventListener('keydown', onShortcut, true)
+    window.removeEventListener('contextmenu', onMenu, true)
+  })
+  return listenOn
 }

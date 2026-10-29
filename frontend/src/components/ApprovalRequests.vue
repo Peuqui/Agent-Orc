@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { type AgentSession, type Approval, type ApprovalAnswer } from '../api'
 import { renderMarkdown } from '../markdown'
 import { type PermissionSuggestion, suggestionText } from '../permissionSuggestions'
+import { APPROVAL_ATTRIBUTE, APPROVAL_FIRST_ATTRIBUTE } from '../columns'
 import AppIcon from './AppIcon.vue'
 import { sessionName, useSessions } from '../composables/useSessions'
 import { useApi } from '../composables/useHostContext'
@@ -12,7 +13,8 @@ import { useToast } from '../composables/useToast'
 // named: shows whose request it is, with a button that goes to that agent (`open`) to see what it
 // is about before deciding, for places away from it.
 const props = defineProps<{ session: AgentSession; named?: boolean }>()
-const emit = defineEmits<{ open: [] }>()
+// leave: Escape on the request, to go back to typing without deciding.
+const emit = defineEmits<{ open: []; leave: [] }>()
 
 const { refresh } = useSessions()
 const toast = useToast()
@@ -70,6 +72,8 @@ async function answer(approval: Approval, decision: ApprovalAnswer): Promise<voi
       v-for="approval in session.approvals"
       :key="approval.id"
       class="controls-zoom flex flex-col gap-2 rounded-lg border border-highlight-500 bg-highlight-950/40 px-3 py-2 text-sm"
+      v-bind="{ [APPROVAL_ATTRIBUTE]: '' }"
+      @keydown.esc="emit('leave')"
     >
       <span v-if="named" class="font-semibold text-highlight-200">{{ sessionName(session) }}</span>
       <template v-if="approval.plan !== null">
@@ -87,17 +91,20 @@ async function answer(approval: Approval, decision: ApprovalAnswer): Promise<voi
         <!-- A plan goes ahead in one of the modes the agent may run in, as the terminal offers them. -->
         <template v-if="approval.plan !== null">
           <button
-            v-for="mode in approval.modes"
+            v-for="(mode, index) in approval.modes"
             :key="mode"
             type="button"
             class="btn-primary btn-small"
+            v-bind="index === 0 ? { [APPROVAL_FIRST_ATTRIBUTE]: '' } : {}"
             @click="answer(approval, { allow: true, mode })"
           >
             {{ $t('approval.approvePlan', { mode: $t(`permission.modes.${mode}`) }) }}
           </button>
         </template>
         <template v-else>
-          <button class="btn-primary btn-small" @click="answer(approval, { allow: true })">{{ $t('approval.allow') }}</button>
+          <button class="btn-primary btn-small" v-bind="{ [APPROVAL_FIRST_ATTRIBUTE]: '' }" @click="answer(approval, { allow: true })">
+            {{ $t('approval.allow') }}
+          </button>
           <!-- As the terminal's "Yes, and don't ask again for ...": the rule Claude Code proposed, applied as it would. -->
           <button
             v-for="offer in offers(approval)"

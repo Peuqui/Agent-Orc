@@ -49,6 +49,10 @@
   --color-accent-700: var(--color-red-700);
   --color-accent-900: var(--color-red-900);
 
+  /* The keyboard's place (a focused button or field): the highlight's ring, as around the machine
+     switcher and the answer being read aloud. */
+  --color-focus: var(--color-highlight-500);
+
   /* Highlight: what is on, chosen, new or asks for attention. */
   --color-highlight-200: var(--color-amber-200);
   --color-highlight-300: var(--color-amber-300);

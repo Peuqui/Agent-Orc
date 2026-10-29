@@ -11,9 +11,11 @@ import { useRoute } from 'vue-router'
 import { api } from '../api'
 import { unreadTexts } from '../answers'
 import {
+  APPROVAL_SELECTOR,
   COLUMN_CLOSE_EVENT,
   COLUMN_FULLSCREEN_EVENT,
   COLUMN_SWIPE_EVENT,
+  focusApproval,
   MESSAGE_FIELD_SELECTOR,
 } from '../columns'
 import AddColumnMenu from '../components/AddColumnMenu.vue'
@@ -281,11 +283,26 @@ function scrollColumns(direction: 1 | -1): void {
   if (target !== undefined) box.scrollBy({ left: target, behavior: 'smooth' })
 }
 
-const onShortcut = useWorkspaceKeys({
+/** With the Menu key: the keyboard to the first button of the next column whose agent asks for a
+ * permission. The active column comes first, unless the keyboard is on its request already. */
+function goToNextApproval(): void {
+  const tabs = workspace.value.tabs
+  const active = workspace.value.active
+  const onRequest = active !== null && frameOf(active)?.contentDocument?.activeElement?.closest(APPROVAL_SELECTOR)
+  const start = active === null ? 0 : tabs.indexOf(active) + (onRequest ? 1 : 0)
+  const id = [...tabs.slice(start), ...tabs.slice(0, start)].find(
+    (tab) => sessions.value.find((session) => session.id === tab)?.approvals.length,
+  )
+  if (id === undefined) return toast.info(t('approval.noneWaiting'))
+  void activate(id).then(() => focusApproval(frameOf(id)?.contentDocument))
+}
+
+const listenForKeys = useWorkspaceKeys({
   tabs: () => workspace.value.tabs,
   order: () => workspaceOrder.value,
   name: () => name.value,
   goToColumn: (id) => void activate(id).then(() => inputOf(id)?.focus()),
+  nextApproval: goToNextApproval,
 })
 
 // The iframes share this page's origin, so their pointer events can be watched directly: a
@@ -314,7 +331,7 @@ function onFrameLoad(id: string): void {
     if (sessions.value.find((session) => session.id === id)?.terminal) return
     window.setTimeout(() => inputOf(id)?.focus(), 0)
   })
-  frameWindow?.addEventListener('keydown', onShortcut, true)
+  if (frameWindow) listenForKeys(frameWindow)
   // A sideways swipe in any terminal moves the columns: phones bring the neighbouring column,
   // wider screens scroll the row to the next column start.
   frameWindow?.addEventListener(COLUMN_SWIPE_EVENT, (event) => {

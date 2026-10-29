@@ -9,6 +9,29 @@
 export const MESSAGE_FIELD_ATTRIBUTE = 'data-message-field'
 export const MESSAGE_FIELD_SELECTOR = `[${MESSAGE_FIELD_ATTRIBUTE}]`
 
+/** Marks a permission request, to know whether the keyboard is on one already. */
+export const APPROVAL_ATTRIBUTE = 'data-approval'
+export const APPROVAL_SELECTOR = `[${APPROVAL_ATTRIBUTE}]`
+
+/** Marks the first button of a permission request (Allow, or approving a plan): the Menu key brings
+ * the keyboard there (see menuFromKeyboard). */
+export const APPROVAL_FIRST_ATTRIBUTE = 'data-approval-first'
+export const APPROVAL_FIRST_SELECTOR = `[${APPROVAL_FIRST_ATTRIBUTE}]`
+
+/** Puts the keyboard on the first button of the page's permission request; false if none waits. */
+export function focusApproval(page: Document | null | undefined): boolean {
+  const first = page?.querySelector<HTMLElement>(APPROVAL_FIRST_SELECTOR)
+  first?.focus()
+  return first !== null && first !== undefined
+}
+
+/** A context menu asked for from the keyboard (the Menu key, Shift+F10), not by a click: it has no
+ * pointer. Its event comes on Windows when the key is let go, so the key itself is not watched. The
+ * event can come from a column's window, whose PointerEvent is another one (no instanceof). */
+export function menuFromKeyboard(event: Event): boolean {
+  return 'pointerId' in event && event.pointerId === -1
+}
+
 /** A sideways swipe in the terminal; detail: 1 next column, -1 previous. */
 export const COLUMN_SWIPE_EVENT = 'agent-orc-column-swipe'
 /** × in the terminal bar on phones, where the column has no tab of its own. */

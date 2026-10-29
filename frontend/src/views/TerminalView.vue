@@ -37,7 +37,13 @@ import {
   useSettings,
   useTerminalView,
 } from '../composables/useSettings'
-import { COLUMN_CLOSE_EVENT, COLUMN_FULLSCREEN_EVENT, COLUMN_SWIPE_EVENT } from '../columns'
+import {
+  COLUMN_CLOSE_EVENT,
+  COLUMN_FULLSCREEN_EVENT,
+  COLUMN_SWIPE_EVENT,
+  focusApproval,
+  menuFromKeyboard,
+} from '../columns'
 import { ESC } from '../keyCatalog'
 import { useTouchScroll } from '../composables/useTouchScroll'
 
@@ -164,6 +170,15 @@ watch(terminalView, async () => {
   await nextTick()
   if (!TOUCH_FIRST.matches) focusInput()
 })
+
+// On its own page the Menu key (or Shift+F10) brings the keyboard to the agent's permission
+// request; in a workspace column the workspace does it for all its columns (useWorkspaceKeys).
+function goToApproval(event: MouseEvent): void {
+  if (!menuFromKeyboard(event)) return
+  event.preventDefault()
+  if (!focusApproval(document)) toast.info(t('approval.noneWaiting'))
+}
+if (!props.embedded) window.addEventListener('contextmenu', goToApproval, true)
 
 function closeColumn(): void {
   window.dispatchEvent(new CustomEvent(COLUMN_CLOSE_EVENT))
@@ -445,6 +460,7 @@ document.addEventListener('focusout', syncKeyboardUpLater)
 onBeforeUnmount(() => {
   document.removeEventListener('focusin', syncKeyboardUp)
   document.removeEventListener('focusout', syncKeyboardUpLater)
+  window.removeEventListener('contextmenu', goToApproval, true)
   PHONE_WIDTH.removeEventListener('change', followPhoneWidth)
   window.removeEventListener(COLUMN_FULLSCREEN_EVENT, followFullscreen)
   unmounted = true
@@ -641,6 +657,7 @@ onBeforeUnmount(() => {
       <ApprovalRequests
         v-if="session"
         :session="session"
+        @leave="focusInput"
         class="absolute bottom-3 left-3 z-20 max-h-[60%] overflow-y-auto rounded-lg bg-page shadow-xl"
         :style="{ right: `calc(var(--spacing) * 3 + ${JOG_TRACK_WIDTH_PX}px)` }"
       />
