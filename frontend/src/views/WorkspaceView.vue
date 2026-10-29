@@ -33,13 +33,14 @@ import { readAnswersAll } from '../composables/useAnswersAll'
 import { useSettings } from '../composables/useSettings'
 import { moveInList, useReorder } from '../composables/useReorder'
 import { shownAgents } from '../composables/useShownAgents'
-import { type Speakable, useSpeech } from '../composables/useSpeech'
+import { useSpeech } from '../composables/useSpeech'
 import { sessionName, useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
 import { useWorkspaceKeys } from '../composables/useWorkspaceKeys'
 import { useWorkspaceStore } from '../composables/useWorkspaceStore'
 import { WORKSPACE_DROP } from '../composables/useWorkspaceTab'
 import { PHONE_WIDTH, TABS_WIDTH, TOUCH_FIRST } from '../device'
+import type { Speakable } from '../speechHost'
 
 // Several agents side by side. Every open agent is one column: its tab is the head of that
 // column, both in one grid, so tab order and column order can never differ. The user picks
@@ -133,7 +134,6 @@ const NEW_ANSWERS_TURNS = 10
 
 /** Reads the answers of this workspace's columns that were not seen yet, one column after the other. */
 async function readNewAnswers(): Promise<void> {
-  if (speech.playing.value !== null) return speech.stop()
   const items: Speakable[] = []
   const seen: Record<string, string> = {}
   try {
@@ -148,7 +148,7 @@ async function readNewAnswers(): Promise<void> {
   }
   if (!items.length) return toast.info(t('answers.nothingNew'))
   for (const [id, time] of Object.entries(seen)) markSeen(id, time)
-  await speech.play(items)
+  speech.play(items)
 }
 
 // New answers of the columns of this workspace are read aloud as they arrive (one switch for the
@@ -178,7 +178,7 @@ async function autoReadTick(): Promise<void> {
     if (!items.length) return
     // A batch stopped half way is not read again; what comes after it is.
     autoReadAfter = [...answered.values()].reduce((newest, { time }) => (time > newest ? time : newest), autoReadAfter)
-    await speech.play(items, (item) => {
+    speech.play(items, (item) => {
       const read = answered.get(item.id)
       if (read) markSeen(read.session, read.time)
     })
@@ -480,15 +480,24 @@ function deleteThis(): void {
               aria-hidden="true"
             >A</span>
           </button>
+          <!-- The one reading of the tab (speechHost.ts): pause and stop for every column. On a phone one column
+               is in view and its own "new" button reads the same as the one here. -->
+          <template v-if="speech.playing.value !== null">
+            <button class="btn-icon" :aria-label="$t('answers.pause')" :title="$t('answers.pause')" @click="speech.togglePause">
+              <AppIcon :name="speech.paused.value ? 'play' : 'pause'" />
+            </button>
+            <button class="btn-icon text-red-400" :aria-label="$t('answers.stop')" :title="$t('answers.stop')" @click="speech.stop">
+              <AppIcon name="stop" />
+            </button>
+          </template>
           <button
-            v-if="speech.available.value"
+            v-else-if="speech.available.value && !phone"
             class="btn-icon"
-            :class="speech.playing.value !== null ? 'animate-pulse text-red-400' : ''"
-            :aria-label="speech.playing.value !== null ? $t('answers.stop') : $t('answers.readNewColumns')"
-            :title="speech.playing.value !== null ? $t('answers.stop') : $t('answers.readNewColumns')"
+            :aria-label="$t('answers.readNewColumns')"
+            :title="$t('answers.readNewColumns')"
             @click="readNewAnswers"
           >
-            <AppIcon :name="speech.playing.value !== null ? 'stop' : 'speaker'" />
+            <AppIcon name="speaker" />
           </button>
           <button
             class="btn-icon"

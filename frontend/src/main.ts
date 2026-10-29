@@ -3,6 +3,7 @@ import { registerSW } from 'virtual:pwa-register'
 import App from './App.vue'
 import { currentHost } from './api'
 import { hostTranscription } from './dictationHost'
+import { hostSpeech } from './speechHost'
 import { setMachine } from './composables/useWorkspaceTab'
 import { i18n } from './i18n'
 import { router } from './router'
@@ -24,8 +25,9 @@ window.addEventListener('vite:preloadError', (event) => {
   void reloadToNewVersion()
 })
 
-// Before a workspace column can dictate.
+// Before a workspace column can dictate or read aloud.
 hostTranscription()
+hostSpeech()
 
 // Before any workspace is shown (it keeps what it remembers per machine).
 setMachine(currentHost)

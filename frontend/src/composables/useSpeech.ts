@@ -1,94 +1,36 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { readAhead } from '../readAhead'
 import { loadServerEngines, speechEngine, speechEngines } from '../speech'
-import { spokenText } from '../speechText'
-import { useSettings, useSpeechVoice } from './useSettings'
-import { useToast } from './useToast'
+import { type Speakable, speechHost } from '../speechHost'
+import { useSettings } from './useSettings'
 
-/** An answer to read: the id says which one is being read, the text is Markdown. */
-export interface Speakable {
-  id: string
-  text: string
-  /** Whose answer it is (the agent's name): spoken first, if the setting asks for it; the Echo
-   * names it as the speaker. */
-  label: string
-}
-
-// One reading at a time on the device, whichever view started it.
+// What the page at the top of the tab reads now (speechHost.ts), followed on this page.
 const playing = ref<string | null>(null)
 const paused = ref(false)
-let reading = 0
+let stopWatching: (() => void) | undefined
+
+function followHost(): void {
+  if (stopWatching !== undefined) return
+  stopWatching = speechHost().watch(window, (now, pausedNow) => {
+    playing.value = now
+    paused.value = pausedNow
+  })
+  // A column loaded anew is the same window to the host: the page that leaves stops being told.
+  window.addEventListener('pagehide', () => stopWatching?.(), { once: true })
+}
 
 export function useSpeech() {
-  const { speechEngine: engineId, speechRate, speechPitch, speechMaxChars, speechAnnounceName } = useSettings()
-  const { locale, t } = useI18n()
-  const toast = useToast()
+  const { speechEngine: engineId } = useSettings()
+  const { locale } = useI18n()
+  followHost()
   // Not there while the server's engines are still being asked for (see loadServerEngines).
   const engine = computed(() => speechEngines.value.find((candidate) => candidate.id === engineId.value))
-  const voice = computed(() => useSpeechVoice(engineId.value))
   const available = computed(() => speechEngines.value.length > 0)
 
-  /** Reads the answers one after the other; what is read now ends. `done` hears of each answer
-   * once it has been read to its end (not of one that was interrupted). */
-  async function play(items: Speakable[], done?: (item: Speakable) => void): Promise<void> {
-    stop()
-    if (items.length === 0) return
-    const mine = ++reading
-    try {
-      await loadServerEngines()
-      const speaker = speechEngine(engineId.value)
-      const limit = Math.min(speechMaxChars.value, speaker.maxChars)
-      const options = { voice: voice.value.value, rate: speechRate.value, pitch: speechPitch.value, lang: locale.value }
-      const answers = items.map((item) => {
-        const name = speechAnnounceName.value ? `${item.label}.\n` : ''
-        // The name counts towards what the engine takes.
-        const answer = spokenText(item.text, t('answers.skipped'), limit - name.length)
-        return { item, text: name + answer }
-      })
-      if (speaker.speakAll) {
-        // All answers as one announcement: nothing is known of when each one is spoken.
-        playing.value = items[0]?.id ?? null
-        const texts = answers.flatMap((answer) => speaker.split(answer.text))
-        await speaker.speakAll(texts, options, items[0].label)
-        if (reading === mine) items.forEach((item) => done?.(item))
-      } else if (speaker.begin) {
-        const begin = speaker.begin
-        await readAhead(answers, {
-          begin: (text) => begin(text, options),
-          active: () => reading === mine,
-          started: (item) => (playing.value = item.id),
-          finished: (item) => done?.(item),
-        })
-      } else {
-        for (const { item, text } of answers) {
-          playing.value = item.id
-          for (const chunk of speaker.split(text)) {
-            if (reading !== mine) return
-            await speaker.speak(chunk, options)
-          }
-          if (reading !== mine) return
-          done?.(item)
-        }
-      }
-    } catch (error) {
-      toast.error(error)
-    }
-    if (reading === mine) stop()
-  }
-
-  function stop(): void {
-    reading++
-    engine.value?.cancel()
-    playing.value = null
-    paused.value = false
-  }
-
-  function togglePause(): void {
-    if (playing.value === null) return
-    paused.value = !paused.value
-    if (paused.value) engine.value?.pause()
-    else engine.value?.resume()
+  /** Reads the answers after what is being read already (on any page of the tab). `done` hears of each
+   * answer once it has been read to its end (not of one that was stopped). */
+  function play(items: Speakable[], done?: (item: Speakable) => void): void {
+    speechHost().enqueue(items, window, done)
   }
 
   return {
@@ -103,7 +45,7 @@ export function useSpeech() {
       return speechEngine(engineId.value).voices(locale.value)
     },
     play,
-    stop,
-    togglePause,
+    stop: () => speechHost().stop(),
+    togglePause: () => speechHost().togglePause(),
   }
 }

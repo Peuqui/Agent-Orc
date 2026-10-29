@@ -10,10 +10,11 @@ import { useAnswersAll } from '../composables/useAnswersAll'
 import { useFeedScroll } from '../composables/useFeedScroll'
 import { useViewZoom } from '../composables/useViewZoom'
 import { sessionName, useSessions } from '../composables/useSessions'
-import { type Speakable, useSpeech } from '../composables/useSpeech'
+import { useSpeech } from '../composables/useSpeech'
 import { useToast } from '../composables/useToast'
 import { formatMoment } from '../format'
 import { LISTEN_REPLAY_CLASS, renderMarkdown } from '../markdown'
+import { READS_HERE, type Speakable } from '../speechHost'
 import AnswerImages from './AnswerImages.vue'
 import FoldedText from './FoldedText.vue'
 import AppIcon from './AppIcon.vue'
@@ -130,16 +131,16 @@ function speakable(texts: AnswerText[]): Speakable[] {
 /** A click on the marker of the paragraph for listening reads this answer again. */
 function readAgain(event: MouseEvent, text: AnswerText): void {
   if (!(event.target instanceof Element) || !event.target.closest(`.${LISTEN_REPLAY_CLASS}`)) return
-  void speech.play(speakable([text]), markReadAloud)
+  speech.play(speakable([text]), markReadAloud)
 }
 
 function readFrom(text: AnswerText): void {
   const all = everyText.value
-  void speech.play(speakable(all.slice(all.findIndex((candidate) => candidate.id === text.id))), markReadAloud)
+  speech.play(speakable(all.slice(all.findIndex((candidate) => candidate.id === text.id))), markReadAloud)
 }
 
 function readUnread(): void {
-  void speech.play(speakable(unread.value), markReadAloud)
+  speech.play(speakable(unread.value), markReadAloud)
 }
 
 
@@ -264,7 +265,8 @@ function jog(lines: number): void {
         >
           <AppIcon name="speaker" />{{ $t('answers.readNew', { count: unread.length }) }}
         </button>
-        <template v-if="speech.playing.value !== null">
+        <!-- In a workspace column, pause and stop are in the workspace's header. -->
+        <template v-if="READS_HERE && speech.playing.value !== null">
           <button type="button" class="btn-secondary btn-small-icon" :title="$t('answers.pause')" :aria-label="$t('answers.pause')" @click="speech.togglePause">
             <AppIcon :name="speech.paused.value ? 'play' : 'pause'" />
           </button>
@@ -346,7 +348,7 @@ function jog(lines: number): void {
                   :class="speech.playing.value === item.id ? 'animate-pulse' : ''"
                   :title="$t('answers.readThis')"
                   :aria-label="$t('answers.readThis')"
-                  @click="void speech.play(speakable([item]), markReadAloud)"
+                  @click="speech.play(speakable([item]), markReadAloud)"
                 >
                   <AppIcon name="speaker" />
                 </button>
