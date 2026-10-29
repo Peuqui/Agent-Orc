@@ -20,6 +20,9 @@ KEPT_TYPES = ("user", "assistant", "queue-operation", "attachment")
 # Claude Code wraps pasted text in marks for the model ("<pasted_content id=...>"); the user
 # does not type them and does not want to read them.
 PASTE_MARK = re.compile(r"</?pasted_content\b[^>]*>")
+# Claude Code's entry for the user when the user stops an answer ("... for tool use" at a tool call,
+# also when a permission is denied with a message for Claude).
+INTERRUPT_MARK = "[Request interrupted by user"
 
 
 def _typed_text(text: str) -> str:
@@ -187,6 +190,24 @@ def request_queued(transcript: Path) -> bool:
 
 # Pictures shown in the answers; anything else in a transcript is not served.
 IMAGE_TYPES = ("image/png", "image/jpeg", "image/gif", "image/webp")
+
+
+def interrupted_at(transcript: Path) -> str | None:
+    """When the user stopped the last answer (Esc), as Claude writes the time (UTC); None if the
+    conversation's newest entry is anything else. Claude runs no Stop hook for such a stop."""
+    for line in lines_from_end(transcript, SCAN_BYTES):
+        entry = transcript_entry(line, transcript)
+        if (
+            entry is None
+            or entry.get("isSidechain")
+            or entry.get("type") not in ("user", "assistant")
+        ):
+            continue
+        stopped = entry["type"] == "user" and any(
+            text.startswith(INTERRUPT_MARK) for text in message_texts(entry)
+        )
+        return str(entry["timestamp"]) if stopped else None
+    return None
 
 
 def _image_blocks(entry: dict[str, Any]) -> list[dict[str, Any]]:

@@ -74,6 +74,7 @@ from agent_orc.config import (
 from agent_orc.consumption import claude_consumption
 from agent_orc.context import (
     QUOTA_SOURCES,
+    end_interrupted_answer,
     session_busy,
     session_compacting,
     session_status,
@@ -1179,6 +1180,11 @@ def create_app(
                 message = agent_message("unsent", session.id, session.name, prompt.text)
                 send_to_all(message, config.push)
 
+    def end_interrupted_answers() -> None:
+        for session in sessions.list():
+            if session.running:
+                end_interrupted_answer(session)
+
     async def watch_agents() -> None:
         while True:
             await asyncio.sleep(AGENT_CHECK_SECONDS)
@@ -1194,6 +1200,10 @@ def create_app(
             except Exception:
                 logger.exception("applying a pending model change failed")
                 pending_model.clear()
+            try:
+                await asyncio.to_thread(end_interrupted_answers)
+            except Exception:
+                logger.exception("looking for stopped answers failed")
             try:
                 await asyncio.to_thread(check_handovers)
             except Exception:

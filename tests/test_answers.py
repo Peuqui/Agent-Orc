@@ -5,7 +5,7 @@ from typing import Any
 
 import pytest
 
-from agent_orc.answers import read_image, read_turns, request_queued
+from agent_orc.answers import interrupted_at, read_image, read_turns, request_queued
 
 
 def entry(kind: str, uuid: str, content: Any, **extra: Any) -> dict[str, Any]:
@@ -238,3 +238,21 @@ def test_the_marks_around_pasted_text_are_not_shown(tmp_path: Path) -> None:
     # An answer that speaks about the marks keeps its words.
     assert turn.texts[0].text == "Ich erkläre <pasted_content> hier."
     assert [i.text for i in turn.interjections] == ["Eingefügt", "Eingefügt"]
+
+
+def test_a_stop_by_the_user_is_found_at_the_end_of_the_conversation(tmp_path: Path) -> None:
+    stopped = [
+        entry("user", "u1", "Frage"),
+        entry("assistant", "a2", [{"type": "tool_use", "name": "Bash", "input": {}}]),
+        entry(
+            "user", "u3", [{"type": "text", "text": "[Request interrupted by user for tool use]"}]
+        ),
+        # A subagent's entry and Claude's own bookkeeping come after it and do not count.
+        entry("assistant", "a4", [{"type": "text", "text": "Unteragent"}], isSidechain=True),
+        {"type": "file-history-snapshot", "uuid": "x5"},
+    ]
+    assert interrupted_at(write(tmp_path / "s.jsonl", stopped)) == "2026-10-06T10:00:03.000Z"
+    # Asked again after the stop: the newest entry is the new request.
+    asked_again = [*stopped, entry("user", "u6", "Neue Frage")]
+    assert interrupted_at(write(tmp_path / "a.jsonl", asked_again)) is None
+    assert interrupted_at(write(tmp_path / "t.jsonl", TRANSCRIPT)) is None

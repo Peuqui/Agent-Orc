@@ -1,3 +1,4 @@
+import json
 import os
 from pathlib import Path
 from typing import Any
@@ -5,9 +6,11 @@ from typing import Any
 import pytest
 
 from agent_orc.context import (
+    activity_file,
     begin_compaction,
     claude_rate_limits,
     end_compaction,
+    end_interrupted_answer,
     session_busy,
     session_status,
     status_file,
@@ -135,3 +138,65 @@ def test_compaction_of_an_agent_that_never_reported_counts_as_resting_before(
     assert session_busy(session)
     end_compaction("c-3")
     assert not session_busy(session)
+
+
+# Claude's times in the transcript (UTC) and the same moments as file times.
+ASKED = "2026-10-29T10:00:00.000Z"
+STOPPED = "2026-10-29T10:00:05.000Z"
+ASKED_SECONDS = 1_793_268_000.0
+
+
+def stopped_conversation(
+    tmp_path: Path, session_id: str, *, newest: dict[str, Any] | None = None
+) -> AgentSession:
+    """An agent marked busy at ASKED whose answer the user stopped at STOPPED (Esc)."""
+    entries = [
+        {"type": "user", "timestamp": ASKED, "message": {"content": "Frage"}},
+        {
+            "type": "assistant",
+            "timestamp": ASKED,
+            "message": {"content": [{"type": "text", "text": "Ich schaue."}]},
+        },
+        {
+            "type": "user",
+            "timestamp": STOPPED,
+            "message": {"content": [{"type": "text", "text": "[Request interrupted by user]"}]},
+        },
+        {"type": "file-history-snapshot", "timestamp": STOPPED},
+    ]
+    if newest is not None:
+        entries.append(newest)
+    transcript = tmp_path / f"{session_id}.jsonl"
+    transcript.write_text(
+        "\n".join(json.dumps(entry) for entry in entries) + "\n", encoding="utf-8"
+    )
+    store_status(session_id, {"transcript_path": str(transcript)})
+    store_activity(session_id, busy=True)
+    os.utime(activity_file(session_id), (ASKED_SECONDS, ASKED_SECONDS))
+    return AgentSession(session_id, "claude", tmp_path, True, None, 0.0, False, None, None)
+
+
+def test_an_answer_the_user_stopped_ends_the_work(tmp_path: Path) -> None:
+    session = stopped_conversation(tmp_path, "s-1")
+    end_interrupted_answer(session)
+    assert not session_busy(session)
+
+
+def test_a_stop_before_the_next_request_was_marked_leaves_the_agent_working(tmp_path: Path) -> None:
+    session = stopped_conversation(tmp_path, "s-2")
+    # The next request ran its hook after the stop; it is not in the transcript yet.
+    later = ASKED_SECONDS + 10
+    os.utime(activity_file("s-2"), (later, later))
+    end_interrupted_answer(session)
+    assert session_busy(session)
+
+
+def test_an_answer_going_on_after_the_stop_leaves_the_agent_working(tmp_path: Path) -> None:
+    going_on = {
+        "type": "assistant",
+        "timestamp": "2026-10-29T10:00:09.000Z",
+        "message": {"content": [{"type": "text", "text": "Weiter."}]},
+    }
+    session = stopped_conversation(tmp_path, "s-3", newest=going_on)
+    end_interrupted_answer(session)
+    assert session_busy(session)

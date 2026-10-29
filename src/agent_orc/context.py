@@ -13,14 +13,17 @@ session alike, so the most recently reported ones are the current ones.
 Whether the agent is working comes from Claude's hooks: UserPromptSubmit runs
 `agent-orc agent-busy`, Stop runs `agent-orc agent-idle`. Text typed while the agent works runs
 UserPromptSubmit when it is queued; if it is taken as a request of its own after the answer, no
-hook marks that start, so agent-idle leaves such an agent working.
+hook marks that start, so agent-idle leaves such an agent working. An answer the user stops (Esc)
+gets no Stop: the server finds the stop in the transcript (end_interrupted_answer).
 """
 
 import json
 from collections.abc import Callable
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from agent_orc.answers import interrupted_at
 from agent_orc.sessions import AgentSession
 from agent_orc.state import state_dir, write_atomically
 
@@ -91,6 +94,21 @@ def end_compaction(session_id: str) -> None:
     before."""
     if _recorded_activity(session_id) == COMPACTING:
         store_activity(session_id, busy=False)
+
+
+def end_interrupted_answer(session: AgentSession) -> None:
+    """An agent marked busy whose conversation ends with the user stopping the answer rests again
+    (Claude runs no Stop hook then). Only a stop after the mark counts: an earlier one belongs to
+    the answer before, and the next request was sent but not yet written to the transcript."""
+    if _session_activity(session) != BUSY:
+        return
+    transcript = session_transcript(session)
+    stopped = None if transcript is None else interrupted_at(transcript)
+    if (
+        stopped is not None
+        and datetime.fromisoformat(stopped).timestamp() > activity_file(session.id).stat().st_mtime
+    ):
+        store_activity(session.id, busy=False)
 
 
 def store_status(session_id: str, status: dict[str, Any]) -> Path:
