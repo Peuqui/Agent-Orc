@@ -34,7 +34,7 @@ import { useColumnWidths } from '../composables/useColumnWidths'
 import { readAnswersAll } from '../composables/useAnswersAll'
 import { useSettings } from '../composables/useSettings'
 import { moveInList, useReorder } from '../composables/useReorder'
-import { shownAgents } from '../composables/useShownAgents'
+import { setShownAgents } from '../composables/useShownAgents'
 import { useSpeech } from '../composables/useSpeech'
 import { sessionName, useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
@@ -86,8 +86,8 @@ const agentsInView = computed(() => {
   if (!phone.value) return tabs
   return active === null ? [] : [active]
 })
-watch(agentsInView, (ids) => (shownAgents.value = [...ids]), { immediate: true })
-onBeforeUnmount(() => (shownAgents.value = []))
+watch(agentsInView, (ids) => setShownAgents(null, [...ids]), { immediate: true })
+onBeforeUnmount(() => setShownAgents(null, []))
 // The menu of the rarely used buttons and the help dialog it opens (where the room is short).
 const moreOpen = ref(false)
 const helpOpen = ref(false)

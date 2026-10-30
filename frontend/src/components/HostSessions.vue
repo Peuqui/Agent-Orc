@@ -20,7 +20,7 @@ import TerminalButton from './TerminalButton.vue'
 import ScheduledList from './ScheduledList.vue'
 import { moveInList, useReorder } from '../composables/useReorder'
 import { provideHost } from '../composables/useHostContext'
-import { shownAgents } from '../composables/useShownAgents'
+import { setShownAgents } from '../composables/useShownAgents'
 import { useHostLinks } from '../composables/useHostLinks'
 import { cardKey, sessionName, useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
@@ -51,36 +51,33 @@ onBeforeUnmount(() => {
 const VISIBLE_SHARE = 0.5
 const THRESHOLDS = [0, 0.25, VISIBLE_SHARE, 0.75, 1]
 const cardsOnScreen = new Set<string>()
-const cardWatcher =
-  props.host === null
-    ? new IntersectionObserver(
-        (entries) => {
-          for (const { target, isIntersecting, intersectionRatio, intersectionRect, rootBounds } of entries) {
-            const id = (target as HTMLElement).dataset.session
-            if (id === undefined) continue
-            const shown =
-              isIntersecting &&
-              (intersectionRatio >= VISIBLE_SHARE || intersectionRect.height >= (rootBounds?.height ?? window.innerHeight) * VISIBLE_SHARE)
-            if (shown) cardsOnScreen.add(id)
-            else cardsOnScreen.delete(id)
-          }
-          shownAgents.value = [...cardsOnScreen]
-        },
-        { threshold: THRESHOLDS },
-      )
-    : null
+const cardWatcher = new IntersectionObserver(
+  (entries) => {
+    for (const { target, isIntersecting, intersectionRatio, intersectionRect, rootBounds } of entries) {
+      const id = (target as HTMLElement).dataset.session
+      if (id === undefined) continue
+      const shown =
+        isIntersecting &&
+        (intersectionRatio >= VISIBLE_SHARE || intersectionRect.height >= (rootBounds?.height ?? window.innerHeight) * VISIBLE_SHARE)
+      if (shown) cardsOnScreen.add(id)
+      else cardsOnScreen.delete(id)
+    }
+    setShownAgents(props.host, [...cardsOnScreen])
+  },
+  { threshold: THRESHOLDS },
+)
 // Cards come and go with the agents: the new ones are watched after they are drawn.
 watch(
   () => sessions.value.map((session) => session.id),
   async () => {
     await nextTick()
-    block.value?.querySelectorAll('[data-session]').forEach((card) => cardWatcher?.observe(card))
+    block.value?.querySelectorAll('[data-session]').forEach((card) => cardWatcher.observe(card))
   },
   { immediate: true },
 )
 onBeforeUnmount(() => {
-  cardWatcher?.disconnect()
-  if (props.host === null) shownAgents.value = []
+  cardWatcher.disconnect()
+  setShownAgents(props.host, [])
 })
 const { t, te } = useI18n()
 const stopping = ref<AgentSession | null>(null)

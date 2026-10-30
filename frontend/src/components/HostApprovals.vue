@@ -6,7 +6,7 @@ import { provideHost } from '../composables/useHostContext'
 import { useApprovalChanges } from '../composables/useApprovalChanges'
 import { useHostLinks } from '../composables/useHostLinks'
 import { useSessions } from '../composables/useSessions'
-import { shownAgents } from '../composables/useShownAgents'
+import { isShownAgent } from '../composables/useShownAgents'
 import { useToast } from '../composables/useToast'
 import { agentRoute } from '../composables/useWorkspaceTab'
 import ApprovalRequests from './ApprovalRequests.vue'
@@ -23,9 +23,8 @@ const { sessions, refresh } = useSessions(props.host)
 useApprovalChanges(() => void refresh(), props.host)
 
 const agentPage = (id: string): string => `/terminal/${encodeURIComponent(id)}`
-// Only this machine's agents can be in view here.
 const inView = (id: string): boolean =>
-  props.host === null && (route.path === agentPage(id) || shownAgents.value.includes(id))
+  (props.host === null && route.path === agentPage(id)) || isShownAgent(props.host, id)
 const waiting = computed(() =>
   sessions.value.filter((session) => session.approvals.length > 0 && !inView(session.id)),
 )
