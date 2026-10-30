@@ -1,39 +1,33 @@
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { ref } from 'vue'
 import { api, type HostsState } from '../api'
+import { useServerEvents } from './useServerEvents'
 
 // The other machines, as this machine's own app knows them: whether each answers.
 const state = ref<HostsState | null>(null)
-const REFRESH_MILLISECONDS = 3000
 let loading: Promise<void> | null = null
-let watchers = 0
-let timer: number | undefined
+let refreshing: Promise<void> | null = null
 
 /** Asked once; the page that follows shows what there is. A machine's coming and going shows in
- * `refresh`. */
+ * `keepFresh`. */
 export function loadHosts(): Promise<void> {
   loading ??= refresh()
   return loading
 }
 
-export async function refresh(): Promise<void> {
-  state.value = await api.hosts()
+/** One request however many components ask at once (each listener of the stream asks). */
+export function refresh(): Promise<void> {
+  refreshing ??= api.hosts().then((hosts) => {
+    state.value = hosts
+  }).finally(() => {
+    refreshing = null
+  })
+  return refreshing
 }
 
-/** Keeps the state fresh while the calling component is shown: one timer however many ask, and a
- * machine's coming and going shows within a few seconds. */
+/** Keeps the state fresh while the calling component is shown: the server reports a machine's
+ * coming and going. */
 function keepFresh(): void {
-  onMounted(() => {
-    watchers += 1
-    if (watchers === 1) {
-      timer = window.setInterval(() => {
-        if (document.visibilityState === 'visible') refresh().catch(() => undefined)
-      }, REFRESH_MILLISECONDS)
-    }
-  })
-  onBeforeUnmount(() => {
-    watchers -= 1
-    if (watchers === 0) window.clearInterval(timer)
-  })
+  useServerEvents('api/hosts/events', () => void refresh().catch(() => undefined))
 }
 
 export function useHosts() {

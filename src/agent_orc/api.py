@@ -139,6 +139,7 @@ from agent_orc.history import (
 )
 from agent_orc.hosts import (
     HostLink,
+    HostState,
     HostUnreachableError,
     UnknownHostError,
     forward,
@@ -272,6 +273,8 @@ LEVELS_CACHE_SECONDS = 30
 AGENT_CHECK_SECONDS = 2
 # How often the server looks at the permission requests the hooks write.
 APPROVAL_CHECK_SECONDS = 0.5
+# How often the other machines are looked at (hosts.HostLink.state).
+HOST_CHECK_SECONDS = 3
 # History lines to read with the screen: none, only what is visible (a question being asked).
 SCREEN_ONLY = 0
 
@@ -1188,6 +1191,24 @@ def create_app(
                 end_interrupted_answer(session)
 
     approval_changes = ChangeNotifier()
+    host_changes = ChangeNotifier()
+    host_states: dict[str, HostState] = {}
+    host_states_known = asyncio.Event()
+
+    async def watch_hosts() -> None:
+        """Looks at the other machines once for all pages and tells them when one changed. They are
+        asked at the same time, so a machine that is off costs the short time-out only once."""
+        links = list(host_links.values())
+        while True:
+            states = await asyncio.gather(*(link.state() for link in links))
+            current = {link.name: state for link, state in zip(links, states, strict=True)}
+            changed = current != host_states
+            host_states.clear()
+            host_states.update(current)
+            host_states_known.set()
+            if changed:
+                host_changes.notify()
+            await asyncio.sleep(HOST_CHECK_SECONDS)
 
     async def watch_approvals() -> None:
         """The hooks are processes of their own and write the requests as files: the server looks
@@ -1243,6 +1264,7 @@ def create_app(
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         watcher = asyncio.create_task(watch_agents())
         approvals = asyncio.create_task(watch_approvals())
+        hosts = asyncio.create_task(watch_hosts())
         tunnels = [
             asyncio.create_task(keep_tunnel_open(name, host_links[name].local_socket, host))
             for name, host in (config.hosts or {}).items()
@@ -1250,6 +1272,7 @@ def create_app(
         yield
         watcher.cancel()
         approvals.cancel()
+        hosts.cancel()
         for tunnel in tunnels:
             tunnel.cancel()
         await asyncio.gather(*tunnels, return_exceptions=True)
@@ -2520,18 +2543,18 @@ def create_app(
             raise UnknownHostError(name)
         return link
 
+    @app.get("/api/hosts/events", dependencies=authenticated)
+    async def host_events() -> StreamingResponse:
+        """A message whenever one of the other machines changed its state."""
+        return event_stream(host_changes.stream(), stopping)
+
     @app.get("/api/hosts", dependencies=authenticated)
     async def list_hosts() -> dict[str, Any]:
-        """This machine's name and the other machines with their state (hosts.HostState). They are
-        asked at the same time, so a machine that is off costs the short time-out only once."""
-        links = host_links.values()
-        states = await asyncio.gather(*(link.state() for link in links))
+        """This machine's name and the other machines with their state (hosts.HostState)."""
+        await host_states_known.wait()
         return {
             "self": socket.gethostname(),
-            "hosts": [
-                {"name": link.name, "state": state}
-                for link, state in zip(links, states, strict=True)
-            ],
+            "hosts": [{"name": name, "state": state} for name, state in host_states.items()],
         }
 
     @app.get("/hosts/{name}", dependencies=authenticated)
