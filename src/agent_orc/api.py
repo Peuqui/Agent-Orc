@@ -1,6 +1,7 @@
 """HTTP API of Agent-Orc."""
 
 import asyncio
+import contextlib
 import hmac
 import logging
 import mimetypes
@@ -1194,6 +1195,8 @@ def create_app(
     host_changes = ChangeNotifier()
     host_states: dict[str, HostState] = {}
     host_states_known = asyncio.Event()
+    # Set when a tunnel ended: the machine may be gone, so the next look need not wait its turn.
+    look_at_hosts = asyncio.Event()
 
     async def watch_hosts() -> None:
         """Looks at the other machines once for all pages and tells them when one changed. They are
@@ -1208,7 +1211,9 @@ def create_app(
             host_states_known.set()
             if changed:
                 host_changes.notify()
-            await asyncio.sleep(HOST_CHECK_SECONDS)
+            with contextlib.suppress(TimeoutError):
+                await asyncio.wait_for(look_at_hosts.wait(), HOST_CHECK_SECONDS)
+            look_at_hosts.clear()
 
     async def watch_approvals() -> None:
         """The hooks are processes of their own and write the requests as files: the server looks
@@ -1266,7 +1271,9 @@ def create_app(
         approvals = asyncio.create_task(watch_approvals())
         hosts = asyncio.create_task(watch_hosts())
         tunnels = [
-            asyncio.create_task(keep_tunnel_open(name, host_links[name].local_socket, host))
+            asyncio.create_task(
+                keep_tunnel_open(name, host_links[name].local_socket, host, look_at_hosts.set)
+            )
             for name, host in (config.hosts or {}).items()
         ]
         yield

@@ -51,10 +51,15 @@ def test_the_tunnel_is_opened_again_when_it_ends(
     monkeypatch.setattr(hosts, "RECONNECT_FIRST_SECONDS", 0.05)
     monkeypatch.setattr(hosts, "RECONNECT_LAST_SECONDS", 0.1)
 
+    ended: list[None] = []
+
     async def run() -> None:
         task = asyncio.create_task(
             hosts.keep_tunnel_open(
-                "A", tmp_path / "run" / "host-A.sock", HostConfig(ssh=[], socket="")
+                "A",
+                tmp_path / "run" / "host-A.sock",
+                HostConfig(ssh=[], socket=""),
+                lambda: ended.append(None),
             )
         )
         for _ in range(100):
@@ -67,6 +72,8 @@ def test_the_tunnel_is_opened_again_when_it_ends(
 
     asyncio.run(run())
     assert len(starts.read_text().splitlines()) >= 3
+    # Every tunnel that ended was reported, for the machine to be looked at at once.
+    assert len(ended) >= 2
 
 
 def test_a_tunnel_that_never_shows_its_socket_is_ended_and_opened_again(
@@ -81,10 +88,15 @@ def test_a_tunnel_that_never_shows_its_socket_is_ended_and_opened_again(
     monkeypatch.setattr(hosts, "RECONNECT_FIRST_SECONDS", 0.05)
     monkeypatch.setattr(hosts, "RECONNECT_LAST_SECONDS", 0.1)
 
+    ended: list[None] = []
+
     async def run() -> None:
         task = asyncio.create_task(
             hosts.keep_tunnel_open(
-                "A", tmp_path / "run" / "host-A.sock", HostConfig(ssh=[], socket="")
+                "A",
+                tmp_path / "run" / "host-A.sock",
+                HostConfig(ssh=[], socket=""),
+                lambda: ended.append(None),
             )
         )
         for _ in range(100):

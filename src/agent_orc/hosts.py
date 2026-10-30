@@ -13,7 +13,7 @@ import os
 import signal
 import socket
 import time
-from collections.abc import AsyncGenerator, AsyncIterator, Iterable
+from collections.abc import AsyncGenerator, AsyncIterator, Callable, Iterable
 from pathlib import Path
 from typing import Literal
 from urllib.parse import urlsplit
@@ -133,8 +133,11 @@ async def end_unless_listening(process: asyncio.subprocess.Process, local_socket
     process.terminate()
 
 
-async def keep_tunnel_open(name: str, local_socket: Path, config: HostConfig) -> None:
-    """Runs the tunnel to the machine, and again whenever it ends, until cancelled."""
+async def keep_tunnel_open(
+    name: str, local_socket: Path, config: HostConfig, on_ended: Callable[[], None]
+) -> None:
+    """Runs the tunnel to the machine, and again whenever it ends, until cancelled. `on_ended` is
+    called each time it ended: the machine may be gone, which is worth looking at at once."""
     delay = RECONNECT_FIRST_SECONDS
     for orphan in end_orphan_tunnels(tunnel_command(local_socket, config)):
         logger.warning("host %s: ended tunnel %s of an earlier run", name, orphan)
@@ -169,6 +172,7 @@ async def keep_tunnel_open(name: str, local_socket: Path, config: HostConfig) ->
                 process.returncode,
                 errors.decode(errors="replace").strip(),
             )
+            on_ended()
             if time.monotonic() - started > RECONNECT_LAST_SECONDS:
                 delay = RECONNECT_FIRST_SECONDS  # it held for a while: begin again quickly
         await asyncio.sleep(delay)
