@@ -4,12 +4,13 @@ import { useSessions } from '../composables/useSessions'
 import { useApi, useHostContext } from '../composables/useHostContext'
 import { useHostLinks } from '../composables/useHostLinks'
 import { useToast } from '../composables/useToast'
+import { routeBeside } from '../composables/useWorkspaceTab'
 import AppIcon from './AppIcon.vue'
 
 // ">_": a plain terminal in the folder, next to its agent or without one; opens the running one if
 // there is. What is started in it is the user's business (no second agent in the same folder).
-// agentId: the agent's session, whose workspace column the terminal opens right after; without
-// it the terminal joins the workspace at the end.
+// agentId: the agent's session, whose workspace the terminal joins, right after its column; without
+// it the terminal joins this tab's workspace at the end.
 const props = defineProps<{ path: string; agentId?: string; buttonClass: string; withLabel?: boolean }>()
 const toast = useToast()
 const api = useApi()
@@ -29,9 +30,9 @@ async function open(): Promise<void> {
           ultracode: false,
         })
     await refresh()
-    // In a workspace column, the router hands this to the tab's workspace.
-    const after = props.agentId === undefined ? {} : { after: props.agentId }
-    await go({ path: '/workspace', query: { open: terminal.id, ...after } })
+    // Beside an agent the terminal opens in the workspace the agent lives in.
+    if (props.agentId === undefined) return await go({ path: '/workspace', query: { open: terminal.id } })
+    await go(routeBeside(await api.workspaces(), props.agentId, terminal.id))
   } catch (error) {
     toast.error(error)
   }

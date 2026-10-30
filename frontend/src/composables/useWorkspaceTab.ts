@@ -110,9 +110,10 @@ const installedApp = window.matchMedia('(display-mode: standalone)').matches
 export const ownTabs = !installedApp
 
 /** Address of a named workspace or the unnamed one (null), with an agent to open in it. */
-export function workspaceRoute(name: string | null, agent?: string) {
+export function workspaceRoute(name: string | null, agent?: string, after?: string) {
   const query: Record<string, string> = name === null ? { unnamed: '1' } : { name }
   if (agent !== undefined) query.open = agent
+  if (after !== undefined) query.after = after
   return { path: '/workspace', query }
 }
 
@@ -120,6 +121,14 @@ export function workspaceRoute(name: string | null, agent?: string) {
 export function agentRoute(workspaces: WorkspaceSet | null, agent: string) {
   const home = workspaces ? homeOf(workspaces, agent) : undefined
   return home === undefined ? { path: '/workspace', query: { open: agent } } : workspaceRoute(home, agent)
+}
+
+/** A column opens in the workspace of `neighbour` (an agent), right after the neighbour's column. */
+export function routeBeside(workspaces: WorkspaceSet, neighbour: string, column: string) {
+  const home = homeOf(workspaces, neighbour)
+  return home === undefined
+    ? { path: '/workspace', query: { open: column, after: neighbour } }
+    : workspaceRoute(home, column, neighbour)
 }
 
 /** Show the workspace in this window. */
