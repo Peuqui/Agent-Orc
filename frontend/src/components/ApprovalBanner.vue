@@ -1,54 +1,32 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { api, type WorkspaceSet } from '../api'
-import { useSessions } from '../composables/useSessions'
-import { shownAgents } from '../composables/useShownAgents'
+import { computed, onMounted } from 'vue'
+import { useHosts } from '../composables/useHosts'
 import { useToast } from '../composables/useToast'
-import { useWorkspaceChanges } from '../composables/useWorkspaceChanges'
-import { agentRoute } from '../composables/useWorkspaceTab'
-import ApprovalRequests from './ApprovalRequests.vue'
+import HostApprovals from './HostApprovals.vue'
 
-// A request of an agent asks at the top of every page, whatever workspace is open, with the
-// agent's name; a click on the name goes to that agent. Not for an agent in view: on its own page
-// and in the columns of the open workspace the request shows at the input. Inside the workspace's
-// iframes it would repeat once per column, so only the outermost page shows it.
+// A request of an agent asks at the top of every page, whatever workspace is open and whichever
+// machine the agent runs on, with the agent's name; a click on the name goes to that agent. Not for
+// an agent in view: on its own page and in the columns of the open workspace the request shows at
+// the input. Inside the workspace's iframes it would repeat once per column, so only the
+// outermost page shows it.
 const embedded = window.self !== window.top
-const route = useRoute()
-const router = useRouter()
-const { sessions } = useSessions()
 const toast = useToast()
+const { state, loadHosts, keepFresh } = useHosts()
+onMounted(() => loadHosts().catch(toast.error))
+keepFresh()
 
-// Where each agent lives, to go to its workspace as the card's terminal button does.
-const workspaces = ref<WorkspaceSet | null>(null)
-if (!embedded) {
-  useWorkspaceChanges(() => api.workspaces().then((everything) => (workspaces.value = everything), toast.error))
-}
-
-const agentPage = (id: string): string => `/terminal/${encodeURIComponent(id)}`
-const waiting = computed(() =>
-  sessions.value.filter(
-    (session) =>
-      session.approvals.length > 0 &&
-      route.path !== agentPage(session.id) &&
-      !shownAgents.value.includes(session.id),
-  ),
-)
+const hosts = computed<(string | null)[]>(() => [
+  null,
+  ...(state.value?.hosts.filter((host) => host.state === 'online').map((host) => host.name) ?? []),
+])
 </script>
 
 <template>
   <div
-    v-if="!embedded && waiting.length"
-    class="fixed inset-x-0 top-0 z-50 flex flex-col items-center gap-2 p-2"
+    v-if="!embedded"
+    class="pointer-events-none fixed inset-x-0 top-0 z-50 flex flex-col items-center gap-2 p-2 empty:hidden"
     aria-live="assertive"
   >
-    <ApprovalRequests
-      v-for="session in waiting"
-      :key="session.id"
-      :session="session"
-      named
-      class="w-full max-w-xl rounded-lg bg-page shadow-xl"
-      @open="router.push(agentRoute(workspaces, session.id))"
-    />
+    <HostApprovals v-for="host in hosts" :key="host ?? ''" :host="host" />
   </div>
 </template>

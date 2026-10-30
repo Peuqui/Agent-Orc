@@ -270,6 +270,8 @@ LEVELS_CACHE_SECONDS = 30
 # How often the server looks after the agents: effort changes waiting for a busy agent,
 # handover advice, scheduled prompts.
 AGENT_CHECK_SECONDS = 2
+# How often the server looks at the permission requests the hooks write.
+APPROVAL_CHECK_SECONDS = 0.5
 # History lines to read with the screen: none, only what is visible (a question being asked).
 SCREEN_ONLY = 0
 
@@ -1185,6 +1187,19 @@ def create_app(
             if session.running:
                 end_interrupted_answer(session)
 
+    approval_changes = ChangeNotifier()
+
+    async def watch_approvals() -> None:
+        """The hooks are processes of their own and write the requests as files: the server looks
+        at them and tells the pages when the open ones changed."""
+        known = {request.id for request in await asyncio.to_thread(open_requests)}
+        while True:
+            await asyncio.sleep(APPROVAL_CHECK_SECONDS)
+            current = {request.id for request in await asyncio.to_thread(open_requests)}
+            if current != known:
+                known = current
+                approval_changes.notify()
+
     async def watch_agents() -> None:
         while True:
             await asyncio.sleep(AGENT_CHECK_SECONDS)
@@ -1227,12 +1242,14 @@ def create_app(
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         watcher = asyncio.create_task(watch_agents())
+        approvals = asyncio.create_task(watch_approvals())
         tunnels = [
             asyncio.create_task(keep_tunnel_open(name, host_links[name].local_socket, host))
             for name, host in (config.hosts or {}).items()
         ]
         yield
         watcher.cancel()
+        approvals.cancel()
         for tunnel in tunnels:
             tunnel.cancel()
         await asyncio.gather(*tunnels, return_exceptions=True)
@@ -1633,6 +1650,11 @@ def create_app(
         # The call to the STT-Suite blocks for seconds, on the CPU even longer.
         result = await asyncio.to_thread(transcribe, audio, content_type, device, config.dictation)
         return {"text": result.text, "device": result.device}
+
+    @app.get("/api/approvals/events", dependencies=authenticated)
+    async def approval_events() -> StreamingResponse:
+        """A message whenever the open permission requests changed, of any agent."""
+        return event_stream(approval_changes.stream(), stopping)
 
     @app.get("/api/sessions", dependencies=authenticated)
     def list_sessions() -> list[dict[str, Any]]:
