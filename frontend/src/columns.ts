@@ -27,9 +27,10 @@ export function focusApproval(page: Document | null | undefined): boolean {
 
 /** A context menu asked for from the keyboard (the Menu key, Shift+F10), not by a click: no mouse
  * button pressed it (-1; a right click is 2). Its event comes on Windows when the key is let go,
- * so the key itself is not watched. */
+ * so the key itself is not watched. A long press on a touch screen has no button either, but it
+ * is no keyboard: it opens the text selection (copy), which must stay. */
 export function menuFromKeyboard(event: MouseEvent): boolean {
-  return event.button === -1
+  return event.button === -1 && (event as PointerEvent).pointerType !== 'touch'
 }
 
 /** A sideways swipe in the terminal; detail: 1 next column, -1 previous. */
