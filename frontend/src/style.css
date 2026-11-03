@@ -214,3 +214,12 @@
     @apply border-line;
   }
 }
+
+/* A terminal under the answers is pushed out of its clipped box instead of hidden: it keeps its
+   size, so fitting it still measures the box, and xterm.js stops drawing what is out of view (its
+   IntersectionObserver; -100% would still touch the edge, which counts as in view). A working
+   agent redraws its terminal several times a second, each time on the GPU: drawn unseen under the
+   answers, that was most of what the app used of a phone's battery. */
+.terminal-covered > .xterm {
+  transform: translateX(-200%);
+}

@@ -99,6 +99,8 @@ function copyPlainText(): Promise<void> {
 }
 
 const session = computed(() => sessions.value.find((candidate) => candidate.id === props.id))
+// The answers lie over the terminal, which stays as it is underneath (no resize when switching back).
+const answersShown = computed(() => terminalView.value === 'answers' && session.value !== undefined && !session.value.terminal)
 const name = computed(() => (session.value ? sessionName(session.value) : props.id))
 
 // A workspace column on a phone has no tab of its own: the bar names it and closes it.
@@ -641,11 +643,10 @@ onBeforeUnmount(() => {
     </div>
 
     <div class="relative flex min-h-0 flex-1 pt-1 pl-1">
-      <div ref="container" class="h-full min-w-0 flex-1" />
+      <div ref="container" class="h-full min-w-0 flex-1 overflow-hidden" :class="{ 'terminal-covered': answersShown }" />
       <JogScroller @scroll="onJog" />
-      <!-- Over the terminal, which stays as it is underneath (no resize when switching back). -->
       <div
-        v-if="terminalView === 'answers' && session && !session.terminal"
+        v-if="answersShown"
         class="absolute inset-0 z-10 flex flex-col bg-page"
         @pointerup="focusFieldAfterClick"
       >
