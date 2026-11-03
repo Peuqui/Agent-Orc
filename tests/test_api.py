@@ -2683,6 +2683,29 @@ def test_answers_come_from_the_transcript_the_agent_reports(
     turns = client.get(answers).json()
     shown = [(t["prompt"], [x["text"] for x in t["texts"]]) for t in turns]
     assert shown == [("Frage", ["Antwort"])]
+    later = [
+        {
+            "type": "user",
+            "uuid": "u3",
+            "timestamp": "2026-10-06T10:01:00Z",
+            "message": {"content": "Noch eine"},
+        },
+        {
+            "type": "assistant",
+            "uuid": "a4",
+            "timestamp": "2026-10-06T10:01:05Z",
+            "message": {"content": [{"type": "text", "text": "Zweite"}]},
+        },
+    ]
+    transcript.write_text("\n".join(json.dumps(line) for line in lines + later), encoding="utf-8")
+    # From the newest request the view has on: it (which may have grown) and what came after.
+    since = client.get(answers, params={"since_turn": "u1"}).json()
+    assert [t["id"] for t in since] == ["u1", "u3"]
+    assert [t["id"] for t in client.get(answers, params={"since_turn": "u3"}).json()] == ["u3"]
+    # A request that is no longer among the last ones: all of them, as without it.
+    unknown = client.get(answers, params={"since_turn": "gone"}).json()
+    assert [t["id"] for t in unknown] == ["u1", "u3"]
+    transcript.write_text("\n".join(json.dumps(line) for line in lines), encoding="utf-8")
     # A path outside Claude's own transcripts is not read, whatever the status says.
     outside = home / "projects" / "secret.jsonl"
     outside.write_text(transcript.read_text(encoding="utf-8"), encoding="utf-8")

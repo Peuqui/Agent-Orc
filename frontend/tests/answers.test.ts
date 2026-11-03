@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { isUnread, shownTexts, spokenAs, unreadTexts, uploadMentions } from '../src/answers.ts'
+import { isUnread, mergeTurns, shownTexts, spokenAs, unreadTexts, uploadMentions } from '../src/answers.ts'
 
 const text = (id: string, time: string) => ({ id, time, text: id })
 const turn = (id: string, texts: ReturnType<typeof text>[]) => ({
@@ -76,4 +76,20 @@ test('a text is new until it or a newer one was seen', () => {
   assert.equal(isUnread(written, '2026-10-06T10:00:01Z'), true)
   assert.equal(isUnread(written, '2026-10-06T10:00:05Z'), false)
   assert.equal(isUnread(written, '2026-10-06T10:00:09Z'), false)
+})
+
+test('a reload from the newest request held keeps the older ones and takes what came', () => {
+  const grown = turn('t3', [text('d', '2026-10-06T10:02:00Z')])
+  const merged = mergeTurns(turns, [grown, turn('t4', [])], 't3', 20)
+  assert.deepEqual(merged.map((t) => t.id), ['t1', 't2', 't3', 't4'])
+  assert.deepEqual(merged[2].texts.map((t) => t.id), ['d'])
+  // Never more than the newest `limit` requests.
+  assert.deepEqual(mergeTurns(turns, [grown, turn('t4', [])], 't3', 2).map((t) => t.id), ['t3', 't4'])
+})
+
+test('an answer that does not start with the request asked from is all there is', () => {
+  const fresh = [turn('n1', [])]
+  assert.deepEqual(mergeTurns(turns, fresh, 't3', 20), fresh)
+  assert.deepEqual(mergeTurns([], fresh, undefined, 20), fresh)
+  assert.deepEqual(mergeTurns(turns, [], 't3', 20), [])
 })

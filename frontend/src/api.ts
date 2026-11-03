@@ -793,8 +793,11 @@ function createApi(host?: string) {
     uploadUrl: (sessionId: string, name: string) =>
       `api/sessions/${encodeURIComponent(sessionId)}/uploads/${encodeURIComponent(name)}`,
     /** The last requests of the user with the agent's texts, oldest first (no thoughts or tools). */
-    answers: (sessionId: string, turns: number) =>
-      request<Turn[]>('GET', `sessions/${encodeURIComponent(sessionId)}/answers`, { query: { turns: String(turns) } }),
+    /** `sinceTurn`: the newest request held; only it and the newer ones come (see mergeTurns). */
+    answers: (sessionId: string, turns: number, sinceTurn?: string) =>
+      request<Turn[]>('GET', `sessions/${encodeURIComponent(sessionId)}/answers`, {
+        query: { turns: String(turns), ...(sinceTurn === undefined ? {} : { since_turn: sinceTurn }) },
+      }),
     /** Where the recording of something said on the Echo is served (the id of its entry). */
     recordingUrl: (id: string) => `api/voice/${encodeURIComponent(id)}/audio`,
     /** What was spoken to the agent on the Echo, to mark those requests in its answers. */

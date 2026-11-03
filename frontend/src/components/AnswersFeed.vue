@@ -2,7 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { api, type AnswerText, type Interjection, type SpokenRequest, type Turn } from '../api'
-import { isUnread, shownTexts, spokenAs, uploadMentions } from '../answers'
+import { isUnread, mergeTurns, shownTexts, spokenAs, uploadMentions } from '../answers'
 import { summaryOf } from '../speechText'
 import { markSeen, seenUntil } from '../composables/useAnswerSeen'
 import { useAnswerFileLinks } from '../composables/useAnswerFileLinks'
@@ -139,7 +139,11 @@ let known: Set<string> | null = null
 
 async function load(): Promise<void> {
   try {
-    ;[turns.value, spoken.value] = await Promise.all([api.answers(props.sessionId, props.turns), api.spoken(props.sessionId)])
+    // Only the newest request held and what came after: the rest of the conversation stays as it was.
+    const since = turns.value.at(-1)?.id
+    const [fresh, currentSpoken] = await Promise.all([api.answers(props.sessionId, props.turns, since), api.spoken(props.sessionId)])
+    turns.value = mergeTurns(turns.value, fresh, since, props.turns)
+    spoken.value = currentSpoken
   } catch (error) {
     toast.error(error)
     return

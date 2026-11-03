@@ -2150,9 +2150,15 @@ def create_app(
         return {"path": str(target.relative_to(session.path))}
 
     @app.get("/api/sessions/{session_id}/answers", dependencies=authenticated)
-    def session_answers(session_id: str, turns: int = 20) -> list[dict[str, Any]]:
+    def session_answers(
+        session_id: str, turns: int = 20, since_turn: str | None = None
+    ) -> list[dict[str, Any]]:
         """The last requests of the user and what the agent wrote in answer (no thoughts, tool
-        calls or results); empty for an agent that keeps no Claude transcript."""
+        calls or results); empty for an agent that keeps no Claude transcript.
+
+        `since_turn` is the newest request the caller has: only it (it may have grown) and the
+        newer ones are sent, when it is among the last `turns`. A view that reloads at every
+        change of a working agent then gets the answer in progress, not the whole conversation."""
         session = find_session(session_id)
         if session is None:
             raise SessionNotFoundError(session_id)
@@ -2162,6 +2168,9 @@ def create_app(
             found = read_turns(transcript, turns - len(found)) + found
             if len(found) >= turns:
                 break
+        ids = [turn.id for turn in found]
+        if since_turn in ids:
+            found = found[ids.index(since_turn) :]
         return [asdict(turn) for turn in found]
 
     def agent_transcripts(session: AgentSession) -> list[Path]:

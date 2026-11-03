@@ -18,6 +18,17 @@ export function shownTexts(turn: Turn, all: boolean): AnswerText[] {
   })
 }
 
+/**
+ * The requests after a reload that asked only from `since` on (the newest one held then): those
+ * before it as they were, then what came, the newest `limit`. An answer that does not start with
+ * `since` is all there is (the server sends everything when `since` is no longer among them).
+ */
+export function mergeTurns(held: Turn[], fresh: Turn[], since: string | undefined, limit: number): Turn[] {
+  if (since === undefined || fresh[0]?.id !== since) return fresh
+  const kept = held.slice(0, held.findIndex((turn) => turn.id === since))
+  return [...kept, ...fresh].slice(-limit)
+}
+
 /** New to the reader: written after the time seen (an ISO time, which compares as text). Seeing or
  * reading an answer marks it and every older one: the server keeps one time per agent. */
 export function isUnread(text: AnswerText, seen: string): boolean {
