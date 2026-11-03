@@ -1,5 +1,5 @@
 import { computed, ref } from 'vue'
-import { apiFor, type AgentProfile, type AgentQuota, type AgentSession } from '../api'
+import { apiFor, serverReachable, type AgentProfile, type AgentQuota, type AgentSession } from '../api'
 import { COLUMN_TAB } from '../device'
 import { useHostContext } from './useHostContext'
 import { useToast } from './useToast'
@@ -55,6 +55,14 @@ function createStore(host: string | null) {
     if (event.data?.kind !== AGENTS_MESSAGE || event.data.app !== APP_ROOT) return
     sessions.value = event.data.sessions
     quotas.value = event.data.quotas
+    // The page just had an answer from the app; a column does not ask itself (see AGENTS_MESSAGE).
+    serverReachable.value = true
+  }
+
+  // Back from the background, at once: a phone drops a hidden page's connections, so what was
+  // shown may be old and the notice of a request cut off by that should not wait for the next tick.
+  function refreshWhenShown(): void {
+    if (document.visibilityState === 'visible') void refresh()
   }
 
   /** Poll while the app is visible; a backgrounded phone app should not keep polling. A column of
@@ -66,14 +74,14 @@ function createStore(host: string | null) {
       window.addEventListener('message', takeFromPage)
       return
     }
-    timer = window.setInterval(() => {
-      if (document.visibilityState === 'visible') void refresh()
-    }, REFRESH_MILLISECONDS)
+    timer = window.setInterval(refreshWhenShown, REFRESH_MILLISECONDS)
+    document.addEventListener('visibilitychange', refreshWhenShown)
   }
 
   function stopPolling(): void {
     window.clearInterval(timer)
     window.removeEventListener('message', takeFromPage)
+    document.removeEventListener('visibilitychange', refreshWhenShown)
   }
 
   async function loadProfiles(): Promise<void> {

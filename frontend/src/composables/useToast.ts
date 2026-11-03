@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import { ApiError } from '../api'
+import { ApiError, NETWORK_ERROR } from '../api'
 import { i18n } from '../i18n'
 
 export interface Toast {
@@ -45,6 +45,9 @@ export function useToast() {
     dismiss,
     clear,
     info: (text: string) => show(text, 'info'),
-    error: (error: unknown) => show(errorText(error), 'error'),
+    // A request that got no answer shows as the lasting notice instead (serverReachable, ToastList).
+    error: (error: unknown) => {
+      if (!(error instanceof ApiError && error.code === NETWORK_ERROR)) show(errorText(error), 'error')
+    },
   }
 }

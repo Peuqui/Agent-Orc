@@ -434,6 +434,10 @@ export const authenticated = ref<boolean | null>(null)
 /** The server runs a different build than this page: it needs a reload. */
 export const newVersion = ref(false)
 
+/** Whether the last request reached this machine's app: false from a request that got no answer
+ * until the next one that does. Shown as a lasting notice instead of a message per failed request. */
+export const serverReachable = ref(true)
+
 const NO_CONTENT = 204
 // Sent by the server with the id of its installed build (agent_orc.api.BUILD_ID_HEADER).
 const BUILD_ID_HEADER = 'X-Build-Id'
@@ -550,9 +554,16 @@ async function fetchApi(method: string, path: string, options: SendOptions = {})
   try {
     response = await fetch(url, { method, credentials: 'same-origin', headers, body, signal: options.signal })
   } catch (error) {
-    // fetch only rejects when no HTTP response arrived at all (server down, network gone).
+    // fetch only rejects when no HTTP response arrived at all (server down, network gone), or when
+    // the caller gave the request up, which says nothing about the server.
+    if (!options.signal?.aborted) serverReachable.value = false
     throw new ApiError(0, NETWORK_ERROR, String(error), null)
   }
+  // What is not JSON did not come from the app: the reverse proxy without a backend (a restart,
+  // a deploy) is the app not reached either.
+  const isJson = response.headers.get('Content-Type')?.includes('application/json') ?? false
+  const proxyWithoutApp = !isJson && PROXY_UNREACHABLE_STATUSES.includes(response.status)
+  serverReachable.value = !proxyWithoutApp
   if (answeredByProxyLogin(response.redirected, response.headers.get('Content-Type'))) {
     // The reverse proxy's login has run out: reloading the page goes through the proxy again (the
     // service worker does not answer navigations, vite.config.ts), which shows its login page and
@@ -569,10 +580,10 @@ async function fetchApi(method: string, path: string, options: SendOptions = {})
     else window.location.assign(rootAddress())
   }
   if (!response.ok) {
-    // What is not JSON did not come from the app: the reverse proxy without a backend (a restart,
-    // a deploy) or an uncaught error of the server, which answers in plain text.
-    if (!response.headers.get('Content-Type')?.includes('application/json')) {
-      if (PROXY_UNREACHABLE_STATUSES.includes(response.status)) throw new ApiError(0, NETWORK_ERROR, String(response.status), null)
+    // Not JSON and not the proxy without a backend: an uncaught error of the server, which answers
+    // in plain text.
+    if (!isJson) {
+      if (proxyWithoutApp) throw new ApiError(0, NETWORK_ERROR, String(response.status), null)
       throw new ApiError(response.status, `http${response.status}`, `${response.status} ${response.statusText}`, null)
     }
     const data = await response.json()

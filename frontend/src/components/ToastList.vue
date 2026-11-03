@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { serverReachable } from '../api'
 import { useToast } from '../composables/useToast'
 
 const { toasts, dismiss } = useToast()
@@ -6,6 +7,12 @@ const { toasts, dismiss } = useToast()
 
 <template>
   <div class="fixed inset-x-0 bottom-20 z-50 flex flex-col items-center gap-2 px-4" aria-live="polite">
+    <p
+      v-if="!serverReachable"
+      class="w-full max-w-md rounded-lg border border-accent-700 bg-accent-900 px-4 py-3 text-sm text-accent-300 shadow-lg"
+    >
+      {{ $t('errors.NetworkError') }}
+    </p>
     <button
       v-for="toast in toasts"
       :key="toast.id"
