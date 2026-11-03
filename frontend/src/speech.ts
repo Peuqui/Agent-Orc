@@ -183,13 +183,19 @@ function ttsSuite(label: string): SpeechEngine {
   // Readings played to the end, by what they were made of: the same text again is not asked for again.
   const replays = new ReplayCache<ReplayPiece[]>(REPLAY_CACHE_ENTRIES)
 
+  /** A context left running plays silence for good: on a phone that keeps the audio output and
+   * the processor awake. It sleeps once nothing plays and nothing is being fetched; `begin` wakes it. */
+  function sleepWhenIdle(): void {
+    if (playing.size === 0 && aborts.size === 0) void context?.suspend()
+  }
+
   function cancel(): void {
     for (const abort of aborts) abort.abort()
     aborts.clear()
     for (const source of playing) source.stop()
     playing = new Set()
     queuedUntil = 0
-    void context?.resume()
+    sleepWhenIdle()
   }
 
   /** Sends the text now; its audio is decoded and queued as it arrives, behind the audio before it. */
@@ -214,7 +220,11 @@ function ttsSuite(label: string): SpeechEngine {
       queuedUntil += piece.buffer.duration
       playing.add(source)
       lastEnded = new Promise((resolve) => {
-        source.onended = () => resolve()
+        source.onended = () => {
+          playing.delete(source)
+          sleepWhenIdle()
+          resolve()
+        }
       })
     }
 
@@ -254,6 +264,8 @@ function ttsSuite(label: string): SpeechEngine {
         if (!controller.signal.aborted) throw error
       } finally {
         aborts.delete(controller)
+        // A reading that brought no audio (an error, a cancel) leaves nothing that would end.
+        sleepWhenIdle()
       }
     })()
     const ended = received.then(() => lastEnded)
