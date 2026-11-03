@@ -18,6 +18,7 @@ from agent_orc.sessions import (
     build_command,
     exact_target,
     session_id_for,
+    text_left_in_input,
     text_pieces,
 )
 
@@ -290,6 +291,66 @@ def test_a_long_line_is_typed_in_pieces_and_arrives_whole(
             break
         time.sleep(0.1)
     assert manager.text(session.id, 50).count(line) == 2
+
+
+RULE = "─" * 40
+
+
+def agent_screen(field: str) -> str:
+    """A Claude Code screen: the sent line stands in the history above the input field."""
+    return "\n".join(["❯ eine Nachricht", "● Antwort", RULE, f"❯ {field}", RULE, "  auto mode"])
+
+
+def test_text_in_the_input_field_counts_as_left_there() -> None:
+    assert text_left_in_input(agent_screen("eine Nachricht"), "eine Nachricht")
+
+
+def test_text_only_in_the_history_counts_as_submitted() -> None:
+    assert not text_left_in_input(agent_screen(""), "eine Nachricht")
+
+
+def test_a_screen_without_an_input_field_never_matches() -> None:
+    assert not text_left_in_input("❯ eine Nachricht", "eine Nachricht")
+
+
+def test_text_wrapped_by_the_agent_is_still_found() -> None:
+    wrapped = "\n".join([RULE, "❯ ein langer", "  Text hier", RULE])
+    assert text_left_in_input(wrapped, "ein langer Text hier")
+
+
+def test_a_trailing_backslash_the_agent_does_not_draw_is_ignored() -> None:
+    assert text_left_in_input(agent_screen("endet so"), "endet so \\")
+
+
+def test_a_line_of_only_backslashes_or_spaces_matches_nothing() -> None:
+    assert not text_left_in_input(agent_screen("x"), " \\ ")
+
+
+def test_a_text_left_in_the_field_logs_the_screen(
+    manager: SessionManager, workdir: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    session = manager.start("reader", workdir, resume=False)
+    screens = {session.id: agent_screen("eine Nachricht")}
+    manager.text = lambda session_id, history_lines: screens[session_id]  # type: ignore[method-assign]
+    manager._report_unsubmitted(session.id, "eine Nachricht")
+    assert "Enter had no effect" in caplog.text
+    assert "● Antwort" in caplog.text
+
+
+def test_a_submitted_text_logs_nothing(
+    manager: SessionManager, workdir: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    session = manager.start("reader", workdir, resume=False)
+    manager.text = lambda session_id, history_lines: agent_screen("")  # type: ignore[method-assign]
+    manager._report_unsubmitted(session.id, "eine Nachricht")
+    assert caplog.text == ""
+
+
+def test_a_session_gone_before_the_check_logs_nothing(
+    manager: SessionManager, caplog: pytest.LogCaptureFixture
+) -> None:
+    manager._report_unsubmitted("no-such-session", "/exit")
+    assert caplog.text == ""
 
 
 def test_a_line_that_looks_like_a_tmux_option_is_typed_as_text(

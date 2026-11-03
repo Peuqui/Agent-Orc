@@ -2,8 +2,10 @@
 
 import builtins
 import hashlib
+import logging
 import re
 import subprocess
+import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -17,6 +19,8 @@ from agent_orc.config import (
     TerminalConfig,
 )
 from agent_orc.effort import agent_settings_file
+
+logger = logging.getLogger(__name__)
 
 # Every agent gets its session id in this environment variable, so helpers it runs
 # (e.g. the status line command) know which session they belong to.
@@ -53,6 +57,10 @@ TMUX_ESCAPE_MS = 10
 EXIT_POLL_SECONDS = 0.2
 # tmux reports a missing server on stderr; that state simply means "no sessions".
 NO_SERVER_MARKERS = ("no server running", "error connecting")
+# Claude Code draws its input field between two rules; the top one may carry a label after them.
+INPUT_RULE_PREFIX = "──"
+# How much of a submitted text's end is looked for in the input field.
+SUBMIT_CHECK_TAIL_CHARS = 40
 
 
 class SessionError(RuntimeError):
@@ -147,6 +155,19 @@ def environment_options(env: dict[str, str]) -> list[str]:
 def text_pieces(text: str, size: int) -> list[str]:
     """The text cut into pieces of at most `size` characters (typed one after the other)."""
     return [text[start : start + size] for start in range(0, len(text), size)]
+
+
+def text_left_in_input(screen: str, text: str) -> bool:
+    """Whether the end of `text` still stands in the agent's input field on this screen. An agent
+    without such a field never matches. Whitespace does not count: the agent wraps long text."""
+    lines = screen.splitlines()
+    rules = [index for index, line in enumerate(lines) if line.startswith(INPUT_RULE_PREFIX)]
+    if len(rules) < 2:
+        return False
+    field = "".join("".join(lines[rules[-2] + 1 : rules[-1]]).split())
+    # A backslash at the end turns the Enter into a line break and is not drawn.
+    tail = "".join(text.split()).rstrip("\\")[-SUBMIT_CHECK_TAIL_CHARS:]
+    return tail != "" and tail in field
 
 
 class SessionManager:
@@ -329,6 +350,28 @@ class SessionManager:
         # Enter separately, so the agent sees typed text plus submit, not one pasted block.
         time.sleep(self._terminal.submit_delay_ms / MILLISECONDS_PER_SECOND)
         self.press_enter(session_id)
+        check = threading.Timer(
+            self._terminal.submit_check_ms / MILLISECONDS_PER_SECOND,
+            self._report_unsubmitted,
+            (session_id, line),
+        )
+        check.daemon = True
+        check.start()
+
+    def _report_unsubmitted(self, session_id: str, line: str) -> None:
+        """Log the screen when a submitted text still stands in the input field. It only records
+        the evidence: a further Enter would hide why the first one had no effect."""
+        try:
+            screen = self.text(session_id, 0)
+        except SessionNotFoundError:
+            return  # The line ended the agent (e.g. its exit command).
+        if text_left_in_input(screen, line):
+            logger.warning(
+                "%s: Enter had no effect, text still in the input field after %s ms:\n%s",
+                session_id,
+                self._terminal.submit_check_ms,
+                screen,
+            )
 
     def press_enter(self, session_id: str) -> None:
         self._tmux("send-keys", "-t", exact_target(session_id), "-l", "\r")

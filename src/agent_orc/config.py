@@ -94,6 +94,9 @@ class TerminalKey(StrictModel):
 class TerminalConfig(StrictModel):
     keys: list[list[TerminalKey]]
     submit_delay_ms: int
+    # This long after the Enter the server looks whether the text left the agent's input field,
+    # and logs the screen if not.
+    submit_check_ms: int = 1000
     text_history_lines: int
     # A long text goes into the agent in pieces of this many characters, a pause apart: Claude
     # Code takes one big chunk (about 800 characters on) for a paste and wraps it as pasted
