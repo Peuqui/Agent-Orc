@@ -228,7 +228,7 @@
   "dictation": {
     "cancel": "Discard the dictation (Esc)",
     "start": "Start dictation",
-    "stop": "Stop dictation",
+    "stop": "End the dictation (Esc discards)",
     "transcribing": "Transcribing …",
     "retry": "Retry",
     "retryHint": "Send the last recording to the STT-Suite again (switch to CPU first if needed)"

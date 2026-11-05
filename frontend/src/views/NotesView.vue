@@ -7,6 +7,8 @@ import AttachMenu from '../components/AttachMenu.vue'
 import BroadcastDialog from '../components/BroadcastDialog.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
 import SelectMenu from '../components/SelectMenu.vue'
+import DictationCancel from '../components/DictationCancel.vue'
+import { TOUCH_FIRST } from '../device'
 import DictationMic from '../components/DictationMic.vue'
 import DictationRetry from '../components/DictationRetry.vue'
 import InputDialog from '../components/InputDialog.vue'
@@ -466,7 +468,10 @@ function firstLine(note: Note): string {
               >
                 {{ item.label }}
               </button>
+              <!-- While a dictation is taken in, on a touch screen: the paperclip's place throws it away. -->
+              <DictationCancel v-if="TOUCH_FIRST.matches && dictation.active" :dictation="dictation" />
               <AttachMenu
+                v-else
                 below
                 :open="attachMenuOpen"
                 :busy="uploading"

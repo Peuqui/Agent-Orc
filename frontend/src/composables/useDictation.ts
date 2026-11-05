@@ -49,6 +49,8 @@ export function useDictation(
   sessionId?: string,
 ) {
   const state = ref<DictationState>('idle')
+  // Recording or listening: what is said is being taken in (it can still be cancelled).
+  const active = computed(() => state.value === 'recording' || state.value === 'listening')
   // What recognises (this device's choice) and where the STT-Suite transcribes (the same on every device).
   const { dictationDevice: device, dictationEngine, dictationSounds } = useSettings()
   // Unknown until the server's settings have arrived.
@@ -207,7 +209,7 @@ export function useDictation(
 
   /** Throws a running dictation away: nothing is transcribed. As in Mundwerk, only while it records or listens. */
   function cancel(): void {
-    if (state.value !== 'recording' && state.value !== 'listening') return
+    if (!active.value) return
     cancelled = true
     ending = true
     playSignal('cancel', dictationSounds.value).catch(onError)
@@ -218,7 +220,7 @@ export function useDictation(
   // Escape cancels, but only a running dictation: otherwise it goes where it went (in the terminal it interrupts
   // the agent). Caught before the page sees it, so it does not reach the terminal either.
   function cancelOnEscape(event: KeyboardEvent): void {
-    if (event.key !== 'Escape' || (state.value !== 'recording' && state.value !== 'listening')) return
+    if (event.key !== 'Escape' || !active.value) return
     event.preventDefault()
     event.stopPropagation()
     cancel()
@@ -228,6 +230,7 @@ export function useDictation(
 
   return {
     state,
+    active,
     device,
     gpuLoaded,
     engine,

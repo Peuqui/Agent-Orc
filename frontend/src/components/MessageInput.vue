@@ -16,6 +16,7 @@ import { isSendKey } from '../sendKey'
 import AppIcon from './AppIcon.vue'
 import { baseName } from '../format'
 import AttachMenu from './AttachMenu.vue'
+import DictationCancel from './DictationCancel.vue'
 import DictationMic from './DictationMic.vue'
 import DictationRetry from './DictationRetry.vue'
 import PromptTemplates from './PromptTemplates.vue'
@@ -280,7 +281,10 @@ function onKeydown(event: KeyboardEvent): void {
   <!-- Scaled with the views' font size, like the answers above it. -->
   <form class="flex items-end gap-1 p-1" :style="zoomStyle" @submit.prevent="submit">
     <DictationRetry :dictation="dictation" />
+    <!-- While a dictation is taken in, on a touch screen: the paperclip's place throws it away. -->
+    <DictationCancel v-if="TOUCH_FIRST.matches && dictation.active" :dictation="dictation" />
     <AttachMenu
+      v-else
       :open="attaching"
       :extra-open="Boolean(templates?.open)"
       :busy="uploading"
