@@ -1,7 +1,8 @@
 <script setup lang="ts">
-// The STT-Suite's logo in a round badge (assets/status-icons/stt-suite-icon.svg of AIfred): while a dictation
-// is taken in, its bars rise and fall like a level and the arcs glow; while it is transcribed, it stands still
-// and grey.
+// The STT-Suite's logo in a round badge (assets/status-icons/stt-suite-icon.svg of AIfred), in the TTS-Suite
+// logo's amber (Peuqui: the blue was too dark to see) and with a light rim, so it stands out on the dark page:
+// while a dictation is taken in, its bars rise and fall like a level and the arcs glow; while it is
+// transcribed, it stands still and grey.
 defineProps<{ listening: boolean }>()
 // The logo's own measures: they fit the circle as they are.
 const BARS = [
@@ -17,11 +18,11 @@ const BARS = [
   <svg viewBox="0 0 512 512" :class="{ still: !listening }" aria-hidden="true">
     <defs>
       <linearGradient id="dictationBadgeWave" gradientUnits="userSpaceOnUse" x1="96" y1="116" x2="336" y2="396">
-        <stop offset="0" stop-color="#38bdf8" />
-        <stop offset="1" stop-color="#0369a1" />
+        <stop offset="0" stop-color="#f59e0b" />
+        <stop offset="1" stop-color="#b45309" />
       </linearGradient>
     </defs>
-    <circle cx="256" cy="256" r="256" fill="#0f172a" />
+    <circle cx="256" cy="256" r="244" fill="#0f172a" stroke="#94a3b8" stroke-width="24" />
     <g fill="none" stroke="url(#dictationBadgeWave)" stroke-width="30" stroke-linecap="round">
       <line v-for="bar in BARS" :key="bar.x" class="bar" :x1="bar.x" :y1="bar.from" :x2="bar.x" :y2="bar.to" />
     </g>
