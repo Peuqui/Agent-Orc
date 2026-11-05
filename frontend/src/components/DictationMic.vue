@@ -5,7 +5,8 @@ import { TOUCH_FIRST } from '../device'
 import DictationBadge, { type BadgePhase } from './DictationBadge.vue'
 import { dictationPointer } from '../dictationPointer'
 
-// The microphone, large where it is pressed with a finger. Where the STT-Suite listens (CPU or GPU) and whether a
+// The microphone; on a touch screen as large as the field and the buttons beside it (40 px), so the row keeps
+// their height. Where the STT-Suite listens (CPU or GPU) and whether a
 // dictation goes to the agent at once are set in the settings menu; only the GPU is shown here, as a small
 // mark, since it is the exception. With the browser chosen, or without a service, it listens through the browser.
 // The button is the STT-Suite's badge, which shows how the dictation stands (ready, taking speech in,
@@ -49,13 +50,13 @@ function press(event: MouseEvent): void {
     <button
       type="button"
       class="btn-icon"
-      :class="TOUCH_FIRST.matches ? 'size-14' : 'size-11'"
+      :class="TOUCH_FIRST.matches ? 'size-10' : 'size-11'"
       :disabled="busy"
       :aria-label="dictation.active ? $t('dictation.stop') : $t('dictation.start')"
       :title="dictation.active ? $t('dictation.stop') : $t('dictation.start')"
       @click="press"
     >
-      <DictationBadge :phase="phase" :class="TOUCH_FIRST.matches ? 'size-10' : 'size-8'" />
+      <DictationBadge :phase="phase" :class="TOUCH_FIRST.matches ? 'size-9' : 'size-8'" />
     </button>
     <span
       v-if="onGpu"
