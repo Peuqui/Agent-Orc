@@ -42,7 +42,7 @@ import {
   COLUMN_FULLSCREEN_EVENT,
   COLUMN_SWIPE_EVENT,
   focusApproval,
-  menuFromKeyboard,
+  listenForMenuKey,
 } from '../columns'
 import { ESC } from '../keyCatalog'
 import { useTouchScroll } from '../composables/useTouchScroll'
@@ -175,12 +175,10 @@ watch(terminalView, async () => {
 
 // On its own page the Menu key (or Shift+F10) brings the keyboard to the agent's permission
 // request; in a workspace column the workspace does it for all its columns (useWorkspaceKeys).
-function goToApproval(event: MouseEvent): void {
-  if (!menuFromKeyboard(event)) return
-  event.preventDefault()
+function goToApproval(): void {
   if (!focusApproval(document)) toast.info(t('approval.noneWaiting'))
 }
-if (!props.embedded) window.addEventListener('contextmenu', goToApproval, true)
+const stopListeningForMenuKey = props.embedded ? undefined : listenForMenuKey(window, goToApproval)
 
 function closeColumn(): void {
   window.dispatchEvent(new CustomEvent(COLUMN_CLOSE_EVENT))
@@ -462,7 +460,7 @@ document.addEventListener('focusout', syncKeyboardUpLater)
 onBeforeUnmount(() => {
   document.removeEventListener('focusin', syncKeyboardUp)
   document.removeEventListener('focusout', syncKeyboardUpLater)
-  window.removeEventListener('contextmenu', goToApproval, true)
+  stopListeningForMenuKey?.()
   PHONE_WIDTH.removeEventListener('change', followPhoneWidth)
   window.removeEventListener(COLUMN_FULLSCREEN_EVENT, followFullscreen)
   unmounted = true

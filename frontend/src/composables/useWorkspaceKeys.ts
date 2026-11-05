@@ -1,6 +1,6 @@
 import { onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
-import { menuFromKeyboard } from '../columns'
+import { listenForMenuKey } from '../columns'
 import { jumpToWorkspace } from './useWorkspaceTab'
 
 // Desktop shortcuts: Alt+Shift+1…9 goes to that column, Alt+Shift+←/→ to the previous or next
@@ -41,21 +41,16 @@ export function useWorkspaceKeys(options: {
     }
   }
 
-  function onMenu(event: MouseEvent): void {
-    if (!menuFromKeyboard(event)) return
-    event.preventDefault()
-    options.nextApproval()
-  }
-
-  function listenOn(page: Window): void {
+  // A column's page takes its listeners along when it goes; only this page's are taken off.
+  function listenOn(page: Window): () => void {
     page.addEventListener('keydown', onShortcut, true)
-    page.addEventListener('contextmenu', onMenu, true)
+    const stopListeningForMenuKey = listenForMenuKey(page, options.nextApproval)
+    return () => {
+      page.removeEventListener('keydown', onShortcut, true)
+      stopListeningForMenuKey()
+    }
   }
 
-  listenOn(window)
-  onBeforeUnmount(() => {
-    window.removeEventListener('keydown', onShortcut, true)
-    window.removeEventListener('contextmenu', onMenu, true)
-  })
+  onBeforeUnmount(listenOn(window))
   return listenOn
 }

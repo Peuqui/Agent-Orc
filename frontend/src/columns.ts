@@ -14,7 +14,7 @@ export const APPROVAL_ATTRIBUTE = 'data-approval'
 export const APPROVAL_SELECTOR = `[${APPROVAL_ATTRIBUTE}]`
 
 /** Marks the first button of a permission request (Allow, or approving a plan): the Menu key brings
- * the keyboard there (see menuFromKeyboard). */
+ * the keyboard there (see listenForMenuKey). */
 export const APPROVAL_FIRST_ATTRIBUTE = 'data-approval-first'
 export const APPROVAL_FIRST_SELECTOR = `[${APPROVAL_FIRST_ATTRIBUTE}]`
 
@@ -25,12 +25,29 @@ export function focusApproval(page: Document | null | undefined): boolean {
   return first !== null && first !== undefined
 }
 
-/** A context menu asked for from the keyboard (the Menu key, Shift+F10), not by a click: no mouse
- * button pressed it (-1; a right click is 2). Its event comes on Windows when the key is let go,
- * so the key itself is not watched. A long press on a touch screen has no button either, but it
- * is no keyboard: it opens the text selection (copy), which must stay. */
-export function menuFromKeyboard(event: MouseEvent): boolean {
-  return event.button === -1 && (event as PointerEvent).pointerType !== 'touch'
+/** Calls onMenu when the context menu is asked for from the keyboard (the Menu key, Shift+F10)
+ * on this page, instead of opening it. Only a key pressed just before counts: on a touch screen a
+ * long press or dragging the handles of a text selection asks for a context menu too, with no
+ * mouse button like the key, and it must open the selection's own menu (copy). The menu comes
+ * when the key goes down or, on Windows, when it is let go; no other key goes down in between.
+ * Returns what stops listening. */
+export function listenForMenuKey(page: Window, onMenu: () => void): () => void {
+  let menuKeyDown = false
+  const noteKey = (event: KeyboardEvent): void => {
+    menuKeyDown = event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')
+  }
+  const onContextMenu = (event: MouseEvent): void => {
+    if (!menuKeyDown) return
+    menuKeyDown = false
+    event.preventDefault()
+    onMenu()
+  }
+  page.addEventListener('keydown', noteKey, true)
+  page.addEventListener('contextmenu', onContextMenu, true)
+  return () => {
+    page.removeEventListener('keydown', noteKey, true)
+    page.removeEventListener('contextmenu', onContextMenu, true)
+  }
 }
 
 /** A sideways swipe in the terminal; detail: 1 next column, -1 previous. */
