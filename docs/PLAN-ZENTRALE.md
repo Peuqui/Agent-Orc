@@ -47,7 +47,7 @@ Erledigt auf dem Branch: 1 und 2 (955b372), 3 und 4 (0fea151), 6 (28af9d6). Pake
 6. **Mehrere Wege zu einem Rechner:** `hosts.<name>.ssh` wird eine Liste von Zielen (Kabel
    `10.0.0.2`, Heimnetz), der Tunnel nimmt das erste, das antwortet, und versucht beim Abbruch
    die anderen.
-7. **Später: Reserve.** Die Zentrale spiegelt die Nutzerdaten auf die Rechner; Anleitung
+7. **Später: Reserve** (Entwurf in docs/PLAN-RESERVE.md). Die Zentrale spiegelt die Nutzerdaten auf die Rechner; Anleitung
    „Aragon zur Zentrale machen“. Zugang von außen zu Aragon klärt Peuqui.
 
 ## Offen
