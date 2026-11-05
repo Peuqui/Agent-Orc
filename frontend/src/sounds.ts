@@ -24,11 +24,20 @@ const BEEP_VOLUME = 0.3
 // The tone fades out exponentially to this level, which cannot be zero.
 const FADE_TO = 0.01
 const MILLISECONDS_PER_SECOND = 1000
+// Where a recording's sound counts as over: its last moment above this share of its peak (-20 dB). The rest is
+// the reverb's tail, which an opening microphone may cut short without it being missed.
+const HEARD_SHARE_OF_PEAK = 0.1
+
+/** A recording, and how long its sound is heard (see HEARD_SHARE_OF_PEAK). */
+interface Recording {
+  buffer: AudioBuffer
+  heardSeconds: number
+}
 
 let context: AudioContext | undefined
 let sounding = 0
 // Each recording is fetched and decoded once, then played from memory: a tone at once, without the network.
-const decoded = new Map<Signal, Promise<AudioBuffer>>()
+const decoded = new Map<Signal, Promise<Recording>>()
 
 /** One context for every tone. A context left running plays silence for good, which on a phone keeps the
  * audio output and the processor awake: it sleeps once no tone sounds (as the reading aloud's, speech.ts). */
@@ -37,7 +46,17 @@ function audioContext(): AudioContext {
   return context
 }
 
-function recording(signal: Signal): Promise<AudioBuffer> {
+function heardSeconds(buffer: AudioBuffer): number {
+  const channels = Array.from({ length: buffer.numberOfChannels }, (_, index) => buffer.getChannelData(index))
+  const loudness = (at: number): number => Math.max(...channels.map((samples) => Math.abs(samples[at])))
+  let peak = 0
+  for (let at = 0; at < buffer.length; at++) peak = Math.max(peak, loudness(at))
+  let last = buffer.length - 1
+  while (last > 0 && loudness(last) < peak * HEARD_SHARE_OF_PEAK) last--
+  return (last + 1) / buffer.sampleRate
+}
+
+function recording(signal: Signal): Promise<Recording> {
   let found = decoded.get(signal)
   if (found === undefined) {
     found = fetch(new URL(RECORDINGS[signal], rootAddress()))
@@ -46,6 +65,7 @@ function recording(signal: Signal): Promise<AudioBuffer> {
         return response.arrayBuffer()
       })
       .then((data) => audioContext().decodeAudioData(data))
+      .then((buffer) => ({ buffer, heardSeconds: heardSeconds(buffer) }))
     // A failed load is tried again at the next tone.
     found.catch(() => decoded.delete(signal))
     decoded.set(signal, found)
@@ -61,20 +81,20 @@ export async function loadSignals(sounds: DictationSounds): Promise<void> {
   if (sounding === 0) await context?.suspend()
 }
 
-/** Plays the tone; done once it has ended (the microphone opens only then, see useDictation). */
+/** Plays the tone; done once its sound is heard to its end, before the reverb's tail (the microphone opens
+ * then, see useDictation). */
 export async function playSignal(signal: Signal, sounds: DictationSounds): Promise<void> {
   const tone = audioContext()
-  const buffer = sounds === 'puck' ? await recording(signal) : null
+  const found = sounds === 'puck' ? await recording(signal) : null
   await tone.resume()
-  const source = buffer === null ? startBeep(tone, BEEPS[signal]) : startRecording(tone, buffer)
+  const source = found === null ? startBeep(tone, BEEPS[signal]) : startRecording(tone, found.buffer)
   sounding++
-  await new Promise<void>((ended) => {
-    source.onended = () => {
-      sounding--
-      if (sounding === 0) void tone.suspend()
-      ended()
-    }
-  })
+  source.onended = () => {
+    sounding--
+    if (sounding === 0) void tone.suspend()
+  }
+  const heard = found === null ? BEEPS[signal].milliseconds / MILLISECONDS_PER_SECOND : found.heardSeconds
+  await new Promise((heardOut) => window.setTimeout(heardOut, heard * MILLISECONDS_PER_SECOND))
 }
 
 function startRecording(tone: AudioContext, buffer: AudioBuffer): AudioScheduledSourceNode {
