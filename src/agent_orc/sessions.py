@@ -162,15 +162,15 @@ def _input_rules(lines: list[str]) -> list[int]:
     return [index for index, line in enumerate(lines) if line.startswith(INPUT_RULE_PREFIX)]
 
 
-def line_above_input(screen: str) -> str | None:
-    """The last line with text above the agent's input field, where Claude Code shows what it is
-    doing; None for a screen without such a field."""
+def lines_above_input(screen: str) -> list[str] | None:
+    """The screen's lines above the agent's input field, where Claude Code shows what it is doing
+    (below its spinner it may show more, such as its task list); None for a screen without such a
+    field."""
     lines = screen.splitlines()
     rules = _input_rules(lines)
     if len(rules) < 2:
         return None
-    above = [line for line in lines[: rules[-2]] if line.strip()]
-    return above[-1] if above else ""
+    return lines[: rules[-2]]
 
 
 def text_left_in_input(screen: str, text: str) -> bool:

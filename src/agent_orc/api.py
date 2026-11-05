@@ -283,6 +283,8 @@ AGENT_CHECK_SECONDS = 2
 # Looks in a row (AGENT_CHECK_SECONDS apart) without work on a busy agent's screen, before it
 # counts as resting (an answer stopped before it began, see context.shows_no_work).
 WORK_GONE_LOOKS = 3
+# How much of the screen above the input field goes to the log when an agent is let rest so.
+SCREEN_LOG_CHARS = 1500
 # How often the server looks at the permission requests the hooks write.
 APPROVAL_CHECK_SECONDS = 0.5
 # How often the other machines are looked at (hosts.HostLink.state).
@@ -1211,7 +1213,8 @@ def create_app(
                 looks_without_work.pop(session.id, None)
                 continue
             screen = functools.partial(sessions.text, session.id, 0)
-            if not shows_no_work(session, screen, profile.working_line, clock()):
+            seen = shows_no_work(session, screen, profile.working_line, clock())
+            if seen is None:
                 looks_without_work.pop(session.id, None)
                 continue
             # One look may catch the agent while it draws its screen anew: only several in a
@@ -1220,6 +1223,13 @@ def create_app(
             if looks_without_work[session.id] >= WORK_GONE_LOOKS:
                 del looks_without_work[session.id]
                 store_activity(session.id, busy=False)
+                # What it showed, to tell a stop before the answer from a screen misread.
+                shown = "\n".join(line for line in seen if line.strip())
+                logger.info(
+                    "%s: no work on the screen, resting again; above the input:\n%s",
+                    session.id,
+                    shown[-SCREEN_LOG_CHARS:],
+                )
 
     approval_changes = ChangeNotifier()
     host_changes = ChangeNotifier()

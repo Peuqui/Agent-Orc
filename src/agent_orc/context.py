@@ -27,7 +27,7 @@ from pathlib import Path
 from typing import Any
 
 from agent_orc.answers import interrupted_at
-from agent_orc.sessions import AgentSession, line_above_input
+from agent_orc.sessions import AgentSession, lines_above_input
 from agent_orc.state import state_dir, write_atomically
 
 STATUS_SUFFIX = ".json"
@@ -118,17 +118,21 @@ def end_interrupted_answer(session: AgentSession) -> None:
 
 def shows_no_work(
     session: AgentSession, screen: Callable[[], str], working: re.Pattern[str], now: float
-) -> bool:
-    """Whether an agent marked busy shows no work on its screen: the user may have stopped the
-    answer before it began, and Claude took the request back without a trace in the transcript.
-    The screen is looked at only past a short while after the mark (the agent first has to draw
-    its work) and not while it waits for a permission (the caller leaves those out)."""
+) -> list[str] | None:
+    """The lines above the input field of an agent marked busy that shows no work in any of them
+    (None while it does, or cannot tell): the user may have stopped the answer before it began,
+    and Claude took the request back without a trace in the transcript. A finished answer's
+    spinner turns into its summary ("✻ Baked for 9s"), so none stays behind. The screen is looked
+    at only past a short while after the mark (the agent first has to draw its work) and not while
+    it waits for a permission (the caller leaves those out)."""
     if _session_activity(session) != BUSY:
-        return False
+        return None
     if now - activity_file(session.id).stat().st_mtime < WORKING_LINE_DELAY_SECONDS:
-        return False
-    line = line_above_input(screen())
-    return line is not None and working.search(line) is None
+        return None
+    lines = lines_above_input(screen())
+    if lines is None or any(working.search(line) for line in lines):
+        return None
+    return lines
 
 
 def store_status(session_id: str, status: dict[str, Any]) -> Path:
