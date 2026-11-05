@@ -97,6 +97,8 @@ Push-Meldung, dann zurück. Erst danach gilt die Reserve als fertig.
 - Fritzbox von Hand umstellen reicht. Ist Aragon aus, weckt Peuqui ihn aus der Fritzbox per
   Wake-on-LAN. Offen: ob nach dem Aufwecken Windows ohne Anmeldung hochkommt und WSL samt
   Agent-Orc von selbst startet.
-- Port: Der Mini-nginx lauscht auf 443 und 8443. Die Reserve nimmt **dieselbe** Adresse samt Port
-  wie das Handy heute; eine andere (etwa 8443 statt 443) wäre ein anderer Ursprung: eigene PWA,
-  eigener Login, eigene Push-Anmeldung.
+- Ports: Peuqui kommt über 8443 (meist) und 443 (aus der Klinik, oft abgeschaltet) herein; der
+  Mini-nginx lauscht auf beiden. Aragons nginx lauscht genauso auf beiden. Im Notfall stellt
+  Peuqui in der Fritzbox die Weiterleitungen, die er gerade offen hat, auf Aragon. Jeder Port ist
+  für den Browser ein eigener Ursprung (eigene PWA, eigene Cookies, eigene Push-Anmeldung); das
+  ist heute schon so und bleibt beim Umschalten gültig, weil Aragon dieselben Daten hat.
