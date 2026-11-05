@@ -202,8 +202,9 @@ dictation:
 # Remove the leading "#" to switch it on.
 # hosts:
 #   Aragon:
-#     # The arguments of ssh: its options and the destination. It must log in without asking (a key).
-#     ssh: ["-p", "2222", "mp@10.0.0.2"]
+#     # The ways to it, each the arguments of ssh (its options and the destination); the tunnel
+#     # takes the first that answers. ssh must log in without asking (a key).
+#     ssh: [["-p", "2222", "mp@10.0.0.2"], ["-p", "2222", "mp@192.168.0.20"]]
 #     # That machine's Agent-Orc socket (its server.socket), spelled out: ssh does not expand "~".
 #     socket: /home/mp/.local/state/agent-orc/run/agent-orc.sock
 

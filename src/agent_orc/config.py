@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, Literal, Self, get_args
 
 import yaml
-from pydantic import BaseModel, ConfigDict, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 NAME_PLACEHOLDER = "{name}"
 CONVERSATION_PLACEHOLDER = "{conversation}"
@@ -288,9 +288,11 @@ HOST_NAME_PATTERN = re.compile(r"[A-Za-z0-9_-]+")
 class HostConfig(StrictModel):
     """Another machine whose Agent-Orc this one reaches through an SSH tunnel (see hosts.py)."""
 
-    # The arguments of ssh: its options and the destination, e.g. ["-p", "2222", "mp@10.0.0.2"].
-    # It must log in without asking (a key).
-    ssh: list[str]
+    # The ways to the machine, each the arguments of ssh (its options and the destination), e.g.
+    # [["-p", "2222", "mp@10.0.0.2"], ["-p", "2222", "mp@192.168.0.20"]]: the tunnel takes the
+    # first that answers (a direct cable before the home network). ssh must log in without
+    # asking (a key).
+    ssh: list[list[str]] = Field(min_length=1)
     # That Agent-Orc's socket on the machine (its server.socket), spelled out: ssh does not
     # expand "~".
     socket: str

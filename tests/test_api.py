@@ -2994,7 +2994,7 @@ def mini(
 ) -> Iterator[TestClient]:
     """This machine's Agent-Orc, logged in; its hosts: "Aragon" (up) and "Gone" (nothing there)."""
     monkeypatch.setattr("agent_orc.api.keep_tunnel_open", idle_tunnel)
-    hosts = {name: HostConfig(ssh=["nowhere"], socket="unused") for name in ("Aragon", "Gone")}
+    hosts = {name: HostConfig(ssh=[["nowhere"]], socket="unused") for name in ("Aragon", "Gone")}
     with_hosts = config.model_copy(update={"hosts": hosts})
     # Entered, so the app keeps one event loop (its HTTP sessions belong to it).
     with TestClient(
@@ -3014,7 +3014,7 @@ def test_another_machines_page_is_this_apps_own_and_only_its_api_is_handed_on(
     (static / "index.html").write_text("<p>this app's page</p>")
     (static / "assets" / "app.js").write_text("// this app's script")
     (static / BUILD_ID_FILE).write_text("this-build")
-    hosts = {"Aragon": HostConfig(ssh=["nowhere"], socket="unused")}
+    hosts = {"Aragon": HostConfig(ssh=[["nowhere"]], socket="unused")}
     with_hosts = config.model_copy(update={"hosts": hosts})
     app = create_app(with_hosts, new_credentials(PASSWORD), static_dir=static, clock=clock)
     with TestClient(app) as client:
@@ -3048,7 +3048,7 @@ def test_the_messages_of_another_machines_agents_are_sent_from_here(
         return answer
 
     monkeypatch.setattr(HostLink, "outbox", recorded)
-    hosts = {"Aragon": HostConfig(ssh=["nowhere"], socket="unused")}
+    hosts = {"Aragon": HostConfig(ssh=[["nowhere"]], socket="unused")}
     with_hosts = config.model_copy(update={"hosts": hosts})
     app = create_app(with_hosts, new_credentials(PASSWORD), static_dir=None, clock=clock)
     deadline = time.monotonic() + 10
@@ -3078,7 +3078,7 @@ def test_the_settings_a_machine_applies_itself_go_to_it(
         sent.append((method, path, body))
 
     monkeypatch.setattr(HostLink, "send", recorded)
-    hosts = {"Aragon": HostConfig(ssh=["nowhere"], socket="unused")}
+    hosts = {"Aragon": HostConfig(ssh=[["nowhere"]], socket="unused")}
     with_hosts = config.model_copy(update={"hosts": hosts})
     app = create_app(with_hosts, new_credentials(PASSWORD), static_dir=None, clock=clock)
     deadline = time.monotonic() + 10

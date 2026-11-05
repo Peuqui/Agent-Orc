@@ -20,14 +20,14 @@ from agent_orc.hosts import (
 
 
 def test_the_tunnel_forwards_the_other_machines_socket_to_a_local_one() -> None:
-    command = tunnel_command(
-        Path("/run/me/host-A.sock"),
-        HostConfig(ssh=["-p", "2222", "mp@10.0.0.2"], socket="/r/o.sock"),
-    )
+    way = ["-p", "2222", "mp@10.0.0.2"]
+    command = tunnel_command(Path("/run/me/host-A.sock"), "/r/o.sock", way)
     assert command[0] == "ssh"
     assert command[command.index("-L") + 1] == "/run/me/host-A.sock:/r/o.sock"
     # Never asks for a password; without the forward the tunnel is worth nothing.
     assert "BatchMode=yes" in command
+    # A way that does not answer is given up soon, for the next.
+    assert any(option.startswith("ConnectTimeout=") for option in command)
     assert "ExitOnForwardFailure=yes" in command
     assert command[-3:] == ["-p", "2222", "mp@10.0.0.2"]
 
@@ -50,7 +50,7 @@ def test_the_tunnel_is_opened_again_when_it_ends(
             hosts.keep_tunnel_open(
                 "A",
                 tmp_path / "run" / "host-A.sock",
-                HostConfig(ssh=[], socket=""),
+                HostConfig(ssh=[["x"]], socket=""),
                 lambda: ended.append(None),
             )
         )
@@ -66,6 +66,61 @@ def test_the_tunnel_is_opened_again_when_it_ends(
     assert len(starts.read_text().splitlines()) >= 3
     # Every tunnel that ended was reported, for the machine to be looked at at once.
     assert len(ended) >= 2
+
+
+def test_a_way_that_fails_is_followed_at_once_by_the_next(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    starts = tmp_path / "starts"
+    # Stands in for ssh: notes the way it was given, ends at once.
+    monkeypatch.setattr(
+        hosts,
+        "tunnel_command",
+        lambda _local, _remote, way: ["sh", "-c", f"echo {way[0]} >> {starts}"],
+    )
+    # Long enough that a pause after the last way would end the test before a second round.
+    monkeypatch.setattr(hosts, "RECONNECT_FIRST_SECONDS", 0.5)
+
+    async def run() -> None:
+        task = asyncio.create_task(
+            hosts.keep_tunnel_open(
+                "A",
+                tmp_path / "run" / "host-A.sock",
+                HostConfig(ssh=[["cable"], ["home"]], socket=""),
+                lambda: None,
+            )
+        )
+        for _ in range(100):
+            await asyncio.sleep(0.02)
+            if starts.exists() and len(starts.read_text().splitlines()) >= 2:
+                break
+        await asyncio.sleep(0.2)
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+
+    asyncio.run(run())
+    assert starts.read_text().splitlines() == ["cable", "home"]
+
+
+def test_a_machine_is_as_near_as_its_nearest_way(monkeypatch: pytest.MonkeyPatch) -> None:
+    link = HostLink(
+        "Aragon", Path("/nonexistent/host.sock"), HostConfig(ssh=[["cable"], ["home"]], socket="x")
+    )
+
+    async def offline() -> bool:
+        return False
+
+    async def address(way: list[str]) -> tuple[str, int]:
+        return way[0], 2222
+
+    async def answers(address: str, _port: int) -> str:
+        return "off" if address == "cable" else "refused"
+
+    monkeypatch.setattr(link, "is_online", offline)
+    monkeypatch.setattr("agent_orc.hosts.ssh_address", address)
+    monkeypatch.setattr("agent_orc.hosts.probe", answers)
+    assert asyncio.run(link.state()) == "ssh_down"
 
 
 def test_a_tunnel_that_never_shows_its_socket_is_ended_and_opened_again(
@@ -87,7 +142,7 @@ def test_a_tunnel_that_never_shows_its_socket_is_ended_and_opened_again(
             hosts.keep_tunnel_open(
                 "A",
                 tmp_path / "run" / "host-A.sock",
-                HostConfig(ssh=[], socket=""),
+                HostConfig(ssh=[["x"]], socket=""),
                 lambda: ended.append(None),
             )
         )
@@ -133,12 +188,14 @@ def hosts_section(lines: str) -> str:
 
 def test_hosts_are_named_for_an_address() -> None:
     config = parse_config(
-        hosts_section('  Aragon:\n    ssh: ["-p", "2222", "mp@10.0.0.2"]\n    socket: /r/o.sock\n')
+        hosts_section(
+            '  Aragon:\n    ssh: [["-p", "2222", "mp@10.0.0.2"]]\n    socket: /r/o.sock\n'
+        )
     )
     assert config.hosts is not None
-    assert config.hosts["Aragon"].ssh == ["-p", "2222", "mp@10.0.0.2"]
+    assert config.hosts["Aragon"].ssh == [["-p", "2222", "mp@10.0.0.2"]]
     with pytest.raises(ValidationError, match="letters, digits"):
-        parse_config(hosts_section('  "a/b":\n    ssh: [x]\n    socket: /s\n'))
+        parse_config(hosts_section('  "a/b":\n    ssh: [[x]]\n    socket: /s\n'))
 
 
 class Wrapped(Exception):  # noqa: N818
@@ -204,19 +261,19 @@ async def never_answers(*_arguments: object) -> None:
 
 
 def test_the_address_of_a_machine_is_what_ssh_would_connect_to() -> None:
-    config = HostConfig(ssh=["-p", "2222", "-o", "HostName=10.0.0.2", "mp@somewhere"], socket="x")
-    assert asyncio.run(ssh_address(config)) == ("10.0.0.2", 2222)
+    way = ["-p", "2222", "-o", "HostName=10.0.0.2", "mp@somewhere"]
+    assert asyncio.run(ssh_address(way)) == ("10.0.0.2", 2222)
 
 
 def test_a_machine_is_in_the_state_its_agent_orc_and_its_port_say(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    link = HostLink("Aragon", Path("/nonexistent/host.sock"), HostConfig(ssh=["x"], socket="x"))
+    link = HostLink("Aragon", Path("/nonexistent/host.sock"), HostConfig(ssh=[["x"]], socket="x"))
 
     async def offline() -> bool:
         return False
 
-    async def address(_config: HostConfig) -> tuple[str, int]:
+    async def address(_way: list[str]) -> tuple[str, int]:
         return "10.0.0.2", 2222
 
     monkeypatch.setattr(link, "is_online", offline)

@@ -41,6 +41,8 @@ ALIVE_INTERVAL_SECONDS = 15
 TUNNEL_SETUP_SECONDS = 20.0
 TUNNEL_SETUP_POLL_SECONDS = 0.2
 CONNECT_TIMEOUT_SECONDS = 5
+# ssh gives up on a way that does not answer after this long, so the next way is tried soon.
+SSH_CONNECT_TIMEOUT_SECONDS = 5
 ONLINE_CHECK_SECONDS = 3
 # A machine that does not answer within this time is taken as off (one that is there refuses or
 # answers at once).
@@ -82,17 +84,19 @@ class UnknownHostError(LookupError):
     """No machine of this name is configured."""
 
 
-def tunnel_command(local_socket: Path, config: HostConfig) -> list[str]:
+def tunnel_command(local_socket: Path, remote_socket: str, way: list[str]) -> list[str]:
+    """The tunnel over one way to the machine (the arguments of ssh, see HostConfig)."""
     return [
         "ssh",
         "-N",
         "-o", "BatchMode=yes",
+        "-o", f"ConnectTimeout={SSH_CONNECT_TIMEOUT_SECONDS}",
         "-o", "ExitOnForwardFailure=yes",
         "-o", f"ServerAliveInterval={ALIVE_INTERVAL_SECONDS}",
         "-o", "ServerAliveCountMax=3",
         "-o", "StreamLocalBindUnlink=yes",
-        "-L", f"{local_socket}:{config.socket}",
-        *config.ssh,
+        "-L", f"{local_socket}:{remote_socket}",
+        *way,
     ]  # fmt: skip
 
 
@@ -137,10 +141,17 @@ async def keep_tunnel_open(
     name: str, local_socket: Path, config: HostConfig, on_ended: Callable[[], None]
 ) -> None:
     """Runs the tunnel to the machine, and again whenever it ends, until cancelled. `on_ended` is
-    called each time it ended: the machine may be gone, which is worth looking at at once."""
+    called each time it ended: the machine may be gone, which is worth looking at at once.
+
+    The ways to it are tried in their order: one that fails is followed at once by the next; once
+    all have failed, the first is tried again after a pause. A tunnel that held a while starts
+    again from the first way (the cable may be back)."""
+    commands = [tunnel_command(local_socket, config.socket, way) for way in config.ssh]
     delay = RECONNECT_FIRST_SECONDS
-    for orphan in end_orphan_tunnels(tunnel_command(local_socket, config)):
-        logger.warning("host %s: ended tunnel %s of an earlier run", name, orphan)
+    for command in commands:
+        for orphan in end_orphan_tunnels(command):
+            logger.warning("host %s: ended tunnel %s of an earlier run", name, orphan)
+    way = 0
     while True:
         try:
             prepare_socket(local_socket)
@@ -150,7 +161,7 @@ async def keep_tunnel_open(
         started = time.monotonic()
         try:
             process = await asyncio.create_subprocess_exec(
-                *tunnel_command(local_socket, config),
+                *commands[way],
                 stdin=asyncio.subprocess.DEVNULL,
                 stdout=asyncio.subprocess.DEVNULL,
                 stderr=asyncio.subprocess.PIPE,
@@ -173,8 +184,13 @@ async def keep_tunnel_open(
                 errors.decode(errors="replace").strip(),
             )
             on_ended()
-            if time.monotonic() - started > RECONNECT_LAST_SECONDS:
-                delay = RECONNECT_FIRST_SECONDS  # it held for a while: begin again quickly
+        if time.monotonic() - started > RECONNECT_LAST_SECONDS:
+            delay = RECONNECT_FIRST_SECONDS  # it held for a while: begin again quickly
+            way = 0
+        else:
+            way = (way + 1) % len(commands)
+            if way != 0:
+                continue  # the next way at once
         await asyncio.sleep(delay)
         delay = min(delay * 2, RECONNECT_LAST_SECONDS)
 
@@ -208,12 +224,12 @@ async def probe(address: str, port: int) -> Connection:
     return "open"
 
 
-async def ssh_address(config: HostConfig) -> tuple[str, int]:
-    """Where `ssh` would connect for this machine (`ssh -G` resolves an alias of ~/.ssh/config)."""
+async def ssh_address(way: list[str]) -> tuple[str, int]:
+    """Where `ssh` would connect over this way (`ssh -G` resolves an alias of ~/.ssh/config)."""
     process = await asyncio.create_subprocess_exec(
         "ssh",
         "-G",
-        *config.ssh,
+        *way,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.DEVNULL,
     )
@@ -232,7 +248,7 @@ class HostLink:
         self.name = name
         self.local_socket = local_socket
         self.config = config
-        self._address: tuple[str, int] | None = None
+        self._addresses: list[tuple[str, int]] | None = None
         self._session: aiohttp.ClientSession | None = None
 
     def session(self) -> aiohttp.ClientSession:
@@ -259,15 +275,15 @@ class HostLink:
         """Whether its Agent-Orc answers; if not, why the machine is out of reach."""
         if await self.is_online():
             return "online"
-        if self._address is None:
-            self._address = await ssh_address(self.config)
-        match await probe(*self._address):
-            case "open":
-                return "service_off"
-            case "refused":
-                return "ssh_down"
-            case _:
-                return "off"
+        if self._addresses is None:
+            self._addresses = [await ssh_address(way) for way in self.config.ssh]
+        # The machine is as near as its nearest way.
+        found = {await probe(*address) for address in self._addresses}
+        if "open" in found:
+            return "service_off"
+        if "refused" in found:
+            return "ssh_down"
+        return "off"
 
     async def outbox(self, after: int | None) -> tuple[int, list[dict[str, Any]]]:
         """The agents' messages the machine left since `after` (a time of its clock), and the
