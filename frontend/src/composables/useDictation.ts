@@ -2,7 +2,7 @@ import { computed, onScopeDispose, ref, type UnwrapNestedRefs } from 'vue'
 import { api } from '../api'
 import { transcribeForAgent } from '../dictationHost'
 import { useSettings, type DictationEngine } from './useSettings'
-import { playSignal } from '../sounds'
+import { loadSignals, playSignal } from '../sounds'
 
 // Recording formats the STT-Suite is fed with (agent_orc.dictation.AUDIO_SUFFIXES),
 // best first: Chrome records WebM, Firefox Ogg, Safari MP4.
@@ -101,6 +101,8 @@ export function useDictation(
       .catch(onError)
   }
   void refreshService()
+  // Ahead of the first dictation, so its tone sounds at once.
+  loadSignals(dictationSounds.value).catch(onError)
 
   async function startRecording(): Promise<void> {
     const mimeType = RECORDING_TYPES.find((type) => MediaRecorder.isTypeSupported(type))
@@ -115,7 +117,7 @@ export function useDictation(
       void transcribe(new Blob(chunks, { type: mimeType }))
     }
     recorder.start()
-    playSignal('start', dictationSounds.value)
+    playSignal('start', dictationSounds.value).catch(onError)
     state.value = 'recording'
   }
 
@@ -165,7 +167,7 @@ export function useDictation(
         }
       }
       recognition = null
-      playSignal('stop', dictationSounds.value)
+      playSignal('stop', dictationSounds.value).catch(onError)
       state.value = 'idle'
       const text = heard.filter(Boolean).join(' ')
       heard = []
@@ -175,7 +177,7 @@ export function useDictation(
     ending = false
     interrupted = false
     listener.start()
-    playSignal('start', dictationSounds.value)
+    playSignal('start', dictationSounds.value).catch(onError)
     state.value = 'listening'
   }
 
@@ -191,7 +193,7 @@ export function useDictation(
       recognition?.stop()
     } else if (state.value === 'idle' && engine.value === 'browser') startListening()
     else if (state.value === 'recording') {
-      playSignal('stop', dictationSounds.value)
+      playSignal('stop', dictationSounds.value).catch(onError)
       recorder?.stop()
     } else if (state.value === 'idle') startRecording().catch(onError)
   }

@@ -40,8 +40,8 @@ export default defineConfig({
       // of its own (narnia: Authelia) only a navigation that reaches the proxy can show its login
       // page, so the start page is neither cached nor handed out for navigations (the router works
       // with #, the server is only ever asked for the start page). Offline the app could not reach its
-      // agents anyway; scripts and styles stay cached.
-      workbox: { importScripts: ['push-sw.js'], navigateFallback: null, globPatterns: ['**/*.{js,css}'] },
+      // agents anyway; scripts, styles and the microphone's tones stay cached.
+      workbox: { importScripts: ['push-sw.js'], navigateFallback: null, globPatterns: ['**/*.{js,css,wav}'] },
       // The manifest request must carry credentials when a reverse proxy uses HTTP basic auth.
       useCredentials: true,
       manifest: {
