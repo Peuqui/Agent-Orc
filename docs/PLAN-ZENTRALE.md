@@ -25,7 +25,7 @@ Rundruf an die Agenten des Rechners.
 
 ## Pakete
 
-Erledigt auf dem Branch: 1 und 2 (955b372), 3 und 4 (0fea151), 6 (28af9d6). Offen: 5, 7.
+Erledigt auf dem Branch: 1 und 2 (955b372), 3 und 4 (0fea151), 6 (28af9d6). Paket 5 entfällt. Offen: 7.
 
 1. **Eine Oberfläche:** Die Zentrale liefert unter `/hosts/<name>/` ihre eigene Oberfläche aus und
    reicht nur `api/…` und Websockets an den Rechner weiter. Die Seite eines Rechners ist damit
@@ -42,9 +42,8 @@ Erledigt auf dem Branch: 1 und 2 (955b372), 3 und 4 (0fea151), 6 (28af9d6). Offe
 4. **Einstellungen, die ein Rechner anwendet** (Warmhalten-Anzahl, Übergabe-Schalter): Die
    Zentrale hält sie und spiegelt sie bei jeder Änderung und wenn ein Rechner online kommt auf
    ihn; der Rechner liest sie wie bisher aus seiner Datei.
-5. **Arbeitsflächen rechnerübergreifend:** Eine Spalte trägt neben der Sitzung ihren Rechner;
-   Arbeitsflächen liegen nur an der Zentrale. Die vorhandenen Arbeitsflächen von Aragon werden
-   von Hand übernommen.
+5. **Arbeitsflächen bleiben je Rechner** (Peuqui 05.11.: der Wechsel zwischen Mini und Aragon
+   passt so), ebenso die Kartenreihenfolge der Übersicht. Entfällt als Umbau.
 6. **Mehrere Wege zu einem Rechner:** `hosts.<name>.ssh` wird eine Liste von Zielen (Kabel
    `10.0.0.2`, Heimnetz), der Tunnel nimmt das erste, das antwortet, und versucht beim Abbruch
    die anderen.
@@ -53,10 +52,6 @@ Erledigt auf dem Branch: 1 und 2 (955b372), 3 und 4 (0fea151), 6 (28af9d6). Offe
 
 ## Offen
 
-- Paket 5 ist eine neue Fähigkeit (Agenten verschiedener Rechner nebeneinander); Peuqui fragen,
-  ob er das so will oder Arbeitsflächen je Rechner bleiben sollen (dann an der Zentrale, aber je
-  Rechner getrennt).
 - Meldungen aus der Zeit, bevor die Zentrale einen Rechner nach ihrem Start zum ersten Mal
   erreicht, werden nicht verschickt (sie beginnt bei „jetzt“). Später fehlende Verbindungen holt
   sie nach (bis eine Stunde).
-- Kartenreihenfolge der Übersicht: wie die Arbeitsflächen noch je Rechner (Paket 5).
