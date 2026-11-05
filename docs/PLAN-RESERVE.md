@@ -85,10 +85,18 @@ neue Push-Anmeldung; ohne HTTPS gehen Diktat, Service Worker und Push gar nicht.
 Einmal den Mini-Dienst stoppen und den Ablauf durchspielen, mit Diktat, Terminal und
 Push-Meldung, dann zurück. Erst danach gilt die Reserve als fertig.
 
-## Offene Fragen an Peuqui
+## Antworten von Peuqui (05.11.2026)
 
-1. Läuft das VPN am Handy über die Fritzbox (WireGuard der Fritzbox) oder über etwas anderes?
-2. Sitzt vor `narnia.spdns.de` ein Login des Proxys (Authelia), der auch vor Agent-Orc gilt? Dann
-   braucht Aragon im Notfall denselben oder kommt ohne aus (Agent-Orc hat seinen eigenen Login).
-3. Reverse Proxy auf Aragon: nginx (wie auf dem Mini) oder Caddy? Beides muss installiert werden.
-4. Reicht das Umschalten in der Fritzbox von Hand, oder soll es ein Schalter sein?
+- Kein VPN: Alles läuft über die Portweiterleitung der Fritzbox. Die VPN-Alternative entfällt.
+- Vor allem sitzt **Authelia** (Zwei-Faktor) als Login des Proxys. Die Reserve braucht deshalb
+  ebenfalls Authelia, sonst wäre Aragon im Notfall nur mit dem Login von Agent-Orc geschützt.
+  Auf dem Mini läuft Authelia als Docker-Container mit nginx `auth_request`; auf Aragon genauso
+  in WSL (Docker ist dort vorhanden). Gespiegelt werden Authelias Konfiguration, Nutzer und die
+  Zwei-Faktor-Geheimnisse, damit die Authenticator-App am Handy weiter gilt.
+- Reverse Proxy: in WSL, mit einer Windows-Portweiterleitung wie für 2222.
+- Fritzbox von Hand umstellen reicht. Ist Aragon aus, weckt Peuqui ihn aus der Fritzbox per
+  Wake-on-LAN. Offen: ob nach dem Aufwecken Windows ohne Anmeldung hochkommt und WSL samt
+  Agent-Orc von selbst startet.
+- Port: Der Mini-nginx lauscht auf 443 und 8443. Die Reserve nimmt **dieselbe** Adresse samt Port
+  wie das Handy heute; eine andere (etwa 8443 statt 443) wäre ein anderer Ursprung: eigene PWA,
+  eigener Login, eigene Push-Anmeldung.
