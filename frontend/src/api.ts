@@ -768,27 +768,29 @@ function createApi(host?: string) {
     peerMessage: (to: string[], content: string) =>
       request<{ sent: { to: string; id: number; online: boolean }[] }>('POST', 'peers/message', { body: { to, content }, fromRoot: true }),
 
+    // Dictation, reading aloud and the shared settings belong to the user and their devices, not to the
+    // machine an agent runs on: this machine's own app serves them, also to another machine's page.
     /** Whether a TTS-Suite service reads answers aloud, and what it is called. */
-    tts: () => request<{ configured: boolean; label: string }>('GET', 'tts'),
+    tts: () => request<{ configured: boolean; label: string }>('GET', 'tts', { fromRoot: true }),
     /** What the service can speak with (each engine on each machine), and the voices of an engine. */
-    ttsCatalog: () => request<TtsCatalogRow[]>('GET', 'tts/catalog'),
-    ttsVoices: (engine: string) => request<{ id: string; label: string }[]>('GET', 'tts/voices', { query: { engine } }),
+    ttsCatalog: () => request<TtsCatalogRow[]>('GET', 'tts/catalog', { fromRoot: true }),
+    ttsVoices: (engine: string) => request<{ id: string; label: string }[]>('GET', 'tts/voices', { query: { engine }, fromRoot: true }),
     /** Which engines speak, in which order and with which voice (what the catalog has now is in it). */
-    ttsChoices: () => request<TtsChoices>('GET', 'tts/choices'),
+    ttsChoices: () => request<TtsChoices>('GET', 'tts/choices', { fromRoot: true }),
     /** The shared settings, all of them. */
-    settings: () => request<SharedSettings>('GET', 'settings'),
+    settings: () => request<SharedSettings>('GET', 'settings', { fromRoot: true }),
     /** Changes some of the shared settings (by name); answers with all of them. */
-    changeSettings: (change: Partial<SharedSettings>) => request<SharedSettings>('PATCH', 'settings', { body: change }),
-    storeTtsChoices: (choices: TtsChoices) => request<void>('PUT', 'tts/choices', { body: choices }),
+    changeSettings: (change: Partial<SharedSettings>) => request<SharedSettings>('PATCH', 'settings', { body: change, fromRoot: true }),
+    storeTtsChoices: (choices: TtsChoices) => request<void>('PUT', 'tts/choices', { body: choices, fromRoot: true }),
     /** The service's frames of audio for the text (see audioFrames.ts), read as they come. `speed` and `pitch`
      * override the service's own (see TtsChoices for those set per engine); null: the service's values apply. */
     ttsSpeak: (text: string, language: string, speed: number | null, pitch: number | null, signal: AbortSignal) =>
-      fetchApi('POST', 'tts/speak', { body: { text, language, speed, pitch }, host, signal }),
+      fetchApi('POST', 'tts/speak', { body: { text, language, speed, pitch }, fromRoot: true, signal }),
     announce: () =>
-      request<{ configured: boolean; rooms: string[]; max_chars: number; label: string }>('GET', 'announce'),
+      request<{ configured: boolean; rooms: string[]; max_chars: number; label: string }>('GET', 'announce', { fromRoot: true }),
     /** Has the text said on the Echo of the room ("*": all); returns once it is queued. */
     announceTexts: (room: string, texts: string[], speaker: string) =>
-      request<void>('POST', 'announce', { body: { room, texts, speaker } }),
+      request<void>('POST', 'announce', { body: { room, texts, speaker }, fromRoot: true }),
     /** Where a picture attached for the agent is served (the file name in its uploads folder). */
     uploadUrl: (sessionId: string, name: string) =>
       `api/sessions/${encodeURIComponent(sessionId)}/uploads/${encodeURIComponent(name)}`,
@@ -851,10 +853,10 @@ function createApi(host?: string) {
 
     /** service: what the STT-Suite transcribes with, null while it does not answer. */
     dictationSettings: () =>
-      request<{ language: string; stt: boolean; service: DictationService | null }>('GET', 'dictation'),
+      request<{ language: string; stt: boolean; service: DictationService | null }>('GET', 'dictation', { fromRoot: true }),
     /** Transcribe recorded speech on the chosen device; `device` in the answer is where it really ran. */
     dictate: (audio: Blob, device: DictationDevice) =>
-      request<{ text: string; device: 'cuda' | 'cpu' }>('POST', 'dictation', { upload: audio, query: { device } }),
+      request<{ text: string; device: 'cuda' | 'cpu' }>('POST', 'dictation', { upload: audio, query: { device }, fromRoot: true }),
 
     listFiles: (path: string) => request<FileEntry[]>('GET', 'files', { query: { path } }),
     /** Stores the file in the folder, or in `subfolder` below it (made if need be), under its name;

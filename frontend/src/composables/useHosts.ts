@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import { api, type HostsState } from '../api'
+import { api, rootAddress, type HostsState } from '../api'
 import { loadOnce } from '../loadOnce'
 import { useServerEvents } from './useServerEvents'
 
@@ -24,7 +24,7 @@ export function refresh(): Promise<void> {
 /** Keeps the state fresh while the calling component is shown: the server reports a machine's
  * coming and going. */
 function keepFresh(): void {
-  useServerEvents('api/hosts/events', () => void refresh().catch(() => undefined))
+  useServerEvents(new URL('api/hosts/events', rootAddress()).href, () => void refresh().catch(() => undefined))
 }
 
 export function useHosts() {
