@@ -12,9 +12,9 @@ from agent_orc.context import (
     claude_rate_limits,
     end_compaction,
     end_interrupted_answer,
-    end_vanished_answer,
     session_busy,
     session_status,
+    shows_no_work,
     status_file,
     status_line,
     store_activity,
@@ -216,16 +216,13 @@ def marked_busy(tmp_path: Path, session_id: str) -> AgentSession:
     return AgentSession(session_id, "claude", tmp_path, True, None, 0.0, False, None, None)
 
 
-def test_an_answer_stopped_before_it_began_ends_the_work_by_the_screen(tmp_path: Path) -> None:
+def test_an_answer_stopped_before_it_began_shows_on_the_screen(tmp_path: Path) -> None:
     working = parse_config(default_config_text()).agents["claude"].working_line
     assert working is not None
     later = ASKED_SECONDS + 60
-    still = marked_busy(tmp_path, "s-1")
-    end_vanished_answer(still, lambda: WORKING_SCREEN, working, later)
-    assert session_busy(still)
-    stopped = marked_busy(tmp_path, "s-2")
-    end_vanished_answer(stopped, lambda: RESTING_SCREEN, working, later)
-    assert not session_busy(stopped)
+    session = marked_busy(tmp_path, "s-1")
+    assert not shows_no_work(session, lambda: WORKING_SCREEN, working, later)
+    assert shows_no_work(session, lambda: RESTING_SCREEN, working, later)
 
 
 def test_the_screen_counts_only_a_while_after_the_mark(tmp_path: Path) -> None:
@@ -233,5 +230,4 @@ def test_the_screen_counts_only_a_while_after_the_mark(tmp_path: Path) -> None:
     assert working is not None
     # Just marked: the agent has not drawn its work yet, the screen is not even asked.
     session = marked_busy(tmp_path, "s-1")
-    end_vanished_answer(session, lambda: pytest.fail("asked"), working, ASKED_SECONDS + 1)
-    assert session_busy(session)
+    assert not shows_no_work(session, lambda: pytest.fail("asked"), working, ASKED_SECONDS + 1)

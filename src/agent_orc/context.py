@@ -16,7 +16,7 @@ UserPromptSubmit when it is queued; if it is taken as a request of its own after
 hook marks that start, so agent-idle leaves such an agent working. An answer the user stops (Esc)
 gets no Stop: the server finds the stop in the transcript (end_interrupted_answer). One stopped
 before it began is not even there (Claude takes the request back): the screen tells
-(end_vanished_answer).
+(shows_no_work).
 """
 
 import json
@@ -116,20 +116,19 @@ def end_interrupted_answer(session: AgentSession) -> None:
         store_activity(session.id, busy=False)
 
 
-def end_vanished_answer(
+def shows_no_work(
     session: AgentSession, screen: Callable[[], str], working: re.Pattern[str], now: float
-) -> None:
-    """An agent marked busy whose screen shows no work any more rests again: the user stopped the
+) -> bool:
+    """Whether an agent marked busy shows no work on its screen: the user may have stopped the
     answer before it began, and Claude took the request back without a trace in the transcript.
     The screen is looked at only past a short while after the mark (the agent first has to draw
     its work) and not while it waits for a permission (the caller leaves those out)."""
     if _session_activity(session) != BUSY:
-        return
+        return False
     if now - activity_file(session.id).stat().st_mtime < WORKING_LINE_DELAY_SECONDS:
-        return
+        return False
     line = line_above_input(screen())
-    if line is not None and working.search(line) is None:
-        store_activity(session.id, busy=False)
+    return line is not None and working.search(line) is None
 
 
 def store_status(session_id: str, status: dict[str, Any]) -> Path:

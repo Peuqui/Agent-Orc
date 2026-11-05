@@ -77,11 +77,11 @@ from agent_orc.consumption import claude_consumption
 from agent_orc.context import (
     QUOTA_SOURCES,
     end_interrupted_answer,
-    end_vanished_answer,
     session_busy,
     session_compacting,
     session_status,
     session_transcript,
+    shows_no_work,
     store_activity,
     transcript_version,
 )
@@ -280,6 +280,9 @@ LEVELS_CACHE_SECONDS = 30
 # How often the server looks after the agents: effort changes waiting for a busy agent,
 # handover advice, scheduled prompts.
 AGENT_CHECK_SECONDS = 2
+# Looks in a row (AGENT_CHECK_SECONDS apart) without work on a busy agent's screen, before it
+# counts as resting (an answer stopped before it began, see context.shows_no_work).
+WORK_GONE_LOOKS = 3
 # How often the server looks at the permission requests the hooks write.
 APPROVAL_CHECK_SECONDS = 0.5
 # How often the other machines are looked at (hosts.HostLink.state).
@@ -1194,6 +1197,9 @@ def create_app(
                 message = agent_message("unsent", session.id, session.name, prompt.text)
                 deliver(message, config.push)
 
+    # How many looks in a row found no work on a busy agent's screen (see shows_no_work).
+    looks_without_work: dict[str, int] = {}
+
     def end_interrupted_answers() -> None:
         waiting = {request.session for request in open_requests()}
         for session in sessions.list():
@@ -1202,9 +1208,18 @@ def create_app(
             end_interrupted_answer(session)
             profile = config.agents.get(session.profile)
             if profile is None or profile.working_line is None or session.id in waiting:
+                looks_without_work.pop(session.id, None)
                 continue
             screen = functools.partial(sessions.text, session.id, 0)
-            end_vanished_answer(session, screen, profile.working_line, clock())
+            if not shows_no_work(session, screen, profile.working_line, clock()):
+                looks_without_work.pop(session.id, None)
+                continue
+            # One look may catch the agent while it draws its screen anew: only several in a
+            # row count.
+            looks_without_work[session.id] = looks_without_work.get(session.id, 0) + 1
+            if looks_without_work[session.id] >= WORK_GONE_LOOKS:
+                del looks_without_work[session.id]
+                store_activity(session.id, busy=False)
 
     approval_changes = ChangeNotifier()
     host_changes = ChangeNotifier()
