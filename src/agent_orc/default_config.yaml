@@ -316,6 +316,9 @@ agents:
             async: true
     # Starting an agent in a folder means trusting it: skip Claude's trust prompt.
     trust: claude
+    # Its spinner above the input field while it works ("* Marinating… (27s"); once that is gone,
+    # an agent counted as working rests again (an answer stopped before it began runs no hook).
+    working_line: '^\S+ [^…]+… \(\d'
     # A further agent in the folder gets an AI-Connect name of its own (Host:Project-Suffix).
     env: {AI_CONNECT_PEER_SUFFIX: "{suffix}"}
     # Usage limits (five hours, week) as Claude reports them in its status line.

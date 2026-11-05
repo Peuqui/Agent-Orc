@@ -5,12 +5,14 @@ from typing import Any
 
 import pytest
 
+from agent_orc.config import default_config_text, parse_config
 from agent_orc.context import (
     activity_file,
     begin_compaction,
     claude_rate_limits,
     end_compaction,
     end_interrupted_answer,
+    end_vanished_answer,
     session_busy,
     session_status,
     status_file,
@@ -199,4 +201,37 @@ def test_an_answer_going_on_after_the_stop_leaves_the_agent_working(tmp_path: Pa
     }
     session = stopped_conversation(tmp_path, "s-3", newest=going_on)
     end_interrupted_answer(session)
+    assert session_busy(session)
+
+
+# Claude Code 2.1.318 while it works, and once it is done.
+INPUT_FIELD = "─" * 40 + "\n❯ \n" + "─" * 40
+WORKING_SCREEN = "● Antwort\n\n* Marinating… (27s · thought for 7s)\n\n" + INPUT_FIELD
+RESTING_SCREEN = "● Antwort\n\n✻ Baked for 9s · done 19:26\n\n" + INPUT_FIELD
+
+
+def marked_busy(tmp_path: Path, session_id: str) -> AgentSession:
+    store_activity(session_id, busy=True)
+    os.utime(activity_file(session_id), (ASKED_SECONDS, ASKED_SECONDS))
+    return AgentSession(session_id, "claude", tmp_path, True, None, 0.0, False, None, None)
+
+
+def test_an_answer_stopped_before_it_began_ends_the_work_by_the_screen(tmp_path: Path) -> None:
+    working = parse_config(default_config_text()).agents["claude"].working_line
+    assert working is not None
+    later = ASKED_SECONDS + 60
+    still = marked_busy(tmp_path, "s-1")
+    end_vanished_answer(still, lambda: WORKING_SCREEN, working, later)
+    assert session_busy(still)
+    stopped = marked_busy(tmp_path, "s-2")
+    end_vanished_answer(stopped, lambda: RESTING_SCREEN, working, later)
+    assert not session_busy(stopped)
+
+
+def test_the_screen_counts_only_a_while_after_the_mark(tmp_path: Path) -> None:
+    working = parse_config(default_config_text()).agents["claude"].working_line
+    assert working is not None
+    # Just marked: the agent has not drawn its work yet, the screen is not even asked.
+    session = marked_busy(tmp_path, "s-1")
+    end_vanished_answer(session, lambda: pytest.fail("asked"), working, ASKED_SECONDS + 1)
     assert session_busy(session)

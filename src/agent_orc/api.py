@@ -2,6 +2,7 @@
 
 import asyncio
 import contextlib
+import functools
 import hmac
 import logging
 import mimetypes
@@ -76,6 +77,7 @@ from agent_orc.consumption import claude_consumption
 from agent_orc.context import (
     QUOTA_SOURCES,
     end_interrupted_answer,
+    end_vanished_answer,
     session_busy,
     session_compacting,
     session_status,
@@ -1193,9 +1195,16 @@ def create_app(
                 deliver(message, config.push)
 
     def end_interrupted_answers() -> None:
+        waiting = {request.session for request in open_requests()}
         for session in sessions.list():
-            if session.running:
-                end_interrupted_answer(session)
+            if not session.running:
+                continue
+            end_interrupted_answer(session)
+            profile = config.agents.get(session.profile)
+            if profile is None or profile.working_line is None or session.id in waiting:
+                continue
+            screen = functools.partial(sessions.text, session.id, 0)
+            end_vanished_answer(session, screen, profile.working_line, clock())
 
     approval_changes = ChangeNotifier()
     host_changes = ChangeNotifier()

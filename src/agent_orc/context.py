@@ -14,23 +14,28 @@ Whether the agent is working comes from Claude's hooks: UserPromptSubmit runs
 `agent-orc agent-busy`, Stop runs `agent-orc agent-idle`. Text typed while the agent works runs
 UserPromptSubmit when it is queued; if it is taken as a request of its own after the answer, no
 hook marks that start, so agent-idle leaves such an agent working. An answer the user stops (Esc)
-gets no Stop: the server finds the stop in the transcript (end_interrupted_answer).
+gets no Stop: the server finds the stop in the transcript (end_interrupted_answer). One stopped
+before it began is not even there (Claude takes the request back): the screen tells
+(end_vanished_answer).
 """
 
 import json
+import re
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 from agent_orc.answers import interrupted_at
-from agent_orc.sessions import AgentSession
+from agent_orc.sessions import AgentSession, line_above_input
 from agent_orc.state import state_dir, write_atomically
 
 STATUS_SUFFIX = ".json"
 ACTIVITY_SUFFIX = ".activity"
 BUSY = "busy"
 IDLE = "idle"
+# The agent draws its work a moment after the hook marked it busy: its screen counts from then on.
+WORKING_LINE_DELAY_SECONDS = 5
 # An agent that rested shrinks its context: it works, but no Stop follows (see begin_compaction).
 COMPACTING = "compacting"
 # The input side of the last request: what the model had to read, i.e. the occupied context.
@@ -108,6 +113,22 @@ def end_interrupted_answer(session: AgentSession) -> None:
         stopped is not None
         and datetime.fromisoformat(stopped).timestamp() > activity_file(session.id).stat().st_mtime
     ):
+        store_activity(session.id, busy=False)
+
+
+def end_vanished_answer(
+    session: AgentSession, screen: Callable[[], str], working: re.Pattern[str], now: float
+) -> None:
+    """An agent marked busy whose screen shows no work any more rests again: the user stopped the
+    answer before it began, and Claude took the request back without a trace in the transcript.
+    The screen is looked at only past a short while after the mark (the agent first has to draw
+    its work) and not while it waits for a permission (the caller leaves those out)."""
+    if _session_activity(session) != BUSY:
+        return
+    if now - activity_file(session.id).stat().st_mtime < WORKING_LINE_DELAY_SECONDS:
+        return
+    line = line_above_input(screen())
+    if line is not None and working.search(line) is None:
         store_activity(session.id, busy=False)
 
 

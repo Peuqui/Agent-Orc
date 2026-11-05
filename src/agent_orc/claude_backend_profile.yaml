@@ -13,6 +13,9 @@
     settings: *claude_settings
     env: {AGENT_ORC_EFFORT: "{effort}", AI_CONNECT_PEER_SUFFIX: "{suffix}"}
     trust: claude
+    # Its spinner above the input field while it works ("* Marinating… (27s"); once that is gone,
+    # an agent counted as working rests again (an answer stopped before it began runs no hook).
+    working_line: '^\S+ [^…]+… \(\d'
     effort:
       levels: [low, medium, high, xhigh, max]
       default: high

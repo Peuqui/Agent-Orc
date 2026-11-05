@@ -17,6 +17,7 @@ from agent_orc.sessions import (
     UnknownProfileError,
     build_command,
     exact_target,
+    line_above_input,
     session_id_for,
     text_left_in_input,
     text_pieces,
@@ -307,6 +308,12 @@ def test_text_in_the_input_field_counts_as_left_there() -> None:
 
 def test_text_only_in_the_history_counts_as_submitted() -> None:
     assert not text_left_in_input(agent_screen(""), "eine Nachricht")
+
+
+def test_the_line_above_the_input_field_is_what_the_agent_shows_it_does() -> None:
+    screen = "\n".join(["● Antwort", "", "* Marinating… (3s)", "", RULE, "❯ ", RULE, "  auto mode"])
+    assert line_above_input(screen) == "* Marinating… (3s)"
+    assert line_above_input("❯ eine Nachricht") is None
 
 
 def test_a_screen_without_an_input_field_never_matches() -> None:
