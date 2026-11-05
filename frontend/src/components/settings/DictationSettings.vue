@@ -9,7 +9,7 @@ import ToggleSwitch from '../ToggleSwitch.vue'
 // The dictation. What recognises it (the STT-Suite or the browser) is chosen for this device; where the STT-Suite
 // transcribes (CPU or GPU) and whether a dictation goes to the agent at once are the same on every device; what
 // the STT-Suite uses is its own business and only shown.
-const { dictationEngine, dictationDevice, dictationSendsAtOnce } = useSettings()
+const { dictationEngine, dictationDevice, dictationSendsAtOnce, dictationSounds } = useSettings()
 const toast = useToast()
 // Whether an STT-Suite service is configured, and what it transcribes with; asked when the window opens.
 const stt = ref(false)
@@ -77,6 +77,23 @@ onMounted(async () => {
         {{ $t('settings.dictationSendsAtOnce') }}
       </ToggleSwitch>
       <p class="mt-1 text-xs text-hint">{{ $t('settings.dictationSendsAtOnceHint') }}</p>
+    </div>
+    <div class="mt-4 border-t border-line pt-3 text-sm text-soft">
+      <div class="flex items-center justify-between gap-2">
+        <span>{{ $t('settings.dictationSounds') }}</span>
+        <div class="flex overflow-hidden rounded-md border border-line-strong text-xs">
+          <button
+            v-for="choice in (['puck', 'sine'] as const)"
+            :key="choice"
+            class="px-2 py-1"
+            :class="dictationSounds === choice ? 'segment-on' : 'text-dim'"
+            @click="dictationSounds = choice"
+          >
+            {{ $t(`settings.dictationSounds_${choice}`) }}
+          </button>
+        </div>
+      </div>
+      <p class="mt-1 text-xs text-hint">{{ $t('settings.dictationSoundsHint') }}</p>
     </div>
 
   </div>

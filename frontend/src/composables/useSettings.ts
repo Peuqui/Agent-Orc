@@ -98,6 +98,9 @@ const dictationSendsAtOnce = sharedSetting('dictation_sends_at_once')
 /** Where the STT-Suite transcribes the dictations, for every agent and device: the CPU unless the GPU was chosen on purpose. */
 const dictationDevice = sharedSetting('dictation_device')
 
+/** The tones when the microphone starts and stops, for every device. */
+const dictationSounds = sharedSetting('dictation_sounds')
+
 /** Per conversation of AI-Connect (its key), the last message read on this device. */
 const peerMessagesSeen = setting<Record<string, number>>('agent-orc-peers-seen', {}, JSON.parse, JSON.stringify)
 
@@ -188,6 +191,7 @@ export function useSettings() {
     dictationSendsAtOnce,
     dictationEngine,
     dictationDevice,
+    dictationSounds,
     extraKeysUnfolded,
     extraKeysVersion,
     speechEngine,

@@ -2,7 +2,7 @@ import { computed, onScopeDispose, ref, type UnwrapNestedRefs } from 'vue'
 import { api } from '../api'
 import { transcribeForAgent } from '../dictationHost'
 import { useSettings, type DictationEngine } from './useSettings'
-import { START_BEEP, STOP_BEEP, playBeep } from '../sounds'
+import { playSignal } from '../sounds'
 
 // Recording formats the STT-Suite is fed with (agent_orc.dictation.AUDIO_SUFFIXES),
 // best first: Chrome records WebM, Firefox Ogg, Safari MP4.
@@ -50,7 +50,7 @@ export function useDictation(
 ) {
   const state = ref<DictationState>('idle')
   // What recognises (this device's choice) and where the STT-Suite transcribes (the same on every device).
-  const { dictationDevice: device, dictationEngine } = useSettings()
+  const { dictationDevice: device, dictationEngine, dictationSounds } = useSettings()
   // Unknown until the server's settings have arrived.
   const stt = ref<boolean | null>(null)
   // Whether the service has a model on the GPU: asked at the start and after every dictation, which is
@@ -115,7 +115,7 @@ export function useDictation(
       void transcribe(new Blob(chunks, { type: mimeType }))
     }
     recorder.start()
-    playBeep(START_BEEP)
+    playSignal('start', dictationSounds.value)
     state.value = 'recording'
   }
 
@@ -165,7 +165,7 @@ export function useDictation(
         }
       }
       recognition = null
-      playBeep(STOP_BEEP)
+      playSignal('stop', dictationSounds.value)
       state.value = 'idle'
       const text = heard.filter(Boolean).join(' ')
       heard = []
@@ -175,7 +175,7 @@ export function useDictation(
     ending = false
     interrupted = false
     listener.start()
-    playBeep(START_BEEP)
+    playSignal('start', dictationSounds.value)
     state.value = 'listening'
   }
 
@@ -191,7 +191,7 @@ export function useDictation(
       recognition?.stop()
     } else if (state.value === 'idle' && engine.value === 'browser') startListening()
     else if (state.value === 'recording') {
-      playBeep(STOP_BEEP)
+      playSignal('stop', dictationSounds.value)
       recorder?.stop()
     } else if (state.value === 'idle') startRecording().catch(onError)
   }
