@@ -8,7 +8,7 @@ const scrollPositions = new Map<string | null, number>()
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
-import { api } from '../api'
+import { api, currentHost } from '../api'
 import { unreadTexts } from '../answers'
 import {
   APPROVAL_SELECTOR,
@@ -86,8 +86,9 @@ const agentsInView = computed(() => {
   if (!phone.value) return tabs
   return active === null ? [] : [active]
 })
-watch(agentsInView, (ids) => setShownAgents(null, [...ids]), { immediate: true })
-onBeforeUnmount(() => setShownAgents(null, []))
+// The columns are of the page's machine.
+watch(agentsInView, (ids) => setShownAgents(currentHost, [...ids]), { immediate: true })
+onBeforeUnmount(() => setShownAgents(currentHost, []))
 // The menu of the rarely used buttons and the help dialog it opens (where the room is short).
 const moreOpen = ref(false)
 const helpOpen = ref(false)

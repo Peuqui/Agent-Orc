@@ -1,6 +1,6 @@
 import { reactive } from 'vue'
 
-// By machine (null: this one's own), since each machine names its agents itself.
+// By machine (null: this one's own, the Zentrale), since each machine names its agents itself.
 const shown = reactive(new Map<string | null, string[]>())
 
 /**

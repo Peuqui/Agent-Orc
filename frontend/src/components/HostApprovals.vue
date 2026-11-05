@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { apiFor } from '../api'
+import { apiFor, currentHost } from '../api'
 import { provideHost } from '../composables/useHostContext'
 import { useApprovalChanges } from '../composables/useApprovalChanges'
 import { useHostLinks } from '../composables/useHostLinks'
@@ -24,7 +24,7 @@ useApprovalChanges(() => void refresh(), props.host)
 
 const agentPage = (id: string): string => `/terminal/${encodeURIComponent(id)}`
 const inView = (id: string): boolean =>
-  (props.host === null && route.path === agentPage(id)) || isShownAgent(props.host, id)
+  (props.host === currentHost && route.path === agentPage(id)) || isShownAgent(props.host, id)
 const waiting = computed(() =>
   sessions.value.filter((session) => session.approvals.length > 0 && !inView(session.id)),
 )

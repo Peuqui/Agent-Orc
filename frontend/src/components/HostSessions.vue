@@ -2,7 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { apiFor, type AgentSession, type Reasoning, type WorkspaceSet } from '../api'
+import { apiFor, currentHost, type AgentSession, type Reasoning, type WorkspaceSet } from '../api'
 import AppIcon from './AppIcon.vue'
 import BaseDialog from './BaseDialog.vue'
 import BroadcastButton from './BroadcastButton.vue'
@@ -35,14 +35,14 @@ const { sessions, profiles, terminalProfile, refresh, startPolling, stopPolling,
 const router = useRouter()
 const { href, go } = useHostLinks(props.host)
 const toast = useToast()
-// This machine's own agents are kept fresh by the app itself (App.vue).
+// The agents of the page's machine are kept fresh by the app itself (App.vue).
 onMounted(() => {
-  if (props.host === null) return
+  if (props.host === currentHost) return
   startPolling()
   loadProfiles().catch(toast.error)
 })
 onBeforeUnmount(() => {
-  if (props.host !== null) stopPolling()
+  if (props.host !== currentHost) stopPolling()
 })
 // A card on the screen shows its agent's request itself: the announcement at the top of the page
 // leaves that agent out. A card scrolled out of view does not, so there the announcement stays (it
@@ -195,7 +195,7 @@ function confirmRemoveWorktree(): void {
 }
 const otherTabs = useOtherTabs()
 // Which tabs are open is known for this machine's own workspaces only.
-const elsewhere = (workspace: string): boolean => props.host === null && otherTabs.value.has(workspace)
+const elsewhere = (workspace: string): boolean => props.host === currentHost && otherTabs.value.has(workspace)
 
 function loadWorkspaces(): void {
   api.workspaces().then((everything) => (workspaces.value = everything), toast.error)
@@ -208,7 +208,7 @@ const terminalAddress = (agent: string) => href(agentRoute(workspaces.value, age
 
 // A workspace of this machine's own opens in a tab of its own; another machine's is its page.
 function openWorkspaceNamed(name: string | null): void {
-  if (props.host === null) openWorkspace(router, name)
+  if (props.host === currentHost) openWorkspace(router, name)
   else void go({ path: '/workspace', query: name === null ? {} : { name } })
 }
 

@@ -524,7 +524,7 @@ interface SendOptions {
   body?: unknown
   upload?: Blob
   query?: Record<string, string>
-  host?: string
+  host?: string | null
   fromRoot?: boolean
   /** Ends the request (an answer that is read as a stream and may be given up). */
   signal?: AbortSignal
@@ -532,11 +532,12 @@ interface SendOptions {
 
 /** The answer of the app to the request, once it is a success; an error answer is an ApiError. The
  * body is not read yet. Of `options`: body is sent as JSON, upload (e.g. recorded audio) as it is;
- * `host` asks another machine's app, `fromRoot` this machine's own whichever machine's page this is. */
+ * `host` asks that machine's app (null: this machine's own, the Zentrale), `fromRoot` this machine's own;
+ * without either, the app of the machine whose page this is. */
 async function fetchApi(method: string, path: string, options: SendOptions = {}): Promise<Response> {
   // Relative to the page, so the app also works under a reverse-proxy sub-path (and below
-  // /hosts/<name>/, where it is another machine's).
-  const base = options.fromRoot ? rootAddress() : document.baseURI
+  // /hosts/<name>/, where it is another machine's). A machine named is named from this one's own.
+  const base = options.fromRoot || options.host !== undefined ? rootAddress() : document.baseURI
   const url = new URL(`${hostPrefix(options.host)}api/${path}`, base)
   for (const [key, value] of Object.entries(options.query ?? {})) {
     url.searchParams.set(key, value)
@@ -606,9 +607,10 @@ function checkBuild(response: Response): void {
   }
 }
 
-/** The calls to the app of `host` (another machine's, below /hosts/<name>/), or to this page's
- * own app without `host`. A call with its own `host` or `fromRoot` goes where it says. */
-function createApi(host?: string) {
+/** The calls to the app of `host` (null: this machine's own; another machine's is below
+ * /hosts/<name>/), or to the app of the machine whose page this is without `host`. A call with its
+ * own `host` or `fromRoot` goes where it says. */
+function createApi(host?: string | null) {
   const request = <T>(method: string, path: string, options: Parameters<typeof send>[2] = {}) =>
     send<T>(method, path, options.fromRoot ? options : { host, ...options })
   return {
@@ -904,13 +906,15 @@ export const api = createApi()
 
 const hostApis = new Map<string, ReturnType<typeof createApi>>()
 
-/** The calls to another machine's app; this machine's own `api` for null. */
+/** The calls to the app of `host` (null: this machine's own, the Zentrale); `api` for the machine
+ * whose page this is. */
 export function apiFor(host: string | null): typeof api {
-  if (host === null) return api
-  let found = hostApis.get(host)
+  if (host === currentHost) return api
+  const key = host ?? ''
+  let found = hostApis.get(key)
   if (found === undefined) {
     found = createApi(host)
-    hostApis.set(host, found)
+    hostApis.set(key, found)
   }
   return found
 }

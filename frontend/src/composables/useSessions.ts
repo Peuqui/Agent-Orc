@@ -1,5 +1,5 @@
 import { computed, ref } from 'vue'
-import { apiFor, serverReachable, type AgentProfile, type AgentQuota, type AgentSession } from '../api'
+import { apiFor, currentHost, serverReachable, type AgentProfile, type AgentQuota, type AgentSession } from '../api'
 import { COLUMN_TAB } from '../device'
 import { useHostContext } from './useHostContext'
 import { useToast } from './useToast'
@@ -26,7 +26,7 @@ function handToColumns(sessions: AgentSession[], quotas: AgentQuota[]): void {
   }
 }
 
-/** The agents of one machine (this one's own for host null) with what belongs to them. */
+/** The agents of one machine (null: this machine's own) with what belongs to them. */
 function createStore(host: string | null) {
   const hostApi = apiFor(host)
   const sessions = ref<AgentSession[]>([])
@@ -39,11 +39,12 @@ function createStore(host: string | null) {
       // The usage limits belong to the account, which this machine's own app reports.
       const [currentSessions, currentQuotas] = await Promise.all([
         hostApi.sessions(),
-        host === null ? hostApi.quota() : quotas.value,
+        host === currentHost ? hostApi.quota() : quotas.value,
       ])
       sessions.value = currentSessions
       quotas.value = currentQuotas
-      if (host === null) handToColumns(currentSessions, currentQuotas)
+      // The columns are of the page's machine.
+      if (host === currentHost) handToColumns(currentSessions, currentQuotas)
     } catch (error) {
       useToast().error(error)
     }
@@ -70,7 +71,7 @@ function createStore(host: string | null) {
   function startPolling(): void {
     stopPolling()
     void refresh()
-    if (host === null && COLUMN_TAB !== null) {
+    if (host === currentHost && COLUMN_TAB !== null) {
       window.addEventListener('message', takeFromPage)
       return
     }
