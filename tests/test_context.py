@@ -180,8 +180,9 @@ def stopped_conversation(
 
 def test_an_answer_the_user_stopped_ends_the_work(tmp_path: Path) -> None:
     session = stopped_conversation(tmp_path, "s-1")
-    end_interrupted_answer(session)
+    assert end_interrupted_answer(session)
     assert not session_busy(session)
+    assert not end_interrupted_answer(session)
 
 
 def test_a_stop_before_the_next_request_was_marked_leaves_the_agent_working(tmp_path: Path) -> None:

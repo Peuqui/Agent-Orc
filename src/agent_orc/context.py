@@ -70,6 +70,11 @@ def _session_activity(session: AgentSession) -> str | None:
     return path.read_text(encoding="utf-8")
 
 
+def session_activity(session: AgentSession) -> str | None:
+    """Busy, idle or compacting, as last reported; None before the agent's first report."""
+    return _session_activity(session)
+
+
 def session_busy(session: AgentSession) -> bool:
     """True while the agent works on a request (also while it waits for a permission, or
     shrinks its context)."""
@@ -101,12 +106,13 @@ def end_compaction(session_id: str) -> None:
         store_activity(session_id, busy=False)
 
 
-def end_interrupted_answer(session: AgentSession) -> None:
+def end_interrupted_answer(session: AgentSession) -> bool:
     """An agent marked busy whose conversation ends with the user stopping the answer rests again
-    (Claude runs no Stop hook then). Only a stop after the mark counts: an earlier one belongs to
-    the answer before, and the next request was sent but not yet written to the transcript."""
+    (Claude runs no Stop hook then); True if so. Only a stop after the mark counts: an earlier one
+    belongs to the answer before, and the next request was sent but not yet written to the
+    transcript."""
     if _session_activity(session) != BUSY:
-        return
+        return False
     transcript = session_transcript(session)
     stopped = None if transcript is None else interrupted_at(transcript)
     if (
@@ -114,6 +120,8 @@ def end_interrupted_answer(session: AgentSession) -> None:
         and datetime.fromisoformat(stopped).timestamp() > activity_file(session.id).stat().st_mtime
     ):
         store_activity(session.id, busy=False)
+        return True
+    return False
 
 
 def shows_no_work(

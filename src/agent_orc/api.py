@@ -77,6 +77,7 @@ from agent_orc.consumption import claude_consumption
 from agent_orc.context import (
     QUOTA_SOURCES,
     end_interrupted_answer,
+    session_activity,
     session_busy,
     session_compacting,
     session_status,
@@ -1201,13 +1202,28 @@ def create_app(
 
     # How many looks in a row found no work on a busy agent's screen (see shows_no_work).
     looks_without_work: dict[str, int] = {}
+    # Each running agent's activity as last seen here: every change goes to the log, with what
+    # made it, so a spinner that went missing can be traced.
+    activity_seen: dict[str, str | None] = {}
+
+    def note_activity(session: AgentSession, cause: str) -> None:
+        now = session_activity(session)
+        if session.id in activity_seen and activity_seen[session.id] != now:
+            logger.info("%s: %s -> %s (%s)", session.id, activity_seen[session.id], now, cause)
+        activity_seen[session.id] = now
 
     def end_interrupted_answers() -> None:
         waiting = {request.session for request in open_requests()}
-        for session in sessions.list():
+        listed = sessions.list()
+        for session_id in activity_seen.keys() - {s.id for s in listed if s.running}:
+            del activity_seen[session_id]
+        for session in listed:
             if not session.running:
                 continue
-            end_interrupted_answer(session)
+            # Changed since the last look by the agent's hooks (or another part of this server).
+            note_activity(session, "reported")
+            if end_interrupted_answer(session):
+                note_activity(session, "stop mark in the transcript")
             profile = config.agents.get(session.profile)
             if profile is None or profile.working_line is None or session.id in waiting:
                 looks_without_work.pop(session.id, None)
@@ -1223,6 +1239,7 @@ def create_app(
             if looks_without_work[session.id] >= WORK_GONE_LOOKS:
                 del looks_without_work[session.id]
                 store_activity(session.id, busy=False)
+                note_activity(session, "no work on the screen")
                 # What it showed, to tell a stop before the answer from a screen misread.
                 shown = "\n".join(line for line in seen if line.strip())
                 logger.info(
