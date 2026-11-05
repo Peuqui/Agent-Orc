@@ -226,6 +226,7 @@
     }
   },
   "dictation": {
+    "cancel": "Discard the dictation (Esc)",
     "start": "Start dictation",
     "stop": "Stop dictation",
     "transcribing": "Transcribing …",

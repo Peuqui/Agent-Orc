@@ -1,17 +1,24 @@
 import { rootAddress, type DictationSounds } from './api'
 
-// The tones around the microphone: a higher "ping" when listening starts, a lower "pong" when it stops.
+// The tones around the microphone: a higher "ping" when listening starts, a lower "pong" when it stops, and the
+// puck's "break" when a dictation is cancelled.
 // Either the Echo puck's recordings (public/sounds/, from FreeEchoDot2's audio_samples at 37190a9, made
 // by its tools/gen_notify_sounds.py), so both sound alike, or sine beeps made in the browser, as AIfred
 // plays them.
-export type Signal = 'start' | 'stop'
+export type Signal = 'start' | 'stop' | 'cancel'
 
 // From this machine's own app on every machine's page: one address, so the browser holds one copy
 // (the service worker keeps it, vite.config.ts).
-const RECORDINGS: Record<Signal, string> = { start: 'sounds/ping.wav', stop: 'sounds/pong.wav' }
+const RECORDINGS: Record<Signal, string> = {
+  start: 'sounds/ping.wav',
+  stop: 'sounds/pong.wav',
+  cancel: 'sounds/break.wav',
+}
 const BEEPS: Record<Signal, { frequency: number; milliseconds: number }> = {
   start: { frequency: 1000, milliseconds: 150 },
   stop: { frequency: 600, milliseconds: 200 },
+  // Lower and longer than the end: nothing is transcribed.
+  cancel: { frequency: 400, milliseconds: 300 },
 }
 const BEEP_VOLUME = 0.3
 // The tone fades out exponentially to this level, which cannot be zero.
@@ -49,7 +56,7 @@ function recording(signal: Signal): Promise<AudioBuffer> {
 /** Fetches and decodes the recordings ahead, so the first dictation's tone needs no wait either. */
 export async function loadSignals(sounds: DictationSounds): Promise<void> {
   if (sounds !== 'puck') return
-  await Promise.all([recording('start'), recording('stop')])
+  await Promise.all([recording('start'), recording('stop'), recording('cancel')])
   // Decoding made the context, which some browsers start running: it sleeps until the first tone.
   if (sounding === 0) await context?.suspend()
 }

@@ -17,7 +17,19 @@ const onGpu = computed(
 </script>
 
 <template>
-  <span v-if="dictation.microphone" class="relative flex">
+  <span v-if="dictation.microphone" class="relative flex items-center">
+    <!-- Throws the running dictation away (on a keyboard: Escape). -->
+    <button
+      v-if="active"
+      type="button"
+      class="btn-icon text-soft"
+      :class="TOUCH_FIRST.matches ? 'size-12 text-2xl' : 'size-9 text-lg'"
+      :aria-label="$t('dictation.cancel')"
+      :title="$t('dictation.cancel')"
+      @click="dictation.cancel"
+    >
+      ×
+    </button>
     <button
       type="button"
       class="btn-icon"

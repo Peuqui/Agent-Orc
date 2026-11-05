@@ -69,6 +69,8 @@ export function useDictation(
   // started again then, so a pause to think does not end the dictation. What was heard comes as one text at the end.
   let ending = false
   let interrupted = false
+  // Set by cancel(): what was recorded or heard is thrown away, not transcribed.
+  let cancelled = false
   let heard: string[] = []
   onScopeDispose(() => {
     ending = true
@@ -114,8 +116,10 @@ export function useDictation(
     recorder.onstop = () => {
       // Releases the microphone, so the browser's recording indicator goes away.
       for (const track of stream.getTracks()) track.stop()
-      void transcribe(new Blob(chunks, { type: mimeType }))
+      if (cancelled) state.value = 'idle'
+      else void transcribe(new Blob(chunks, { type: mimeType }))
     }
+    cancelled = false
     recorder.start()
     playSignal('start', dictationSounds.value).catch(onError)
     state.value = 'recording'
@@ -148,9 +152,10 @@ export function useDictation(
         if (result.isFinal) heard.push(result[0].transcript.trim())
       }
     }
-    // "no-speech" is a silence before anything was said: it ends like any other silence.
+    // "no-speech" is a silence before anything was said: it ends like any other silence. "aborted" follows a
+    // cancel (abort()).
     listener.onerror = (event) => {
-      if (event.error === 'no-speech') return
+      if (event.error === 'no-speech' || cancelled) return
       ending = true
       interrupted = true
       onError(new Error(event.error))
@@ -167,15 +172,17 @@ export function useDictation(
         }
       }
       recognition = null
-      playSignal('stop', dictationSounds.value).catch(onError)
       state.value = 'idle'
       const text = heard.filter(Boolean).join(' ')
       heard = []
+      if (cancelled) return
+      playSignal('stop', dictationSounds.value).catch(onError)
       if (text) onText(text, interrupted)
     }
     recognition = listener
     ending = false
     interrupted = false
+    cancelled = false
     listener.start()
     playSignal('start', dictationSounds.value).catch(onError)
     state.value = 'listening'
@@ -198,6 +205,27 @@ export function useDictation(
     } else if (state.value === 'idle') startRecording().catch(onError)
   }
 
+  /** Throws a running dictation away: nothing is transcribed. As in Mundwerk, only while it records or listens. */
+  function cancel(): void {
+    if (state.value !== 'recording' && state.value !== 'listening') return
+    cancelled = true
+    ending = true
+    playSignal('cancel', dictationSounds.value).catch(onError)
+    if (state.value === 'recording') recorder?.stop()
+    else recognition?.abort()
+  }
+
+  // Escape cancels, but only a running dictation: otherwise it goes where it went (in the terminal it interrupts
+  // the agent). Caught before the page sees it, so it does not reach the terminal either.
+  function cancelOnEscape(event: KeyboardEvent): void {
+    if (event.key !== 'Escape' || (state.value !== 'recording' && state.value !== 'listening')) return
+    event.preventDefault()
+    event.stopPropagation()
+    cancel()
+  }
+  window.addEventListener('keydown', cancelOnEscape, { capture: true })
+  onScopeDispose(() => window.removeEventListener('keydown', cancelOnEscape, { capture: true }))
+
   return {
     state,
     device,
@@ -207,6 +235,7 @@ export function useDictation(
     failedAudio,
     retry,
     toggleMicrophone,
+    cancel,
   }
 }
 
