@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, watch } from 'vue'
 import type { Dictation } from '../composables/useDictation'
 import { TOUCH_FIRST } from '../device'
 import AppIcon from './AppIcon.vue'
 import DictationBadge from './DictationBadge.vue'
-import DictationPointer from './DictationPointer.vue'
+import { dictationPointer } from '../dictationPointer'
 
 // The microphone, large where it is pressed with a finger. Where the STT-Suite listens (CPU or GPU) and whether a
 // dictation goes to the agent at once are set in the settings menu; only the GPU is shown here, as a small
 // mark, since it is the exception. With the browser chosen, or without a service, it listens through the browser.
-// While a dictation runs, the STT-Suite's badge shows it: with a mouse beside the pointer, on a touch screen in
-// the microphone's place. A running dictation is thrown away with Escape (on a touch screen: DictationCancel).
+// While a dictation runs, the STT-Suite's badge shows it: with a mouse beside the pointer, anywhere in the tab
+// (dictationPointer.ts), on a touch screen in the microphone's place. A running dictation is thrown away with Escape (on a touch screen: DictationCancel).
 const props = defineProps<{ dictation: Dictation }>()
 const busy = computed(() => props.dictation.state === 'transcribing')
 const shown = computed(() => props.dictation.active || busy.value)
@@ -18,13 +18,24 @@ const shown = computed(() => props.dictation.active || busy.value)
 const onGpu = computed(
   () => props.dictation.engine === 'stt-suite' && props.dictation.device !== 'cpu' && props.dictation.gpuLoaded,
 )
+const pointer = dictationPointer()
 // Where the pointer pressed the microphone: the badge starts there.
-const pressedAt = ref({ x: 0, y: 0 })
+let pressedAt = { x: 0, y: 0 }
+watch(shown, (now) => {
+  if (TOUCH_FIRST.matches) return
+  if (now) pointer.set(props.dictation.active, pressedAt.x, pressedAt.y)
+  else pointer.set(null)
+})
+watch(
+  () => props.dictation.active,
+  (active) => shown.value && !TOUCH_FIRST.matches && pointer.set(active),
+)
+onBeforeUnmount(() => pointer.set(null))
 
 function press(event: MouseEvent): void {
   // Pressed by a key (Enter, Space): no pointer position, so the button's middle.
   const button = (event.currentTarget as HTMLElement).getBoundingClientRect()
-  pressedAt.value =
+  pressedAt =
     event.detail === 0
       ? { x: button.left + button.width / 2, y: button.top + button.height / 2 }
       : { x: event.clientX, y: event.clientY }
@@ -50,12 +61,6 @@ function press(event: MouseEvent): void {
       <DictationBadge v-if="shown && TOUCH_FIRST.matches" :listening="dictation.active" class="size-10" />
       <AppIcon v-else name="mic" :class="TOUCH_FIRST.matches ? 'size-8' : 'size-6'" />
     </button>
-    <DictationPointer
-      v-if="shown && !TOUCH_FIRST.matches"
-      :listening="dictation.active"
-      :x="pressedAt.x"
-      :y="pressedAt.y"
-    />
     <span
       v-if="onGpu"
       class="pointer-events-none absolute -top-0.5 -right-0.5 rounded border border-highlight-500 px-1 text-[0.55rem] leading-3.5 font-semibold text-highlight-300"

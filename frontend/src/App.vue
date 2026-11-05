@@ -5,6 +5,7 @@ import { ApiError, NETWORK_ERROR, api, authenticated } from './api'
 import AppHeader from './components/AppHeader.vue'
 import ApprovalBanner from './components/ApprovalBanner.vue'
 import BottomNav from './components/BottomNav.vue'
+import DictationPointer from './components/DictationPointer.vue'
 import AppIcon from './components/AppIcon.vue'
 import SettingsSync from './components/SettingsSync.vue'
 import ToastList from './components/ToastList.vue'
@@ -70,6 +71,8 @@ watch(authenticated, (isAuthenticated) => {
     stopPolling()
   }
 })
+// The page at the top of the tab, not a workspace column's.
+const TOP_PAGE = window.self === window.top
 </script>
 
 <template>
@@ -105,6 +108,8 @@ watch(authenticated, (isAuthenticated) => {
   </div>
   <SettingsSync v-if="authenticated" />
   <ApprovalBanner v-if="authenticated" />
+  <!-- The badge of a running dictation, anywhere in the tab: the page at the top draws it (dictationPointer.ts). -->
+  <DictationPointer v-if="TOP_PAGE" />
   <ToastList />
   <UpdateBanner />
 </template>
