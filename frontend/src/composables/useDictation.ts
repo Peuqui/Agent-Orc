@@ -66,6 +66,8 @@ export function useDictation(
   // Kept when the STT-Suite failed, so the dictation is not lost: it can be sent again, e.g. on the CPU.
   const failedAudio = ref<Blob | null>(null)
   let recorder: MediaRecorder | null = null
+  // The microphone's stream while a recording runs.
+  let openMicrophone: MediaStream | null = null
   let recognition: SpeechRecognitionLike | null = null
   // Only the microphone button (or an error) ends listening: the browser stops by itself after a silence and is
   // started again then, so a pause to think does not end the dictation. What was heard comes as one text at the end.
@@ -126,15 +128,11 @@ export function useDictation(
     const mimeType = RECORDING_TYPES.find((type) => MediaRecorder.isTypeSupported(type))
     if (mimeType === undefined) throw new Error('No supported audio recording format')
     await soundStart()
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    openMicrophone = await navigator.mediaDevices.getUserMedia({ audio: true })
     const chunks: Blob[] = []
-    recorder = new MediaRecorder(stream, { mimeType })
+    recorder = new MediaRecorder(openMicrophone, { mimeType })
     recorder.ondataavailable = (event) => chunks.push(event.data)
     recorder.onstop = () => {
-      // Releases the microphone, so the browser's recording indicator goes away.
-      for (const track of stream.getTracks()) track.stop()
-      // The microphone is closed: its tone sounds in the ordinary audio mode (see soundStart).
-      playSignal(cancelled ? 'cancel' : 'stop', dictationSounds.value).catch(onError)
       if (cancelled) state.value = 'idle'
       else void transcribe(new Blob(chunks, { type: mimeType }))
     }
@@ -205,6 +203,17 @@ export function useDictation(
     state.value = 'listening'
   }
 
+  /** Closes the microphone at once and then sounds the end (or cancel): the tone need not wait for the recorder
+   * to hand over its last data, and it sounds in the ordinary audio mode (see soundStart). The recorder ends
+   * by itself once its microphone is closed and still hands over all it has (onstop). Closing it also takes
+   * the browser's recording indicator away. */
+  function endRecording(): void {
+    for (const track of openMicrophone?.getTracks() ?? []) track.stop()
+    openMicrophone = null
+    playSignal(cancelled ? 'cancel' : 'stop', dictationSounds.value).catch(onError)
+    recorder?.stop()
+  }
+
   /** Send the recording that failed once more, with the device chosen now. */
   function retry(): void {
     if (failedAudio.value !== null && state.value === 'idle') void transcribe(failedAudio.value)
@@ -217,7 +226,7 @@ export function useDictation(
       ending = true
       recognition?.stop()
     } else if (state.value === 'idle' && engine.value === 'browser') startListening().catch(onError)
-    else if (state.value === 'recording') recorder?.stop()
+    else if (state.value === 'recording') endRecording()
     else if (state.value === 'idle') startRecording().catch(onError)
   }
 
@@ -226,8 +235,8 @@ export function useDictation(
     if (!active.value) return
     cancelled = true
     ending = true
-    // Its tone once the microphone is closed (onstop, onend).
-    if (state.value === 'recording') recorder?.stop()
+    // Its tone once the microphone is closed (endRecording, onend).
+    if (state.value === 'recording') endRecording()
     else recognition?.abort()
   }
 
