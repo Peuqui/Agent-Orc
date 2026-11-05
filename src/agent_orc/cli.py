@@ -4,6 +4,7 @@ import argparse
 import asyncio
 import getpass
 import json
+import logging
 import os
 import signal
 import socket
@@ -93,6 +94,19 @@ def check_config() -> None:
 SHUTDOWN_GRACE_SECONDS = 5
 
 
+def log_from_info() -> None:
+    """The server's own messages from INFO on, to stderr, which systemd keeps in the journal.
+    Without a handler of its own only warnings came through (Python's last resort), and the info
+    (an agent's activity changing, see api.py) was lost. Other libraries keep their own level."""
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter("%(message)s"))
+    own = logging.getLogger("agent_orc")
+    own.addHandler(handler)
+    own.setLevel(logging.INFO)
+    # Handled here: not again by Python's last resort.
+    own.propagate = False
+
+
 class Server(uvicorn.Server):
     """Tells the app's live streams to end as the stop begins: otherwise the stop waits for them
     in vain and cancels them, which uvicorn logs as an error for each."""
@@ -115,6 +129,7 @@ def serve() -> None:
     static_dir = Path(str(files("agent_orc").joinpath("static")))
     if not (static_dir / "index.html").is_file():
         sys.exit(f"Frontend not built: no index.html in {static_dir} (run: npm run build)")
+    log_from_info()
     app = create_app(config, credentials, static_dir=static_dir)
     # The standard asyncio loop, not uvloop: uvloop runs preexec_fn before setsid(), which
     # breaks claiming the terminal PTY (see terminal.py); the tests also run on asyncio.
