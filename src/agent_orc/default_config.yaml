@@ -330,7 +330,7 @@ agents:
     # goes cold. Claude Code compacts a large resting context by itself 55 minutes in, so the
     # prompt comes before that.
     keep_warm:
-      prompt: "Keep-alive: answer with one word only."
+      prompt: "Keep-alive: answer with the single word Pong."
       lead_minutes: 10
     # Reasoning effort of each agent, handed over in its settings file at start.
     effort:
