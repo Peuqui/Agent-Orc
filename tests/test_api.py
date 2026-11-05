@@ -3002,6 +3002,34 @@ def mini(
         yield c
 
 
+def test_another_machines_page_is_this_apps_own_and_only_its_api_is_handed_on(
+    config: Config, clock: FakeClock, other_machine: None, monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:  # fmt: skip
+    monkeypatch.setattr("agent_orc.api.keep_tunnel_open", idle_tunnel)
+    static = tmp_path / "pwa"
+    (static / "assets").mkdir(parents=True)
+    (static / "index.html").write_text("<p>this app's page</p>")
+    (static / "assets" / "app.js").write_text("// this app's script")
+    (static / BUILD_ID_FILE).write_text("this-build")
+    hosts = {"Aragon": HostConfig(ssh=["nowhere"], socket="unused")}
+    with_hosts = config.model_copy(update={"hosts": hosts})
+    app = create_app(with_hosts, new_credentials(PASSWORD), static_dir=static, clock=clock)
+    with TestClient(app) as client:
+        assert client.post("/api/login", json={"password": PASSWORD}).status_code == 204
+        page = client.get("/hosts/Aragon/")
+        assert page.text == "<p>this app's page</p>"
+        assert page.headers["cache-control"] == "no-cache"
+        assert client.get("/hosts/Aragon/assets/app.js").text == "// this app's script"
+        assert client.get("/hosts/Aragon/assets/none.js").status_code == 404
+        assert client.get("/hosts/Nowhere/").status_code == 404
+        # The API is the other machine's (it has no static files), with this app's build: a
+        # reload of the page gets this one.
+        answer = client.get("/hosts/Aragon/api/agents")
+        assert answer.json()[0]["name"] == "sleeper"
+        assert answer.headers[BUILD_ID_HEADER] == "this-build"
+
+
 def test_the_hosts_and_whether_they_answer(mini: TestClient) -> None:
     listed = mini.get("/api/hosts").json()
     assert listed["self"] == socket.gethostname()

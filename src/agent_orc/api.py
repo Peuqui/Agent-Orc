@@ -245,6 +245,10 @@ class PwaFiles(StaticFiles):
     the workspace's columns (iframes of the start page) from the page of the version before an
     update, whose scripts the update had removed, so the columns stayed empty."""
 
+    def __init__(self, directory: Path) -> None:
+        super().__init__(directory=directory, html=True)
+        self.build_id_file = directory / BUILD_ID_FILE
+
     def file_response(
         self,
         full_path: PathLike[str] | str,
@@ -2580,13 +2584,22 @@ def create_app(
         host_link(name)
         return RedirectResponse(f"{name}/")
 
+    # The page of another machine is this app's own (one interface, one build); only its API is
+    # that machine's. Everything below "/hosts/<name>/" that is not "api/" is this app's PWA.
+    pwa = PwaFiles(static_dir) if static_dir is not None else None
+
     @app.api_route(
         "/hosts/{name}/{path:path}",
         methods=["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"],
         dependencies=authenticated,
     )
     async def host_request(name: str, path: str, request: Request) -> Response:
-        return await forward(request, host_link(name), path, stopping)
+        link = host_link(name)
+        if path.startswith("api/"):
+            return await forward(request, link, path, stopping)
+        if pwa is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND)
+        return await pwa.get_response(os.path.normpath(path or "."), request.scope)
 
     @app.websocket("/hosts/{name}/{path:path}")
     async def host_websocket(websocket: WebSocket, name: str, path: str) -> None:
@@ -2753,8 +2766,7 @@ def create_app(
     def empty_trash() -> None:
         trash.empty()
 
-    if static_dir is not None:
-        build_id_file = static_dir / BUILD_ID_FILE
+    if pwa is not None:
 
         @app.middleware("http")
         async def send_build_id(
@@ -2762,14 +2774,13 @@ def create_app(
         ) -> Response:
             response = await call_next(request)
             # Read every time: an update may replace the files while this server runs, and the
-            # header must name the build a reload would actually get.
-            # Not over another machine's: its page knows its own build, which may differ.
-            if BUILD_ID_HEADER not in response.headers:
-                response.headers[BUILD_ID_HEADER] = build_id_file.read_text(encoding="utf-8")
+            # header must name the build a reload would actually get. Also over another machine's
+            # API: its page is this app's, so a reload gets this build, whatever that machine runs.
+            response.headers[BUILD_ID_HEADER] = pwa.build_id_file.read_text(encoding="utf-8")
             return response
 
         # Mounted last, so the API routes above take precedence.
-        app.mount("/", PwaFiles(directory=static_dir, html=True), name="pwa")
+        app.mount("/", pwa, name="pwa")
 
     return app
 

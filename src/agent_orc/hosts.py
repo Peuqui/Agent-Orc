@@ -1,9 +1,10 @@
 """Other machines' Agent-Orc, reached through SSH tunnels and handed on under /hosts/<name>/.
 
 Every machine runs an Agent-Orc of its own that listens on a socket without a login (see
-listen.py). This one keeps an SSH tunnel to each socket open and passes requests for
-/hosts/<name>/... on to it as they are: the other machine's whole app (pages, API, live streams,
-terminals) is then reachable through this one's login, which is the only one there is.
+listen.py). This one keeps an SSH tunnel to each socket open and passes the requests for
+/hosts/<name>/api/... on to it as they are: the other machine's API (with its live streams and
+terminals) is then reachable through this one's login, which is the only one there is. The pages
+there are this app's own (api.py): one interface, which holds what belongs to the user.
 """
 
 import asyncio
@@ -16,7 +17,6 @@ import time
 from collections.abc import AsyncGenerator, AsyncIterator, Callable, Iterable
 from pathlib import Path
 from typing import Literal
-from urllib.parse import urlsplit
 
 import aiohttp
 from fastapi import Request, WebSocket
@@ -278,26 +278,10 @@ def _upstream_url(path: str, query: str) -> str:
     return f"{UPSTREAM}{path}" + (f"?{query}" if query else "")
 
 
-def _relative_location(location: str, path: str, prefix: str) -> str:
-    """A redirect of the other machine's app, as it is to be followed through this one.
-
-    Its static files send "/dir" on to "/dir/"; that becomes the last part of the address with a
-    slash, which holds wherever this app itself is served."""
-    target = urlsplit(location)
-    if target.path == f"/{path}/":
-        return f"{path.rsplit('/', 1)[-1]}/" + (f"?{target.query}" if target.query else "")
-    return f"{prefix}{target.path}" + (f"?{target.query}" if target.query else "")
-
-
-def _response_headers(headers: Iterable[tuple[str, str]], path: str, prefix: str) -> dict[str, str]:
-    forwarded: dict[str, str] = {}
-    for name, value in headers:
-        if name.lower() in HOP_BY_HOP:
-            continue
-        forwarded[name] = (
-            _relative_location(value, path, prefix) if name.lower() == "location" else value
-        )
-    return forwarded
+def _response_headers(headers: Iterable[tuple[str, str]]) -> dict[str, str]:
+    """The other machine's answer headers that go on to the browser. Only its API is handed on,
+    which never redirects, so no address in them needs rewriting."""
+    return {name: value for name, value in headers if name.lower() not in HOP_BY_HOP}
 
 
 async def _chunks(upstream: aiohttp.ClientResponse) -> AsyncGenerator[bytes]:
@@ -340,11 +324,10 @@ async def forward(request: Request, link: HostLink, path: str, stopping: asyncio
         )
     except (aiohttp.ClientError, OSError, TimeoutError) as error:
         raise HostUnreachableError(link.name) from error
-    prefix = f"/hosts/{link.name}"
     return StreamingResponse(
         until_stopped(_chunks(upstream), stopping),
         status_code=upstream.status,
-        headers=_response_headers(upstream.headers.items(), path, prefix),
+        headers=_response_headers(upstream.headers.items()),
     )
 
 

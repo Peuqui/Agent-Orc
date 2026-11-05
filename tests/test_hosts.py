@@ -12,7 +12,6 @@ from agent_orc import hosts
 from agent_orc.config import HostConfig, default_config_text, parse_config
 from agent_orc.hosts import (
     HostLink,
-    _relative_location,
     connection_result,
     probe,
     ssh_address,
@@ -31,13 +30,6 @@ def test_the_tunnel_forwards_the_other_machines_socket_to_a_local_one() -> None:
     assert "BatchMode=yes" in command
     assert "ExitOnForwardFailure=yes" in command
     assert command[-3:] == ["-p", "2222", "mp@10.0.0.2"]
-
-
-def test_a_redirect_of_the_other_app_stays_below_its_address() -> None:
-    # Static files send "/assets" on to "/assets/": the same name, with a slash, wherever we are.
-    assert _relative_location("http://host/assets/", "assets", "/hosts/A") == "assets/"
-    assert _relative_location("/a/b/", "a/b", "/hosts/A") == "b/"
-    assert _relative_location("/login?next=1", "x", "/hosts/A") == "/hosts/A/login?next=1"
 
 
 def test_the_tunnel_is_opened_again_when_it_ends(

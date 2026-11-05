@@ -9,3 +9,7 @@ export const NAV_ITEMS: { to: string; icon: IconName; label: string }[] = [
   { to: '/peers', icon: 'peers', label: 'nav.peers' },
   { to: '/consumption', icon: 'chart', label: 'nav.consumption' },
 ]
+
+/** The sections that belong to the user, not to a machine: this machine's own app shows them, also
+ * from another machine's page (the agents of all machines, notes, conversations, consumption). */
+export const USER_SECTIONS = ['/sessions', '/notes', '/peers', '/consumption']

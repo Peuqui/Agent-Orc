@@ -1,5 +1,6 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 import { currentHost, rootAddress } from './api'
+import { USER_SECTIONS } from './navigation'
 import FilesView from './views/FilesView.vue'
 import SessionsView from './views/SessionsView.vue'
 import ConsumptionView from './views/ConsumptionView.vue'
@@ -56,10 +57,10 @@ router.beforeEach((to) => {
   return false
 })
 
-// The agents of all machines are listed in one overview, which this machine's own app shows: from
-// another machine's page, "Agents" leads there.
+// The user's sections are this machine's own app's (the agents of all machines are listed in one
+// overview): from another machine's page they lead there.
 router.beforeEach((to) => {
-  if (currentHost === null || to.path !== '/sessions') return true
+  if (currentHost === null || !USER_SECTIONS.includes(to.path)) return true
   window.location.assign(`${rootAddress()}#${to.fullPath}`)
   return false
 })

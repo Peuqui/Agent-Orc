@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { currentHost, rootAddress } from '../api'
 import { hostPath, sectionOf } from '../hostPaths'
 import { fitLabel, textWidth } from '../labelFit'
-import { NAV_ITEMS } from '../navigation'
+import { NAV_ITEMS, USER_SECTIONS } from '../navigation'
 import { useHosts } from '../composables/useHosts'
 import { useToast } from '../composables/useToast'
 import AppIcon from './AppIcon.vue'
@@ -57,11 +57,13 @@ function choose(name: string): void {
     document.getElementById(`host-${name}`)?.scrollIntoView({ behavior: 'smooth' })
     return
   }
-  // From another machine's page "Agents" leads to the overview, which is this machine's own.
-  const target =
-    name === own.value || section === '/sessions'
-      ? rootAddress()
-      : hostPath(new URL(rootAddress()).pathname, name)
+  // The user's sections are the same for every machine (this machine's own app shows them): from
+  // one of them, or from another machine's page, the choice leads to the overview.
+  if (USER_SECTIONS.includes(section)) {
+    window.location.assign(`${rootAddress()}#/sessions`)
+    return
+  }
+  const target = name === own.value ? rootAddress() : hostPath(new URL(rootAddress()).pathname, name)
   // Stays in the section the page is in (a terminal, folder or workspace is one machine's own).
   window.location.assign(`${new URL(target, rootAddress()).href}#${section}`)
 }

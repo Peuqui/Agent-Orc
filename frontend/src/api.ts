@@ -571,14 +571,11 @@ async function fetchApi(method: string, path: string, options: SendOptions = {})
     window.location.reload()
     throw new ApiError(0, NETWORK_ERROR, 'login of the reverse proxy has run out', null)
   }
-  // Only an answer of the page's own app says whether the page is out of date: another machine's
-  // app may be at another build, and from a page of its own the root's is not the page's.
-  if ((options.host ?? (options.fromRoot ? null : currentHost)) === currentHost) checkBuild(response)
-  if (response.status === 401 && path !== 'login' && path !== 'scope/unlock') {
-    // Another machine's app has no login: it is this machine's that has run out, so to there.
-    if (currentHost === null) authenticated.value = false
-    else window.location.assign(rootAddress())
-  }
+  // Every page is this machine's own app's, and it sends its build with every answer, also with
+  // another machine's (api.py): each says whether the page is out of date.
+  checkBuild(response)
+  // Another machine's app has no login: it is this machine's that has run out.
+  if (response.status === 401 && path !== 'login' && path !== 'scope/unlock') authenticated.value = false
   if (!response.ok) {
     // Not JSON and not the proxy without a backend: an uncaught error of the server, which answers
     // in plain text.
@@ -615,9 +612,10 @@ function createApi(host?: string) {
   const request = <T>(method: string, path: string, options: Parameters<typeof send>[2] = {}) =>
     send<T>(method, path, options.fromRoot ? options : { host, ...options })
   return {
-    login: (password: string) => request<void>('POST', 'login', { body: { password } }),
-    logout: () => request<void>('POST', 'logout'),
-    me: () => request<{ authenticated: boolean }>('GET', 'me'),
+    // The login is this machine's own app's, the only one there is.
+    login: (password: string) => request<void>('POST', 'login', { body: { password }, fromRoot: true }),
+    logout: () => request<void>('POST', 'logout', { fromRoot: true }),
+    me: () => request<{ authenticated: boolean }>('GET', 'me', { fromRoot: true }),
 
     scope: () => request<ScopeState>('GET', 'scope'),
     unlock: (password: string) => request<ScopeState>('POST', 'scope/unlock', { body: { password } }),
@@ -627,11 +625,11 @@ function createApi(host?: string) {
     lock: () => request<ScopeState>('POST', 'scope/lock'),
 
     agents: () => request<AgentProfile[]>('GET', 'agents'),
-    terminalSettings: () => request<TerminalSettings>('GET', 'terminal'),
+    terminalSettings: () => request<TerminalSettings>('GET', 'terminal', { fromRoot: true }),
     /** Stores the extra keys for every device. */
-    arrangeKeys: (rows: TerminalKey[][]) => request<void>('PUT', 'terminal/keys', { body: rows }),
+    arrangeKeys: (rows: TerminalKey[][]) => request<void>('PUT', 'terminal/keys', { body: rows, fromRoot: true }),
     /** Back to the extra keys of the config. */
-    resetKeys: () => request<void>('DELETE', 'terminal/keys'),
+    resetKeys: () => request<void>('DELETE', 'terminal/keys', { fromRoot: true }),
     sessions: () => request<AgentSession[]>('GET', 'sessions'),
     /** This machine's name and the others', from this machine's own app (also from another's page). */
     hosts: () => request<HostsState>('GET', 'hosts', { fromRoot: true }),
@@ -698,9 +696,9 @@ function createApi(host?: string) {
       request<FileChange[]>('GET', `sessions/${encodeURIComponent(sessionId)}/changes`),
     changeDiff: (sessionId: string, path: string) =>
       request<FileDiff>('GET', `sessions/${encodeURIComponent(sessionId)}/changes/diff`, { query: { path } }),
-    promptTemplates: () => request<PromptTemplate[]>('GET', 'prompt-templates'),
+    promptTemplates: () => request<PromptTemplate[]>('GET', 'prompt-templates', { fromRoot: true }),
     storePromptTemplates: (templates: PromptTemplate[]) =>
-      request<void>('PUT', 'prompt-templates', { body: templates }),
+      request<void>('PUT', 'prompt-templates', { body: templates, fromRoot: true }),
     /** The consumption on this machine, or on another (`host`). A page of another machine's app asks
      * this machine's own, too: it sums them all. */
     consumption: (host?: string) => request<ConsumptionRow[]>('GET', 'consumption', { host, fromRoot: true }),
@@ -815,13 +813,13 @@ function createApi(host?: string) {
     arrangeCards: (folders: string[]) => request<void>('PUT', 'card-order', { body: { folders } }),
 
     /** The server's public key a device subscribes to push messages with. */
-    pushKey: () => request<{ key: string }>('GET', 'push/key'),
+    pushKey: () => request<{ key: string }>('GET', 'push/key', { fromRoot: true }),
     subscribePush: (subscription: PushSubscriptionJSON) =>
-      request<void>('POST', 'push/subscriptions', { body: subscription }),
+      request<void>('POST', 'push/subscriptions', { body: subscription, fromRoot: true }),
     unsubscribePush: (endpoint: string) =>
-      request<void>('DELETE', 'push/subscriptions', { query: { endpoint } }),
+      request<void>('DELETE', 'push/subscriptions', { query: { endpoint }, fromRoot: true }),
     /** A sample message to every subscribed device; returns how many took it. */
-    testPush: () => request<{ delivered: number }>('POST', 'push/test'),
+    testPush: () => request<{ delivered: number }>('POST', 'push/test', { fromRoot: true }),
 
     /** Every workspace, as the server keeps them for all devices. */
     workspaces: () => request<WorkspaceSet>('GET', 'workspaces'),
