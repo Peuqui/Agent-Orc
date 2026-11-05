@@ -82,7 +82,7 @@ watch(speechEngine, loadChoices)
     </ToggleSwitch>
     <label class="flex flex-col gap-1 text-dim">
       {{ $t('answers.maxChars') }}
-      <input v-model.number="speechMaxChars" type="number" min="100" step="100" class="input text-sm text-main" />
+      <input v-model.lazy.number="speechMaxChars" type="number" min="100" step="100" class="input text-sm text-main" />
     </label>
   </div>
 </template>

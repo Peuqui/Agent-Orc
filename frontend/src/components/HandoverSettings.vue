@@ -48,7 +48,7 @@ async function change(current: HandoverSettings, wanted: { auto?: boolean; fresh
     <p class="mt-1 text-xs text-hint">{{ $t('handover.freshHint') }}</p>
     <label class="mt-4 flex flex-col gap-1 border-t border-line pt-3">
       {{ $t('keepWarm.maxPings') }}
-      <input v-model.number="keepWarmMaxPings" type="number" min="1" max="48" step="1" class="input text-sm text-main" />
+      <input v-model.lazy.number="keepWarmMaxPings" type="number" min="1" max="48" step="1" class="input text-sm text-main" />
     </label>
     <p class="mt-1 text-xs text-hint">{{ $t('keepWarm.maxPingsHint') }}</p>
   </div>
