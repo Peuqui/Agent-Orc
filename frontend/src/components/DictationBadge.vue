@@ -15,7 +15,9 @@ const BARS = [
 </script>
 
 <template>
-  <svg viewBox="0 0 512 512" :class="{ still: !listening }" aria-hidden="true">
+  <!-- Grey through Tailwind's filter classes, which add up with a drop-shadow given from outside (one CSS
+       filter of its own here would replace it). -->
+  <svg viewBox="0 0 512 512" :class="{ 'still grayscale opacity-60': !listening }" aria-hidden="true">
     <defs>
       <linearGradient id="dictationBadgeWave" gradientUnits="userSpaceOnUse" x1="96" y1="116" x2="336" y2="396">
         <stop offset="0" stop-color="#f59e0b" />
@@ -54,10 +56,6 @@ const BARS = [
 }
 .arc.far {
   animation-delay: -0.6s;
-}
-.still {
-  filter: grayscale(1);
-  opacity: 0.6;
 }
 .still .bar,
 .still .arc {
