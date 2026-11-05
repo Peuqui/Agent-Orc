@@ -151,6 +151,8 @@ from agent_orc.push import (
     add_subscription,
     agent_message,
     application_server_key,
+    deliver,
+    outbox_since,
     remove_subscription,
     send_to_all,
 )
@@ -989,7 +991,7 @@ def create_app(
         sessions.press_escape(session.id)
         store_activity(session.id, busy=False)
         handover_progress[session.id] = HANDOVER_DONE
-        send_to_all(agent_message("handover_done", session.id, session.name, ""), config.push)
+        deliver(agent_message("handover_done", session.id, session.name, ""), config.push)
 
     def cache_entry(cache: CacheState | None) -> dict[str, float] | None:
         """When the cache expires (the page counts down itself) and how long before that its age
@@ -1096,7 +1098,7 @@ def create_app(
                     ask_for_handover(session)
             elif progress is None:
                 handover_progress[session.id] = HANDOVER_ADVISED
-                send_to_all(agent_message("handover", session.id, session.name, ""), config.push)
+                deliver(agent_message("handover", session.id, session.name, ""), config.push)
         save_handovers()
 
     def runs_below_advice(session: AgentSession) -> bool:
@@ -1114,7 +1116,7 @@ def create_app(
         handover_progress[session.id] = followed
         if followed == HANDOVER_DONE and progress != HANDOVER_DONE:
             message = agent_message("handover_done", session.id, session.name, "")
-            send_to_all(message, config.push)
+            deliver(message, config.push)
 
     # Where each agent's keep-warm prompts of the current rest stand (see keepwarm.py).
     keep_warm_progress: dict[str, keepwarm.KeepWarmProgress] = {}
@@ -1188,7 +1190,7 @@ def create_app(
                 sessions.type_line(session.id, prompt.text)
             else:
                 message = agent_message("unsent", session.id, session.name, prompt.text)
-                send_to_all(message, config.push)
+                deliver(message, config.push)
 
     def end_interrupted_answers() -> None:
         for session in sessions.list():
@@ -1218,6 +1220,54 @@ def create_app(
             with contextlib.suppress(TimeoutError):
                 await asyncio.wait_for(look_at_hosts.wait(), HOST_CHECK_SECONDS)
             look_at_hosts.clear()
+
+    async def relay_host_messages() -> None:
+        """The devices subscribe here, so the messages of the other machines' agents are sent
+        from here (push.py): fetched from each machine that answers, from when it was reached."""
+        after: dict[str, int | None] = dict.fromkeys(host_links)
+        while True:
+            for link in host_links.values():
+                if host_states.get(link.name) != "online":
+                    continue
+                try:
+                    after[link.name], messages = await link.outbox(after[link.name])
+                except HostUnreachableError:
+                    # Gone since it was last looked at: asked again from the same time.
+                    continue
+                for message in messages:
+                    with_host = {**message, "host": link.name}
+                    await asyncio.to_thread(send_to_all, with_host, config.push)
+            await asyncio.sleep(HOST_CHECK_SECONDS)
+
+    # Told when a setting changed here that the other machines apply to their agents themselves.
+    machine_settings_changes = ChangeNotifier()
+
+    async def mirror_settings() -> None:
+        """The user's settings are kept here, but each machine applies some of them to its own
+        agents (keep-warm, handovers) as stored on it: they go to every machine whenever they
+        change and whenever it is reached again."""
+        listener = machine_settings_changes.subscribe()
+        mirrored: set[str] = set()
+        try:
+            while True:
+                for link in host_links.values():
+                    if host_states.get(link.name) != "online":
+                        mirrored.discard(link.name)
+                    elif link.name not in mirrored:
+                        with contextlib.suppress(HostUnreachableError):
+                            await mirror_to(link)
+                            mirrored.add(link.name)
+                with contextlib.suppress(TimeoutError):
+                    await asyncio.wait_for(listener[1].get(), HOST_CHECK_SECONDS)
+                    mirrored.clear()
+        finally:
+            machine_settings_changes.unsubscribe(listener)
+
+    async def mirror_to(link: HostLink) -> None:
+        settings = SharedSettings.model_validate(read_settings()).model_dump()
+        await link.send("PATCH", "api/settings", settings)
+        switches = read_handover_switches()
+        await link.send("PUT", "api/handover", {"auto": switches.auto, "fresh": switches.fresh})
 
     async def watch_approvals() -> None:
         """The hooks are processes of their own and write the requests as files: the server looks
@@ -1274,6 +1324,8 @@ def create_app(
         watcher = asyncio.create_task(watch_agents())
         approvals = asyncio.create_task(watch_approvals())
         hosts = asyncio.create_task(watch_hosts())
+        relay = asyncio.create_task(relay_host_messages())
+        mirror = asyncio.create_task(mirror_settings())
         tunnels = [
             asyncio.create_task(
                 keep_tunnel_open(name, host_links[name].local_socket, host, look_at_hosts.set)
@@ -1284,6 +1336,8 @@ def create_app(
         watcher.cancel()
         approvals.cancel()
         hosts.cancel()
+        relay.cancel()
+        mirror.cancel()
         for tunnel in tunnels:
             tunnel.cancel()
         await asyncio.gather(*tunnels, return_exceptions=True)
@@ -1625,6 +1679,12 @@ def create_app(
     )
     def unsubscribe(endpoint: str) -> None:
         remove_subscription(endpoint)
+
+    @app.get("/api/push/outbox", dependencies=authenticated)
+    def push_outbox(after: int | None = None) -> dict[str, Any]:
+        """The agents' messages since `after` (this machine's clock), for the Zentrale to send."""
+        newest, messages = outbox_since(after)
+        return {"after": newest, "messages": messages}
 
     @app.post("/api/push/test", dependencies=authenticated)
     def push_test() -> dict[str, int]:
@@ -2040,7 +2100,10 @@ def create_app(
 
     @app.put("/api/handover", dependencies=authenticated, status_code=status.HTTP_204_NO_CONTENT)
     def set_handover_switches(body: HandoverSwitchesRequest) -> None:
-        write_handover_switches(HandoverSwitches(auto=body.auto, fresh=body.fresh))
+        switches = HandoverSwitches(auto=body.auto, fresh=body.fresh)
+        if switches != read_handover_switches():
+            write_handover_switches(switches)
+            machine_settings_changes.notify()
 
     @app.put(
         "/api/sessions/{session_id}/keep-warm",
@@ -2320,9 +2383,14 @@ def create_app(
     def change_shared_settings(change: dict[str, Any]) -> SharedSettings:
         """Changes some of the shared settings (by name) and answers with all of them."""
         with changing_settings() as stored:
+            before = SharedSettings.model_validate(stored["settings"])
             now = changed(stored["settings"], change)
             stored["settings"] = now.model_dump()
         settings_changes.notify()
+        # Only a real change goes on: two machines that each hold the other as theirs then do not
+        # send the same settings back and forth.
+        if now != before:
+            machine_settings_changes.notify()
         return now
 
     @app.put("/api/tts/choices", dependencies=authenticated, status_code=status.HTTP_204_NO_CONTENT)

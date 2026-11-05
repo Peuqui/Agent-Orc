@@ -45,7 +45,9 @@ from agent_orc.handover import (
     write_state,
 )
 from agent_orc.history import claude_project_dir
+from agent_orc.hosts import HostLink
 from agent_orc.listen import prepare_socket
+from agent_orc.push import agent_message, deliver
 from agent_orc.schedule import mark_limited, read_scheduled
 from agent_orc.sessions import SESSION_ENV, SessionManager
 from agent_orc.state import state_dir
@@ -3028,6 +3030,78 @@ def test_another_machines_page_is_this_apps_own_and_only_its_api_is_handed_on(
         answer = client.get("/hosts/Aragon/api/agents")
         assert answer.json()[0]["name"] == "sleeper"
         assert answer.headers[BUILD_ID_HEADER] == "this-build"
+
+
+def test_the_messages_of_another_machines_agents_are_sent_from_here(
+    config: Config, clock: FakeClock, other_machine: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("agent_orc.api.keep_tunnel_open", idle_tunnel)
+    monkeypatch.setattr("agent_orc.api.HOST_CHECK_SECONDS", 0.05)
+    sent: list[dict[str, Any]] = []
+    monkeypatch.setattr("agent_orc.api.send_to_all", lambda message, _config: sent.append(message))
+    fetched: list[int | None] = []
+    fetch = HostLink.outbox
+
+    async def recorded(link: HostLink, after: int | None) -> tuple[int, list[dict[str, Any]]]:
+        answer = await fetch(link, after)
+        fetched.append(after)
+        return answer
+
+    monkeypatch.setattr(HostLink, "outbox", recorded)
+    hosts = {"Aragon": HostConfig(ssh=["nowhere"], socket="unused")}
+    with_hosts = config.model_copy(update={"hosts": hosts})
+    app = create_app(with_hosts, new_credentials(PASSWORD), static_dir=None, clock=clock)
+    deadline = time.monotonic() + 10
+    with TestClient(app):
+        # What was left before the other machine was first reached is not sent.
+        deliver(agent_message("done", "far-0", "far", "before"), config.push)
+        while not fetched and time.monotonic() < deadline:
+            time.sleep(0.02)
+        # The test's two apps share one state folder: this is the other machine's outbox.
+        deliver(agent_message("done", "far-1", "far", "said"), config.push)
+        while not sent and time.monotonic() < deadline:
+            time.sleep(0.02)
+    assert sent == [agent_message("done", "far-1", "far", "said") | {"host": "Aragon"}]
+
+
+def test_the_settings_a_machine_applies_itself_go_to_it(
+    config: Config, clock: FakeClock, other_machine: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("agent_orc.api.keep_tunnel_open", idle_tunnel)
+    monkeypatch.setattr("agent_orc.api.HOST_CHECK_SECONDS", 0.05)
+    # The test's two apps share one state folder: what reaches the other machine is seen on the way.
+    sent: list[tuple[str, str, Any]] = []
+    send = HostLink.send
+
+    async def recorded(link: HostLink, method: str, path: str, body: Any) -> None:
+        await send(link, method, path, body)
+        sent.append((method, path, body))
+
+    monkeypatch.setattr(HostLink, "send", recorded)
+    hosts = {"Aragon": HostConfig(ssh=["nowhere"], socket="unused")}
+    with_hosts = config.model_copy(update={"hosts": hosts})
+    app = create_app(with_hosts, new_credentials(PASSWORD), static_dir=None, clock=clock)
+    deadline = time.monotonic() + 10
+
+    def arrived(count: int) -> list[tuple[str, str, Any]]:
+        while len(sent) < count and time.monotonic() < deadline:
+            time.sleep(0.02)
+        return sent[:count]
+
+    with TestClient(app) as client:
+        assert client.post("/api/login", json={"password": PASSWORD}).status_code == 204
+        # Once it is reached; again after a change (the same value again is no change).
+        assert [(method, path) for method, path, _body in arrived(2)] == [
+            ("PATCH", "api/settings"),
+            ("PUT", "api/handover"),
+        ]
+        client.patch("/api/settings", json={"keep_warm_max_pings": 4})
+        client.patch("/api/settings", json={"keep_warm_max_pings": 9})
+        assert arrived(4)[2][2]["keep_warm_max_pings"] == 9
+        switched = {"auto": not client.get("/api/handover").json()["auto"], "fresh": True}
+        client.put("/api/handover", json=switched)
+        assert arrived(6)[5] == ("PUT", "api/handover", switched)
+    assert len(sent) == 6
 
 
 def test_the_hosts_and_whether_they_answer(mini: TestClient) -> None:

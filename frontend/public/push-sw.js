@@ -32,9 +32,10 @@ self.addEventListener('push', (event) => {
       body: message.text,
       icon: 'pwa-192x192.png',
       // One notification per agent: a newer one replaces the older, and still alerts.
-      tag: message.session || message.kind,
+      tag: message.host ? `${message.host}/${message.session}` : message.session || message.kind,
       renotify: true,
-      data: { session: message.session },
+      // `host`: the agent is another machine's (its messages are sent from here, push.py).
+      data: { session: message.session, host: message.host },
     }),
   )
 })
@@ -42,8 +43,9 @@ self.addEventListener('push', (event) => {
 // A tap opens the agent in the workspace, in an app window that is already open if there is one.
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
-  const session = event.notification.data.session
-  const target = session ? `./#/workspace?open=${encodeURIComponent(session)}` : './'
+  const { session, host } = event.notification.data
+  const page = host ? `./hosts/${encodeURIComponent(host)}/` : './'
+  const target = session ? `${page}#/workspace?open=${encodeURIComponent(session)}` : page
   const url = new URL(target, self.registration.scope).href
   event.waitUntil(
     (async () => {

@@ -56,7 +56,7 @@ from agent_orc.context import (
 )
 from agent_orc.handover import SESSION_START_SUBCOMMAND, take_resume_request
 from agent_orc.listen import SocketFolderError, prepare_socket
-from agent_orc.push import agent_message, send_to_all
+from agent_orc.push import agent_message, deliver
 from agent_orc.schedule import mark_limited
 from agent_orc.sessions import SESSION_ENV
 from agent_orc.setup import run_setup
@@ -260,7 +260,7 @@ def _announce_voice_reply(hook: dict[str, Any], answer: str) -> None:
 def _notify(kind: str, hook: dict[str, Any], text: str) -> None:
     config = load_config(config_dir() / CONFIG_FILE_NAME)
     message = agent_message(kind, os.environ[SESSION_ENV], Path(hook["cwd"]).name, text)
-    send_to_all(message, config.push)
+    deliver(message, config.push)
 
 
 BACKEND_USAGE = (

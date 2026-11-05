@@ -741,9 +741,11 @@ function createApi(host?: string) {
       request<void>('PUT', `sessions/${encodeURIComponent(sessionId)}/keep-warm`, { body: { enabled } }),
     setAnswersMode: (sessionId: string, allTexts: boolean) =>
       request<void>('PUT', `sessions/${encodeURIComponent(sessionId)}/answers-mode`, { body: { all_texts: allTexts } }),
-    /** Whether handovers are asked for by themselves, and from which shares of the context. */
-    handover: () => request<HandoverSettings>('GET', 'handover'),
-    setHandover: (auto: boolean, fresh: boolean) => request<void>('PUT', 'handover', { body: { auto, fresh } }),
+    /** Whether handovers are asked for by themselves, and from which shares of the context. The user's,
+     * kept by this machine's own app, which hands the switches on to the other machines (api.py). */
+    handover: () => request<HandoverSettings>('GET', 'handover', { fromRoot: true }),
+    setHandover: (auto: boolean, fresh: boolean) =>
+      request<void>('PUT', 'handover', { body: { auto, fresh }, fromRoot: true }),
     /** Takes effect at the agent's next start. */
     changePermissionMode: (sessionId: string, mode: string) =>
       request<void>('PUT', `sessions/${encodeURIComponent(sessionId)}/permission-mode`, { body: { mode } }),

@@ -16,7 +16,7 @@ import socket
 import time
 from collections.abc import AsyncGenerator, AsyncIterator, Callable, Iterable
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 import aiohttp
 from fastapi import Request, WebSocket
@@ -268,6 +268,32 @@ class HostLink:
                 return "ssh_down"
             case _:
                 return "off"
+
+    async def outbox(self, after: int | None) -> tuple[int, list[dict[str, Any]]]:
+        """The agents' messages the machine left since `after` (a time of its clock), and the
+        time to ask from next (see push.py)."""
+        query = "" if after is None else f"?after={after}"
+        check = aiohttp.ClientTimeout(total=ONLINE_CHECK_SECONDS)
+        try:
+            async with self.session().get(
+                f"{UPSTREAM}api/push/outbox{query}", timeout=check
+            ) as response:
+                response.raise_for_status()
+                answer = await response.json()
+        except (aiohttp.ClientError, OSError, TimeoutError) as error:
+            raise HostUnreachableError(self.name) from error
+        return answer["after"], answer["messages"]
+
+    async def send(self, method: str, path: str, body: Any) -> None:
+        """A change for the machine's app, as JSON (an answer other than a success is an error)."""
+        check = aiohttp.ClientTimeout(total=ONLINE_CHECK_SECONDS)
+        try:
+            async with self.session().request(
+                method, f"{UPSTREAM}{path}", json=body, timeout=check
+            ) as response:
+                response.raise_for_status()
+        except (aiohttp.ClientError, OSError, TimeoutError) as error:
+            raise HostUnreachableError(self.name) from error
 
     async def close(self) -> None:
         if self._session is not None:

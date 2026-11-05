@@ -12,10 +12,14 @@ from agent_orc.config import PushConfig, default_config_text
 from agent_orc.context import BUSY, IDLE, activity_file, store_activity
 from agent_orc.push import (
     MAX_TEXT_CHARS,
+    OUTBOX_DIR,
+    OUTBOX_KEEP_NANOSECONDS,
     VAPID_KEY_FILE,
     add_subscription,
     agent_message,
     application_server_key,
+    deliver,
+    outbox_since,
     read_subscriptions,
     remove_subscription,
     send_to_all,
@@ -121,3 +125,26 @@ def test_hooks_store_the_activity_and_notify(
     monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(stop)))
     cli.agent_idle()
     assert activity_file("garden-1").read_text() == BUSY
+
+
+def test_a_message_waits_in_the_outbox_for_the_zentrale(state: Path) -> None:
+    # Without a time the Zentrale starts from now: what was left before is not sent again.
+    deliver(agent_message("done", "s-1", "early", ""), PUSH_CONFIG)
+    start, none = outbox_since(None)
+    assert none == []
+    first = agent_message("done", "s-2", "far", "")
+    second = agent_message("waiting", "s-3", "farther", "")
+    deliver(first, PUSH_CONFIG)
+    deliver(second, PUSH_CONFIG)
+    after, messages = outbox_since(start)
+    assert messages == [first, second]
+    assert outbox_since(after) == (after, [])
+
+
+def test_an_old_message_leaves_the_outbox(state: Path) -> None:
+    deliver(agent_message("done", "s-1", "far", ""), PUSH_CONFIG)
+    [left] = (state / OUTBOX_DIR).glob("*.json")
+    at = int(left.stem.split("-")[0])
+    left.rename(left.with_name(f"{at - OUTBOX_KEEP_NANOSECONDS - 1}-old.json"))
+    assert outbox_since(0)[1] == []
+    assert list((state / OUTBOX_DIR).glob("*.json")) == []

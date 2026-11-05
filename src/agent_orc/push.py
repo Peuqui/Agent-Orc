@@ -4,11 +4,18 @@ A browser subscribes (Push API) with the server's VAPID public key; Agent-Orc ke
 subscriptions and sends through the browser vendor's push service, encrypted by pywebpush
 (RFC 8291). The agent's hooks run `agent-orc agent-idle` and `agent-orc agent-waiting`,
 which send; the service worker of the web app shows the message.
+
+The devices subscribe at the machine with the login (the Zentrale), so a message of another
+machine's agent goes there: every message is also left in this machine's outbox, one file each
+(written by the hooks' processes as by the server), and the Zentrale fetches it through the
+tunnel and sends it with its key (api.py).
 """
 
 import base64
 import json
 import logging
+import time
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -28,6 +35,10 @@ PRIVATE_KEY_MODE = 0o600
 MAX_TEXT_CHARS = 300
 # The push service answers so for a subscription the browser has given up.
 GONE_STATUSES = {404, 410}
+OUTBOX_DIR = "push-outbox"
+# A message waits this long for the Zentrale to fetch it (a machine that was out of its reach a
+# while has its messages sent when it is back); older ones are dropped.
+OUTBOX_KEEP_NANOSECONDS = 3600 * 1_000_000_000
 
 
 def vapid_key() -> Vapid02:
@@ -109,3 +120,41 @@ def send_to_all(message: dict[str, Any], config: PushConfig) -> int:
             continue
         delivered += 1
     return delivered
+
+
+def _outbox_dir() -> Path:
+    return state_dir() / OUTBOX_DIR
+
+
+def _expire_outbox(now: int) -> None:
+    for path in _outbox_dir().glob("*.json"):
+        if now - int(path.stem.split("-")[0]) > OUTBOX_KEEP_NANOSECONDS:
+            path.unlink(missing_ok=True)
+
+
+def deliver(message: dict[str, Any], config: PushConfig) -> int:
+    """An agent's message: to this machine's devices, and into its outbox for the Zentrale."""
+    now = time.time_ns()
+    directory = _outbox_dir()
+    directory.mkdir(parents=True, exist_ok=True)
+    _expire_outbox(now)
+    write_atomically(directory / f"{now}-{uuid.uuid4().hex}.json", json.dumps(message))
+    return send_to_all(message, config)
+
+
+def outbox_since(after: int | None) -> tuple[int, list[dict[str, Any]]]:
+    """This machine's clock (in nanoseconds) and the messages left after `after` (a time of that
+    clock), oldest first; none without `after`: the Zentrale starts from now."""
+    now = time.time_ns()
+    directory = _outbox_dir()
+    if after is None or not directory.is_dir():
+        return now, []
+    _expire_outbox(now)
+    left = sorted((int(path.stem.split("-")[0]), path) for path in directory.glob("*.json"))
+    messages = []
+    newest = after
+    for at, path in left:
+        if after < at <= now:
+            messages.append(json.loads(path.read_text(encoding="utf-8")))
+            newest = at
+    return newest, messages
