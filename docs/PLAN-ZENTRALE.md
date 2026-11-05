@@ -25,6 +25,8 @@ Rundruf an die Agenten des Rechners.
 
 ## Pakete
 
+Erledigt auf dem Branch: 1 und 2 (955b372), 3 und 4 (0fea151), 6 (28af9d6). Offen: 5, 7.
+
 1. **Eine Oberfläche:** Die Zentrale liefert unter `/hosts/<name>/` ihre eigene Oberfläche aus und
    reicht nur `api/…` und Websockets an den Rechner weiter. Die Seite eines Rechners ist damit
    der Build der Zentrale; die relative Adressierung (`document.baseURI`) bleibt, wie sie ist.
