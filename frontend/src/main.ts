@@ -16,7 +16,16 @@ import '@fontsource-variable/jetbrains-mono'
 import '@fontsource/noto-sans-symbols-2'
 import './style.css'
 
-registerSW({ immediate: true })
+// One service worker, the Zentrale's: its scope holds the pages of the other machines, too (below
+// /hosts/<name>/), whose worker it is. A worker such a page registered when every machine had an
+// app of its own would take its pages and push messages from the Zentrale's: it is removed.
+if (currentHost === null) registerSW({ immediate: true })
+else void unregisterOwnWorker()
+
+async function unregisterOwnWorker(): Promise<void> {
+  const registration = await navigator.serviceWorker?.getRegistration()
+  if (registration?.scope === new URL('./', document.baseURI).href) await registration.unregister()
+}
 
 // After an install, a page still running the old version cannot load its parts any more (their
 // file names changed, e.g. the workspace's): it switches to the new version by itself.
