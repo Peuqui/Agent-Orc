@@ -33,10 +33,12 @@ Erledigt auf dem Branch: 1 und 2 (955b372), 3 und 4 (0fea151), 6 (28af9d6). Offe
    Die Versionsprüfung (`checkBuild`) vergleicht nur noch mit der Zentrale.
 2. **Nutzer-Aufrufe an die Zentrale:** alle Aufrufe der ersten Liste mit `fromRoot`, ebenso ihre
    Live-Streams (Einstellungen, Rechnerliste schon erledigt in 34162ae; Notizbücher).
-3. **Push über die Zentrale:** Jeder Server stellt seine Agenten-Meldungen (Übergabe, fertig,
-   nicht zugestellt …) als Live-Stream bereit; die Zentrale liest die Streams der Rechner über
-   den Tunnel und schickt sie mit ihren Schlüsseln an die Geräte. Ein Rechner ohne Anmeldungen
-   schickt selbst nichts.
+3. **Push über die Zentrale:** Jede Agenten-Meldung (fertig, wartet, Übergabe, nicht zugestellt …)
+   landet zusätzlich als Datei im Ausgangsordner ihres Rechners (`push-outbox/`, auch aus den
+   Hooks). Die Zentrale holt sie alle 3 s über den Tunnel ab (`GET api/push/outbox`) und schickt
+   sie mit ihrem Schlüssel und dem Rechnernamen an die Geräte; ein Tippen öffnet die Seite des
+   Rechners. Eine Meldung wartet eine Stunde lang. Ein Rechner ohne Anmeldungen schickt selbst
+   nichts.
 4. **Einstellungen, die ein Rechner anwendet** (Warmhalten-Anzahl, Übergabe-Schalter): Die
    Zentrale hält sie und spiegelt sie bei jeder Änderung und wenn ein Rechner online kommt auf
    ihn; der Rechner liest sie wie bisher aus seiner Datei.
@@ -54,5 +56,7 @@ Erledigt auf dem Branch: 1 und 2 (955b372), 3 und 4 (0fea151), 6 (28af9d6). Offe
 - Paket 5 ist eine neue Fähigkeit (Agenten verschiedener Rechner nebeneinander); Peuqui fragen,
   ob er das so will oder Arbeitsflächen je Rechner bleiben sollen (dann an der Zentrale, aber je
   Rechner getrennt).
-- Meldungen eines Rechners, während die Zentrale ihn nicht erreicht, gehen verloren (kein
-  Nachholen) — reicht das?
+- Meldungen aus der Zeit, bevor die Zentrale einen Rechner nach ihrem Start zum ersten Mal
+  erreicht, werden nicht verschickt (sie beginnt bei „jetzt“). Später fehlende Verbindungen holt
+  sie nach (bis eine Stunde).
+- Kartenreihenfolge der Übersicht: wie die Arbeitsflächen noch je Rechner (Paket 5).
