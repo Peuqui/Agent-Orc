@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // The STT-Suite's logo in a round badge (assets/status-icons/stt-suite-icon.svg of AIfred), in the TTS-Suite
-// logo's amber (Peuqui: the blue was too dark to see) and with a light rim, so it stands out on the dark page.
+// logo's amber (Peuqui: the blue was too dark to see) and with a yellow rim, so it stands out on the dark page.
 // The dictation's symbol: ready, it stands still and waits to be pressed; while speech is taken in, its bars
 // rise and fall like a level, the arcs glow and the rim turns red (also where motion is reduced, so that
 // ready and recording never look alike); while it is transcribed, it stands still and grey.
@@ -60,7 +60,8 @@ const BARS = [
   animation-delay: -0.6s;
 }
 .rim {
-  stroke: #94a3b8;
+  /* The yellow of the microphone it replaced. */
+  stroke: var(--color-highlight-300);
 }
 .listening .rim {
   stroke: var(--color-accent-500);
