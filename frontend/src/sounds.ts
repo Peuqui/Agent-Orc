@@ -61,16 +61,20 @@ export async function loadSignals(sounds: DictationSounds): Promise<void> {
   if (sounding === 0) await context?.suspend()
 }
 
+/** Plays the tone; done once it has ended (the microphone opens only then, see useDictation). */
 export async function playSignal(signal: Signal, sounds: DictationSounds): Promise<void> {
   const tone = audioContext()
   const buffer = sounds === 'puck' ? await recording(signal) : null
   await tone.resume()
   const source = buffer === null ? startBeep(tone, BEEPS[signal]) : startRecording(tone, buffer)
   sounding++
-  source.onended = () => {
-    sounding--
-    if (sounding === 0) void tone.suspend()
-  }
+  await new Promise<void>((ended) => {
+    source.onended = () => {
+      sounding--
+      if (sounding === 0) void tone.suspend()
+      ended()
+    }
+  })
 }
 
 function startRecording(tone: AudioContext, buffer: AudioBuffer): AudioScheduledSourceNode {

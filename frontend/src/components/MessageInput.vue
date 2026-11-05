@@ -301,8 +301,9 @@ function onKeydown(event: KeyboardEvent): void {
          than the field and leaves room there: in every view, without taking room in a toolbar. -->
     <span class="relative flex">
       <DictationMic :dictation="dictation" />
+      <!-- Not during a dictation: the microphone's badge shows that one, and on a phone the spinner covered it. -->
       <span
-        v-if="busy"
+        v-if="busy && dictation.state === 'idle'"
         class="flex size-4 items-center justify-center rounded-full bg-page"
         :class="dictation.microphone ? 'pointer-events-none absolute right-0 bottom-0' : 'mx-1 self-center'"
         role="status"

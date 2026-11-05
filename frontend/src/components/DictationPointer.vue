@@ -15,7 +15,7 @@ const ABOVE_PX = 38
 <template>
   <DictationBadge
     v-if="badge.shown"
-    :listening="badge.listening"
+    :phase="badge.listening ? 'listening' : 'transcribing'"
     class="pointer-events-none fixed z-[60] size-7 drop-shadow"
     :style="{ left: `${badge.x + RIGHT_PX}px`, top: `${badge.y - ABOVE_PX}px` }"
   />

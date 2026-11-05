@@ -73,6 +73,8 @@ export function useDictation(
   let interrupted = false
   // Set by cancel(): what was recorded or heard is thrown away, not transcribed.
   let cancelled = false
+  // The start tone sounds before the microphone opens: a press meanwhile changes nothing.
+  let starting = false
   let heard: string[] = []
   onScopeDispose(() => {
     ending = true
@@ -108,9 +110,22 @@ export function useDictation(
   // Ahead of the first dictation, so its tone sounds at once.
   loadSignals(dictationSounds.value).catch(onError)
 
+  /** The start tone, to its end, before the microphone opens. An open microphone puts a phone into a call's
+   * audio mode (echo cancellation, other sounds lowered), which made the tones quiet, cut off or echoing; the
+   * puck, too, plays its ping first and then listens. */
+  async function soundStart(): Promise<void> {
+    starting = true
+    try {
+      await playSignal('start', dictationSounds.value)
+    } finally {
+      starting = false
+    }
+  }
+
   async function startRecording(): Promise<void> {
     const mimeType = RECORDING_TYPES.find((type) => MediaRecorder.isTypeSupported(type))
     if (mimeType === undefined) throw new Error('No supported audio recording format')
+    await soundStart()
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
     const chunks: Blob[] = []
     recorder = new MediaRecorder(stream, { mimeType })
@@ -118,12 +133,13 @@ export function useDictation(
     recorder.onstop = () => {
       // Releases the microphone, so the browser's recording indicator goes away.
       for (const track of stream.getTracks()) track.stop()
+      // The microphone is closed: its tone sounds in the ordinary audio mode (see soundStart).
+      playSignal(cancelled ? 'cancel' : 'stop', dictationSounds.value).catch(onError)
       if (cancelled) state.value = 'idle'
       else void transcribe(new Blob(chunks, { type: mimeType }))
     }
     cancelled = false
     recorder.start()
-    playSignal('start', dictationSounds.value).catch(onError)
     state.value = 'recording'
   }
 
@@ -142,8 +158,9 @@ export function useDictation(
     }
   }
 
-  function startListening(): void {
+  async function startListening(): Promise<void> {
     if (BrowserRecognition === undefined) return
+    await soundStart()
     const listener = new BrowserRecognition()
     listener.lang = language.value
     listener.continuous = true
@@ -177,16 +194,14 @@ export function useDictation(
       state.value = 'idle'
       const text = heard.filter(Boolean).join(' ')
       heard = []
-      if (cancelled) return
-      playSignal('stop', dictationSounds.value).catch(onError)
-      if (text) onText(text, interrupted)
+      playSignal(cancelled ? 'cancel' : 'stop', dictationSounds.value).catch(onError)
+      if (!cancelled && text) onText(text, interrupted)
     }
     recognition = listener
     ending = false
     interrupted = false
     cancelled = false
     listener.start()
-    playSignal('start', dictationSounds.value).catch(onError)
     state.value = 'listening'
   }
 
@@ -197,14 +212,13 @@ export function useDictation(
 
   /** Microphone button: the engine chosen (the browser's recognition without a service). */
   function toggleMicrophone(): void {
+    if (starting) return
     if (state.value === 'listening') {
       ending = true
       recognition?.stop()
-    } else if (state.value === 'idle' && engine.value === 'browser') startListening()
-    else if (state.value === 'recording') {
-      playSignal('stop', dictationSounds.value).catch(onError)
-      recorder?.stop()
-    } else if (state.value === 'idle') startRecording().catch(onError)
+    } else if (state.value === 'idle' && engine.value === 'browser') startListening().catch(onError)
+    else if (state.value === 'recording') recorder?.stop()
+    else if (state.value === 'idle') startRecording().catch(onError)
   }
 
   /** Throws a running dictation away: nothing is transcribed. As in Mundwerk, only while it records or listens. */
@@ -212,7 +226,7 @@ export function useDictation(
     if (!active.value) return
     cancelled = true
     ending = true
-    playSignal('cancel', dictationSounds.value).catch(onError)
+    // Its tone once the microphone is closed (onstop, onend).
     if (state.value === 'recording') recorder?.stop()
     else recognition?.abort()
   }

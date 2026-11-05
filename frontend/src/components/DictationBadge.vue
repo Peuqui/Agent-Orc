@@ -1,9 +1,11 @@
 <script setup lang="ts">
 // The STT-Suite's logo in a round badge (assets/status-icons/stt-suite-icon.svg of AIfred), in the TTS-Suite
-// logo's amber (Peuqui: the blue was too dark to see) and with a light rim, so it stands out on the dark page:
-// while a dictation is taken in, its bars rise and fall like a level and the arcs glow; while it is
-// transcribed, it stands still and grey.
-defineProps<{ listening: boolean }>()
+// logo's amber (Peuqui: the blue was too dark to see) and with a light rim, so it stands out on the dark page.
+// The dictation's symbol: ready, it stands still and waits to be pressed; while speech is taken in, its bars
+// rise and fall like a level, the arcs glow and the rim turns red (also where motion is reduced, so that
+// ready and recording never look alike); while it is transcribed, it stands still and grey.
+export type BadgePhase = 'ready' | 'listening' | 'transcribing'
+defineProps<{ phase: BadgePhase }>()
 // The logo's own measures: they fit the circle as they are.
 const BARS = [
   { x: 96, from: 226, to: 286 },
@@ -17,14 +19,14 @@ const BARS = [
 <template>
   <!-- Grey through Tailwind's filter classes, which add up with a drop-shadow given from outside (one CSS
        filter of its own here would replace it). -->
-  <svg viewBox="0 0 512 512" :class="{ 'still grayscale opacity-60': !listening }" aria-hidden="true">
+  <svg viewBox="0 0 512 512" :class="[phase, { 'grayscale opacity-60': phase === 'transcribing' }]" aria-hidden="true">
     <defs>
       <linearGradient id="dictationBadgeWave" gradientUnits="userSpaceOnUse" x1="96" y1="116" x2="336" y2="396">
         <stop offset="0" stop-color="#f59e0b" />
         <stop offset="1" stop-color="#b45309" />
       </linearGradient>
     </defs>
-    <circle cx="256" cy="256" r="244" fill="#0f172a" stroke="#94a3b8" stroke-width="24" />
+    <circle class="rim" cx="256" cy="256" r="244" fill="#0f172a" stroke-width="24" />
     <g fill="none" stroke="url(#dictationBadgeWave)" stroke-width="30" stroke-linecap="round">
       <line v-for="bar in BARS" :key="bar.x" class="bar" :x1="bar.x" :y1="bar.from" :x2="bar.x" :y2="bar.to" />
     </g>
@@ -57,8 +59,16 @@ const BARS = [
 .arc.far {
   animation-delay: -0.6s;
 }
-.still .bar,
-.still .arc {
+.rim {
+  stroke: #94a3b8;
+}
+.listening .rim {
+  stroke: var(--color-accent-500);
+}
+.ready .bar,
+.ready .arc,
+.transcribing .bar,
+.transcribing .arc {
   animation: none;
 }
 @media (prefers-reduced-motion: reduce) {
