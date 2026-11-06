@@ -28,6 +28,9 @@ const BEEP_VOLUME = 0.3
 // The tone fades out exponentially to this level, which cannot be zero.
 const FADE_TO = 0.01
 const MILLISECONDS_PER_SECOND = 1000
+// A new context's output takes a moment to run: a tone started at once lost its beginning, a short one (the
+// sine's end) now and then all of it. Each starts this long after its context.
+const START_LEAD_SECONDS = 0.05
 // Where a recording's sound counts as over: its last moment above this share of its peak (-20 dB). The rest is
 // the reverb's tail, which an opening microphone may cut short without it being missed.
 const HEARD_SHARE_OF_PEAK = 0.1
@@ -85,33 +88,37 @@ export async function playSignal(signal: Signal, sounds: DictationSounds): Promi
   const tone = new AudioContext()
   // Made outside a tap (the end's tone after the recorder), a context may start suspended.
   await tone.resume()
-  const source = found === null ? startBeep(tone, BEEPS[signal]) : startRecording(tone, found.buffer)
+  const at = tone.currentTime + START_LEAD_SECONDS
+  const source = found === null ? startBeep(tone, BEEPS[signal], at) : startRecording(tone, found.buffer, at)
   source.onended = () => void tone.close()
   const heard = found === null ? BEEPS[signal].milliseconds / MILLISECONDS_PER_SECOND : found.heardSeconds
-  await new Promise((heardOut) => window.setTimeout(heardOut, heard * MILLISECONDS_PER_SECOND))
+  const until = (START_LEAD_SECONDS + heard) * MILLISECONDS_PER_SECOND
+  await new Promise((heardOut) => window.setTimeout(heardOut, until))
 }
 
-function startRecording(tone: AudioContext, buffer: AudioBuffer): AudioScheduledSourceNode {
+function startRecording(tone: AudioContext, buffer: AudioBuffer, at: number): AudioScheduledSourceNode {
   const source = tone.createBufferSource()
   source.buffer = buffer
   source.connect(tone.destination)
-  source.start()
+  source.start(at)
   return source
 }
 
-function startBeep(tone: AudioContext, beep: { frequency: number; milliseconds: number }): AudioScheduledSourceNode {
+function startBeep(
+  tone: AudioContext,
+  beep: { frequency: number; milliseconds: number },
+  at: number,
+): AudioScheduledSourceNode {
   const oscillator = tone.createOscillator()
   const gain = tone.createGain()
   oscillator.connect(gain)
   gain.connect(tone.destination)
   oscillator.type = 'sine'
   oscillator.frequency.value = beep.frequency
-  // On the new context's clock: from now.
-  const now = tone.currentTime
-  const end = now + beep.milliseconds / MILLISECONDS_PER_SECOND
-  gain.gain.setValueAtTime(BEEP_VOLUME, now)
+  const end = at + beep.milliseconds / MILLISECONDS_PER_SECOND
+  gain.gain.setValueAtTime(BEEP_VOLUME, at)
   gain.gain.exponentialRampToValueAtTime(FADE_TO, end)
-  oscillator.start(now)
+  oscillator.start(at)
   oscillator.stop(end)
   return oscillator
 }

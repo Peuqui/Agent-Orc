@@ -128,7 +128,10 @@ export function useDictation(
     const mimeType = RECORDING_TYPES.find((type) => MediaRecorder.isTypeSupported(type))
     if (mimeType === undefined) throw new Error('No supported audio recording format')
     await soundStart()
-    openMicrophone = await navigator.mediaDevices.getUserMedia({ audio: true })
+    // Without echo cancellation: on a phone it puts the whole audio into a call's mode, so every tone around
+    // the microphone came quieter, distorted, late or not at all, depending on how far the switch was. A
+    // dictation needs none (nothing plays while it is taken in), and the speech models take the plain signal.
+    openMicrophone = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false } })
     const chunks: Blob[] = []
     recorder = new MediaRecorder(openMicrophone, { mimeType })
     recorder.ondataavailable = (event) => chunks.push(event.data)
