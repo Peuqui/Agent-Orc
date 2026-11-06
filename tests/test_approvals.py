@@ -77,6 +77,12 @@ def test_request_is_listed_until_closed_and_decided_once() -> None:
         decide(request, allow=True)
 
 
+def test_an_answered_request_is_gone_before_its_hook_takes_the_answer() -> None:
+    request = open_request("garden-1", HOOK_INPUT)
+    decide(request, allow=True)
+    assert open_requests() == []
+
+
 def test_a_request_without_suggestions_can_be_answered_once_only() -> None:
     without = {key: value for key, value in HOOK_INPUT.items() if key != "permission_suggestions"}
     request = open_request("garden-1", without)

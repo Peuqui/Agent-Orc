@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive } from 'vue'
+import { computed, reactive } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { type AgentSession, type Approval, type ApprovalAnswer } from '../api'
 import { renderMarkdown } from '../markdown'
@@ -56,10 +56,17 @@ function denyLabel(approval: Approval): string {
   return approval.plan === null ? t('approval.sendInstead') : t('approval.keepPlanning')
 }
 
+// Answered here: hidden at once, before the agents list says so (a phone's next look takes a moment,
+// and a request still shown was tapped again, in vain). Back if the answer did not go through.
+const answered = reactive(new Set<string>())
+const shown = computed(() => props.session.approvals.filter((approval) => !answered.has(approval.id)))
+
 async function answer(approval: Approval, decision: ApprovalAnswer): Promise<void> {
+  answered.add(approval.id)
   try {
     await api.answerApproval(props.session.id, approval.id, decision)
   } catch (error) {
+    answered.delete(approval.id)
     toast.error(error)
   }
   await refresh()
@@ -68,9 +75,9 @@ async function answer(approval: Approval, decision: ApprovalAnswer): Promise<voi
 
 <template>
   <!-- The agent asks for a permission; the terminal asks too, the first answer counts. -->
-  <div v-if="session.approvals.length" class="flex flex-col gap-2">
+  <div v-if="shown.length" class="flex flex-col gap-2">
     <div
-      v-for="approval in session.approvals"
+      v-for="approval in shown"
       :key="approval.id"
       class="controls-zoom flex flex-col gap-2 rounded-lg border border-highlight-500 bg-highlight-950/40 px-3 py-2 text-sm"
       v-bind="{ [APPROVAL_ATTRIBUTE]: '' }"

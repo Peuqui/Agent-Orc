@@ -165,7 +165,9 @@ def _hook_alive(pid: int) -> bool:
 
 
 def open_requests() -> list[ApprovalRequest]:
-    """Requests whose hook still waits."""
+    """Requests whose hook still waits for an answer; an answered one is gone at once, not only
+    once its hook took the answer (up to DECISION_POLL_SECONDS later), so the page that answered
+    no longer shows it on its next look."""
     directory = approvals_dir()
     if not directory.is_dir():
         return []
@@ -177,7 +179,11 @@ def open_requests() -> list[ApprovalRequest]:
             # Its hook finished while the directory was being read.
             continue
         requests.append(ApprovalRequest(**json.loads(stored)))
-    return [request for request in requests if _hook_alive(request.pid)]
+    return [
+        request
+        for request in requests
+        if _hook_alive(request.pid) and not _decision_file(request.id).is_file()
+    ]
 
 
 class InvalidAnswerError(ValueError):
