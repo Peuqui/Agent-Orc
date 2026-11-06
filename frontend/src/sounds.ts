@@ -34,17 +34,10 @@ interface Recording {
   heardSeconds: number
 }
 
-let context: AudioContext | undefined
-let sounding = 0
 // Each recording is fetched and decoded once, then played from memory: a tone at once, without the network.
 const decoded = new Map<Signal, Promise<Recording>>()
-
-/** One context for every tone. A context left running plays silence for good, which on a phone keeps the
- * audio output and the processor awake: it sleeps once no tone sounds (as the reading aloud's, speech.ts). */
-function audioContext(): AudioContext {
-  context ??= new AudioContext()
-  return context
-}
+// Decoded without an audio output, at the recordings' own rate (48 kHz); a tone's context plays it at its own.
+const DECODE_SAMPLE_RATE = 48000
 
 function heardSeconds(buffer: AudioBuffer): number {
   const channels = Array.from({ length: buffer.numberOfChannels }, (_, index) => buffer.getChannelData(index))
@@ -64,7 +57,7 @@ function recording(signal: Signal): Promise<Recording> {
         if (!response.ok) throw new Error(`${RECORDINGS[signal]}: ${response.status}`)
         return response.arrayBuffer()
       })
-      .then((data) => audioContext().decodeAudioData(data))
+      .then((data) => new OfflineAudioContext(1, 1, DECODE_SAMPLE_RATE).decodeAudioData(data))
       .then((buffer) => ({ buffer, heardSeconds: heardSeconds(buffer) }))
     // A failed load is tried again at the next tone.
     found.catch(() => decoded.delete(signal))
@@ -77,22 +70,19 @@ function recording(signal: Signal): Promise<Recording> {
 export async function loadSignals(sounds: DictationSounds): Promise<void> {
   if (sounds !== 'puck') return
   await Promise.all([recording('start'), recording('stop'), recording('cancel')])
-  // Decoding made the context, which some browsers start running: it sleeps until the first tone.
-  if (sounding === 0) await context?.suspend()
 }
 
 /** Plays the tone; done once its sound is heard to its end, before the reverb's tail (the microphone opens
- * then, see useDictation). */
+ * then, see useDictation). Each tone has a context of its own, closed after it: a phone switches a context to
+ * a call's audio path once the microphone was used and kept it there (the tones sounded distorted and the
+ * end's came late, after waking it); a new one never sits there, and nothing keeps the audio output awake. */
 export async function playSignal(signal: Signal, sounds: DictationSounds): Promise<void> {
-  const tone = audioContext()
   const found = sounds === 'puck' ? await recording(signal) : null
+  const tone = new AudioContext()
+  // Made outside a tap (the end's tone after the recorder), a context may start suspended.
   await tone.resume()
   const source = found === null ? startBeep(tone, BEEPS[signal]) : startRecording(tone, found.buffer)
-  sounding++
-  source.onended = () => {
-    sounding--
-    if (sounding === 0) void tone.suspend()
-  }
+  source.onended = () => void tone.close()
   const heard = found === null ? BEEPS[signal].milliseconds / MILLISECONDS_PER_SECOND : found.heardSeconds
   await new Promise((heardOut) => window.setTimeout(heardOut, heard * MILLISECONDS_PER_SECOND))
 }
@@ -112,7 +102,7 @@ function startBeep(tone: AudioContext, beep: { frequency: number; milliseconds: 
   gain.connect(tone.destination)
   oscillator.type = 'sine'
   oscillator.frequency.value = beep.frequency
-  // On the context's clock, which stood still while it slept: from now.
+  // On the new context's clock: from now.
   const now = tone.currentTime
   const end = now + beep.milliseconds / MILLISECONDS_PER_SECOND
   gain.gain.setValueAtTime(BEEP_VOLUME, now)
