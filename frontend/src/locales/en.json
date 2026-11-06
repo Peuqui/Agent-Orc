@@ -310,9 +310,9 @@
     "dictationSendsAtOnce": "Send a dictation at once",
     "dictationSendsAtOnceHint": "The recording goes to the agent as soon as it is recognised, without pressing send; a draft in the field goes with it. A dictation cut off by an error stays in the field to be checked. For every device.",
     "dictationSounds": "Microphone tones",
-    "dictationSounds_puck": "Echo puck",
+    "dictationSounds_puck": "Rich",
     "dictationSounds_sine": "Sine",
-    "dictationSoundsHint": "When a dictation starts and ends: the Echo puck's tones or plain sine beeps. For every device.",
+    "dictationSoundsHint": "When a dictation starts and ends: plain sine beeps or rich tones with reverb (the Echo puck's; on small phone speakers they sound less clean). For every device.",
     "sections": {
       "display": "Display",
       "dictation": "Dictation",

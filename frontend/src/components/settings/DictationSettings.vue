@@ -83,7 +83,7 @@ onMounted(async () => {
         <span>{{ $t('settings.dictationSounds') }}</span>
         <div class="flex overflow-hidden rounded-md border border-line-strong text-xs">
           <button
-            v-for="choice in (['puck', 'sine'] as const)"
+            v-for="choice in (['sine', 'puck'] as const)"
             :key="choice"
             class="px-2 py-1"
             :class="dictationSounds === choice ? 'segment-on' : 'text-dim'"

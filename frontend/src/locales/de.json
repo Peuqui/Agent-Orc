@@ -310,9 +310,9 @@
     "dictationSendsAtOnce": "Diktat sofort senden",
     "dictationSendsAtOnceHint": "Die Aufnahme geht nach dem Erkennen gleich an den Agenten, ohne Druck auf Senden; ein Entwurf im Feld geht mit. Ein durch einen Fehler abgebrochenes Diktat bleibt zum Prüfen im Feld. Gilt für alle Geräte.",
     "dictationSounds": "Töne des Mikrofons",
-    "dictationSounds_puck": "Echo-Puck",
+    "dictationSounds_puck": "Klangvoll",
     "dictationSounds_sine": "Sinus",
-    "dictationSoundsHint": "Beim Starten und Beenden eines Diktats: die Töne des Echo-Pucks oder einfache Sinustöne. Gilt für alle Geräte.",
+    "dictationSoundsHint": "Beim Starten und Beenden eines Diktats: einfache Sinustöne oder klangvolle Töne mit Nachhall (die des Echo-Pucks; auf kleinen Handy-Lautsprechern klingen sie weniger sauber). Gilt für alle Geräte.",
     "sections": {
       "display": "Anzeige",
       "dictation": "Diktat",

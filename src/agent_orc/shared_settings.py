@@ -18,8 +18,9 @@ class SharedSettings(BaseModel):
     dictation_device: Literal["cpu", "cuda", "auto"] = "cpu"
     # A dictation goes to the agent as soon as it is transcribed, without pressing send.
     dictation_sends_at_once: bool = False
-    # The tones when the microphone starts and stops: the Echo puck's recordings, or sine beeps.
-    dictation_sounds: Literal["puck", "sine"] = "puck"
+    # The tones when the microphone starts and stops: sine beeps, or the Echo puck's recordings
+    # (richer, but less clean on a phone's small speaker).
+    dictation_sounds: Literal["puck", "sine"] = "sine"
     # Which speech output reads answers aloud: "browser", "echo" or "tts-suite".
     speech_engine: str = Field(default="browser", min_length=1)
     # Speed and pitch of what is read aloud, as overrides: with nothing set the TTS service's own
