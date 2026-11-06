@@ -507,15 +507,10 @@ export interface TtsChoices {
   tuning: Record<string, TtsTuning>
 }
 
-/** The tones of the microphone: the Echo puck's recordings, or sine beeps (sounds.ts). */
-export type DictationSounds = 'puck' | 'sine'
-
 /** The settings that are the same on every device, kept on the server (shared_settings.py has the defaults). */
 export interface SharedSettings {
   dictation_device: DictationDevice
   dictation_sends_at_once: boolean
-  dictation_sounds: DictationSounds
-  speech_engine: string
   speech_rate: number | null
   speech_pitch: number | null
   speech_announce_name: boolean

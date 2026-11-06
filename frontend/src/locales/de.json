@@ -312,7 +312,7 @@
     "dictationSounds": "Töne des Mikrofons",
     "dictationSounds_puck": "Klangvoll",
     "dictationSounds_sine": "Sinus",
-    "dictationSoundsHint": "Beim Starten und Beenden eines Diktats: einfache Sinustöne oder klangvolle Töne mit Nachhall (die des Echo-Pucks; auf kleinen Handy-Lautsprechern klingen sie weniger sauber). Gilt für alle Geräte.",
+    "dictationSoundsHint": "Beim Starten und Beenden eines Diktats: einfache Sinustöne oder klangvolle Töne mit Nachhall (die des Echo-Pucks; auf kleinen Handy-Lautsprechern klingen sie weniger sauber). Gilt für dieses Gerät.",
     "sections": {
       "display": "Anzeige",
       "dictation": "Diktat",

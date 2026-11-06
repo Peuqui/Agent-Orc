@@ -312,7 +312,7 @@
     "dictationSounds": "Microphone tones",
     "dictationSounds_puck": "Rich",
     "dictationSounds_sine": "Sine",
-    "dictationSoundsHint": "When a dictation starts and ends: plain sine beeps or rich tones with reverb (the Echo puck's; on small phone speakers they sound less clean). For every device.",
+    "dictationSoundsHint": "When a dictation starts and ends: plain sine beeps or rich tones with reverb (the Echo puck's; on small phone speakers they sound less clean). For this device.",
     "sections": {
       "display": "Display",
       "dictation": "Dictation",

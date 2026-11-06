@@ -1,5 +1,6 @@
 import { type Ref, computed, ref, watch } from 'vue'
 import { sharedSetting } from './useSharedSettings'
+import type { DictationSounds } from '../sounds'
 
 // Settings of this device (a phone scrolls and reads differently than a desktop), kept in the
 // browser. The workspace's iframes share the storage; the storage event tells them about a
@@ -98,8 +99,9 @@ const dictationSendsAtOnce = sharedSetting('dictation_sends_at_once')
 /** Where the STT-Suite transcribes the dictations, for every agent and device: the CPU unless the GPU was chosen on purpose. */
 const dictationDevice = sharedSetting('dictation_device')
 
-/** The tones when the microphone starts and stops, for every device. */
-const dictationSounds = sharedSetting('dictation_sounds')
+/** The tones when the microphone starts and stops on this device: a phone's small speaker plays the rich ones
+ * less cleanly than a desktop's. */
+const dictationSounds = setting<DictationSounds>('agent-orc-dictation-sounds', 'sine', (stored) => stored as DictationSounds)
 
 /** Per conversation of AI-Connect (its key), the last message read on this device. */
 const peerMessagesSeen = setting<Record<string, number>>('agent-orc-peers-seen', {}, JSON.parse, JSON.stringify)
@@ -114,11 +116,14 @@ export type TerminalView = 'terminal' | 'answers'
 export function useTerminalView(sessionId: string): Ref<TerminalView> {
   return setting<TerminalView>(`agent-orc-terminal-view:${sessionId}`, 'answers', (stored) => stored as TerminalView)
 }
-/** What reads answers aloud: the engine (speech.ts), its voice, and its speed and pitch as overrides (none: the engine's own). */
-const speechEngine = sharedSetting('speech_engine')
+/** What reads answers aloud on this device: the engine (speech.ts), its voice, and its speed and pitch as overrides
+ * (none: the engine's own). The engine is the device's own choice (the browser's voices on one, the TTS-Suite on
+ * another); its id is one of speechEngines, the browser's until the server's are known. */
+// The browser's own voices: an engine every device has.
+const BROWSER_ENGINE = 'browser'
+const speechEngine = setting('agent-orc-speech-engine', BROWSER_ENGINE, String)
 // What is chosen with an engine (a room of the Echo, a voice of the TTS service) is kept on the server, one for each; the
 // voices of the browser are the device's own and stay in the browser.
-const BROWSER_ENGINE = 'browser'
 const browserVoice = setting(`agent-orc-speech-voice:${BROWSER_ENGINE}`, '', String)
 const speechVoices = sharedSetting('speech_voices')
 const voiceRefs = new Map<string, Ref<string>>()

@@ -1,4 +1,4 @@
-import { rootAddress, type DictationSounds } from './api'
+import { rootAddress } from './api'
 
 // The tones around the microphone: a higher "ping" when listening starts, a lower "pong" when it stops, and the
 // puck's "break" when a dictation is cancelled.
@@ -6,6 +6,10 @@ import { rootAddress, type DictationSounds } from './api'
 // by its tools/gen_notify_sounds.py), so both sound alike, or sine beeps made in the browser, as AIfred
 // plays them.
 export type Signal = 'start' | 'stop' | 'cancel'
+
+/** Which tones a device plays (its own choice: the puck's sound richer on a large speaker, less clean on a
+ * phone's). */
+export type DictationSounds = 'puck' | 'sine'
 
 // From this machine's own app on every machine's page: one address, so the browser holds one copy
 // (the service worker keeps it, vite.config.ts).

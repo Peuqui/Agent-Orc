@@ -36,7 +36,7 @@ def test_a_new_server_starts_with_the_factory_settings(
     answer = client_for(tmp_path, monkeypatch).get("/api/settings").json()
     assert answer == SharedSettings().model_dump()
     assert answer["dictation_device"] == "cpu"  # the CPU unless the GPU is chosen on purpose
-    assert answer["dictation_sends_at_once"] is False and answer["speech_engine"] == "browser"
+    assert answer["dictation_sends_at_once"] is False
     # Speed and pitch are overrides: nothing set means the service's own values apply.
     assert answer["speech_rate"] is None and answer["speech_pitch"] is None
 
@@ -64,7 +64,9 @@ def test_a_change_names_only_what_it_changes_and_lasts(
         {"speech_rate": "fast"},
         {"speech_pitch": -1},
         {"speech_max_chars": 5},
-        {"speech_engine": ""},
+        # Chosen on each device now, no longer kept here.
+        {"speech_engine": "browser"},
+        {"dictation_sounds": "puck"},
         {"keep_warm_max_pings": 0},
     ],
 )
