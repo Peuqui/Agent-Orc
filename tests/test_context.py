@@ -208,6 +208,8 @@ def test_an_answer_going_on_after_the_stop_leaves_the_agent_working(tmp_path: Pa
 # Claude Code 2.1.318 while it works, and once it is done.
 INPUT_FIELD = "─" * 40 + "\n❯ \n" + "─" * 40
 WORKING_SCREEN = "● Antwort\n\n* Marinating… (27s · thought for 7s)\n\n" + INPUT_FIELD
+# At the very start the spinner shows no time yet.
+STARTING_SCREEN = "● Antwort\n\n❯ Eine Frage…\n\n✻ Reticulating…\n\n" + INPUT_FIELD
 # Below its spinner Claude shows its task list.
 TASKS_SCREEN = "● Antwort\n\n* Marinating… (27s)\n  ⎿  ☐ Prüfen\n     ☐ Bauen\n\n" + INPUT_FIELD
 RESTING_SCREEN = "● Antwort\n\n✻ Baked for 9s · done 19:26\n\n" + INPUT_FIELD
@@ -226,6 +228,7 @@ def test_an_answer_stopped_before_it_began_shows_on_the_screen(tmp_path: Path) -
     session = marked_busy(tmp_path, "s-1")
     assert shows_no_work(session, lambda: WORKING_SCREEN, working, later) is None
     assert shows_no_work(session, lambda: TASKS_SCREEN, working, later) is None
+    assert shows_no_work(session, lambda: STARTING_SCREEN, working, later) is None
     assert shows_no_work(session, lambda: RESTING_SCREEN, working, later) is not None
 
 
