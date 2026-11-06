@@ -108,6 +108,19 @@ export interface Notebook {
   folders: NoteFolder[]
 }
 
+/** Something deleted from the notebooks; it waits until restored or deleted for good. */
+export interface NotesTrashEntry {
+  id: string
+  kind: 'notebook' | 'folder' | 'note'
+  /** ISO time (UTC). */
+  deleted_at: string
+  /** The notebook it was in (a notebook: its name). */
+  notebook: string
+  /** The folder a note was in; null for a loose note, a folder or a notebook. */
+  folder: string | null
+  content: Notebook | NoteFolder | Note
+}
+
 /** One text the agent wrote while answering. */
 export interface AnswerText {
   id: string
@@ -840,7 +853,22 @@ function createApi(host?: string | null) {
       request<void>('PUT', `notebooks/${encodeURIComponent(name)}`, { body: notebook }),
     renameNotebook: (name: string, newName: string) =>
       request<void>('PUT', `notebooks/${encodeURIComponent(name)}/name`, { body: { name: newName } }),
+    /** Into the notes' trash, like a folder or a note. */
     deleteNotebook: (name: string) => request<void>('DELETE', `notebooks/${encodeURIComponent(name)}`),
+    deleteNoteFolder: (name: string, folder: number) =>
+      request<void>('DELETE', `notebooks/${encodeURIComponent(name)}/folders/${folder}`),
+    /** A loose note (folder null) or one of that folder. */
+    deleteNote: (name: string, folder: number | null, note: number) =>
+      request<void>(
+        'DELETE',
+        `notebooks/${encodeURIComponent(name)}/notes/${note}${folder === null ? '' : `?folder=${folder}`}`,
+      ),
+    notesTrash: () => request<NotesTrashEntry[]>('GET', 'notes/trash'),
+    /** Returns the notebook it went back into; `name` for a notebook whose own name is taken. */
+    restoreNotes: (id: string, name?: string) =>
+      request<{ notebook: string }>('POST', `notes/trash/${encodeURIComponent(id)}/restore`, { body: { name } }),
+    deleteFromNotesTrash: (id: string) => request<void>('DELETE', `notes/trash/${encodeURIComponent(id)}`),
+    emptyNotesTrash: () => request<void>('DELETE', 'notes/trash'),
 
     /** Stores a file for a note; returns the address the note links to it with. */
     attachToNote: (file: File) =>

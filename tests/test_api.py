@@ -2611,6 +2611,57 @@ def test_notebooks_are_kept_renamed_and_deleted(
     assert list(client.get("/api/notebooks").json()) == ["Einfälle"]
 
 
+def test_deleted_notebooks_folders_and_notes_wait_in_the_trash(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+    link = {"title": "Link", "text": "https://example.org"}
+    snippet = {"title": "Snippet", "text": "ls"}
+    ideas = {"notes": [link], "folders": [{"name": "Code", "notes": [snippet]}]}
+    client.put("/api/notebooks/Ideen", json=ideas)
+    assert client.delete("/api/notebooks/Ideen/notes/0", params={"folder": 0}).status_code == 204
+    assert client.delete("/api/notebooks/Ideen/notes/0").status_code == 204
+    assert client.delete("/api/notebooks/Ideen/notes/0").status_code == 404
+    assert client.delete("/api/notebooks/Ideen/folders/0").status_code == 204
+    assert client.get("/api/notebooks").json() == {"Ideen": {"notes": [], "folders": []}}
+    assert client.delete("/api/notebooks/Ideen").status_code == 204
+    trash = client.get("/api/notes/trash").json()
+    # Newest first; a note remembers its folder.
+    assert [(entry["kind"], entry["folder"]) for entry in trash] == [
+        ("notebook", None),
+        ("folder", None),
+        ("note", None),
+        ("note", "Code"),
+    ]
+    snippet_entry, link_entry, folder_entry, notebook_entry = reversed(trash)
+    # A note of a notebook that is gone makes it again, and goes back into its folder once
+    # that is back.
+    restored = client.post(f"/api/notes/trash/{link_entry['id']}/restore", json={})
+    assert restored.json() == {"notebook": "Ideen"}
+    client.post(f"/api/notes/trash/{folder_entry['id']}/restore", json={})
+    client.post(f"/api/notes/trash/{snippet_entry['id']}/restore", json={})
+    assert client.get("/api/notebooks").json() == {
+        "Ideen": {"notes": [link], "folders": [{"name": "Code", "notes": [snippet]}]}
+    }
+    # The deleted notebook's name is taken now: it comes back under another.
+    taken = client.post(f"/api/notes/trash/{notebook_entry['id']}/restore", json={})
+    assert taken.status_code == 409
+    renamed = client.post(
+        f"/api/notes/trash/{notebook_entry['id']}/restore", json={"name": "Ideen (2)"}
+    )
+    assert renamed.json() == {"notebook": "Ideen (2)"}
+    assert list(client.get("/api/notebooks").json()) == ["Ideen", "Ideen (2)"]
+    assert client.get("/api/notes/trash").json() == []
+    client.delete("/api/notebooks/Ideen (2)")
+    client.delete("/api/notebooks/Ideen/notes/0")
+    first, second = client.get("/api/notes/trash").json()
+    assert client.delete(f"/api/notes/trash/{first['id']}").status_code == 204
+    assert client.delete(f"/api/notes/trash/{first['id']}").status_code == 404
+    assert [entry["id"] for entry in client.get("/api/notes/trash").json()] == [second["id"]]
+    assert client.delete("/api/notes/trash").status_code == 204
+    assert client.get("/api/notes/trash").json() == []
+
+
 def test_a_note_file_is_stored_served_and_refused_outside_its_folder(
     client: TestClient, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

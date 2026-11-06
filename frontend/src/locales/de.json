@@ -682,14 +682,14 @@
     "newNotebook": "Neues Notizbuch",
     "renameNotebook": "Notizbuch umbenennen",
     "deleteNotebook": "Notizbuch löschen",
-    "confirmDeleteNotebook": "Notizbuch „{name}“ mit allen Notizen löschen?",
+    "confirmDeleteNotebook": "Notizbuch „{name}“ mit allen Notizen in den Papierkorb legen?",
     "newFolder": "Neuer Ordner",
     "renameFolder": "Ordner umbenennen",
     "deleteFolder": "Ordner löschen",
-    "confirmDeleteFolder": "Ordner „{name}“ mit {count} Notizen löschen?",
+    "confirmDeleteFolder": "Ordner „{name}“ mit {count} Notizen in den Papierkorb legen?",
     "newNote": "Neue Notiz",
     "deleteNote": "Notiz löschen",
-    "confirmDeleteNote": "Notiz „{title}“ löschen?",
+    "confirmDeleteNote": "Notiz „{title}“ in den Papierkorb legen?",
     "name": "Name",
     "create": "Anlegen",
     "rename": "Umbenennen",
@@ -727,6 +727,11 @@
       "open": "In neuem Tab öffnen"
     },
     "newFolderOption": "Neuer Ordner …"
+  },
+  "notesTrash": {
+    "title": "Papierkorb der Notizen",
+    "restoredName": "{name} (wiederhergestellt) | {name} (wiederhergestellt {count})",
+    "kind": { "notebook": "Notizbuch" }
   },
   "broadcast": {
     "insert": "In {count} einfügen",

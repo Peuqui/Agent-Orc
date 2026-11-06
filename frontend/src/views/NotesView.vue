@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { api, type Note, type Notebook } from '../api'
+import { api, type Note, type Notebook, type NotesTrashEntry } from '../api'
 import AppIcon from '../components/AppIcon.vue'
 import AttachMenu from '../components/AttachMenu.vue'
 import BroadcastDialog from '../components/BroadcastDialog.vue'
@@ -12,6 +12,7 @@ import { TOUCH_FIRST } from '../device'
 import DictationMic from '../components/DictationMic.vue'
 import DictationRetry from '../components/DictationRetry.vue'
 import InputDialog from '../components/InputDialog.vue'
+import NotesTrash from '../components/NotesTrash.vue'
 import PdfPreview from '../components/PdfPreview.vue'
 import { useDictation } from '../composables/useDictation'
 import { useServerEvents } from '../composables/useServerEvents'
@@ -53,6 +54,9 @@ const selection = ref<Selection | null>(null)
 const editing = ref(false)
 const query = ref('')
 const dialog = ref<Dialog | null>(null)
+// What was deleted from the notebooks; shown instead of a notebook while `showTrash`.
+const trash = ref<NotesTrashEntry[]>([])
+const showTrash = ref(false)
 
 const names = computed(() => Object.keys(notebooks.value))
 const notebook = computed(() => (current.value === null ? null : (notebooks.value[current.value] ?? null)))
@@ -120,7 +124,7 @@ function changed(): void {
 async function reload(): Promise<void> {
   if (saveTimer !== undefined || saving > 0) return
   try {
-    notebooks.value = await api.notebooks()
+    ;[notebooks.value, trash.value] = await Promise.all([api.notebooks(), api.notesTrash()])
   } catch (error) {
     toast.error(error)
     return
@@ -137,6 +141,7 @@ onBeforeUnmount(() => void flush())
 
 function openNotebook(name: string): void {
   void flush()
+  showTrash.value = false
   current.value = name
   selection.value = null
   query.value = ''
@@ -172,20 +177,9 @@ async function renameNotebook(name: string): Promise<void> {
   await reload()
 }
 
-async function deleteNotebook(): Promise<void> {
-  dialog.value = null
-  const name = current.value
-  if (name === null) return
-  window.clearTimeout(saveTimer)
-  saveTimer = undefined
-  try {
-    await api.deleteNotebook(name)
-  } catch (error) {
-    toast.error(error)
-  }
-  current.value = null
-  selection.value = null
-  await reload()
+function deleteNotebook(): Promise<void> {
+  // Its tab goes: reload opens the first one left.
+  return trashFromNotebook((name) => api.deleteNotebook(name))
 }
 
 /** Opens a note; one without text opens for writing, one with text for reading. */
@@ -220,19 +214,34 @@ function renameFolder(folder: number, name: string): void {
   changed()
 }
 
-function deleteFolder(folder: number): void {
+/** Into the trash, by the server: this device's edits are stored first, so the places match. */
+async function trashFromNotebook(remove: (name: string) => Promise<void>): Promise<void> {
   dialog.value = null
-  notebook.value?.folders.splice(folder, 1)
+  const name = current.value
+  if (name === null) return
   selection.value = null
-  changed()
+  try {
+    await flush()
+    await remove(name)
+  } catch (error) {
+    toast.error(error)
+  }
+  await reload()
 }
 
-function deleteNote(): void {
-  dialog.value = null
-  if (selection.value === null) return
-  notesOf(selection.value.folder).splice(selection.value.index, 1)
-  selection.value = null
-  changed()
+function deleteFolder(folder: number): Promise<void> {
+  return trashFromNotebook((name) => api.deleteNoteFolder(name, folder))
+}
+
+function deleteNote(): Promise<void> {
+  const place = selection.value
+  if (place === null) return Promise.resolve()
+  return trashFromNotebook((name) => api.deleteNote(name, place.folder, place.index))
+}
+
+async function onRestored(name: string): Promise<void> {
+  await reload()
+  openNotebook(name)
 }
 
 /** Moves the selected note into a folder (null: loose), at the end. */
@@ -375,7 +384,7 @@ function firstLine(note: Note): string {
       <button class="btn-secondary btn-small-icon" :title="$t('notes.newNotebook')" :aria-label="$t('notes.newNotebook')" @click="dialog = { kind: 'newNotebook' }">
         <AppIcon name="plus" />
       </button>
-      <template v-if="current !== null">
+      <template v-if="current !== null && !showTrash">
         <button class="btn-secondary btn-small-icon" :title="$t('notes.renameNotebook')" :aria-label="$t('notes.renameNotebook')" @click="dialog = { kind: 'renameNotebook' }">
           <AppIcon name="pencil" />
         </button>
@@ -383,9 +392,18 @@ function firstLine(note: Note): string {
           <AppIcon name="trash" />
         </button>
       </template>
+      <button
+        class="btn-small ml-auto"
+        :class="showTrash ? 'btn-primary' : 'btn-secondary'"
+        :title="$t('notesTrash.title')"
+        @click="showTrash = !showTrash"
+      >
+        <AppIcon name="trash" />{{ trash.length }}
+      </button>
     </div>
 
-    <p v-if="current === null" class="text-dim">{{ $t('notes.empty') }}</p>
+    <NotesTrash v-if="showTrash" :entries="trash" :notebooks="names" @restored="onRestored" />
+    <p v-else-if="current === null" class="text-dim">{{ $t('notes.empty') }}</p>
 
     <!-- Wide: list and note side by side; while editing the note itself has two columns (text and
          view), so below xl the list steps aside, as on phones. -->

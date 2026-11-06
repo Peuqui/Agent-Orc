@@ -150,6 +150,18 @@ from agent_orc.hosts import (
     forward_websocket,
     keep_tunnel_open,
 )
+from agent_orc.notebooks import (
+    NotebookExistsError,
+    TrashKind,
+    UnknownNotebookError,
+    UnknownNoteError,
+    UnknownNotesTrashEntryError,
+    delete_trashed,
+    restore_trashed,
+    trash_folder,
+    trash_note,
+    trash_notebook,
+)
 from agent_orc.push import (
     add_subscription,
     agent_message,
@@ -187,6 +199,7 @@ from agent_orc.state import (
     UNNAMED_WORKSPACE,
     add_unassigned_agents,
     assign_agent,
+    changing_notes,
     changing_settings,
     changing_workspaces,
     empty_workspace,
@@ -199,6 +212,7 @@ from agent_orc.state import (
     read_card_order,
     read_extra_keys,
     read_notebooks,
+    read_notes_trash,
     read_prompt_templates,
     read_settings,
     read_tts_choices,
@@ -210,7 +224,6 @@ from agent_orc.state import (
     write_base_dir,
     write_card_order,
     write_extra_keys,
-    write_notebooks,
     write_prompt_templates,
     write_tts_choices,
 )
@@ -329,14 +342,6 @@ class TtsChoiceInvalidError(ValueError):
     """The user's choice of TTS engines cannot be kept."""
 
 
-class UnknownNotebookError(LookupError):
-    """No notebook of this name."""
-
-
-class NotebookExistsError(ValueError):
-    """A notebook of this name exists already."""
-
-
 class FolderBusyError(RuntimeError):
     """An agent session runs in this folder or below it."""
 
@@ -362,6 +367,8 @@ ERROR_STATUS: dict[type[Exception], int] = {
     UnknownModelError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     UnknownWorkspaceError: status.HTTP_404_NOT_FOUND,
     UnknownNotebookError: status.HTTP_404_NOT_FOUND,
+    UnknownNoteError: status.HTTP_404_NOT_FOUND,
+    UnknownNotesTrashEntryError: status.HTTP_404_NOT_FOUND,
     NotConfiguredError: status.HTTP_404_NOT_FOUND,
     UnknownHostError: status.HTTP_404_NOT_FOUND,
     InvalidBaseDirError: status.HTTP_422_UNPROCESSABLE_CONTENT,
@@ -490,6 +497,22 @@ class Notebook(BaseModel):
 
 class NotebookNameRequest(BaseModel):
     name: str
+
+
+class NotesTrashEntry(BaseModel):
+    """Something deleted from the notebooks (see notebooks.py)."""
+
+    id: str
+    kind: TrashKind
+    deleted_at: str
+    notebook: str
+    folder: str | None
+    content: dict[str, Any]
+
+
+class NotesRestoreRequest(BaseModel):
+    # A notebook's name when its own is taken by now; None: its own.
+    name: str | None = None
 
 
 class AssignWorkspaceRequest(BaseModel):
@@ -1673,9 +1696,8 @@ def create_app(
     )
     def store_notebook(name: str, body: Notebook) -> None:
         """Stores the whole notebook, creating it at the end of the tabs if it is new."""
-        stored = read_notebooks()
-        stored[name] = body.model_dump()
-        write_notebooks(stored)
+        with changing_notes() as (stored, _):
+            stored[name] = body.model_dump()
         notebook_changes.notify()
 
     @app.put(
@@ -1684,22 +1706,75 @@ def create_app(
         status_code=status.HTTP_204_NO_CONTENT,
     )
     def rename_notebook_route(name: str, body: NotebookNameRequest) -> None:
-        stored = read_notebooks()
-        if name not in stored:
-            raise UnknownNotebookError(name)
-        if body.name != name and body.name in stored:
-            raise NotebookExistsError(body.name)
-        write_notebooks(rename_notebook(stored, name, body.name))
+        with changing_notes() as (stored, _):
+            if name not in stored:
+                raise UnknownNotebookError(name)
+            if body.name != name and body.name in stored:
+                raise NotebookExistsError(body.name)
+            renamed = rename_notebook(stored, name, body.name)
+            stored.clear()
+            stored.update(renamed)
         notebook_changes.notify()
 
     @app.delete(
         "/api/notebooks/{name}", dependencies=authenticated, status_code=status.HTTP_204_NO_CONTENT
     )
     def delete_notebook(name: str) -> None:
-        stored = read_notebooks()
-        if stored.pop(name, None) is None:
-            raise UnknownNotebookError(name)
-        write_notebooks(stored)
+        """Into the notes' trash, like a folder or a note."""
+        with changing_notes() as (stored, trash):
+            trash_notebook(stored, trash, name)
+        notebook_changes.notify()
+
+    @app.delete(
+        "/api/notebooks/{name}/folders/{folder}",
+        dependencies=authenticated,
+        status_code=status.HTTP_204_NO_CONTENT,
+    )
+    def delete_note_folder(name: str, folder: int) -> None:
+        with changing_notes() as (stored, trash):
+            trash_folder(stored, trash, name, folder)
+        notebook_changes.notify()
+
+    @app.delete(
+        "/api/notebooks/{name}/notes/{note}",
+        dependencies=authenticated,
+        status_code=status.HTTP_204_NO_CONTENT,
+    )
+    def delete_note(name: str, note: int, folder: int | None = None) -> None:
+        """A loose note, or with `folder` one of that folder (indices as the page shows them)."""
+        with changing_notes() as (stored, trash):
+            trash_note(stored, trash, name, folder, note)
+        notebook_changes.notify()
+
+    @app.get("/api/notes/trash", dependencies=authenticated)
+    def notes_trash() -> list[NotesTrashEntry]:
+        """Newest first; it changes with the notebooks (their events)."""
+        return [NotesTrashEntry(**entry) for entry in read_notes_trash()]
+
+    @app.post("/api/notes/trash/{entry_id}/restore", dependencies=authenticated)
+    def restore_from_notes_trash(entry_id: str, body: NotesRestoreRequest) -> dict[str, str]:
+        """Returns the notebook it went back into."""
+        with changing_notes() as (stored, trash):
+            notebook = restore_trashed(stored, trash, entry_id, body.name)
+        notebook_changes.notify()
+        return {"notebook": notebook}
+
+    @app.delete(
+        "/api/notes/trash/{entry_id}",
+        dependencies=authenticated,
+        status_code=status.HTTP_204_NO_CONTENT,
+    )
+    def delete_from_notes_trash(entry_id: str) -> None:
+        with changing_notes() as (_, trash):
+            delete_trashed(trash, entry_id)
+        notebook_changes.notify()
+
+    @app.delete(
+        "/api/notes/trash", dependencies=authenticated, status_code=status.HTTP_204_NO_CONTENT
+    )
+    def empty_notes_trash() -> None:
+        with changing_notes() as (_, trash):
+            trash.clear()
         notebook_changes.notify()
 
     @app.delete(

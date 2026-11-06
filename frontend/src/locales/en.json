@@ -682,14 +682,14 @@
     "newNotebook": "New notebook",
     "renameNotebook": "Rename notebook",
     "deleteNotebook": "Delete notebook",
-    "confirmDeleteNotebook": "Delete the notebook “{name}” with all its notes?",
+    "confirmDeleteNotebook": "Move the notebook “{name}” with all its notes to the trash?",
     "newFolder": "New folder",
     "renameFolder": "Rename folder",
     "deleteFolder": "Delete folder",
-    "confirmDeleteFolder": "Delete the folder “{name}” with {count} notes?",
+    "confirmDeleteFolder": "Move the folder “{name}” with {count} notes to the trash?",
     "newNote": "New note",
     "deleteNote": "Delete note",
-    "confirmDeleteNote": "Delete the note “{title}”?",
+    "confirmDeleteNote": "Move the note “{title}” to the trash?",
     "name": "Name",
     "create": "Create",
     "rename": "Rename",
@@ -727,6 +727,11 @@
       "open": "Open in a new tab"
     },
     "newFolderOption": "New folder …"
+  },
+  "notesTrash": {
+    "title": "Notes trash",
+    "restoredName": "{name} (restored) | {name} (restored {count})",
+    "kind": { "notebook": "Notebook" }
   },
   "broadcast": {
     "insert": "Insert into {count}",

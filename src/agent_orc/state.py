@@ -18,6 +18,7 @@ SETTINGS_FILE = "settings.json"
 DEFAULT_PARAGRAPH_PAUSE_MS = 700
 EXTRA_KEYS_FILE = "extra-keys.json"
 NOTEBOOKS_FILE = "notebooks.json"
+NOTES_TRASH_FILE = "notes-trash.json"
 BASE_DIR_FILE = "base-dir.json"
 ANSWERS_SEEN_FILE = "answers-seen.json"
 # Key of the unnamed workspace in the workspaces file; a name the user gives is never empty.
@@ -235,6 +236,30 @@ def read_notebooks() -> dict[str, Any]:
 
 def write_notebooks(notebooks: dict[str, Any]) -> None:
     write_atomically(state_dir() / NOTEBOOKS_FILE, json.dumps(notebooks))
+
+
+def read_notes_trash() -> list[dict[str, Any]]:
+    """What was deleted from the notebooks, newest first (see notebooks.py)."""
+    path = state_dir() / NOTES_TRASH_FILE
+    if not path.is_file():
+        return []
+    trash: list[dict[str, Any]] = json.loads(path.read_text(encoding="utf-8"))
+    return trash
+
+
+_changing_notes = threading.Lock()
+
+
+@contextmanager
+def changing_notes() -> Iterator[tuple[dict[str, Any], list[dict[str, Any]]]]:
+    """The notebooks and their trash to change together in the `with` block; both written back
+    when it ends without an error."""
+    with _changing_notes:
+        notebooks, trash = read_notebooks(), read_notes_trash()
+        yield notebooks, trash
+        # The trash first: stopped in between, a deleted note is in both rather than in neither.
+        write_atomically(state_dir() / NOTES_TRASH_FILE, json.dumps(trash))
+        write_notebooks(notebooks)
 
 
 def rename_notebook(notebooks: dict[str, Any], old: str, new: str) -> dict[str, Any]:
