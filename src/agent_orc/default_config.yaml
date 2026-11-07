@@ -321,6 +321,8 @@ agents:
     # ("✻ Baked for 9s", no "…"). Once it is gone, an agent counted as working rests again (an
     # answer stopped before it began runs no hook).
     working_line: '^[^●❯\s] [^…]+…(\s|$)'
+    # Shown instead of the spinner while the screen is scrolled back: no judgement then.
+    scrolled_line: '\(ctrl\+End\)'
     # A further agent in the folder gets an AI-Connect name of its own (Host:Project-Suffix).
     env: {AI_CONNECT_PEER_SUFFIX: "{suffix}"}
     # Usage limits (five hours, week) as Claude reports them in its status line.

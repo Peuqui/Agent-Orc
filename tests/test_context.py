@@ -15,6 +15,7 @@ from agent_orc.context import (
     session_busy,
     session_status,
     shows_no_work,
+    shows_work_again,
     status_file,
     status_line,
     store_activity,
@@ -226,10 +227,10 @@ def test_an_answer_stopped_before_it_began_shows_on_the_screen(tmp_path: Path) -
     assert working is not None
     later = ASKED_SECONDS + 60
     session = marked_busy(tmp_path, "s-1")
-    assert shows_no_work(session, lambda: WORKING_SCREEN, working, later) is None
-    assert shows_no_work(session, lambda: TASKS_SCREEN, working, later) is None
-    assert shows_no_work(session, lambda: STARTING_SCREEN, working, later) is None
-    assert shows_no_work(session, lambda: RESTING_SCREEN, working, later) is not None
+    assert shows_no_work(session, lambda: WORKING_SCREEN, working, None, later) is None
+    assert shows_no_work(session, lambda: TASKS_SCREEN, working, None, later) is None
+    assert shows_no_work(session, lambda: STARTING_SCREEN, working, None, later) is None
+    assert shows_no_work(session, lambda: RESTING_SCREEN, working, None, later) is not None
 
 
 def test_the_screen_counts_only_a_while_after_the_mark(tmp_path: Path) -> None:
@@ -237,4 +238,49 @@ def test_the_screen_counts_only_a_while_after_the_mark(tmp_path: Path) -> None:
     assert working is not None
     # Just marked: the agent has not drawn its work yet, the screen is not even asked.
     session = marked_busy(tmp_path, "s-1")
-    assert shows_no_work(session, lambda: pytest.fail("asked"), working, ASKED_SECONDS + 1) is None
+    assert (
+        shows_no_work(session, lambda: pytest.fail("asked"), working, None, ASKED_SECONDS + 1)
+        is None
+    )
+
+
+# Claude Code scrolled back: the conversation instead of the spinner, with a hint at the bottom.
+SCROLLED_SCREEN = "● Antwort\n\n  1 new message (ctrl+End) ↓\n\n" + INPUT_FIELD
+
+
+def test_a_scrolled_back_screen_says_nothing_about_the_work(tmp_path: Path) -> None:
+    config = parse_config(default_config_text()).agents["claude"]
+    assert config.working_line is not None and config.scrolled_line is not None
+    later = ASKED_SECONDS + 60
+    session = marked_busy(tmp_path, "s-1")
+    assert shows_no_work(session, lambda: SCROLLED_SCREEN, config.working_line, None, later)
+    assert (
+        shows_no_work(
+            session, lambda: SCROLLED_SCREEN, config.working_line, config.scrolled_line, later
+        )
+        is None
+    )
+
+
+def test_a_resting_agent_showing_its_spinner_works_again(tmp_path: Path) -> None:
+    config = parse_config(default_config_text()).agents["claude"]
+    assert config.working_line is not None and config.scrolled_line is not None
+    resting = marked_busy(tmp_path, "s-1")
+    store_activity("s-1", busy=False)
+    os.utime(activity_file("s-1"), (ASKED_SECONDS, ASKED_SECONDS))
+    later = ASKED_SECONDS + 60
+
+    def again(screen: str, now: float) -> bool:
+        return shows_work_again(
+            resting, lambda: screen, config.working_line, config.scrolled_line, now
+        )
+
+    assert again(WORKING_SCREEN, later)
+    assert not again(RESTING_SCREEN, later)
+    assert not again(SCROLLED_SCREEN, later)
+    # The spinner of an answer that just ended may still be drawn.
+    assert not again(WORKING_SCREEN, ASKED_SECONDS + 1)
+    # An agent marked busy is not judged here.
+    store_activity("s-1", busy=True)
+    os.utime(activity_file("s-1"), (ASKED_SECONDS, ASKED_SECONDS))
+    assert not again(WORKING_SCREEN, later)

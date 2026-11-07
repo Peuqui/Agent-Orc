@@ -83,6 +83,7 @@ from agent_orc.context import (
     session_status,
     session_transcript,
     shows_no_work,
+    shows_work_again,
     store_activity,
     transcript_version,
 )
@@ -294,9 +295,10 @@ LEVELS_CACHE_SECONDS = 30
 # How often the server looks after the agents: effort changes waiting for a busy agent,
 # handover advice, scheduled prompts.
 AGENT_CHECK_SECONDS = 2
-# Looks in a row (AGENT_CHECK_SECONDS apart) without work on a busy agent's screen, before it
-# counts as resting (an answer stopped before it began, see context.shows_no_work).
-WORK_GONE_LOOKS = 3
+# Looks in a row (AGENT_CHECK_SECONDS apart) at which the screen contradicts the recorded
+# activity (no work on a busy agent's, work on a resting one's), before the record is changed
+# (see context.shows_no_work, shows_work_again).
+WORK_CHANGE_LOOKS = 3
 # How much of the screen above the input field goes to the log when an agent is let rest so.
 SCREEN_LOG_CHARS = 1500
 # How often the server looks at the permission requests the hooks write.
@@ -1223,8 +1225,9 @@ def create_app(
                 message = agent_message("unsent", session.id, session.name, prompt.text)
                 deliver(message, config.push)
 
-    # How many looks in a row found no work on a busy agent's screen (see shows_no_work).
-    looks_without_work: dict[str, int] = {}
+    # How many looks in a row found the screen to contradict the agent's recorded activity (see
+    # shows_no_work, shows_work_again).
+    contradicting_looks: dict[str, int] = {}
     # Each running agent's activity as last seen here: every change goes to the log, with what
     # made it, so a spinner that went missing can be traced.
     activity_seen: dict[str, str | None] = {}
@@ -1249,27 +1252,36 @@ def create_app(
                 note_activity(session, "stop mark in the transcript")
             profile = config.agents.get(session.profile)
             if profile is None or profile.working_line is None or session.id in waiting:
-                looks_without_work.pop(session.id, None)
+                contradicting_looks.pop(session.id, None)
                 continue
             screen = functools.partial(sessions.text, session.id, 0)
-            seen = shows_no_work(session, screen, profile.working_line, clock())
-            if seen is None:
-                looks_without_work.pop(session.id, None)
+            now = clock()
+            seen = shows_no_work(session, screen, profile.working_line, profile.scrolled_line, now)
+            work_again = seen is None and shows_work_again(
+                session, screen, profile.working_line, profile.scrolled_line, now
+            )
+            if seen is None and not work_again:
+                contradicting_looks.pop(session.id, None)
                 continue
             # One look may catch the agent while it draws its screen anew: only several in a
             # row count.
-            looks_without_work[session.id] = looks_without_work.get(session.id, 0) + 1
-            if looks_without_work[session.id] >= WORK_GONE_LOOKS:
-                del looks_without_work[session.id]
-                store_activity(session.id, busy=False)
-                note_activity(session, "no work on the screen")
-                # What it showed, to tell a stop before the answer from a screen misread.
-                shown = "\n".join(line for line in seen if line.strip())
-                logger.info(
-                    "%s: no work on the screen, resting again; above the input:\n%s",
-                    session.id,
-                    shown[-SCREEN_LOG_CHARS:],
-                )
+            contradicting_looks[session.id] = contradicting_looks.get(session.id, 0) + 1
+            if contradicting_looks[session.id] < WORK_CHANGE_LOOKS:
+                continue
+            del contradicting_looks[session.id]
+            if seen is None:
+                store_activity(session.id, busy=True)
+                note_activity(session, "work on the screen")
+                continue
+            store_activity(session.id, busy=False)
+            note_activity(session, "no work on the screen")
+            # What it showed, to tell a stop before the answer from a screen misread.
+            shown = "\n".join(line for line in seen if line.strip())
+            logger.info(
+                "%s: no work on the screen, resting again; above the input:\n%s",
+                session.id,
+                shown[-SCREEN_LOG_CHARS:],
+            )
 
     approval_changes = ChangeNotifier()
     host_changes = ChangeNotifier()

@@ -18,6 +18,8 @@
     # ("✻ Baked for 9s", no "…"). Once it is gone, an agent counted as working rests again (an
     # answer stopped before it began runs no hook).
     working_line: '^[^●❯\s] [^…]+…(\s|$)'
+    # Shown instead of the spinner while the screen is scrolled back: no judgement then.
+    scrolled_line: '\(ctrl\+End\)'
     effort:
       levels: [low, medium, high, xhigh, max]
       default: high

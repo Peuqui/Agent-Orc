@@ -391,6 +391,9 @@ class AgentProfile(StrictModel):
     # spinner, "* Marinating… (27s"). An agent counted as working that shows it no more rests
     # again: an answer stopped before it began runs no hook and leaves nothing in the transcript.
     working_line: re.Pattern[str] | None = None
+    # What the agent shows instead of its spinner while its screen is scrolled back (Claude: "1 new
+    # message (ctrl+End) ↓"): such a screen says nothing about its work.
+    scrolled_line: re.Pattern[str] | None = None
     # Prints the models to choose from at start, one per line; the choice fills {model}. A tab
     # may follow the name, then a note shown beside it; the note `free_until=<YYYY-MM-DD>` is the
     # last day the model is free, which the interface words in its own language.

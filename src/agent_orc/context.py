@@ -16,7 +16,7 @@ UserPromptSubmit when it is queued; if it is taken as a request of its own after
 hook marks that start, so agent-idle leaves such an agent working. An answer the user stops (Esc)
 gets no Stop: the server finds the stop in the transcript (end_interrupted_answer). One stopped
 before it began is not even there (Claude takes the request back): the screen tells
-(shows_no_work).
+(shows_no_work, shows_work_again).
 """
 
 import json
@@ -124,8 +124,24 @@ def end_interrupted_answer(session: AgentSession) -> bool:
     return False
 
 
+def _lines_to_judge(
+    screen: Callable[[], str], scrolled: re.Pattern[str] | None
+) -> list[str] | None:
+    """The lines above the input field, or None where they say nothing about the agent's work:
+    a screen without an input field, or one scrolled back, which shows the conversation instead
+    of the spinner."""
+    lines = lines_above_input(screen())
+    if lines is None or (scrolled is not None and any(scrolled.search(line) for line in lines)):
+        return None
+    return lines
+
+
 def shows_no_work(
-    session: AgentSession, screen: Callable[[], str], working: re.Pattern[str], now: float
+    session: AgentSession,
+    screen: Callable[[], str],
+    working: re.Pattern[str],
+    scrolled: re.Pattern[str] | None,
+    now: float,
 ) -> list[str] | None:
     """The lines above the input field of an agent marked busy that shows no work in any of them
     (None while it does, or cannot tell): the user may have stopped the answer before it began,
@@ -137,10 +153,29 @@ def shows_no_work(
         return None
     if now - activity_file(session.id).stat().st_mtime < WORKING_LINE_DELAY_SECONDS:
         return None
-    lines = lines_above_input(screen())
+    lines = _lines_to_judge(screen, scrolled)
     if lines is None or any(working.search(line) for line in lines):
         return None
     return lines
+
+
+def shows_work_again(
+    session: AgentSession,
+    screen: Callable[[], str],
+    working: re.Pattern[str],
+    scrolled: re.Pattern[str] | None,
+    now: float,
+) -> bool:
+    """Whether an agent marked resting shows work above its input field: a turn that no prompt
+    started (a message that woke it, a background task) runs no UserPromptSubmit hook, and one
+    that was taken for stopped (see shows_no_work) goes on. The spinner of an answer that just
+    ended may still be on the screen for a moment, hence the same short while after the mark."""
+    if _session_activity(session) != IDLE:
+        return False
+    if now - activity_file(session.id).stat().st_mtime < WORKING_LINE_DELAY_SECONDS:
+        return False
+    lines = _lines_to_judge(screen, scrolled)
+    return lines is not None and any(working.search(line) for line in lines)
 
 
 def store_status(session_id: str, status: dict[str, Any]) -> Path:
