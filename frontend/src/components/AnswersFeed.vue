@@ -115,12 +115,34 @@ function readAgain(event: MouseEvent, text: AnswerText): void {
   speech.play(speakable([text]), markReadAloud)
 }
 
+// The reading a "from here" button started: that button moves while it goes on (the one pressed), not the button
+// of the answer being spoken. The answers it reads are kept, so no state has to be reset when it ends.
+const readFromHere = ref<{ start: string; ids: Set<string> } | null>(null)
+
+const readFromHereActive = (id: string): boolean =>
+  readFromHere.value?.start === id && speech.playing.value !== null && readFromHere.value.ids.has(speech.playing.value) && !speech.paused.value
+const readThisActive = (id: string): boolean =>
+  speech.playing.value === id && !speech.paused.value && !readFromHere.value?.ids.has(id)
+
+// A button of the answer that is being read holds the reading and goes on from there; any other starts it.
+function readThis(text: AnswerText): void {
+  if (speech.playing.value === text.id && !readFromHere.value?.ids.has(text.id)) return speech.togglePause()
+  readFromHere.value = null
+  speech.play(speakable([text]), markReadAloud)
+}
+
 function readFrom(text: AnswerText): void {
+  if (readFromHere.value?.start === text.id && speech.playing.value !== null && readFromHere.value.ids.has(speech.playing.value)) {
+    return speech.togglePause()
+  }
   const all = everyText.value
-  speech.play(speakable(all.slice(all.findIndex((candidate) => candidate.id === text.id))), markReadAloud)
+  const texts = all.slice(all.findIndex((candidate) => candidate.id === text.id))
+  readFromHere.value = { start: text.id, ids: new Set(texts.map((candidate) => candidate.id)) }
+  speech.play(speakable(texts), markReadAloud)
 }
 
 function readUnread(): void {
+  readFromHere.value = null
   speech.play(speakable(unread.value), markReadAloud)
 }
 
@@ -332,9 +354,9 @@ function jog(lines: number): void {
                   class="btn btn-small-icon ml-auto hover:bg-raised-strong"
                   :title="$t('answers.readThis')"
                   :aria-label="$t('answers.readThis')"
-                  @click="speech.playing.value === item.id ? speech.togglePause() : speech.play(speakable([item]), markReadAloud)"
+                  @click="readThis(item)"
                 >
-                  <SpeakerIcon :playing="speech.playing.value === item.id && !speech.paused.value" />
+                  <SpeakerIcon :playing="readThisActive(item.id)" />
                 </button>
                 <button
                   type="button"
@@ -343,7 +365,7 @@ function jog(lines: number): void {
                   :aria-label="$t('answers.readFromHereHint')"
                   @click="readFrom(item)"
                 >
-                  <SpeakerIcon from />
+                  <SpeakerIcon from :playing="readFromHereActive(item.id)" />
                 </button>
               </template>
             </div>
