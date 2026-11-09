@@ -332,9 +332,9 @@ function jog(lines: number): void {
                   class="btn btn-small-icon ml-auto hover:bg-raised-strong"
                   :title="$t('answers.readThis')"
                   :aria-label="$t('answers.readThis')"
-                  @click="speech.play(speakable([item]), markReadAloud)"
+                  @click="speech.playing.value === item.id ? speech.togglePause() : speech.play(speakable([item]), markReadAloud)"
                 >
-                  <SpeakerIcon :playing="speech.playing.value === item.id" />
+                  <SpeakerIcon :playing="speech.playing.value === item.id && !speech.paused.value" />
                 </button>
                 <button
                   type="button"
