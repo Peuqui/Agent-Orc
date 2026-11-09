@@ -20,6 +20,7 @@ import {
 } from '../columns'
 import AddColumnMenu from '../components/AddColumnMenu.vue'
 import AppIcon from '../components/AppIcon.vue'
+import SpeakerIcon from '../components/SpeakerIcon.vue'
 import ColumnCountControl from '../components/ColumnCountControl.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
 import DropdownMenu from '../components/DropdownMenu.vue'
@@ -491,7 +492,7 @@ function deleteThis(): void {
             @click="speechAutoRead = !speechAutoRead"
           >
             <!-- The speaker with an "A": reads by itself (the speaker beside it reads what is new now). -->
-            <AppIcon name="speaker" />
+            <SpeakerIcon />
             <span
               class="absolute right-0.5 bottom-0.5 rounded px-[3px] text-[9px] leading-tight font-bold"
               :class="speechAutoRead ? 'bg-highlight-500 text-on-highlight' : 'bg-raised-strong text-main'"
@@ -515,7 +516,7 @@ function deleteThis(): void {
             :title="$t('answers.readNewColumns')"
             @click="readNewAnswers"
           >
-            <AppIcon name="speaker" />
+            <SpeakerIcon />
           </button>
           <button
             class="btn-icon"

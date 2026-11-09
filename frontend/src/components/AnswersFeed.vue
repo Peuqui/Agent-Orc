@@ -18,6 +18,7 @@ import { READS_HERE, type Speakable } from '../speechHost'
 import AnswerImages from './AnswerImages.vue'
 import FoldedText from './FoldedText.vue'
 import AppIcon from './AppIcon.vue'
+import SpeakerIcon from './SpeakerIcon.vue'
 import JogScroller from './JogScroller.vue'
 
 // What an agent answered, in short: per request of the user its last text (the summary), or
@@ -247,7 +248,7 @@ function jog(lines: number): void {
           :title="$t('answers.readNewHint')"
           @click="readUnread"
         >
-          <AppIcon name="speaker" />{{ $t('answers.readNew', { count: unread.length }) }}
+          <SpeakerIcon />{{ $t('answers.readNew', { count: unread.length }) }}
         </button>
         <!-- In a workspace column, pause and stop are in the workspace's header. -->
         <template v-if="READS_HERE && speech.playing.value !== null">
@@ -334,7 +335,7 @@ function jog(lines: number): void {
                   :aria-label="$t('answers.readThis')"
                   @click="speech.play(speakable([item]), markReadAloud)"
                 >
-                  <AppIcon name="speaker" />
+                  <SpeakerIcon />
                 </button>
                 <button
                   type="button"
@@ -343,7 +344,7 @@ function jog(lines: number): void {
                   :aria-label="$t('answers.readFromHereHint')"
                   @click="readFrom(item)"
                 >
-                  <AppIcon name="speakerFrom" />
+                  <SpeakerIcon from />
                 </button>
               </template>
             </div>
