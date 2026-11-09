@@ -330,12 +330,11 @@ function jog(lines: number): void {
                 <button
                   type="button"
                   class="btn btn-small-icon ml-auto hover:bg-raised-strong"
-                  :class="speech.playing.value === item.id ? 'animate-pulse' : ''"
                   :title="$t('answers.readThis')"
                   :aria-label="$t('answers.readThis')"
                   @click="speech.play(speakable([item]), markReadAloud)"
                 >
-                  <SpeakerIcon />
+                  <SpeakerIcon :playing="speech.playing.value === item.id" />
                 </button>
                 <button
                   type="button"
