@@ -8,8 +8,8 @@ defineProps<{ from?: boolean }>()
 </script>
 
 <template>
-  <span class="relative inline-flex size-5 shrink-0">
-    <img :src="iconUrl" alt="" class="size-5" />
+  <span class="relative inline-flex size-6 shrink-0">
+    <img :src="iconUrl" alt="" class="size-6" />
     <svg
       v-if="from"
       class="absolute -right-1 -bottom-1 size-3 rounded-full bg-raised-strong text-main"
