@@ -9,9 +9,10 @@ import { dictationPointer } from '../dictationPointer'
 // their height. Where the STT-Suite listens (CPU or GPU) and whether a
 // dictation goes to the agent at once are set in the settings menu; only the GPU is shown here, as a small
 // mark, since it is the exception. With the browser chosen, or without a service, it listens through the browser.
-// The button is the STT-Suite's badge, which shows how the dictation stands (ready, taking speech in,
-// transcribing); with a mouse it goes along with the pointer, too, anywhere in the tab (dictationPointer.ts). A
-// running dictation is thrown away with Escape (on a touch screen: DictationCancel).
+// The button is the STT-Suite's badge, without a background of its own (also under the pointer), which shows how
+// the dictation stands (ready, taking speech in, transcribing); with a mouse it goes along with the pointer, too,
+// anywhere in the tab (dictationPointer.ts). A running dictation is thrown away with Escape (on a touch screen:
+// DictationCancel).
 const props = defineProps<{ dictation: Dictation }>()
 const busy = computed(() => props.dictation.state === 'transcribing')
 const shown = computed(() => props.dictation.active || busy.value)
@@ -49,7 +50,7 @@ function press(event: MouseEvent): void {
   <span v-if="dictation.microphone" class="relative flex">
     <button
       type="button"
-      class="btn-icon"
+      class="inline-flex items-center justify-center disabled:opacity-30"
       :class="TOUCH_FIRST.matches ? 'size-10' : 'size-11'"
       :disabled="busy"
       :aria-label="dictation.active ? $t('dictation.stop') : $t('dictation.start')"
