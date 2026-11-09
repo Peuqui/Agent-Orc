@@ -312,7 +312,7 @@ function jog(lines: number): void {
             :data-anchor="item.id"
             class="card flex flex-col gap-2 p-3"
             :class="[
-              isUnread(item, seen) ? 'border-l-4 border-l-accent-500 pl-[calc(0.75rem-3px)]' : '',
+              isUnread(item, seen) ? 'border-l-accent-500' : '',
               speech.playing.value === item.id ? 'ring-1 ring-highlight-500 bg-panel/70' : '',
             ]"
             :title="isUnread(item, seen) ? $t('answers.clickToMark') : undefined"
