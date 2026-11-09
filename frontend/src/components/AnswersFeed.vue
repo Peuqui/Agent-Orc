@@ -115,12 +115,13 @@ function readAgain(event: MouseEvent, text: AnswerText): void {
   speech.play(speakable([text]), markReadAloud)
 }
 
-// The reading a "from here" button started: that button moves while it goes on (the one pressed), not the button
-// of the answer being spoken. The answers it reads are kept, so no state has to be reset when it ends.
+// The reading a "from here" button started: the "from here" button of the answer being spoken moves, so it follows the
+// reading from answer to answer, while the plain speaker of that answer stays still. The answers it reads are kept,
+// so no state has to be reset when it ends.
 const readFromHere = ref<{ start: string; ids: Set<string> } | null>(null)
 
 const readFromHereActive = (id: string): boolean =>
-  readFromHere.value?.start === id && speech.playing.value !== null && readFromHere.value.ids.has(speech.playing.value) && !speech.paused.value
+  speech.playing.value === id && !speech.paused.value && !!readFromHere.value?.ids.has(id)
 const readThisActive = (id: string): boolean =>
   speech.playing.value === id && !speech.paused.value && !readFromHere.value?.ids.has(id)
 
@@ -132,9 +133,7 @@ function readThis(text: AnswerText): void {
 }
 
 function readFrom(text: AnswerText): void {
-  if (readFromHere.value?.start === text.id && speech.playing.value !== null && readFromHere.value.ids.has(speech.playing.value)) {
-    return speech.togglePause()
-  }
+  if (speech.playing.value === text.id && readFromHere.value?.ids.has(text.id)) return speech.togglePause()
   const all = everyText.value
   const texts = all.slice(all.findIndex((candidate) => candidate.id === text.id))
   readFromHere.value = { start: text.id, ids: new Set(texts.map((candidate) => candidate.id)) }
