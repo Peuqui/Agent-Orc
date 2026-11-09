@@ -329,7 +329,7 @@ function jog(lines: number): void {
               <template v-if="speech.available.value">
                 <button
                   type="button"
-                  class="btn-secondary btn-small-icon ml-auto"
+                  class="btn btn-small-icon ml-auto hover:bg-raised-strong"
                   :class="speech.playing.value === item.id ? 'animate-pulse' : ''"
                   :title="$t('answers.readThis')"
                   :aria-label="$t('answers.readThis')"
@@ -339,7 +339,7 @@ function jog(lines: number): void {
                 </button>
                 <button
                   type="button"
-                  class="btn-secondary btn-small-icon"
+                  class="btn btn-small-icon hover:bg-raised-strong"
                   :title="$t('answers.readFromHereHint')"
                   :aria-label="$t('answers.readFromHereHint')"
                   @click="readFrom(item)"
