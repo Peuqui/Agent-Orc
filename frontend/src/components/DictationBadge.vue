@@ -1,6 +1,6 @@
 <script setup lang="ts">
-// The STT-Suite's logo in a round badge (assets/status-icons/stt-suite-icon.svg of AIfred), in the TTS-Suite
-// logo's amber (Peuqui: the blue was too dark to see) and with a yellow rim, so it stands out on the dark page.
+// The STT-Suite's logo in a round badge (assets/status-icons/stt-suite-icon.svg of AIfred), in its colours
+// (yellow to orange, Peuqui's choice "C", 10.11.2026; the blue was too dark to see) and with a yellow rim, so it stands out on the dark page.
 // The dictation's symbol: ready, it stands still and waits to be pressed; while speech is taken in, its bars
 // rise and fall like a level, the arcs glow and the rim turns red (also where motion is reduced, so that
 // ready and recording never look alike); while it is transcribed, it stands still and grey.
@@ -22,16 +22,17 @@ const BARS = [
   <svg viewBox="0 0 512 512" :class="[phase, { 'grayscale opacity-60': phase === 'transcribing' }]" aria-hidden="true">
     <defs>
       <linearGradient id="dictationBadgeWave" gradientUnits="userSpaceOnUse" x1="96" y1="116" x2="336" y2="396">
-        <stop offset="0" stop-color="#f59e0b" />
-        <stop offset="1" stop-color="#b45309" />
+        <stop offset="0" stop-color="#fef9c3" />
+        <stop offset="0.5" stop-color="#f59e0b" />
+        <stop offset="1" stop-color="#ea580c" />
       </linearGradient>
     </defs>
     <circle class="rim" cx="256" cy="256" r="244" fill="#0f172a" stroke-width="24" />
     <g fill="none" stroke="url(#dictationBadgeWave)" stroke-width="30" stroke-linecap="round">
       <line v-for="bar in BARS" :key="bar.x" class="bar" :x1="bar.x" :y1="bar.from" :x2="bar.x" :y2="bar.to" />
     </g>
-    <path class="arc" d="M388 196 q48 60 0 120" fill="none" stroke="#e2e8f0" stroke-width="22" stroke-linecap="round" />
-    <path class="arc far" d="M424 156 q84 100 0 200" fill="none" stroke="#64748b" stroke-width="22" stroke-linecap="round" />
+    <path class="arc" d="M388 196 q48 60 0 120" fill="none" stroke="#fef3c7" stroke-width="22" stroke-linecap="round" />
+    <path class="arc far" d="M424 156 q84 100 0 200" fill="none" stroke="#fdba74" stroke-width="22" stroke-linecap="round" />
   </svg>
 </template>
 
