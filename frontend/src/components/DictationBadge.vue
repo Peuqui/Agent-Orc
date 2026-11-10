@@ -31,8 +31,8 @@ const BARS = [
     <g fill="none" stroke="url(#dictationBadgeWave)" stroke-width="30" stroke-linecap="round">
       <line v-for="bar in BARS" :key="bar.x" class="bar" :x1="bar.x" :y1="bar.from" :x2="bar.x" :y2="bar.to" />
     </g>
-    <path class="arc" d="M388 196 q48 60 0 120" fill="none" stroke="#fef3c7" stroke-width="22" stroke-linecap="round" />
-    <path class="arc far" d="M424 156 q84 100 0 200" fill="none" stroke="#fdba74" stroke-width="22" stroke-linecap="round" />
+    <path class="arc" d="M388 196 q48 60 0 120" fill="none" stroke="#94a3b8" stroke-width="22" stroke-linecap="round" />
+    <path class="arc far" d="M424 156 q84 100 0 200" fill="none" stroke="#64748b" stroke-width="22" stroke-linecap="round" />
   </svg>
 </template>
 
