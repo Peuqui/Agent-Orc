@@ -14,7 +14,7 @@ import {
 // What depends on the device itself (its screen, its mouse or finger), kept in the browser: the fonts, the
 // scrolling, the line spacing; and the arrangement of the extra keys (its editor opens from here).
 defineEmits<{ keys: [] }>()
-const { scrollLines, lineHeight, fontSize, stepFontSize, viewFontSize, stepViewFontSize, controlsScale, stepControlsScale, terminalFont } = useSettings()
+const { scrollLines, lineHeight, fontSize, stepFontSize, viewFontSize, stepViewFontSize, controlsScale, stepControlsScale, pinQuestion, terminalFont } = useSettings()
 const FONT_NAMES: Record<TerminalFont, string> = { jetbrains: 'JetBrains Mono', system: 'System' }
 const { locale } = useI18n()
 
@@ -63,6 +63,11 @@ function changeScrollLines(delta: number): void {
       </div>
     </div>
     <p class="mt-1 mb-3 text-xs text-hint">{{ $t('settings.viewFontSizeHint') }}</p>
+    <label class="flex items-center justify-between gap-2 text-sm text-soft">
+      <span>{{ $t('settings.pinQuestion') }}</span>
+      <input v-model="pinQuestion" type="checkbox" class="size-4" />
+    </label>
+    <p class="mt-1 mb-3 text-xs text-hint">{{ $t('settings.pinQuestionHint') }}</p>
     <div class="flex items-center justify-between gap-2 text-sm text-soft">
       <span>{{ $t('settings.controlsScale') }}</span>
       <div class="flex items-center gap-1">

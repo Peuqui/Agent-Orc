@@ -1,4 +1,5 @@
 import { type Ref, computed, ref, watch } from 'vue'
+import { PHONE_WIDTH } from '../device'
 import { sharedSetting } from './useSharedSettings'
 import type { DictationSounds } from '../sounds'
 
@@ -77,6 +78,8 @@ const lineHeight = setting('agent-orc-line-height', DEFAULT_LINE_HEIGHT, Number)
 const fontSize = setting('agent-orc-font-size', DEFAULT_FONT_SIZE, Number)
 /** Font size of every view of this device: the base size its texts are scaled from (useViewZoom). */
 const viewFontSize = setting('agent-orc-view-font-size', DEFAULT_FONT_SIZE, Number)
+/** The question of a request stays at the top of the answers while its answers scroll (a phone's screen is too small for it, so off there at first). */
+const pinQuestion = setting('agent-orc-pin-question', !PHONE_WIDTH.matches, (stored) => stored === 'true')
 /** Size of the controls of this device in percent (see DEFAULT_CONTROLS_SCALE). */
 const controlsScale = setting('agent-orc-controls-scale', DEFAULT_CONTROLS_SCALE, Number)
 const terminalFont = setting<TerminalFont>(
@@ -192,6 +195,7 @@ export function useSettings() {
     stepViewFontSize,
     controlsScale,
     stepControlsScale,
+    pinQuestion,
     terminalFont,
     dictationSendsAtOnce,
     dictationEngine,

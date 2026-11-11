@@ -19,6 +19,11 @@ export function useFeedScroll(box: Ref<HTMLElement | undefined>, sessionId: stri
 
   const anchor = (id: string): HTMLElement | null => box.value?.querySelector<HTMLElement>(`[data-anchor="${CSS.escape(id)}"]`) ?? null
   const endTop = (scroller: HTMLElement): number => scroller.scrollHeight - scroller.clientHeight
+  // The room a pinned question takes at the upper edge (see AnswersFeed): what is read from its top stops below it.
+  const pinnedRoom = (element: HTMLElement): number => {
+    const pinned = element.closest('section')?.querySelector<HTMLElement>('[data-pinned]')
+    return pinned && !pinned.contains(element) ? pinned.getBoundingClientRect().height : 0
+  }
 
   function toEnd(): void {
     if (box.value) box.value.scrollTo({ top: endTop(box.value) })
@@ -31,7 +36,7 @@ export function useFeedScroll(box: Ref<HTMLElement | undefined>, sessionId: stri
     const element = id === undefined ? null : anchor(id)
     if (!scroller || element === null) return toEnd()
     const above = element.getBoundingClientRect().top - scroller.getBoundingClientRect().top
-    scroller.scrollTo({ top: Math.max(scroller.scrollTop, Math.min(endTop(scroller), scroller.scrollTop + above - TOP_ROOM_PX)) })
+    scroller.scrollTo({ top: Math.max(scroller.scrollTop, Math.min(endTop(scroller), scroller.scrollTop + above - TOP_ROOM_PX - pinnedRoom(element))) })
   }
 
   /** Back to where the reader was. */
@@ -74,7 +79,10 @@ export function useFeedScroll(box: Ref<HTMLElement | undefined>, sessionId: stri
     following.value = isFollowing(endTop(scroller) - scroller.scrollTop)
     countUnreadBelow()
     const top = scroller.getBoundingClientRect().top
-    const first = [...scroller.querySelectorAll<HTMLElement>('[data-anchor]')].find((element) => element.getBoundingClientRect().bottom > top + 1)
+    // A pinned question always sits at the upper edge: it is not where the reader is.
+    const first = [...scroller.querySelectorAll<HTMLElement>('[data-anchor]')].find(
+      (element) => !element.closest('[data-pinned]') && element.getBoundingClientRect().bottom > top + 1,
+    )
     if (first?.dataset.anchor) remembered.set(sessionId, { id: first.dataset.anchor, offset: first.getBoundingClientRect().top - top })
   }
 
@@ -89,7 +97,7 @@ export function useFeedScroll(box: Ref<HTMLElement | undefined>, sessionId: stri
     const scroller = box.value
     const element = id === undefined ? null : anchor(id)
     if (!scroller || element === null) return
-    scroller.scrollTo({ top: scroller.scrollTop + element.getBoundingClientRect().top - scroller.getBoundingClientRect().top - TOP_ROOM_PX })
+    scroller.scrollTo({ top: scroller.scrollTop + element.getBoundingClientRect().top - scroller.getBoundingClientRect().top - TOP_ROOM_PX - pinnedRoom(element) })
   }
 
   /** The answer that is read aloud now comes into view (its top, if it is not wholly in view), until the reader scrolls by hand. */
@@ -100,8 +108,9 @@ export function useFeedScroll(box: Ref<HTMLElement | undefined>, sessionId: stri
     if (!followsSpeech || !scroller || element === null) return
     const view = scroller.getBoundingClientRect()
     const bounds = element.getBoundingClientRect()
-    if (bounds.top >= view.top && bounds.bottom <= view.bottom) return
-    scroller.scrollTo({ top: scroller.scrollTop + bounds.top - view.top - TOP_ROOM_PX })
+    const room = pinnedRoom(element)
+    if (bounds.top >= view.top + room && bounds.bottom <= view.bottom) return
+    scroller.scrollTo({ top: scroller.scrollTop + bounds.top - view.top - TOP_ROOM_PX - room })
   }
 
   return { unreadBelow, countUnreadBelow, place, onScroll, takenByHand, showNewBelow, followSpeech }

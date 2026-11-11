@@ -290,6 +290,8 @@
     "controlsScale": "Bedienelemente: Größe",
     "controlsScaleHint": "Kopfzeilen, Reiter, Navigationsleisten und Tastenreihen, nicht der Inhalt. Gilt für dieses Gerät.",
     "viewFontSizeHint": "Antworten, Notizen, Gespräche, Dateien, Verbrauch und der Editor, nicht das Terminal. Alle Größen darin skalieren mit. Gilt für dieses Gerät.",
+    "pinQuestion": "Frage oben festhalten",
+    "pinQuestionHint": "Die Frage eines Auftrags bleibt oben in den Antworten stehen, während seine Antworten scrollen (zwei Zeilen, „mehr“ zeigt sie ganz). Gilt für dieses Gerät.",
     "dictationEngine": "Diktat erkennt",
     "dictationEngine_stt-suite": "STT-Suite",
     "dictationEngine_browser": "Browser",

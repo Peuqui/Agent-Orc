@@ -10,6 +10,7 @@ import { useAnswersAll } from '../composables/useAnswersAll'
 import { useFeedScroll } from '../composables/useFeedScroll'
 import { useViewZoom } from '../composables/useViewZoom'
 import { sessionName, useSessions } from '../composables/useSessions'
+import { useSettings } from '../composables/useSettings'
 import { useSpeech } from '../composables/useSpeech'
 import { useToast } from '../composables/useToast'
 import { formatMoment } from '../format'
@@ -32,6 +33,7 @@ const answersAll = useAnswersAll(props.sessionId)
 const { sessions } = useSessions()
 const session = computed(() => sessions.value.find((candidate) => candidate.id === props.sessionId))
 const speech = useSpeech()
+const { pinQuestion } = useSettings()
 const turns = ref<Turn[]>([])
 const spoken = ref<SpokenRequest[]>([])
 const loaded = ref(false)
@@ -286,7 +288,8 @@ function jog(lines: number): void {
     <div class="relative flex min-h-0 flex-1">
     <div
       ref="box"
-      class="min-h-0 min-w-0 flex-1 overflow-y-auto p-3 [scrollbar-width:none]"
+      class="min-h-0 min-w-0 flex-1 overflow-y-auto px-3 pb-3 [scrollbar-width:none]"
+      :class="pinQuestion ? '' : 'pt-3'"
       @scroll.passive="onScroll"
       @wheel.passive="takenByHand"
       @touchstart.passive="takenByHand"
@@ -295,7 +298,9 @@ function jog(lines: number): void {
     <div ref="zoomed" class="flex flex-col gap-4" :style="zoomStyle">
       <p v-if="loaded && !turns.length" class="text-dim">{{ $t('answers.empty') }}</p>
       <section v-for="entry in shown" :key="entry.turn.id" class="flex flex-col gap-2">
-        <!-- What the user asked: a few lines, more on a click. -->
+        <!-- What the user asked: a few lines, more on a click; it stays at the top while its answers scroll (the page's
+             colour behind it, as its own is see-through). No padding above the list then: it sticks where it sits. Pictures in it may not fill the list: it scrolls in itself. -->
+        <div :data-pinned="pinQuestion ? '' : undefined" :class="pinQuestion ? 'sticky top-0 z-10 max-h-[30vh] overflow-y-auto bg-page pb-1' : ''">
         <div :data-anchor="entry.turn.id" class="rounded-lg border-l-4 border-info-600/70 bg-info-900/40 px-3 py-2 text-sm text-soft">
           <FoldedText v-if="uploadMentions(entry.turn.prompt).text" :text="uploadMentions(entry.turn.prompt).text" :lines="USER_LINES" />
           <AnswerImages :urls="pictureUrls(entry.turn.id, entry.turn.prompt, entry.turn.images)" />
@@ -311,6 +316,7 @@ function jog(lines: number): void {
               :src="api.recordingUrl(spokenAs(entry.turn, spoken)?.id ?? '')"
             />
           </div>
+        </div>
         </div>
         <template v-for="item in entry.items" :key="item.id">
           <!-- Typed while the agent was answering. -->

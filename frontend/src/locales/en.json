@@ -290,6 +290,8 @@
     "controlsScale": "Controls: size",
     "controlsScaleHint": "Headers, tabs, navigation bars and key rows, not the content. For this device.",
     "viewFontSizeHint": "Answers, notes, conversations, files, consumption and the editor, not the terminal. All sizes in them scale along. For this device.",
+    "pinQuestion": "Keep the question at the top",
+    "pinQuestionHint": "A request's question stays at the top of the answers while its answers scroll (two lines, ‘more’ shows it all). For this device.",
     "dictationEngine": "Dictation recognised by",
     "dictationEngine_stt-suite": "STT-Suite",
     "dictationEngine_browser": "Browser",
