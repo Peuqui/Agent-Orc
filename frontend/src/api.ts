@@ -2,6 +2,7 @@ import { ref } from 'vue'
 import { hostOf, rootOf } from './hostPaths'
 import type { PermissionSuggestion } from './permissionSuggestions'
 import { answeredByProxyLogin } from './proxyLogin'
+import { messageSent } from './sentMessage'
 
 /** A model a profile offers at start; the note is shown beside it (e.g. until when it is free). */
 export interface ModelChoice {
@@ -741,10 +742,10 @@ function createApi(host?: string | null) {
       request<void>('PUT', `sessions/${encodeURIComponent(sessionId)}/answers-seen`, { body: { time } }),
     /** Types the message into the agent and submits it (the server types, then presses Enter). */
     sendMessage: (sessionId: string, text: string) =>
-      request<void>('POST', `sessions/${encodeURIComponent(sessionId)}/message`, { body: { text } }),
+      request<void>('POST', `sessions/${encodeURIComponent(sessionId)}/message`, { body: { text } }).then(messageSent),
     /** Types the same prompt into each of the (running) agents and submits it. */
     broadcast: (sessionIds: string[], text: string) =>
-      request<void>('POST', 'broadcast', { body: { sessions: sessionIds, text } }),
+      request<void>('POST', 'broadcast', { body: { sessions: sessionIds, text } }).then(messageSent),
     /** The prompt as each of the (running) agents would get it, by session id, typed nowhere. */
     broadcastDrafts: (sessionIds: string[], text: string) =>
       request<Record<string, string>>('POST', 'broadcast/drafts', { body: { sessions: sessionIds, text } }),

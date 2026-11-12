@@ -62,8 +62,6 @@ export function useFeedScroll(box: Ref<HTMLElement | undefined>, sessionId: stri
   /** Something happened (see Reason): the list goes where the rules say, or stays and counts what came in below. */
   async function place(reason: Reason): Promise<void> {
     await nextTick()
-    // A bubble's height is final only after the layout that follows: the end measured now may be too short.
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
     const move = moveFor(reason, { following: following.value, hasUnread: firstUnreadId() !== undefined, hasRemembered: remembered.has(sessionId) })
     if (move === 'end') toEnd()
     else if (move === 'oldestUnread') toOldestUnread()

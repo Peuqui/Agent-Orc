@@ -1,10 +1,15 @@
 import { computed, ref } from 'vue'
 import { apiFor, currentHost, serverReachable, type AgentProfile, type AgentQuota, type AgentSession } from '../api'
 import { COLUMN_TAB } from '../device'
+import { onMessageSent } from '../sentMessage'
 import { useHostContext } from './useHostContext'
 import { useToast } from './useToast'
 
 const REFRESH_MILLISECONDS = 3000
+// After a message was sent the agents are asked again at once and every half second until the conversation shows it (its
+// version changes), at most this long: the request would otherwise appear only with the next of the polls above.
+const QUICK_REFRESH_MILLISECONDS = 500
+const QUICK_REFRESH_LIMIT_MILLISECONDS = 5000
 // A workspace column is this app again, in an iframe of the page around it. That page polls this
 // machine's agents anyway and hands each answer on to its columns, so a column does not poll
 // itself: one request every few seconds instead of one per column (each keeps a phone's radio
@@ -33,6 +38,8 @@ function createStore(host: string | null) {
   const profiles = ref<AgentProfile[]>([])
   const quotas = ref<AgentQuota[]>([])
   let timer: number | undefined
+  let stopListeningForSent: (() => void) | undefined
+  let quickRefresh: Promise<void> | null = null
 
   async function refresh(): Promise<void> {
     try {
@@ -48,6 +55,24 @@ function createStore(host: string | null) {
     } catch (error) {
       useToast().error(error)
     }
+  }
+
+  const versions = (): string => sessions.value.map((session) => `${session.id}:${session.transcript_version}`).join('|')
+
+  /** Asks again until a conversation changed or the limit is up; one run at a time. */
+  function refreshUntilChanged(): Promise<void> {
+    quickRefresh ??= (async () => {
+      const before = versions()
+      const until = Date.now() + QUICK_REFRESH_LIMIT_MILLISECONDS
+      do {
+        await refresh()
+        if (versions() !== before) break
+        await new Promise((resolve) => window.setTimeout(resolve, QUICK_REFRESH_MILLISECONDS))
+      } while (Date.now() < until)
+    })().finally(() => {
+      quickRefresh = null
+    })
+    return quickRefresh
   }
 
   /** What the page around a column handed on (see AGENTS_MESSAGE). */
@@ -77,12 +102,14 @@ function createStore(host: string | null) {
     }
     timer = window.setInterval(refreshWhenShown, REFRESH_MILLISECONDS)
     document.addEventListener('visibilitychange', refreshWhenShown)
+    if (host === currentHost) stopListeningForSent = onMessageSent(() => void refreshUntilChanged())
   }
 
   function stopPolling(): void {
     window.clearInterval(timer)
     window.removeEventListener('message', takeFromPage)
     document.removeEventListener('visibilitychange', refreshWhenShown)
+    stopListeningForSent?.()
   }
 
   async function loadProfiles(): Promise<void> {
