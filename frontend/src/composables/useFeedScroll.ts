@@ -29,14 +29,24 @@ export function useFeedScroll(box: Ref<HTMLElement | undefined>, sessionId: stri
     if (box.value) box.value.scrollTo({ top: endTop(box.value) })
   }
 
-  /** Down until the oldest unread answer meets the upper edge, or to the end where what follows fits the screen first. Never up. */
+  // Where reading begins for an answer: its request, when the answer is the first one of it (the request stands right
+  // above, so the reader sees what was asked and the answer's beginning together), else the answer itself.
+  const readingStart = (answer: HTMLElement): HTMLElement => {
+    const section = answer.closest('section')
+    const first = section?.querySelector<HTMLElement>('article[data-anchor]')
+    const request = section?.querySelector<HTMLElement>('[data-anchor]')
+    return first === answer && request ? request : answer
+  }
+
+  /** Down until the oldest unread answer, with the request above it, meets the upper edge, or to the end where what follows fits the screen first. Never up. */
   function toOldestUnread(): void {
     const scroller = box.value
     const id = firstUnreadId()
     const element = id === undefined ? null : anchor(id)
     if (!scroller || element === null) return toEnd()
-    const above = element.getBoundingClientRect().top - scroller.getBoundingClientRect().top
-    scroller.scrollTo({ top: Math.max(scroller.scrollTop, Math.min(endTop(scroller), scroller.scrollTop + above - TOP_ROOM_PX - pinnedRoom(element))) })
+    const start = readingStart(element)
+    const above = start.getBoundingClientRect().top - scroller.getBoundingClientRect().top
+    scroller.scrollTo({ top: Math.max(scroller.scrollTop, Math.min(endTop(scroller), scroller.scrollTop + above - TOP_ROOM_PX - pinnedRoom(start))) })
   }
 
   /** Back to where the reader was. */
@@ -52,6 +62,8 @@ export function useFeedScroll(box: Ref<HTMLElement | undefined>, sessionId: stri
   /** Something happened (see Reason): the list goes where the rules say, or stays and counts what came in below. */
   async function place(reason: Reason): Promise<void> {
     await nextTick()
+    // A bubble's height is final only after the layout that follows: the end measured now may be too short.
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
     const move = moveFor(reason, { following: following.value, hasUnread: firstUnreadId() !== undefined, hasRemembered: remembered.has(sessionId) })
     if (move === 'end') toEnd()
     else if (move === 'oldestUnread') toOldestUnread()

@@ -3,8 +3,9 @@
 //
 // The reader is either FOLLOWING (at the bottom, or has just been brought there) or READING (has scrolled
 // up). Following is decided by the reader's own scrolling alone, never by a measurement before each look:
-//   - Following: what is new comes into view. A long new answer starts at its top, so that reading can
-//     begin at once; a short one ends flush at the bottom.
+//   - Following: what is new comes into view. A long new answer starts at the upper edge with the request
+//     it answers above it (what was asked and the answer's beginning together), so that reading can begin
+//     at once; a short one ends flush at the bottom.
 //   - Reading: nothing moves; a button says what came in below.
 // Opening the feed: to the oldest unread answer; with nothing unread, to where the reader was; else the end.
 
