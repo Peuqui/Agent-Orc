@@ -54,6 +54,11 @@ Nur was noch aussteht. Erledigtes steht in der Git-Historie.
   doppelte Zeichen und Worte (die Tastatur ersetzt das eben geschriebene Wort, xterm.js sieht Löschen und Einfügen); ohne die
   Vorschläge anzutippen läuft alles. Von der Seite aus nicht abschaltbar (xterm setzt `autocorrect`, `autocapitalize` und
   `spellcheck` schon aus). Der Hinweis steht in der Hilfe (Terminal).
+- **Terminalrand am Tablet** (13.11.): Im Zwei-Spalten-Layout war die linke Terminal-Spalte am linken Rand um wenige Pixel
+  abgeschnitten (Handy mit einer Spalte nicht). Nicht nachzubauen, Ursache unbekannt; bei Peuqui passt es gerade wieder, er beobachtet es.
+  Kommt es wieder: erst am Tablet messen (Drahtloses Debugging mit `adb`, oder ein kleiner Mess-Aufruf in der Oberfläche), welches Element
+  um wie viele Pixel verschoben ist. Kandidaten: `overflow-hidden` in `TerminalView.vue` (um Zeile 644) als `overflow-clip` (Vorbild
+  Commit `9e5d071`), das CSS-`zoom` von `.controls-zoom`, die Wiederherstellung von `scrollLeft` in `WorkspaceView.vue`.
 
 ## AI-Connect
 
