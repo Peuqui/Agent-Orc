@@ -152,8 +152,10 @@ that run Agent-Orc can be shown in the same app, through an SSH tunnel ([Several
 
 **Notes**
 - Notebooks as tabs, each with loose notes and folders, kept on the server like the workspaces.
-- A note is Markdown with a formatting bar (bold, italic, heading, list, code, link), a
-  search over titles and text, and text and view side by side on computers and tablets.
+- A note is Markdown, edited as it looks (like Obsidian's live preview): headings, bold, lists,
+  code, links, pictures and tables show formatted, only the line with the cursor shows its Markdown
+  characters. With a formatting bar (bold, italic, heading, list, code, link), tasks to tick
+  (`- [ ]`) and a search over titles and text.
 - Attach photos, screenshots and files to a note; they are stored on the server and copied into
   an agent's folder when the note is sent to it. Pictures show as thumbnails, PDFs with a preview
   of the first page (all pages on request, drawn by [pdf.js](https://mozilla.github.io/pdf.js/)).

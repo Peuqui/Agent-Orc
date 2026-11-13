@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { applyFormat, fileLink, insertBlock, LINK_ADDRESS, pdfLinks, type Placeholders } from '../src/notesFormat.ts'
+import { applyFormat, changeBetween, fileLink, insertBlock, insertDictation, LINK_ADDRESS, pdfLinks, type Placeholders } from '../src/notesFormat.ts'
 
 const placeholders: Placeholders = { bold: 'fett', italic: 'kursiv', code: 'code', link: 'Link' }
 const selected = (text: string, edit: { from: number; to: number }) => text.slice(edit.from, edit.to)
@@ -72,4 +72,28 @@ test('the PDFs of a note are found, pictures and other links are not', () => {
     { name: 'Plan', url: 'api/notes/files/1-plan.pdf' },
     { name: 'Zweiter', url: 'api/notes/files/3-b.PDF' },
   ])
+})
+
+test('dictated text goes in at the cursor, a space apart from a word before it', () => {
+  assert.deepEqual(insertDictation('', 0, 'Hallo'), { text: 'Hallo', from: 5, to: 5 })
+  assert.deepEqual(insertDictation('Eins zwei', 4, 'und'), { text: 'Eins und zwei', from: 8, to: 8 })
+  assert.deepEqual(insertDictation('Eins ', 5, 'zwei'), { text: 'Eins zwei', from: 9, to: 9 })
+  assert.deepEqual(insertDictation('Zeile\n', 6, 'neu'), { text: 'Zeile\nneu', from: 9, to: 9 })
+})
+
+test('the change between two texts is only what differs', () => {
+  const apply = (old: string, change: { from: number; to: number; insert: string }) =>
+    old.slice(0, change.from) + change.insert + old.slice(change.to)
+  for (const [old, next] of [
+    ['abc', 'abc'],
+    ['', 'neu'],
+    ['alt', ''],
+    ['Hallo Welt', 'Hallo schöne Welt'],
+    ['aaa', 'aa'],
+    ['**fett**', 'fett'],
+  ] as const) {
+    assert.equal(apply(old, changeBetween(old, next)), next)
+  }
+  assert.deepEqual(changeBetween('Hallo Welt', 'Hallo schöne Welt'), { from: 6, to: 6, insert: 'schöne ' })
+  assert.deepEqual(changeBetween('abc', 'abc'), { from: 3, to: 3, insert: '' })
 })

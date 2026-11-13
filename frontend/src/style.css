@@ -215,6 +215,108 @@
   }
 }
 
+/* A note edited as it looks (NoteEditor, livePreview.ts), in the look of .markdown above. Outside
+   the layer and one class deeper than CodeMirror's own theme, which it adds to the page unlayered. */
+.note-editor .cm-editor {
+  @apply rounded-lg border border-line bg-sunken/40 text-main;
+}
+.note-editor .cm-editor.cm-focused {
+  @apply border-focus outline-none;
+}
+.note-editor .cm-editor .cm-scroller {
+  font-family: inherit;
+  line-height: 1.625;
+}
+.note-editor .cm-editor .cm-content {
+  @apply min-h-[50dvh] px-3 py-2;
+  caret-color: var(--color-bright);
+}
+.note-editor .cm-editor .cm-placeholder {
+  @apply text-muted;
+}
+.note-editor .cm-editor .cm-selectionBackground,
+.note-editor .cm-editor.cm-focused .cm-selectionBackground {
+  @apply bg-raised-strong;
+}
+.note-editor .cm-md-h1,
+.note-editor .cm-md-h2,
+.note-editor .cm-md-h3,
+.note-editor .cm-md-h4,
+.note-editor .cm-md-h5,
+.note-editor .cm-md-h6 {
+  @apply font-semibold text-bright;
+}
+.note-editor .cm-md-h1 {
+  font-size: 1.6em;
+}
+.note-editor .cm-md-h2 {
+  font-size: 1.35em;
+}
+.note-editor .cm-md-h3 {
+  font-size: 1.15em;
+}
+.note-editor .cm-md-em {
+  @apply italic;
+}
+.note-editor .cm-md-strong {
+  @apply font-bold text-bright;
+}
+.note-editor .cm-md-strike {
+  @apply text-dim line-through;
+}
+.note-editor .cm-md-code {
+  @apply rounded bg-panel px-1 font-mono text-code;
+  font-size: 0.9em;
+}
+.note-editor .cm-md-copy {
+  @apply cursor-copy;
+}
+.note-editor .cm-md-link {
+  @apply cursor-pointer text-info-400 underline;
+}
+.note-editor .cm-md-link-source {
+  @apply text-info-400;
+}
+.note-editor .cm-md-image {
+  @apply my-1 inline-block max-h-64 max-w-full cursor-zoom-in rounded-lg border border-line;
+}
+.note-editor .cm-md-quote {
+  @apply border-l-4 border-line-strong pl-3 text-dim;
+}
+.note-editor .cm-md-bullet {
+  @apply text-dim;
+}
+.note-editor .cm-md-task {
+  @apply mr-1 size-4 cursor-pointer align-middle accent-accent-500;
+}
+.note-editor .cm-md-rule {
+  @apply my-2 inline-block w-full border-line align-middle;
+}
+.note-editor .cm-editor .cm-line.cm-md-codeblock {
+  @apply bg-panel px-3 font-mono;
+  font-size: 0.9em;
+}
+.note-editor .cm-editor .cm-line.cm-md-codeblock-first {
+  @apply relative rounded-t-lg pt-1;
+}
+.note-editor .cm-editor .cm-line.cm-md-codeblock-last {
+  @apply rounded-b-lg pb-1;
+}
+.note-editor .cm-md-fence {
+  @apply text-muted;
+}
+/* As the copy button of a code block in .markdown: at the block's right edge, over the text. */
+.note-editor .cm-md-copy-block {
+  @apply absolute top-1 right-1 flex size-8 items-center justify-center rounded-md border border-line-strong bg-raised/90 font-sans text-main hover:bg-raised-strong;
+}
+.note-editor .cm-md-copy-block svg {
+  @apply size-4;
+}
+/* Rendered HTML: the line breaks between its tags are no text (CodeMirror keeps every space). */
+.note-editor .cm-md-block {
+  @apply cursor-text py-1 whitespace-normal;
+}
+
 /* A terminal under the answers is pushed out of its clipped box instead of hidden: it keeps its
    size, so fitting it still measures the box, and xterm.js stops drawing what is out of view (its
    IntersectionObserver; -100% would still touch the edge, which counts as in view). A working

@@ -12,6 +12,7 @@ import { TOUCH_FIRST } from '../device'
 import DictationMic from '../components/DictationMic.vue'
 import DictationRetry from '../components/DictationRetry.vue'
 import InputDialog from '../components/InputDialog.vue'
+import NoteEditor from '../components/NoteEditor.vue'
 import NotesTrash from '../components/NotesTrash.vue'
 import PdfPreview from '../components/PdfPreview.vue'
 import { useDictation } from '../composables/useDictation'
@@ -19,13 +20,13 @@ import { useServerEvents } from '../composables/useServerEvents'
 import { useCopyText } from '../composables/useCopyText'
 import { useToast } from '../composables/useToast'
 import { useViewZoom } from '../composables/useViewZoom'
-import { renderMarkdown } from '../markdown'
 import { attachInOrder } from '../attachInOrder'
 import { pastedImages } from '../composables/usePastedImages'
-import { applyFormat, fileLink, FORMATS, insertBlock, pdfLinks, type FormatId, type Placeholders } from '../notesFormat'
+import { applyFormat, fileLink, FORMATS, insertBlock, insertDictation, pdfLinks, type FormatId, type Placeholders } from '../notesFormat'
 
-// Notebooks as tabs, each with loose notes and folders; a note is Markdown. The server keeps
-// them, so every device shows the same; edits are stored shortly after the last keystroke.
+// Notebooks as tabs, each with loose notes and folders; a note is Markdown, edited as it looks
+// (NoteEditor). The server keeps them, so every device shows the same; edits are stored shortly
+// after the last keystroke.
 const SAVE_DELAY_MS = 500
 // null: the loose notes of the notebook; otherwise the index of a folder.
 type FolderIndex = number | null
@@ -51,7 +52,6 @@ const { zoomStyle } = useViewZoom(zoomed)
 const notebooks = ref<Record<string, Notebook>>({})
 const current = ref<string | null>(null)
 const selection = ref<Selection | null>(null)
-const editing = ref(false)
 const query = ref('')
 const dialog = ref<Dialog | null>(null)
 // What was deleted from the notebooks; shown instead of a notebook while `showTrash`.
@@ -69,7 +69,16 @@ function notesOf(folder: FolderIndex): Note[] {
 
 const selected = computed(() => (selection.value === null ? null : (notesOf(selection.value.folder)[selection.value.index] ?? null)))
 const pdfs = computed(() => (selected.value === null ? [] : pdfLinks(selected.value.text)))
-const html = computed(() => (selected.value === null ? '' : renderMarkdown(selected.value.text, null)))
+// The editor belongs to one note: another note gets one of its own (its own undo steps).
+const editorKey = computed(() => (selection.value === null ? '' : `${current.value}/${selection.value.folder}/${selection.value.index}`))
+const editor = ref<InstanceType<typeof NoteEditor>>()
+
+/** A note without text is there to be written: the cursor goes in. */
+async function focusIfEmpty(): Promise<void> {
+  if (selected.value?.text !== '') return
+  await nextTick()
+  editor.value?.focus()
+}
 
 interface Section {
   folder: FolderIndex
@@ -182,10 +191,9 @@ function deleteNotebook(): Promise<void> {
   return trashFromNotebook((name) => api.deleteNotebook(name))
 }
 
-/** Opens a note; one without text opens for writing, one with text for reading. */
 function select(folder: FolderIndex, index: number): void {
   selection.value = { folder, index }
-  editing.value = notesOf(folder)[index].text === ''
+  void focusIfEmpty()
 }
 
 function addNote(): void {
@@ -193,8 +201,8 @@ function addNote(): void {
   const notes = notesOf(folder)
   notes.push({ title: '', text: '' })
   selection.value = { folder, index: notes.length - 1 }
-  editing.value = true
   changed()
+  void focusIfEmpty()
 }
 
 function addFolder(name: string, thenMoveNote: boolean): void {
@@ -288,24 +296,17 @@ const placeholders = computed<Placeholders>(() => ({
   link: t('notes.placeholder.link'),
 }))
 
-const field = ref<HTMLTextAreaElement>()
-
 // A file attached to the note is stored on the server and linked in the text at the cursor.
 const attachMenuOpen = ref(false)
 const uploading = ref(false)
 
 async function attachFile(file: File): Promise<void> {
-  const note = selected.value
-  if (!note) return
+  if (!selected.value) return
   uploading.value = true
   try {
     const { url } = await api.attachToNote(file)
     const link = fileLink(file.name, url, file.type.startsWith('image/'))
-    const edit = insertBlock(note.text, field.value?.selectionEnd ?? note.text.length, link)
-    note.text = edit.text
-    changed()
-    await nextTick()
-    field.value?.setSelectionRange(edit.to, edit.to)
+    editor.value?.edit((text, _from, to) => insertBlock(text, to, link), false)
   } catch (error) {
     toast.error(error)
   } finally {
@@ -320,44 +321,15 @@ function onPaste(event: ClipboardEvent): void {
   void attachInOrder(images, attachFile)
 }
 
-/** A picture or file in the view opens in a tab of its own, the page stays. */
-function onViewClick(event: MouseEvent): void {
-  const target = event.target
-  if (!(target instanceof Element)) return
-  const link = target.closest('a')
-  const address = link?.getAttribute('href') ?? (target instanceof HTMLImageElement ? target.src : null)
-  if (address === null) return
-  event.preventDefault()
-  window.open(address, '_blank', 'noopener')
-}
-
 // Dictation (STT-Suite or the browser) writes at the cursor of the text, as if typed there.
 const dictation = reactive(useDictation(insertDictated, toast.error))
 
-async function insertDictated(dictated: string): Promise<void> {
-  const note = selected.value
-  const element = field.value
-  if (!note || !element) return
-  const at = element.selectionEnd
-  const before = note.text.slice(0, at)
-  const glue = before && !/\s$/.test(before) ? ' ' : ''
-  note.text = before + glue + dictated + note.text.slice(at)
-  changed()
-  await nextTick()
-  const caret = before.length + glue.length + dictated.length
-  element.setSelectionRange(caret, caret)
+function insertDictated(dictated: string): void {
+  editor.value?.edit((text, _from, to) => insertDictation(text, to, dictated), false)
 }
 
-async function format(id: FormatId): Promise<void> {
-  const element = field.value
-  const note = selected.value
-  if (!element || !note) return
-  const edit = applyFormat(id, note.text, element.selectionStart, element.selectionEnd, placeholders.value)
-  note.text = edit.text
-  changed()
-  await nextTick()
-  element.focus()
-  element.setSelectionRange(edit.from, edit.to)
+function format(id: FormatId): void {
+  editor.value?.edit((text, from, to) => applyFormat(id, text, from, to, placeholders.value), true)
 }
 
 function folderName(folder: number): string {
@@ -405,10 +377,9 @@ function firstLine(note: Note): string {
     <NotesTrash v-if="showTrash" :entries="trash" :notebooks="names" @restored="onRestored" />
     <p v-else-if="current === null" class="text-dim">{{ $t('notes.empty') }}</p>
 
-    <!-- Wide: list and note side by side; while editing the note itself has two columns (text and
-         view), so below xl the list steps aside, as on phones. -->
-    <div v-else class="md:grid md:grid-cols-[20rem_1fr] md:gap-4" :class="editing && selection ? 'md:max-xl:grid-cols-1' : ''">
-      <div class="flex flex-col gap-3" :class="selection ? (editing ? 'max-xl:hidden' : 'max-md:hidden') : ''">
+    <!-- Wide: list and note side by side; on phones one of them. -->
+    <div v-else class="md:grid md:grid-cols-[20rem_1fr] md:gap-4">
+      <div class="flex flex-col gap-3" :class="selection ? 'max-md:hidden' : ''">
         <div class="flex gap-1.5">
           <input v-model="query" type="search" class="input flex-1 text-sm" :placeholder="$t('notes.search')" />
           <button class="btn-primary btn-small-icon" :title="$t('notes.newNote')" :aria-label="$t('notes.newNote')" @click="addNote">
@@ -446,11 +417,8 @@ function firstLine(note: Note): string {
 
       <div v-if="selected" class="flex min-w-0 flex-col gap-3">
         <div class="flex flex-wrap items-center gap-1.5">
-          <button class="btn-secondary btn-small" :class="editing ? 'xl:hidden' : 'md:hidden'" @click="selection = null">
+          <button class="btn-secondary btn-small md:hidden" @click="selection = null">
             <AppIcon name="up" class="-rotate-90" />{{ $t('notes.back') }}
-          </button>
-          <button class="btn-secondary btn-small" @click="editing = !editing">
-            <AppIcon :name="editing ? 'eye' : 'pencil'" />{{ editing ? $t('notes.preview') : $t('notes.edit') }}
           </button>
           <button class="btn-secondary btn-small" @click="copyNote">
             <AppIcon name="copy" />{{ $t('notes.copy') }}
@@ -470,51 +438,44 @@ function firstLine(note: Note): string {
           </button>
         </div>
         <input v-model="selected.title" class="input font-semibold" :placeholder="$t('notes.titlePlaceholder')" @input="changed" />
-        <!-- Editing: text left, view right on wide screens; on phones one of them at a time. -->
-        <div :class="editing ? 'md:grid md:grid-cols-2 md:gap-4' : ''">
-          <div v-if="editing" class="flex min-w-0 flex-col gap-3">
-            <div class="flex flex-wrap gap-1.5">
-              <button
-                v-for="item in FORMATS"
-                :key="item.id"
-                class="btn-secondary btn-small min-w-9 justify-center"
-                :class="item.id === 'bold' ? 'font-bold' : item.id === 'italic' ? 'italic' : ''"
-                :title="$t('notes.format.' + item.id)"
-                :aria-label="$t('notes.format.' + item.id)"
-                @pointerdown.prevent
-                @click="format(item.id)"
-              >
-                {{ item.label }}
-              </button>
-              <!-- While a dictation is taken in, on a touch screen: the paperclip's place throws it away. -->
-              <DictationCancel v-if="TOUCH_FIRST.matches && dictation.active" :dictation="dictation" />
-              <AttachMenu
-                v-else
-                below
-                :open="attachMenuOpen"
-                :busy="uploading"
-                @toggle="attachMenuOpen = !attachMenuOpen"
-                @close="attachMenuOpen = false"
-                @files="(files) => attachInOrder(files, attachFile)"
-              />
-              <!-- Right of the formatting keys: speech input into the text. -->
-              <span class="ml-auto flex items-end gap-1">
-                <DictationRetry :dictation="dictation" />
-                <DictationMic :dictation="dictation" />
-              </span>
-            </div>
-            <textarea
-              ref="field"
-              v-model="selected.text"
-              class="input min-h-[50dvh] py-2 font-mono text-sm"
-              :placeholder="$t('notes.textPlaceholder')"
-              spellcheck="false"
-              @input="changed"
-              @paste="onPaste"
-            />
-          </div>
-          <div class="markdown note min-w-0 min-h-[20dvh]" :class="editing ? 'max-md:hidden md:border-l md:border-line md:pl-4' : ''" v-html="html" @click="onViewClick" />
+        <div class="flex flex-wrap gap-1.5">
+          <button
+            v-for="item in FORMATS"
+            :key="item.id"
+            class="btn-secondary btn-small min-w-9 justify-center"
+            :class="item.id === 'bold' ? 'font-bold' : item.id === 'italic' ? 'italic' : ''"
+            :title="$t('notes.format.' + item.id)"
+            :aria-label="$t('notes.format.' + item.id)"
+            @pointerdown.prevent
+            @click="format(item.id)"
+          >
+            {{ item.label }}
+          </button>
+          <!-- While a dictation is taken in, on a touch screen: the paperclip's place throws it away. -->
+          <DictationCancel v-if="TOUCH_FIRST.matches && dictation.active" :dictation="dictation" />
+          <AttachMenu
+            v-else
+            below
+            :open="attachMenuOpen"
+            :busy="uploading"
+            @toggle="attachMenuOpen = !attachMenuOpen"
+            @close="attachMenuOpen = false"
+            @files="(files) => attachInOrder(files, attachFile)"
+          />
+          <!-- Right of the formatting keys: speech input into the text. -->
+          <span class="ml-auto flex items-end gap-1">
+            <DictationRetry :dictation="dictation" />
+            <DictationMic :dictation="dictation" />
+          </span>
         </div>
+        <NoteEditor
+          ref="editor"
+          :key="editorKey"
+          v-model="selected.text"
+          :placeholder="$t('notes.textPlaceholder')"
+          @update:model-value="changed"
+          @paste="onPaste"
+        />
         <!-- The PDFs of the note, with a preview, below its text. -->
         <PdfPreview v-for="pdf in pdfs" :key="pdf.url" :url="pdf.url" :name="pdf.name" />
       </div>

@@ -98,6 +98,25 @@ export function insertBlock(text: string, at: number, block: string): Edit {
   return { text: before + inserted + after, from: caret, to: caret }
 }
 
+/** Dictated text at the cursor, as if typed there: apart from a word just before it. */
+export function insertDictation(text: string, at: number, dictated: string): Edit {
+  const before = text.slice(0, at)
+  const glue = before && !/\s$/.test(before) ? ' ' : ''
+  const caret = before.length + glue.length + dictated.length
+  return { text: before + glue + dictated + text.slice(at), from: caret, to: caret }
+}
+
+/** The one change that turns `old` into `next`: what lies between their common start and end. A
+ * whole new text would reset the editor's undo steps and move the marks of everything after it. */
+export function changeBetween(old: string, next: string): { from: number; to: number; insert: string } {
+  let start = 0
+  const shorter = Math.min(old.length, next.length)
+  while (start < shorter && old[start] === next[start]) start++
+  let end = 0
+  while (end < shorter - start && old[old.length - 1 - end] === next[next.length - 1 - end]) end++
+  return { from: start, to: old.length - end, insert: next.slice(start, next.length - end) }
+}
+
 export interface PdfLink {
   name: string
   url: string

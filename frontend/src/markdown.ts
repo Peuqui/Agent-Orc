@@ -3,7 +3,7 @@ import { Marked } from 'marked'
 import { rawFileUrl } from './api'
 import { joinPath, parentPath } from './format'
 import { i18n } from './i18n'
-import { ICONS } from './icons'
+import { iconMarkup } from './icons'
 import { LISTEN_MARKER } from './speechText'
 
 // A scheme (https:, mailto:, data:) or protocol-relative: not a path in the project.
@@ -35,7 +35,7 @@ function withCopyButtons(html: string): string {
     button.className = CODE_COPY_CLASS
     button.title = label
     button.setAttribute('aria-label', label)
-    button.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${ICONS.copy}"/></svg>`
+    button.innerHTML = iconMarkup('copy')
     block.replaceWith(wrapper)
     wrapper.append(block, button)
   }

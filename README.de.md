@@ -162,8 +162,10 @@ einen SSH-Tunnel ([Mehrere Rechner](#mehrere-rechner)).
 
 **Notizen**
 - Notizbücher als Reiter, je mit losen Notizen und Ordnern; sie liegen wie die Arbeitsflächen auf dem Server.
-- Eine Notiz ist Markdown mit Formatierungsleiste (fett, kursiv, Überschrift, Liste, Code, Link),
-  einer Suche über Titel und Text und Text und Ansicht nebeneinander am Rechner und Tablet.
+- Eine Notiz ist Markdown und wird bearbeitet, wie sie aussieht (wie die Live-Vorschau in Obsidian):
+  Überschriften, Fett, Listen, Code, Links, Bilder und Tabellen erscheinen formatiert, nur die Zeile
+  mit dem Cursor zeigt ihre Markdown-Zeichen. Dazu eine Formatierungsleiste (fett, kursiv,
+  Überschrift, Liste, Code, Link), abhakbare Aufgaben (`- [ ]`) und eine Suche über Titel und Text.
 - Fotos, Screenshots und Dateien an eine Notiz hängen; sie liegen auf dem Server und werden beim
   Senden an einen Agenten in dessen Ordner kopiert. Bilder erscheinen als Vorschau, PDFs mit der
   ersten Seite (auf Wunsch alle, gezeichnet von [pdf.js](https://mozilla.github.io/pdf.js/)).

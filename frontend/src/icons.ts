@@ -56,3 +56,8 @@ export const ICONS = {
 } as const
 
 export type IconName = keyof typeof ICONS
+
+/** An icon as SVG markup, for HTML built outside Vue (rendered Markdown, the note editor). */
+export function iconMarkup(name: IconName): string {
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${ICONS[name]}"/></svg>`
+}
