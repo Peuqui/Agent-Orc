@@ -2892,12 +2892,12 @@ def create_app(
     def read_file(path: str) -> files.TextFile:
         return files.read_text(scope.resolve(path), max_edit_bytes)
 
-    def served_file(path: Path, download: bool) -> FileResponse:
+    def served_file(path: Path, download: bool, sandbox: str = "sandbox") -> FileResponse:
         headers = {"X-Content-Type-Options": "nosniff"}
         # Opened directly, a file the agent wrote (an SVG, an HTML page) runs no script under
         # Agent-Orc's origin. A PDF is shown by the browser's own viewer, which the sandbox blocks.
         if mimetypes.guess_type(path.name)[0] != "application/pdf":
-            headers["Content-Security-Policy"] = "sandbox"
+            headers["Content-Security-Policy"] = sandbox
         return FileResponse(
             path,
             filename=path.name,
@@ -2927,6 +2927,16 @@ def create_app(
         if not resolved.is_file():
             raise FileNotFoundError(str(resolved))
         return served_file(resolved, download)
+
+    @app.get("/api/files/view/{path:path}", dependencies=authenticated)
+    def viewed_file(path: str) -> FileResponse:
+        """An HTML page shown as a page, with the path in the address, so the styles and pictures
+        it names beside it are found. Its scripts run, but without Agent-Orc's origin: they reach
+        neither this page nor the login."""
+        resolved = scope.resolve("/" + path)
+        if not resolved.is_file():
+            raise FileNotFoundError(str(resolved))
+        return served_file(resolved, download=False, sandbox="sandbox allow-scripts")
 
     @app.post("/api/files/existing", dependencies=authenticated)
     def existing_files(body: ExistingPathsRequest) -> dict[str, dict[str, str]]:

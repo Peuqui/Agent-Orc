@@ -84,17 +84,19 @@ function withReplayButton(html: string): string {
  * lines into a paragraph. `listenButton`: the marker of the paragraph for listening is a button (answers).
  */
 export function renderMarkdown(text: string, filePath: string | null, listenButton = false): string {
-  const isNote = filePath === null
-  const marked = new Marked({
-    gfm: true,
-    breaks: isNote,
-    walkTokens(token) {
-      if (!isNote && token.type === 'image' && !isExternal(token.href)) {
-        token.href = rawFileUrl(linkedPath(filePath, token.href))
-      }
-    },
-  })
-  const html = marked.parse(text, { async: false })
-  const page = withExternalLinksOutside(withCopyButtons(DOMPurify.sanitize(html)))
+  const marked = new Marked({ gfm: true, breaks: filePath === null })
+  const html = DOMPurify.sanitize(marked.parse(text, { async: false }))
+  const page = withExternalLinksOutside(withCopyButtons(filePath === null ? html : withPicturesFromFolder(html, filePath)))
   return listenButton ? withReplayButton(page) : page
+}
+
+/** Pictures with a relative path, written in Markdown or as HTML (`<img src=…>`), come from the
+ * file's folder. */
+function withPicturesFromFolder(html: string, filePath: string): string {
+  const page = new DOMParser().parseFromString(html, 'text/html')
+  for (const picture of page.querySelectorAll('img[src]')) {
+    const source = picture.getAttribute('src') ?? ''
+    if (!isExternal(source)) picture.setAttribute('src', rawFileUrl(linkedPath(filePath, source)))
+  }
+  return page.body.innerHTML
 }

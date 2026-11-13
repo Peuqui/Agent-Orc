@@ -430,7 +430,7 @@
           "**Codeblöcke** (Antworten, Notizen, Vorschau) haben rechts einen Kopieren-Knopf. Er kopiert ohne den Zeilenumbruch am Ende, damit ein Befehl beim Einfügen nicht sofort läuft.",
           "**Vorlagen** (in der Büroklammer): häufige Anweisungen mit einem Tipp ins Eingabefeld setzen; „Vorlagen verwalten“ legt sie an, für alle Geräte.",
           "**Dateipfade in der Ausgabe** (z. B. src/main.py:42) sind anklickbar, wenn es sie gibt: Dateien öffnen im Editor an der genannten Zeile, Ordner in der Dateiansicht. Das Ordner-Symbol oben öffnet den Projektordner.",
-          "**Editor**: Markdown erscheint als Seite (Stift: bearbeiten), Bilder als Bild; andere Dateien, die keine Textdateien sind, lassen sich herunterladen. „Zurück“ führt dorthin, woher die Datei geöffnet wurde.",
+          "**Editor**: Markdown und HTML erscheinen als Seite (Stift: bearbeiten), PDFs mit allen Seiten, Word-Dokumente (.docx) als Seite, Bilder als Bild, Ton und Video zum Abspielen; andere Dateien, die keine Textdateien sind, lassen sich herunterladen. „Zurück“ führt dorthin, woher die Datei geöffnet wurde.",
           "**Sondertasten**: der Pfeil am Ende der ersten Reihe klappt die übrigen Reihen ein oder aus (gilt für alle Terminals des Geräts).",
           "**Sondertasten anpassen** (Menü ☰): Tasten per Ziehen sortieren, auch zwischen den Reihen, fertige Tasten hinzufügen, eine Tastenkombination aufnehmen (z. B. Strg+R) oder eine Text-Taste anlegen, die einen festen Text wie /compact eintippt und auf Wunsch gleich abschickt. Die Belegung gilt für alle Geräte; „Zurücksetzen“ holt die aus der Config zurück."
         ]

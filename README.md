@@ -194,8 +194,11 @@ that run Agent-Orc can be shown in the same app, through an SSH tunnel ([Several
 
 **Files and more**
 - Browse, edit and trash files in your project folders (the trash sits beside the list: drag a
-  file onto it, restore or empty it there); Markdown as a preview, pictures as
-  pictures, other files to download.
+  file onto it, restore or empty it there); Markdown and HTML as a page (pencil: edit), PDFs with
+  all pages (pdf.js), Word documents (.docx, converted by
+  [mammoth](https://github.com/mwilliamson/mammoth.js)), pictures, sound and video; other files to
+  download. An HTML page runs sealed off: its scripts run but reach neither Agent-Orc nor the
+  login; files beside it (CSS, pictures) are not loaded.
 - File paths in an agent's output are clickable and open the file (at the line named) or the
   folder: in the terminal, and in the answers view for paths written as code (`docs/TODO.md`,
   `src/app.py:42`). Only paths that exist in the agent's folder are offered.

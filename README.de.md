@@ -206,7 +206,10 @@ einen SSH-Tunnel ([Mehrere Rechner](#mehrere-rechner)).
 **Dateien und mehr**
 - Dateien in den Projektordnern durchsuchen, bearbeiten und in den Papierkorb legen (er steht
   neben der Liste: Datei darauf ziehen, dort wiederherstellen oder leeren);
-  Markdown als Vorschau, Bilder als Bild, andere Dateien zum Herunterladen.
+  Markdown und HTML als Seite (Stift: bearbeiten), PDFs mit allen Seiten (pdf.js), Word-Dokumente
+  (.docx, umgewandelt von [mammoth](https://github.com/mwilliamson/mammoth.js)), Bilder, Ton und
+  Video; andere Dateien zum Herunterladen. Eine HTML-Seite läuft abgeschottet: Ihre Skripte laufen,
+  erreichen aber weder Agent-Orc noch den Login; Dateien neben ihr (CSS, Bilder) lädt sie nicht.
 - Dateipfade in der Ausgabe eines Agenten sind anklickbar und öffnen die Datei (an der
   genannten Zeile) oder den Ordner: im Terminal und in der Antworten-Ansicht bei Pfaden, die als
   Code geschrieben sind (`docs/TODO.md`, `src/app.py:42`). Angeboten werden nur Pfade, die im

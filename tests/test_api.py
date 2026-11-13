@@ -2257,6 +2257,24 @@ def test_raw_file_is_served_without_running_its_scripts(client: TestClient, home
     assert client.get("/api/files/raw", params={"path": str(secret)}).status_code == 403
 
 
+def test_page_view_runs_scripts_without_agent_orcs_origin(client: TestClient, home: Path) -> None:
+    site = home / "projects" / "my site"
+    site.mkdir()
+    (site / "index.html").write_text('<link rel="stylesheet" href="style.css"><p>Hallo</p>')
+    (site / "style.css").write_text("p { color: red }")
+    page = client.get(f"/api/files/view{site}/index.html")
+    assert page.status_code == 200
+    assert page.headers["content-type"].startswith("text/html")
+    # Scripts run, but without allow-same-origin: never both, or the page could lift the sandbox.
+    assert page.headers["content-security-policy"] == "sandbox allow-scripts"
+    # What the page names beside it is found by the same address.
+    assert client.get(f"/api/files/view{site}/style.css").text == "p { color: red }"
+    assert client.get(f"/api/files/view{site}").status_code == 404
+    secret = home / "private" / "secret.html"
+    secret.write_text("x")
+    assert client.get(f"/api/files/view{secret}").status_code == 403
+
+
 def test_existing_paths_of_an_agents_output(
     client: TestClient, home: Path, caplog: pytest.LogCaptureFixture
 ) -> None:

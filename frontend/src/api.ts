@@ -946,10 +946,6 @@ export function apiFor(host: string | null): typeof api {
   return found
 }
 
-/**
- * WebSocket URL of a session's terminal, relative to the page like all API calls; the size goes
- * along, so tmux draws for this terminal from the start.
- */
 /** The file as it is, for pictures and downloads (the login cookie goes along). */
 export function rawFileUrl(path: string, download = false): string {
   const url = new URL('api/files/raw', document.baseURI)
@@ -957,6 +953,16 @@ export function rawFileUrl(path: string, download = false): string {
   return url.toString()
 }
 
+/** An HTML file as a page: the path is in the address, so what it names beside it is found. */
+export function pageViewUrl(path: string): string {
+  const encoded = path.split('/').map(encodeURIComponent).join('/')
+  return new URL(`api/files/view${encoded}`, document.baseURI).toString()
+}
+
+/**
+ * WebSocket URL of a session's terminal, relative to the page like all API calls; the size goes
+ * along, so tmux draws for this terminal from the start.
+ */
 export function terminalUrl(sessionId: string, cols: number, rows: number): string {
   const url = new URL(`api/sessions/${encodeURIComponent(sessionId)}/terminal`, document.baseURI)
   url.search = new URLSearchParams({ cols: String(cols), rows: String(rows) }).toString()

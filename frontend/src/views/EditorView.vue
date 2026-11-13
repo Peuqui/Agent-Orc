@@ -9,26 +9,23 @@ import { EditorView, keymap } from '@codemirror/view'
 import { basicSetup } from 'codemirror'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { ApiError, api, rawFileUrl } from '../api'
+import { ApiError, api, pageViewUrl, rawFileUrl } from '../api'
 import AppIcon from '../components/AppIcon.vue'
 import BaseDialog from '../components/BaseDialog.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
+import PdfPages from '../components/PdfPages.vue'
 import { useSettings } from '../composables/useSettings'
 import { useToast } from '../composables/useToast'
 import { useViewZoom } from '../composables/useViewZoom'
+import { docxToHtml } from '../docx'
+import { isTextKind, kindOfFile, type FileKind } from '../fileKinds'
 import { baseName, parentPath } from '../format'
 import { isExternal, linkedPath, renderMarkdown } from '../markdown'
 
 // line: where to start, e.g. from "main.py:42" in an agent's output.
 const props = defineProps<{ path: string; line: number | null }>()
 
-// What the file is shown as: text in the editor, Markdown also as a page, a picture, a sound or
-// a video the browser plays, or (not text, too large) only offered to download.
-type Kind = 'text' | 'markdown' | 'image' | 'audio' | 'video' | 'binary'
-const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'ico', 'avif']
-const AUDIO_EXTENSIONS = ['wav', 'mp3', 'ogg', 'oga', 'opus', 'flac', 'm4a', 'aac']
-const VIDEO_EXTENSIONS = ['mp4', 'webm', 'ogv', 'mov']
-const MARKDOWN_EXTENSIONS = ['md', 'markdown']
+// Not text, or too large for the editor: only offered to download.
 const NOT_SHOWN_AS_TEXT = ['NotTextError', 'FileTooLargeError']
 
 const HTTP_CONFLICT = 409
@@ -54,18 +51,15 @@ let view: EditorView | null = null
 const language = new Compartment()
 const fontTheme = new Compartment()
 const name = computed(() => baseName(props.path))
-const extension = computed(() => name.value.split('.').pop()?.toLowerCase() ?? '')
-function kindOfExtension(extensionName: string): Kind {
-  if (IMAGE_EXTENSIONS.includes(extensionName)) return 'image'
-  if (AUDIO_EXTENSIONS.includes(extensionName)) return 'audio'
-  if (VIDEO_EXTENSIONS.includes(extensionName)) return 'video'
-  return 'text'
-}
-const kind = ref<Kind>(kindOfExtension(extension.value))
-// Markdown opens as a page; the editor keeps the text for switching back.
-const previewing = ref(MARKDOWN_EXTENSIONS.includes(extension.value))
+const kind = ref<FileKind>(kindOfFile(name.value))
+// Markdown and HTML open as a page, the editor keeps the text for switching back; a Word
+// document is only a page.
+const hasPage = computed(() => kind.value === 'markdown' || kind.value === 'html')
+const previewing = ref(hasPage.value || kind.value === 'docx')
 const previewHtml = ref('')
-const editable = computed(() => kind.value === 'text' || kind.value === 'markdown')
+const editable = computed(() => isTextKind(kind.value))
+// An HTML page is shown as saved; switching to it shows it anew, with what was saved since.
+const pageShown = ref(0)
 
 function fontSizeTheme(size: number) {
   return EditorView.theme({ '&': { fontSize: `${size}px` }, '.cm-scroller': { fontFamily: 'ui-monospace, monospace' } })
@@ -99,7 +93,8 @@ async function loadLanguage(): Promise<void> {
 }
 
 function showPreview(): void {
-  previewHtml.value = renderMarkdown(view?.state.doc.toString() ?? '', props.path)
+  if (kind.value === 'markdown') previewHtml.value = renderMarkdown(view?.state.doc.toString() ?? '', props.path)
+  else pageShown.value += 1
   previewing.value = true
 }
 
@@ -125,7 +120,8 @@ function goToLine(line: number): void {
 }
 
 async function load(): Promise<void> {
-  if (kind.value === 'image' || kind.value === 'audio' || kind.value === 'video') {
+  if (kind.value === 'docx') previewHtml.value = await docxToHtml(rawFileUrl(props.path))
+  if (!editable.value) {
     loaded.value = true
     return
   }
@@ -139,8 +135,7 @@ async function load(): Promise<void> {
   }
   dirty.value = false
   loaded.value = true
-  if (MARKDOWN_EXTENSIONS.includes(extension.value)) {
-    kind.value = 'markdown'
+  if (hasPage.value) {
     // Asked for a line: the text there, not the page.
     if (props.line === null && previewing.value) showPreview()
     else previewing.value = false
@@ -215,7 +210,7 @@ onBeforeUnmount(() => view?.destroy())
         {{ name }}<span v-if="dirty" class="text-accent-400"> ●</span>
       </h1>
       <button
-        v-if="kind === 'markdown'"
+        v-if="hasPage"
         class="btn-secondary btn-small"
         :title="$t(previewing ? 'editor.edit' : 'editor.preview')"
         :aria-label="$t(previewing ? 'editor.edit' : 'editor.preview')"
@@ -253,15 +248,28 @@ onBeforeUnmount(() => view?.destroy())
     </header>
 
     <div v-show="editable && !previewing" ref="container" class="min-h-0 flex-1 overflow-hidden" />
-    <!-- v-html is safe here: renderMarkdown passes the HTML through DOMPurify. -->
+    <!-- v-html is safe here: renderMarkdown and docxToHtml pass the HTML through DOMPurify. The
+         page's blocks are the direct children of .markdown, which spaces them. -->
     <article
-      v-if="kind === 'markdown' && previewing"
+      v-if="(kind === 'markdown' && previewing) || kind === 'docx'"
       ref="previewBox"
-      class="markdown min-h-0 flex-1 overflow-y-auto px-4 py-3 sm:px-8"
+      class="min-h-0 flex-1 overflow-y-auto px-4 py-3 sm:px-8"
       @click="followLink"
     >
-      <div ref="previewContent" :style="zoomStyle" v-html="previewHtml" />
+      <div ref="previewContent" class="markdown" :style="zoomStyle" v-html="previewHtml" />
     </article>
+    <!-- Its own scripts run, without Agent-Orc's origin (also set by the server for the page). -->
+    <iframe
+      v-if="kind === 'html' && previewing"
+      :key="pageShown"
+      :src="pageViewUrl(path)"
+      :title="name"
+      sandbox="allow-scripts"
+      class="min-h-0 w-full flex-1 bg-white"
+    />
+    <div v-if="kind === 'pdf'" class="min-h-0 flex-1 overflow-y-auto p-3">
+      <PdfPages :url="rawFileUrl(path)" all class="mx-auto max-w-4xl" />
+    </div>
     <div v-if="kind === 'image'" class="flex min-h-0 flex-1 items-center justify-center overflow-auto p-3">
       <img :src="rawFileUrl(path)" :alt="name" class="max-h-full max-w-full object-contain" />
     </div>
