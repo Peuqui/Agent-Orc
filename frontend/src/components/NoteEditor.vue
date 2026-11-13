@@ -15,7 +15,8 @@ import { renderMarkdown } from '../markdown'
 import { changeBetween, type Edit } from '../notesFormat'
 
 // The text of a note, edited as it looks (livePreview.ts): Markdown in, Markdown out.
-const props = defineProps<{ modelValue: string; placeholder: string }>()
+// autofocus: a note without text is there to be written, the cursor goes in.
+const props = defineProps<{ modelValue: string; placeholder: string; autofocus: boolean }>()
 const emit = defineEmits<{ 'update:modelValue': [text: string]; paste: [event: ClipboardEvent] }>()
 const { t } = useI18n()
 const copyText = useCopyText()
@@ -65,6 +66,7 @@ onMounted(() => {
       ],
     }),
   })
+  if (props.autofocus) view.focus()
 })
 
 onBeforeUnmount(() => view?.destroy())

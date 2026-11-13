@@ -23,6 +23,13 @@ export default defineConfig({
     // text on older Android tablets); this target makes the build add plain hex fallbacks. 99
     // is the oldest Chrome that has the cascade layers Tailwind needs anyway.
     cssTarget: 'chrome99',
+    rolldownOptions: {
+      output: {
+        // xterm.js, most of the terminal view, as a part of its own: it changes only with an xterm
+        // update, so after an update of Agent-Orc a device keeps it from its cache.
+        codeSplitting: { groups: [{ name: 'xterm', test: /node_modules[\\/]@xterm[\\/]/ }] },
+      },
+    },
   },
   plugins: [
     {

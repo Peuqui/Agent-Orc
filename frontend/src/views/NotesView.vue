@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, reactive, ref } from 'vue'
+import { computed, defineAsyncComponent, onBeforeUnmount, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { api, type Note, type Notebook, type NotesTrashEntry } from '../api'
 import AppIcon from '../components/AppIcon.vue'
@@ -12,7 +12,7 @@ import { TOUCH_FIRST } from '../device'
 import DictationMic from '../components/DictationMic.vue'
 import DictationRetry from '../components/DictationRetry.vue'
 import InputDialog from '../components/InputDialog.vue'
-import NoteEditor from '../components/NoteEditor.vue'
+import type NoteEditorComponent from '../components/NoteEditor.vue'
 import NotesTrash from '../components/NotesTrash.vue'
 import PdfPreview from '../components/PdfPreview.vue'
 import { useDictation } from '../composables/useDictation'
@@ -69,16 +69,11 @@ function notesOf(folder: FolderIndex): Note[] {
 
 const selected = computed(() => (selection.value === null ? null : (notesOf(selection.value.folder)[selection.value.index] ?? null)))
 const pdfs = computed(() => (selected.value === null ? [] : pdfLinks(selected.value.text)))
+// CodeMirror is large: loaded with the first note opened, not with the app.
+const NoteEditor = defineAsyncComponent(() => import('../components/NoteEditor.vue'))
 // The editor belongs to one note: another note gets one of its own (its own undo steps).
 const editorKey = computed(() => (selection.value === null ? '' : `${current.value}/${selection.value.folder}/${selection.value.index}`))
-const editor = ref<InstanceType<typeof NoteEditor>>()
-
-/** A note without text is there to be written: the cursor goes in. */
-async function focusIfEmpty(): Promise<void> {
-  if (selected.value?.text !== '') return
-  await nextTick()
-  editor.value?.focus()
-}
+const editor = ref<InstanceType<typeof NoteEditorComponent>>()
 
 interface Section {
   folder: FolderIndex
@@ -193,7 +188,6 @@ function deleteNotebook(): Promise<void> {
 
 function select(folder: FolderIndex, index: number): void {
   selection.value = { folder, index }
-  void focusIfEmpty()
 }
 
 function addNote(): void {
@@ -202,7 +196,6 @@ function addNote(): void {
   notes.push({ title: '', text: '' })
   selection.value = { folder, index: notes.length - 1 }
   changed()
-  void focusIfEmpty()
 }
 
 function addFolder(name: string, thenMoveNote: boolean): void {
@@ -473,6 +466,7 @@ function firstLine(note: Note): string {
           :key="editorKey"
           v-model="selected.text"
           :placeholder="$t('notes.textPlaceholder')"
+          :autofocus="selected.text === ''"
           @update:model-value="changed"
           @paste="onPaste"
         />
