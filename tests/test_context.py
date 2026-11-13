@@ -264,16 +264,15 @@ def test_a_scrolled_back_screen_says_nothing_about_the_work(tmp_path: Path) -> N
 
 def test_a_resting_agent_showing_its_spinner_works_again(tmp_path: Path) -> None:
     config = parse_config(default_config_text()).agents["claude"]
-    assert config.working_line is not None and config.scrolled_line is not None
+    working, scrolled = config.working_line, config.scrolled_line
+    assert working is not None and scrolled is not None
     resting = marked_busy(tmp_path, "s-1")
     store_activity("s-1", busy=False)
     os.utime(activity_file("s-1"), (ASKED_SECONDS, ASKED_SECONDS))
     later = ASKED_SECONDS + 60
 
     def again(screen: str, now: float) -> bool:
-        return shows_work_again(
-            resting, lambda: screen, config.working_line, config.scrolled_line, now
-        )
+        return shows_work_again(resting, lambda: screen, working, scrolled, now)
 
     assert again(WORKING_SCREEN, later)
     assert not again(RESTING_SCREEN, later)
