@@ -1,13 +1,14 @@
 import { computed, type Ref, ref, watch } from 'vue'
 import type { Workspace } from '../api'
 import { boundaryShift, MAX_VISIBLE } from './boundaryShift'
-import { loadColumnWidths, MIN_VISIBLE, saveColumnWidths } from './useWorkspaceTab'
+import { loadColumnWidths, loadVisibleColumns, MIN_VISIBLE, saveColumnWidths, saveVisibleColumns } from './useWorkspaceTab'
 
 // The widths of a workspace's columns: N of them fill the screen. A divider sits between two
 // neighbours and only moves their boundary (mouse or finger): what one gains the other loses, so
 // the width of all columns together stays. A double click on a divider or the reset button makes
-// the columns equal again. The widths are kept on this device, per workspace (screens differ);
-// on a phone every column fills the screen, and the widths set on a computer stay as they are.
+// the columns equal again. The widths and the number of columns that fill the screen are kept on this
+// device, per workspace (screens differ); on a phone every column fills the screen, and the widths set on a
+// computer stay as they are.
 
 interface Resize {
   // The column left of the dragged divider; its right neighbour is the other one that changes.
@@ -30,13 +31,17 @@ export function useColumnWidths(
   watch(name, (shown) => (shares.value = loadColumnWidths(shown)), { immediate: true })
   watch(shares, () => saveColumnWidths(name.value, shares.value), { deep: true })
   const resized = computed(() => Object.keys(shares.value).length > 0)
+  // How many columns fill the screen.
+  const visible = ref(MIN_VISIBLE)
+  watch(name, (shown) => (visible.value = loadVisibleColumns(shown)), { immediate: true })
+  watch(visible, () => saveVisibleColumns(name.value, visible.value))
 
   // The divider being dragged.
   const resize = ref<Resize | null>(null)
 
   function widthShare(id: string): number {
     if (phone.value) return 1
-    return shares.value[id] ?? 1 / workspace.value.visible
+    return shares.value[id] ?? 1 / visible.value
   }
 
   const gridStyle = computed(() => ({
@@ -45,7 +50,7 @@ export function useColumnWidths(
 
   /** Sets the width of all columns: N of them fill the screen; individual widths are dropped. */
   function changeVisible(delta: number): void {
-    workspace.value.visible = Math.min(MAX_VISIBLE, Math.max(MIN_VISIBLE, workspace.value.visible + delta))
+    visible.value = Math.min(MAX_VISIBLE, Math.max(MIN_VISIBLE, visible.value + delta))
     shares.value = {}
   }
 
@@ -102,5 +107,5 @@ export function useColumnWidths(
     shares.value = Object.fromEntries(Object.entries(shares.value).filter(([id]) => open.has(id)))
   }
 
-  return { resize, resized, gridStyle, changeVisible, resetWidths, resetWidth, onDividerPointerDown, onDividerPointerMove, endResize }
+  return { resize, resized, visible, gridStyle, changeVisible, resetWidths, resetWidth, onDividerPointerDown, onDividerPointerMove, endResize }
 }

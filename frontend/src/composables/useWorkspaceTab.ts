@@ -43,7 +43,7 @@ export function homeOf(workspaces: WorkspaceSet, agent: string): string | null |
 }
 
 export function emptyWorkspace(): Workspace {
-  return { tabs: [], visible: MIN_VISIBLE, active: null }
+  return { tabs: [], active: null }
 }
 
 export function loadTabState(): TabState {
@@ -92,6 +92,30 @@ export function saveColumnWidths(name: string | null, widths: Record<string, num
 export function moveColumnWidths(from: string | null, to: string): void {
   saveColumnWidths(to, loadColumnWidths(from))
   saveColumnWidths(from, {})
+}
+
+// How many columns of a workspace fill the screen is kept on this device, too, per workspace (a phone, a tablet and a desktop
+// differ, and one's choice should not change the others'); one column until it is set.
+const visibleColumnsKey = (name: string | null) => `agent-orc-visible-columns${machine}:${name ?? ''}`
+
+export function loadVisibleColumns(name: string | null): number {
+  const stored = localStorage.getItem(visibleColumnsKey(name))
+  return stored === null ? MIN_VISIBLE : Number(stored)
+}
+
+export function saveVisibleColumns(name: string | null, count: number): void {
+  localStorage.setItem(visibleColumnsKey(name), String(count))
+}
+
+/** A deleted workspace leaves nothing behind. */
+export function forgetVisibleColumns(name: string | null): void {
+  localStorage.removeItem(visibleColumnsKey(name))
+}
+
+/** A renamed workspace keeps its number of columns. */
+export function moveVisibleColumns(from: string | null, to: string): void {
+  saveVisibleColumns(to, loadVisibleColumns(from))
+  forgetVisibleColumns(from)
 }
 
 export function saveTabState(state: TabState): void {

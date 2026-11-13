@@ -582,10 +582,10 @@ class CardOrderRequest(BaseModel):
 class Workspace(BaseModel):
     """Several agents side by side, as the workspace page arranges them."""
 
-    # Open agents (session ids), in column order.
+    # Open agents (session ids), in column order. How many columns fill the screen and how wide
+    # they are is kept by each browser, not here: screens differ (useWorkspaceTab.ts).
     tabs: list[str]
-    # How many columns fill the screen.
-    visible: int
+    # The agent whose column is the active one.
     active: str | None
 
 

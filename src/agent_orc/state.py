@@ -97,7 +97,7 @@ def changing_workspaces() -> Iterator[dict[str, Any]]:
 
 
 def empty_workspace() -> dict[str, Any]:
-    return {"tabs": [], "visible": 1, "active": None}
+    return {"tabs": [], "active": None}
 
 
 def remove_workspace(workspaces: dict[str, Any], name: str) -> None:

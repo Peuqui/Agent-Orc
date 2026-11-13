@@ -398,7 +398,7 @@ async function showRequested(): Promise<void> {
 }
 
 /** One column fills the screen: on a phone, or where the user set one column for this workspace. */
-const singleColumn = computed(() => phone.value || workspace.value.visible === 1)
+const singleColumn = computed(() => phone.value || widths.visible.value === 1)
 
 /** A swipe came to rest: with one column on the screen, the one in view is the active one (the red one). */
 function activateColumnInView(): void {
@@ -477,7 +477,7 @@ function deleteThis(): void {
           <AddColumnMenu :candidates="candidates" @open="open" />
           <ColumnCountControl
             v-if="!phone"
-            :visible="workspace.visible"
+            :visible="widths.visible.value"
             :resized="widths.resized.value"
             @change="widths.changeVisible"
             @reset="widths.resetWidths"

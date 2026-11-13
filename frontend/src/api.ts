@@ -326,13 +326,12 @@ export interface Reasoning {
  * service walk its own list (GPU first, the CPU last). */
 export type DictationDevice = 'cuda' | 'cpu' | 'auto'
 
-/** Several agents side by side, as the workspace page arranges them. */
+/** Several agents side by side, as the workspace page arranges them. How many columns fill the screen and how wide they are is
+ * kept in each browser (useWorkspaceTab.ts), not on the server: screens differ. */
 export interface Workspace {
   /** Open agents, in column order. */
   tabs: string[]
-  /** How many columns fill the screen. */
-  visible: number
-  /** Columns set wider or narrower by dragging their divider, as a share of the screen width. */
+  /** The agent whose column is the active one (the red one). */
   active: string | null
 }
 

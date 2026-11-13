@@ -7,6 +7,7 @@ const storage = () => {
   return {
     getItem: (key: string) => items.get(key) ?? null,
     setItem: (key: string, value: string) => void items.set(key, value),
+    removeItem: (key: string) => void items.delete(key),
   }
 }
 Object.assign(globalThis, {
@@ -14,9 +15,20 @@ Object.assign(globalThis, {
   localStorage: storage(),
   sessionStorage: storage(),
 })
-const { homeOf, rememberLastWorkspace, setMachine, startWorkspace, unnamedListed } = await import('../src/composables/useWorkspaceTab.ts')
+const {
+  emptyWorkspace,
+  forgetVisibleColumns,
+  homeOf,
+  loadVisibleColumns,
+  moveVisibleColumns,
+  rememberLastWorkspace,
+  saveVisibleColumns,
+  setMachine,
+  startWorkspace,
+  unnamedListed,
+} = await import('../src/composables/useWorkspaceTab.ts')
 
-const workspace = (tabs: string[]) => ({ tabs, visible: 1, active: null })
+const workspace = (tabs: string[]) => ({ tabs, active: null })
 const everything = { unnamed: workspace(['loose-1']), named: { Links: workspace(['left-2']), Rechts: workspace([]) } }
 
 test('an agent is found in the workspace it lives in', () => {
@@ -48,4 +60,35 @@ test('what a tab remembers is kept per machine, as both apps share the browser',
   rememberLastWorkspace('Rechts')
   setMachine(null)
   assert.equal(startWorkspace(everythingNamed), 'Rechts')
+})
+
+test('a workspace on the server holds its agents only: the number of columns is the device\'s', () => {
+  assert.deepEqual(emptyWorkspace(), { tabs: [], active: null })
+})
+
+test('the number of columns is one until it is set, then kept per workspace on this device', () => {
+  assert.equal(loadVisibleColumns('Links'), 1)
+  saveVisibleColumns('Links', 3)
+  saveVisibleColumns(null, 2)
+  assert.equal(loadVisibleColumns('Links'), 3)
+  assert.equal(loadVisibleColumns(null), 2)
+  assert.equal(loadVisibleColumns('Rechts'), 1)
+})
+
+test('a renamed workspace keeps its number of columns, a deleted one leaves none behind', () => {
+  saveVisibleColumns('Alt', 4)
+  moveVisibleColumns('Alt', 'Neu')
+  assert.equal(loadVisibleColumns('Neu'), 4)
+  assert.equal(loadVisibleColumns('Alt'), 1)
+  forgetVisibleColumns('Neu')
+  assert.equal(loadVisibleColumns('Neu'), 1)
+})
+
+test('the numbers of another machine\'s workspaces are kept apart from this machine\'s', () => {
+  saveVisibleColumns('Gleich', 2)
+  setMachine('Aragon')
+  assert.equal(loadVisibleColumns('Gleich'), 1)
+  saveVisibleColumns('Gleich', 3)
+  setMachine(null)
+  assert.equal(loadVisibleColumns('Gleich'), 2)
 })
