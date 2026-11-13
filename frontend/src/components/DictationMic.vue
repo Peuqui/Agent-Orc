@@ -19,6 +19,8 @@ const shown = computed(() => props.dictation.active || busy.value)
 const phase = computed<BadgePhase>(() => (props.dictation.active ? 'listening' : busy.value ? 'transcribing' : 'ready'))
 // The GPU is shown while the service has a model there and the dictation may use it (GPU or automatic): as a small
 // plate with the page's own background, so the badge's waves do not show through it, grey while it is transcribed (as the badge).
+// Its top edge is level with the field's, the box ends at the capitals (the same rim above and below the letters), and the badge
+// stands 2 px inside the button, so the mark overlaps only the badge's corner.
 const onGpu = computed(
   () => props.dictation.engine === 'stt-suite' && props.dictation.device !== 'cpu' && props.dictation.gpuLoaded,
 )
@@ -62,7 +64,7 @@ function press(event: MouseEvent): void {
     </button>
     <span
       v-if="onGpu"
-      class="pointer-events-none absolute -top-0.5 -right-0.5 rounded border bg-page px-1 text-[0.5rem] leading-3 font-semibold"
+      class="pointer-events-none absolute top-0 right-0 rounded border bg-page px-1 py-0.5 text-[0.5rem] leading-none font-semibold [text-box:trim-both_cap_alphabetic]"
       :class="busy ? 'border-slate-500 text-slate-400' : 'border-highlight-500 text-highlight-300'"
       :title="$t('settings.dictationDeviceGpu')"
     >
