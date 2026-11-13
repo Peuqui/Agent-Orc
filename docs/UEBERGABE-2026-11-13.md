@@ -102,6 +102,32 @@ Aragon, `workspaces.json` dort von Hand ohne `visible` neu geschrieben (Sicherun
 - **Nicht gesehen:** die Seite im Browser (hinter Authelia), und das GPU-Zeichen, weil der Dienst nicht läuft (der Start nimmt llama-swap mit,
   und die Karten gehörten an dem Tag vllm-research).
 
+## DashScope (Claude Code auf Qwen, Kimi, GLM, DeepSeek), Befund vom Abend
+
+- **Fehler bei Peuqui** („API Error: 400 … InvalidParameter … Request body format invalid“, 13:55 und 14:24 im Journal): Er hatte einen langen,
+  schon bei Anthropic laufenden Agenten (AIfred, 966 Nachrichten) auf das Profil `claude-dashscope` umgestellt.
+- **Ursache:** Claude Code schickt Anthropics Beta-Funktionen mit (Header `mid-conversation-tool-changes`, `inline-tools`, Werkzeugsuche,
+  `context_management`): Nachrichten mit Rolle `system`, die einen `tool_addition`-Block tragen (Werkzeuge kamen oder gingen mitten im Gespräch,
+  etwa MCP), `tool_reference` in Werkzeugergebnissen, `defer_loading`. DashScope lehnt die Nachricht mit `tool_addition` an allen geprüften
+  Modellen mit genau dieser Meldung ab (synthetische Anfrage, sonst identisch mit einer, die 200 liefert). `tool_reference`, `defer_loading`,
+  `caller`, `thinking` mit Signatur, `cache_control` und `system` als Text in den Nachrichten nimmt es an.
+- **Korrektur** (`dae8d6f`): `CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS=1` in `claude_environment` (`backends.py`), für alle Backends. Geprüft: Anfrage
+  eines fortgesetzten Verlaufs mit dem Schalter ohne `tool_addition` und ohne Beta-Header (nur Trockenlauf, nichts gesendet), und echte Läufe auf DashScope mit
+  kimi-k3 (Werkzeugaufruf, danach `--continue`, drei Anfragen, alle 200). Auf Mini und Aragon nur die eine Datei `backends.py` in die installierte
+  Kopie gelegt (Sicherung `backends.py.bak-vor-betas`), weil vllm-research ab 17:40 misst und kein Bau erlaubt war; der Start eines Agenten ruft
+  `agent-orc backend run` als eigenen Prozess, ein Dienst-Neustart war nicht nötig. **Das reguläre Deploy mit diesem Commit steht aus** (nach dem Messfenster).
+- **Alle sechs angebotenen Modelle laufen mit frischer Sitzung und Werkzeugaufruf** über echtes Claude Code (qwen3.8-flash, -27b, -max-0902,
+  deepseek-v4.1-flash, kimi-k3, glm-5.3; 13 Anfragen, alle 200). Die drei mit abgelaufenem Freikontingent (qwen3.8-2.4t-a95b, deepseek-v4-pro-0813,
+  deepseek-v4-flash-0731) liefert `agent-orc backend models` nicht mehr; ruft man sie doch, kommt 403 `AccessDenied`, „free quota has been exhausted“.
+- **Grenzen, die bleiben:** (1) Bilder in Werkzeugergebnissen (Screenshots im Verlauf) lehnen qwen3.8-27b, qwen3.8-max-0902 und glm-5.3 mit
+  `InternalError.Algo.InvalidParameter` ab, deepseek-v4.1-flash und kimi-k3 nehmen sie an. (2) Ein sehr langer Verlauf passt in kein Modell: Der
+  fortgesetzte AIfred-Verlauf war 7,3 MB groß (Obergrenze für qwen3.8-flash 983.616 Eingabe-Token, schon 4 MB reiner Text überschreiten sie);
+  Anthropic kürzt ihn serverseitig (`context_management`), die anderen Backends nicht. Vor dem Wechsel auf ein fremdes Backend also `/compact` oder
+  neu anfangen. (3) Das Freikontingent zählt Token je Modell, die Konfiguration kennt nur das Enddatum (`free_until`): ein aufgebrauchtes Modell steht weiter
+  in der Liste und endet mit 403.
+- **Quota verbraucht:** Meine Tests haben das Freikontingent von qwen3.8-flash aufgebraucht (Größenreihe bis 2 MB, rund 0,6 Mio. Token, dazu die Läufe
+  mit Claude Code); danach kam dafür 403. Die anderen fünf Modelle antworteten weiter. Künftig keine Größenreihen gegen Freikontingente.
+
 ## Gelernte Wege (stehen auch in der globalen `CLAUDE.md` und im Gedächtnis)
 
 - **Dateien für Peuqui:** nur als Pfad in Backticks, im Projektordner unter `.agent-orc/previews/` (git-ignoriert); Agent-Orc macht daraus
