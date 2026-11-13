@@ -36,8 +36,7 @@ Größen über die Variablen (Agent-Orc in `theme.css`, AIfred in `ChatInput.vue
 | Lautsprecher aus der Quelle | `SpeakerIcon.vue` (erzeugt), `assets/speaker/speaker.css`, `theme.css` | `--speaker-size: 1.5rem`; `frontend/brand/tts-icon.svg` entfällt |
 | Test für mypy | `tests/test_context.py` | Zusicherung als lokale Namen; war ein alter mypy-Fehler |
 
-Eingespielt am 13.11. auf Mini und Aragon (21a5b51); die späteren Commits (nur Kommentare der erzeugten Dateien, diese Übergabe)
-sind nicht neu eingespielt, es ändert sich nichts am Verhalten. Beim nächsten Deploy mitnehmen.
+Eingespielt am 13.11. auf Mini und Aragon, zuletzt `a840be9` (mit der Spaltenzahl je Gerät, siehe unten); danach nur Doku.
 
 **Anzeige-Einstellungen sind je Gerät im Browser** (`composables/useSettings.ts`, `localStorage`): Schriftgrößen von Terminal und
 Ansichten, Zeilenabstand, Scroll-Zeilen, Größe der Bedienelemente, „Frage oben festhalten“, Terminalschrift, Diktier-Engine und
@@ -45,6 +44,13 @@ Ansichten, Zeilenabstand, Scroll-Zeilen, Größe der Bedienelemente, „Frage ob
 `SharedSettings` (Diktier-Gerät, „Diktat sofort senden“, Tempo, Tonhöhe, Namen ansagen, Stimmen, Zeichenlimit, Warmhalten).
 Peuqui will es so (Anzeige je Gerät, beim Gerätewechsel unverändert). Der Speicher gilt je Adresse des Browsers: Mini und Aragon unter ihren
 eigenen Adressen haben getrennte Werte.
+
+**Auch die Zahl der sichtbaren Spalten eines Arbeitsbereichs ist jetzt je Gerät** (f0afeff, a840be9; vorher lag sie als `visible` im Arbeitsbereich auf
+dem Server und galt für alle Geräte): `agent-orc-visible-columns:<Arbeitsbereich>` im Browser (`useWorkspaceTab.ts`: `loadVisibleColumns`,
+`saveVisibleColumns`, beim Umbenennen `moveVisibleColumns`, beim Löschen `forgetVisibleColumns`), eine Spalte, bis sie gesetzt ist;
+`useColumnWidths.ts` hält sie wie die Breiten. Der Arbeitsbereich auf dem Server hat nur noch `tabs` und `active`. Eingespielt auf Mini und
+Aragon, `workspaces.json` dort von Hand ohne `visible` neu geschrieben (Sicherungen `workspaces.json.bak-20261113-visible`). Die alten Werte
+(Mini: System 2, Entwicklung 4, Unbenannt 2) gehen dabei auf jedem Gerät verloren: Peuqui stellt sie je Gerät einmal neu ein.
 
 ## Mundwerk (Windows-Programm, Repo `~/Projekte/Mundwerk`)
 
@@ -106,6 +112,10 @@ eigenen Adressen haben getrennte Werte.
 
 ## Offen
 
+- **Messfenster von vllm-research ab etwa 17:40 bis zum nächsten Morgen** (A/B-Messungen auf allen Karten, Stand 13.11.): nichts Schweres auf dem Mini
+  (keine Bauten, kein npm, kein pip, kein Deploy mit Build). Kurze Dienst-Neustarts ohne Last gehen. Das gilt auch für Agent-Orc-Deploys
+  (`deploy/install.sh` baut das Frontend) und für Mundwerk-Builds: vorher vllm-research fragen.
+
 - **Terminalrand am Tablet** (Freitagsliste): Die linke Terminal-Spalte war am Rand abgeschnitten; bei Peuqui passt es gerade wieder, er
   beobachtet es. Ursache unbekannt; kommt es wieder: Drahtloses Debugging am Tablet (`adb`, Port 9222 vorher mit den Peers absprechen) oder ein
   kleiner Mess-Aufruf in der Oberfläche; Kandidaten stehen in `LISTE-FREITAG-2026-11-13.md` im AIfred-Ordner `data/handover`.
@@ -124,5 +134,5 @@ eigenen Adressen haben getrennte Werte.
 | TTS-Suite | `0772645` Lautsprecher-Quelle, `1731031` Skript wandert in die STT-Suite |
 | Mundwerk | `819ba88`, `5ddbb17`, `0343706`, `5d943f2`, `486cbe4`, `9ad5b1d` |
 | AI-ATC | `701dc0f` Backend, `50e074d` Oberfläche, `e08f383` Doku, `79c092f` Kommentare |
-| Agent-Orc | `6920048` Knöpfe, `21a5b51` mypy-Test, `9e2274d` Kommentare, diese Übergabe |
+| Agent-Orc | `6920048` Knöpfe, `21a5b51` mypy-Test, `9e2274d` Kommentare, `f0afeff` Spaltenzahl je Gerät, `a840be9` Hilfetexte, `a916100` Übergabe |
 | AIfred | `47ee5b42`, `8b15315e`, `3c5ea091` (von AIfred selbst) |
