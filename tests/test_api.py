@@ -2257,7 +2257,7 @@ def test_raw_file_is_served_without_running_its_scripts(client: TestClient, home
     assert client.get("/api/files/raw", params={"path": str(secret)}).status_code == 403
 
 
-def test_page_view_runs_scripts_without_agent_orcs_origin(client: TestClient, home: Path) -> None:
+def test_page_view_runs_scripts_or_has_the_origin(client: TestClient, home: Path) -> None:
     site = home / "projects" / "my site"
     site.mkdir()
     (site / "index.html").write_text('<link rel="stylesheet" href="style.css"><p>Hallo</p>')
@@ -2265,10 +2265,12 @@ def test_page_view_runs_scripts_without_agent_orcs_origin(client: TestClient, ho
     page = client.get(f"/api/files/view{site}/index.html")
     assert page.status_code == 200
     assert page.headers["content-type"].startswith("text/html")
-    # Scripts run, but without allow-same-origin: never both, or the page could lift the sandbox.
-    assert page.headers["content-security-policy"] == "sandbox allow-scripts"
-    # What the page names beside it is found by the same address.
+    # By default nothing runs, and the page may load what lies beside it (with the login).
+    assert page.headers["content-security-policy"] == "sandbox allow-same-origin"
     assert client.get(f"/api/files/view{site}/style.css").text == "p { color: red }"
+    # Scripts only without the origin: never both, or a script could lift the sandbox.
+    scripted = client.get(f"/api/files/view{site}/index.html", params={"scripts": True})
+    assert scripted.headers["content-security-policy"] == "sandbox allow-scripts"
     assert client.get(f"/api/files/view{site}").status_code == 404
     secret = home / "private" / "secret.html"
     secret.write_text("x")

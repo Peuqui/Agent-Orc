@@ -210,8 +210,9 @@ einen SSH-Tunnel ([Mehrere Rechner](#mehrere-rechner)).
   neben der Liste: Datei darauf ziehen, dort wiederherstellen oder leeren);
   Markdown und HTML als Seite (Stift: bearbeiten), PDFs mit allen Seiten (pdf.js), Word-Dokumente
   (.docx, umgewandelt von [mammoth](https://github.com/mwilliamson/mammoth.js)), Bilder, Ton und
-  Video; andere Dateien zum Herunterladen. Eine HTML-Seite läuft abgeschottet: Ihre Skripte laufen,
-  erreichen aber weder Agent-Orc noch den Login; Dateien neben ihr (CSS, Bilder) lädt sie nicht.
+  Video; andere Dateien zum Herunterladen. Eine HTML-Seite zeigt CSS und Bilder neben ihr, führt aber
+  nichts aus; „Skripte ausführen“ lässt ihre Skripte laufen, abgeschottet von Agent-Orc und dem
+  Login (dann ohne die Dateien neben ihr).
 - Dateipfade in der Ausgabe eines Agenten sind anklickbar und öffnen die Datei (an der
   genannten Zeile) oder den Ordner: im Terminal und in der Antworten-Ansicht bei Pfaden, die als
   Code geschrieben sind (`docs/TODO.md`, `src/app.py:42`). Angeboten werden nur Pfade, die im
@@ -489,6 +490,11 @@ Konfiguration mit dem passenden `backends`-Eintrag.
 ~/.venv/devtools/bin/ruff check . && ~/.venv/devtools/bin/mypy && venv/bin/python -m pytest   # Backend, mit echtem tmux
 cd frontend && npm test                                               # reine Frontend-Logik (Test-Runner von Node)
 ```
+
+Die Icons der App (eigene Strich-Icons, `frontend/src/icons.ts`) zeigt die Übersicht
+[docs/icons/agent-orc-icons.png](docs/icons/agent-orc-icons.png) (auch als HTML daneben). Nach einer
+Änderung an den Icons schreibt `cd frontend && npm run icons` beide neu; ein Test meldet eine
+veraltete Übersicht.
 
 ## Sicherheit
 

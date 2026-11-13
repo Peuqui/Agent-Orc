@@ -953,10 +953,13 @@ export function rawFileUrl(path: string, download = false): string {
   return url.toString()
 }
 
-/** An HTML file as a page: the path is in the address, so what it names beside it is found. */
-export function pageViewUrl(path: string): string {
+/** An HTML file as a page: the path is in the address, so what it names beside it is found.
+ * `scripts`: its scripts run, but then without what lies beside it (see the server). */
+export function pageViewUrl(path: string, scripts: boolean): string {
   const encoded = path.split('/').map(encodeURIComponent).join('/')
-  return new URL(`api/files/view${encoded}`, document.baseURI).toString()
+  const url = new URL(`api/files/view${encoded}`, document.baseURI)
+  if (scripts) url.search = new URLSearchParams({ scripts: 'true' }).toString()
+  return url.toString()
 }
 
 /**

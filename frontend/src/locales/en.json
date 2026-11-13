@@ -175,6 +175,8 @@
     "edit": "Edit",
     "preview": "Preview",
     "download": "Download",
+    "runScripts": "Run scripts",
+    "stopScripts": "Scripts off",
     "notText": "This file is not a text file (or too large for the editor)."
   },
   "errors": {
@@ -430,7 +432,7 @@
           "**Code blocks** (answers, notes, preview) have a copy button on the right. It copies without the line break at the end, so a command does not run at once when pasted.",
           "**Templates** (in the paperclip menu): put frequent prompts into the input field with a tap; “Manage templates” creates them, for all devices.",
           "**File paths in the output** (e.g. src/main.py:42) are clickable when they exist: files open in the editor at that line, folders in the file view. The folder icon at the top opens the project folder.",
-          "**Editor**: Markdown and HTML show as a page (pencil: edit), PDFs with all pages, Word documents (.docx) as a page, pictures as pictures, sound and video to play; other files that are not text can be downloaded. “Back” returns to where the file was opened from.",
+          "**Editor**: Markdown and HTML show as a page (pencil: edit; an HTML page runs scripts only after “Run scripts”, then without the files beside it), PDFs with all pages, Word documents (.docx) as a page, pictures as pictures, sound and video to play; other files that are not text can be downloaded. “Back” returns to where the file was opened from.",
           "**Extra keys**: the arrow at the end of the first row folds or unfolds the other rows (for every terminal of the device).",
           "**Arrange extra keys** (☰ menu): drag keys into order, also between rows, add ready-made keys, record a key combination (e.g. Ctrl+R) or create a text key that types a fixed text such as /compact and sends it if wanted. The arrangement holds for every device; “reset” brings back the config’s keys."
         ]

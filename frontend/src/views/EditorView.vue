@@ -60,6 +60,9 @@ const previewHtml = ref('')
 const editable = computed(() => isTextKind(kind.value))
 // An HTML page is shown as saved; switching to it shows it anew, with what was saved since.
 const pageShown = ref(0)
+// An HTML page runs no scripts but shows what lies beside it (styles, pictures); on request its
+// scripts run instead, without those files. Asked for anew with every page opened.
+const scriptsRun = ref(false)
 
 function fontSizeTheme(size: number) {
   return EditorView.theme({ '&': { fontSize: `${size}px` }, '.cm-scroller': { fontFamily: 'ui-monospace, monospace' } })
@@ -221,6 +224,19 @@ onBeforeUnmount(() => view?.destroy())
           $t(previewing ? 'editor.edit' : 'editor.preview')
         }}</span>
       </button>
+      <button
+        v-if="kind === 'html' && previewing"
+        class="btn-secondary btn-small"
+        :class="scriptsRun ? '!text-highlight-300' : ''"
+        :aria-pressed="scriptsRun"
+        :title="$t(scriptsRun ? 'editor.stopScripts' : 'editor.runScripts')"
+        :aria-label="$t(scriptsRun ? 'editor.stopScripts' : 'editor.runScripts')"
+        @click="scriptsRun = !scriptsRun"
+      >
+        <AppIcon :name="scriptsRun ? 'stop' : 'play'" /><span class="max-sm:hidden">{{
+          $t(scriptsRun ? 'editor.stopScripts' : 'editor.runScripts')
+        }}</span>
+      </button>
       <template v-if="editable && !previewing">
         <button class="btn-icon" :aria-label="$t('editor.search')" @click="view && openSearchPanel(view)">
           <AppIcon name="search" />
@@ -258,13 +274,14 @@ onBeforeUnmount(() => view?.destroy())
     >
       <div ref="previewContent" class="markdown" :style="zoomStyle" v-html="previewHtml" />
     </article>
-    <!-- Its own scripts run, without Agent-Orc's origin (also set by the server for the page). -->
+    <!-- Scripts or Agent-Orc's origin, never both (the server sets the same for the page). A
+         changed sandbox takes effect only when the frame loads anew: the key does that. -->
     <iframe
       v-if="kind === 'html' && previewing"
-      :key="pageShown"
-      :src="pageViewUrl(path)"
+      :key="`${pageShown}-${scriptsRun}`"
+      :src="pageViewUrl(path, scriptsRun)"
       :title="name"
-      sandbox="allow-scripts"
+      :sandbox="scriptsRun ? 'allow-scripts' : 'allow-same-origin'"
       class="min-h-0 w-full flex-1 bg-white"
     />
     <div v-if="kind === 'pdf'" class="min-h-0 flex-1 overflow-y-auto p-3">

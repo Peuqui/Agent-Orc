@@ -199,8 +199,9 @@ that run Agent-Orc can be shown in the same app, through an SSH tunnel ([Several
   file onto it, restore or empty it there); Markdown and HTML as a page (pencil: edit), PDFs with
   all pages (pdf.js), Word documents (.docx, converted by
   [mammoth](https://github.com/mwilliamson/mammoth.js)), pictures, sound and video; other files to
-  download. An HTML page runs sealed off: its scripts run but reach neither Agent-Orc nor the
-  login; files beside it (CSS, pictures) are not loaded.
+  download. An HTML page shows the CSS and pictures beside it but runs nothing; “Run scripts”
+  lets its scripts run, sealed off from Agent-Orc and the login (then without the files beside
+  it).
 - File paths in an agent's output are clickable and open the file (at the line named) or the
   folder: in the terminal, and in the answers view for paths written as code (`docs/TODO.md`,
   `src/app.py:42`). Only paths that exist in the agent's folder are offered.
@@ -467,6 +468,11 @@ configuration with the matching `backends` entry.
 ~/.venv/devtools/bin/ruff check . && ~/.venv/devtools/bin/mypy && venv/bin/python -m pytest   # backend, with a real tmux
 cd frontend && npm test                                               # pure frontend logic (Node's test runner)
 ```
+
+The app's icons (its own stroke icons, `frontend/src/icons.ts`) are shown in the overview
+[docs/icons/agent-orc-icons.png](docs/icons/agent-orc-icons.png) (also as HTML beside it). After a
+change to the icons, `cd frontend && npm run icons` writes both anew; a test reports an outdated
+overview.
 
 ## Security
 

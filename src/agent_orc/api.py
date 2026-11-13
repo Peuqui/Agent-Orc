@@ -2929,14 +2929,17 @@ def create_app(
         return served_file(resolved, download)
 
     @app.get("/api/files/view/{path:path}", dependencies=authenticated)
-    def viewed_file(path: str) -> FileResponse:
-        """An HTML page shown as a page, with the path in the address, so the styles and pictures
-        it names beside it are found. Its scripts run, but without Agent-Orc's origin: they reach
-        neither this page nor the login."""
+    def viewed_file(path: str, scripts: bool = False) -> FileResponse:
+        """An HTML page shown as a page, with the path in the address. Without scripts it belongs
+        to Agent-Orc's origin, so the login goes along for the styles and pictures it names beside
+        it, and nothing in it runs. With scripts (asked for by the user) they run, but without that
+        origin: they reach neither this page nor the login, and so neither the files beside it.
+        Never both: a script with the origin could lift its sandbox."""
         resolved = scope.resolve("/" + path)
         if not resolved.is_file():
             raise FileNotFoundError(str(resolved))
-        return served_file(resolved, download=False, sandbox="sandbox allow-scripts")
+        sandbox = "sandbox allow-scripts" if scripts else "sandbox allow-same-origin"
+        return served_file(resolved, download=False, sandbox=sandbox)
 
     @app.post("/api/files/existing", dependencies=authenticated)
     def existing_files(body: ExistingPathsRequest) -> dict[str, dict[str, str]]:
