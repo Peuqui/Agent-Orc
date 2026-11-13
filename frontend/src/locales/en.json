@@ -386,7 +386,7 @@
           "Clicking another workspace jumps to the tab that already shows it (↗︎), otherwise this tab switches. A middle click opens a new tab.",
           "Jumping only finds tabs opened from within Agent-Orc – so open further workspaces through the buttons; they can then be detached onto other monitors.",
           "On the phone (installed app) the bar switches within the same window.",
-          "**“+”** adds a running agent as a column, “− n +” sets how many columns fill the screen.",
+          "**“+”** adds a running agent as a column, “− n +” sets how many columns fill the screen (kept on this device only, per workspace).",
           "Dragging a column head sorts the columns; dropped on the name of another workspace at the top, it moves the agent there.",
           "The divider between two columns moves their boundary: drag it (a touch is enough, no long press) and what one column gains the other loses, so the width of all columns together stays. A double click on the divider makes these two columns equal again; the button with the two arrows next to “− n +” (it appears once a width was changed) resets all. The widths are kept on this device only, as screens differ.",
           "On a phone the workspace shows one column at a time; a sideways swipe in the terminal brings the next (to the left) or previous one (to the right), up and down scrolls.",
