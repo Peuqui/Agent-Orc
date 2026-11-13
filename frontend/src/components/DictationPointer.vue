@@ -13,10 +13,12 @@ const ABOVE_PX = 38
 </script>
 
 <template>
-  <DictationBadge
+  <!-- The shadow on the wrapper: the badge's grey while it transcribes is a filter of its own. -->
+  <span
     v-if="badge.shown"
-    :phase="badge.listening ? 'listening' : 'transcribing'"
     class="pointer-events-none fixed z-[60] size-7 drop-shadow"
     :style="{ left: `${badge.x + RIGHT_PX}px`, top: `${badge.y - ABOVE_PX}px` }"
-  />
+  >
+    <DictationBadge :phase="badge.listening ? 'listening' : 'transcribing'" class="size-full" />
+  </span>
 </template>

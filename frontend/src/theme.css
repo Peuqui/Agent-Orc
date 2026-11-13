@@ -95,3 +95,24 @@
   --color-peer-7: var(--color-indigo-300);
   --color-peer-8: var(--color-yellow-200);
 }
+
+/* The dictation button (assets/dictation-badge/badge.css, the STT-Suite's source for it) in this theme's names, so it
+   follows a theme like everything else. The logo's own colours (the face, the waves, the arcs) stay as the source gives them. */
+:root {
+  --badge-rim: var(--color-highlight-300);
+  --badge-rim-listening: var(--color-accent-500);
+  --badge-plate: var(--color-page);
+  --badge-gpu-text: var(--color-highlight-300);
+  --badge-gpu-border: var(--color-highlight-500);
+  --badge-grey-text: var(--color-dim);
+  --badge-grey-border: var(--color-muted);
+  --badge-working: var(--color-working);
+}
+
+/* The speaker button (assets/speaker/speaker.css, the TTS-Suite's source for it) in this theme's names: 24 px as before,
+   the small arrow for "from here on" on the raised surface in the main text colour. The logo's own colours stay as given. */
+:root {
+  --speaker-size: 1.5rem;
+  --speaker-from-plate: var(--color-raised-strong);
+  --speaker-from-arrow: var(--color-main);
+}
