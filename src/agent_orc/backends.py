@@ -32,6 +32,9 @@ from agent_orc.gpuorc import Request, free_for_model, request_json
 DEFAULT_LEVEL = "high"
 # The effort a profile hands over to the start (AgentProfile.env: {effort}).
 EFFORT_VARIABLE = "AGENT_ORC_EFFORT"
+# Claude Code leaves out Anthropic's beta features (and the headers asking for them) when this is
+# set.
+DISABLE_BETAS_VARIABLE = "CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS"
 # What a start tells the hooks of its session: which backend, where it is and which model runs.
 BACKEND_VARIABLE = "AGENT_ORC_BACKEND"
 BASE_URL_VARIABLE = "AGENT_ORC_BACKEND_URL"
@@ -189,6 +192,11 @@ def claude_environment(
         "ANTHROPIC_DEFAULT_SONNET_MODEL": model,
         "ANTHROPIC_DEFAULT_OPUS_MODEL": model,
         "CLAUDE_CODE_SUBAGENT_MODEL": model,
+        # Anthropic's beta features (tool search, tools added or removed in the middle of a
+        # conversation, editing of the context) are unknown to the other backends: DashScope
+        # refuses a conversation that has used them (a message with a `tool_addition` block) as
+        # "Request body format invalid".
+        DISABLE_BETAS_VARIABLE: "1",
     }
     if backend.api_timeout_ms is not None:
         environment["API_TIMEOUT_MS"] = str(backend.api_timeout_ms)

@@ -205,6 +205,7 @@ def test_claude_code_is_pointed_at_the_backend_and_every_alias_at_the_model() ->
         "ANTHROPIC_DEFAULT_SONNET_MODEL": "Qwen-27B-vllm",
         "ANTHROPIC_DEFAULT_OPUS_MODEL": "Qwen-27B-vllm",
         "CLAUDE_CODE_SUBAGENT_MODEL": "Qwen-27B-vllm",
+        "CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS": "1",
         "API_TIMEOUT_MS": "600000",
         "CLAUDE_CODE_MAX_CONTEXT_TOKENS": "262144",
     }
