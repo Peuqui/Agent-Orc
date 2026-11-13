@@ -71,11 +71,12 @@ Aragon, `workspaces.json` dort von Hand ohne `visible` neu geschrieben (Sicherun
   lässt sich unter Windows nicht überschreiben. Weg: Exe mit Commit-Kennung im Namen (`mundwerk-<hash>.exe`) nach
   `Agent-Orc/.agent-orc/previews/` legen, den Pfad in Backticks nennen, Peuqui lädt sie im Browser; alte Datei dort entfernen.
   Stand: `mundwerk-486cbe4.exe`.
-- **Windows merkt Icons je Dateiname** (Explorer-Zwischenspeicher): Unter einem neuen Namen zeigt sich das richtige Icon, unter dem alten das
-  alte. Abhilfe in der Administrator-PowerShell (`;` statt `&`):
-  `taskkill /f /im explorer.exe; Remove-Item "$env:LOCALAPPDATA\Microsoft\Windows\Explorer\iconcache*" -Force -ErrorAction SilentlyContinue; Start-Process explorer.exe`
-  (der Explorer-Neustart hat bei Peuqui gewirkt; `ie4uinit.exe -show` reichte nicht).
-
+- **Windows zeigt das alte Icon einer Exe aus Zwischenspeichern, nicht aus der Datei** (belegt: dieselbe Exe zeigte unter anderem Namen das richtige Icon,
+  unter `mundwerk.exe` in jedem Ordner das alte Mikrofon; Registry-Einträge für den Namen gab es nicht, die Datei war nachweislich richtig). Geholfen hat erst
+  der Befehl, der **alle drei** Zwischenspeicher leert, in der Administrator-PowerShell (`;` statt `&`, der Explorer ist kurz weg):
+  `taskkill /f /im explorer.exe; Remove-Item "$env:LOCALAPPDATA\Microsoft\Windows\Explorer\thumbcache*","$env:LOCALAPPDATA\Microsoft\Windows\Explorer\iconcache*","$env:LOCALAPPDATA\IconCache.db" -Force -ErrorAction SilentlyContinue; Start-Process explorer.exe`
+  (nur `iconcache*` und `ie4uinit.exe -show` reichten nicht; der Vorschau-Zwischenspeicher `thumbcache*` war der entscheidende Teil). Die Datei und das Programm
+  waren die ganze Zeit in Ordnung; Tray-Symbol und Fenster-Icon kommen als Bilder aus der Exe.
 ## STT-Suite, TTS-Suite
 
 - **STT-Suite:** Probe-Seite (`ui/test.js`, `ui/dictation-mic.js`) zeigt das Badge statt des Textknopfs „Aufnehmen“; GPU-Zeichen aus
