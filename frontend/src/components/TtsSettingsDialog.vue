@@ -123,7 +123,7 @@ async function save(): Promise<void> {
 
 <template>
   <BaseDialog :title="$t('ttsSettings.title')" tall @close="emit('close')">
-    <div class="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto text-sm">
+    <div class="thin-scroll flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pr-3 text-sm">
       <div class="flex items-center justify-between gap-2" :title="$t('ttsSettings.autoTitle')">
         <span>{{ $t('ttsSettings.auto') }}</span>
         <ToggleSwitch :checked="choices.auto" @click="choices.auto = !choices.auto">

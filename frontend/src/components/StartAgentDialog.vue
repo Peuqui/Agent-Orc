@@ -246,7 +246,7 @@ async function start(resume: boolean, conversation: string | null = null): Promi
         :placeholder="$t('agent.searchConversations')"
         :aria-label="$t('agent.searchConversations')"
       />
-      <ul v-if="hits" class="flex max-h-64 flex-col gap-1 overflow-y-auto">
+      <ul v-if="hits" class="thin-scroll flex max-h-64 flex-col gap-1 overflow-y-auto">
         <li v-if="hits.length === 0" class="px-3 py-2 text-sm text-muted">{{ $t('agent.noHits') }}</li>
         <li v-for="hit in hits" :key="hit.id">
           <button
@@ -265,7 +265,7 @@ async function start(resume: boolean, conversation: string | null = null): Promi
           </button>
         </li>
       </ul>
-      <ul v-else class="flex max-h-64 flex-col gap-1 overflow-y-auto">
+      <ul v-else class="thin-scroll flex max-h-64 flex-col gap-1 overflow-y-auto">
         <li v-for="conversation in conversations" :key="conversation.id">
           <button
             class="flex w-full flex-col items-start rounded-lg px-3 py-2 text-left hover:bg-raised"

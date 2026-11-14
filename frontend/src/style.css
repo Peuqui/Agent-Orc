@@ -128,6 +128,15 @@
   @apply min-h-11 w-full rounded-lg border border-line-strong bg-page px-3 text-bright placeholder:text-muted focus:border-accent-500 focus:ring-1 focus:ring-accent-500 focus:outline-none;
 }
 
+/* The scrolling body of a dialog: a thin bar in the theme's colours, not the browser's bulky
+   white one. (Not on the terminal, whose scrollbar xterm draws itself.) */
+@layer components {
+  .thin-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-line-strong) transparent;
+  }
+}
+
 /* A Markdown file shown as a page (EditorView, markdown.ts). */
 @layer components {
   /* Long paths, addresses and inline code break at the edge instead of widening the page (in a

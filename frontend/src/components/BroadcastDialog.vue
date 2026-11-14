@@ -44,7 +44,7 @@ async function send(): Promise<void> {
 <template>
   <BaseDialog :title="$t('broadcast.title')" @close="emit('close')">
     <form class="flex flex-col gap-3" @submit.prevent="send">
-      <div class="flex max-h-[40dvh] flex-col gap-1 overflow-y-auto">
+      <div class="thin-scroll flex max-h-[40dvh] flex-col gap-1 overflow-y-auto">
         <label
           v-for="session in running"
           :key="session.id"

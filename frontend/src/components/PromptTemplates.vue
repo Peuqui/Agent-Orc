@@ -67,7 +67,7 @@ async function save(): Promise<void> {
       </button>
     </div>
     <BaseDialog v-if="editing" :title="$t('templates.manage')" @close="editing = null">
-      <div class="flex max-h-[60dvh] flex-col gap-3 overflow-y-auto">
+      <div class="thin-scroll flex max-h-[60dvh] flex-col gap-3 overflow-y-auto">
         <div v-for="(template, index) in editing" :key="index" class="flex flex-col gap-1 rounded-lg border border-line p-2">
           <div class="flex items-center gap-2">
             <input v-model="template.label" class="input min-w-0 flex-1 text-sm" :placeholder="$t('templates.label')" />
