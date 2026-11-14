@@ -49,7 +49,6 @@ Nur was noch aussteht. Erledigtes steht in der Git-Historie.
   vllm-research geprüft: Abweisung mit Grund (503) auf Mini und Aragon, 401 ohne Zeichen, Modellliste geht durch,
   der Start unter Hold beginnt nicht, nichts geladen. Offen: eine echte `claude-local`-Sitzung, die das Tor abweist,
   bekommt nach dem Ende eines Holds `resume_prompt` eingetippt und liest dann ihre liegengebliebenen Nachrichten.
-  Kleinigkeit: Beim Start nennt die Abweisung „Agent-Orc weckt dich“, obwohl es dort keine Sitzung zum Wecken gibt.
 
 ## Dateien-Reiter und Oberfläche
 

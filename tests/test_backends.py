@@ -578,7 +578,8 @@ def gate_state(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
 def test_a_hold_stops_the_start_before_anything_is_freed_or_loaded() -> None:
     gpu_orc = GpuOrcDouble(HOLD)
     fetch = listing_fetch()
-    with pytest.raises(BackendError, match="Cards held: vllm-research measures"):
+    # Not the gate's refusal, which promises to wake a session: the start leaves none.
+    with pytest.raises(BackendError, match="the cards are held: vllm-research measures"):
         prepare_launch(
             "local",
             backend(gpu_orc={"port": 5070}),

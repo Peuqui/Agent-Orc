@@ -222,13 +222,14 @@ def refuse_under_hold(
     base_url: str,
     key: str,
     model: str,
-    gate: CardGateConfig | None,
     fetch: Fetch,
     gpu_orc_request: Request,
 ) -> None:
     """Plan docs/PLAN-2026-11-14-kartentor.md: a start that would load a model onto cards GPU-Orc
     holds for somebody else does not begin. A model that runs already loads nothing. A GPU-Orc
-    that does not answer is no hold: free_for_model tells that, and the gate stops the requests."""
+    that does not answer is no hold: free_for_model tells that, and the gate stops the requests.
+    Not the gate's refusal: that one promises to wake the session, and a start that does not
+    begin leaves no session to wake."""
     if backend.gpu_orc is None or model_runs(base_url, key, model, fetch):
         return
     try:
@@ -237,8 +238,6 @@ def refuse_under_hold(
         return
     if hold is None:
         return
-    if gate is not None:
-        raise BackendError(gate.refusal.format(reason=hold["reason"], since=hold["since"]))
     raise BackendError(
         f"the cards are held: {hold['reason']} (since {hold['since']}); "
         f"{backend.label} would load {model!r} onto them"
@@ -420,7 +419,7 @@ def prepare_launch(
         )
     # Before anything loads the model: free_for_model would clear cards under a hold, and the
     # context length comes from the server loading the model.
-    refuse_under_hold(backend, base_url, key, model, gate, fetch, gpu_orc_request)
+    refuse_under_hold(backend, base_url, key, model, fetch, gpu_orc_request)
     if backend.gpu_orc is not None:
         for line in free_for_model(backend.gpu_orc, base_url, model, gpu_orc_request):
             print(f"GPU-Orc: {line}", file=sys.stderr)
