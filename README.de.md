@@ -509,6 +509,17 @@ mit eigenem Port; von einem anderen Rechner aus braucht er sein Token (`token_fi
 antwortet er nicht oder bleiben Karten belegt, erscheint das als Problem, und Start oder Eingabe
 gehen weiter.
 
+Ein Hold von GPU-Orc (jemand hält die Karten fest) verhindert den Start einer lokalen Sitzung, deren
+Modell noch nicht geladen ist, mit Grund. Mit `card_gate` in der Config (Port, `refusal`,
+`resume_prompt`, `check_seconds`) sprechen die Sitzungen, die Agent-Orc auf einem Backend mit
+`gpu_orc` startet, statt mit dem Server mit einem Tor auf 127.0.0.1: jede mit einem eigenen Zeichen
+als Schlüssel, das das Tor prüft. Eine Anfrage, deren Modell nicht geladen ist, weist es ab, solange
+die Karten gehalten sind (oder GPU-Orc nicht antwortet), mit `refusal` als Grund; das erfasst auch,
+was an den Hooks vorbeigeht, etwa eine Sitzung, die eine AI-Connect-Nachricht weckt. Die Karte des
+Agenten zeigt dann, dass er auf Karten wartet, und nach dem Ende des Holds tippt Agent-Orc ihm
+`resume_prompt` ein (sonst schliefe eine Sitzung nach einem Zug, den ein API-Fehler beendet, mit
+ungelesenen Nachrichten weiter). Siehe docs/PLAN-2026-11-14-kartentor.md.
+
 ```yaml
 backends:
   local:

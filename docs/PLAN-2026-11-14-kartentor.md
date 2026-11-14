@@ -2,6 +2,10 @@
 
 Abgestimmt mit Mini:AIfred-Intelligence (21:47), zur Freigabe bei Peuqui.
 
+**Stand:** von Peuqui freigegeben; Schritte 1–4 umgesetzt (5195539, ac84240, 6673850, f06c9b8).
+Nachtrag 22:09: AI-Connect 7075647 startet den Watcher auch nach `StopFailure` (`--new-only`): eine
+abgewiesene Sitzung wacht für neue Nachrichten wieder auf, liegengebliebene liest erst der Weckzug.
+
 ## Befund
 
 Am 14.11. hielt vllm-research über GPU-Orc die Karten (Hold bis 15.11., 06:15). Die lokale Sitzung

@@ -484,6 +484,16 @@ port; from another machine it needs its token (`token_file`), and `model_server`
 server when it has more than one. What it did is shown; when it does not answer or the cards stay
 held, that is shown as a problem, and the start or the input goes on.
 
+A hold of GPU-Orc (somebody keeps the cards) stops the start of a local session whose model is not
+loaded yet, with the reason. With `card_gate` in the config (port, `refusal`, `resume_prompt`,
+`check_seconds`) the sessions Agent-Orc starts on a backend with `gpu_orc` talk to a gate on
+127.0.0.1 instead of the server: each with a mark of its own as its key, which the gate checks. A
+request whose model is not loaded is turned away while the cards are held (or while GPU-Orc does not
+answer), with `refusal` as the reason; this covers what bypasses the hooks, such as a session woken by
+an AI-Connect message. The agent's card then shows that it waits for the cards, and once the hold has
+ended Agent-Orc types `resume_prompt` into it (a turn ended by an API error leaves the session asleep
+otherwise, with its messages unread). See docs/PLAN-2026-11-14-kartentor.md.
+
 ```yaml
 backends:
   local:
