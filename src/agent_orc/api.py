@@ -828,8 +828,8 @@ def create_app(
     listen on) means everyone who reaches the socket is the user: nothing asks for a login."""
     if (credentials is None) != (config.server.socket is not None):
         raise ValueError("credentials are needed exactly when the server listens on a port")
-    sessions = SessionManager(config.tmux.socket_name, config.agents, config.terminal)
     home = Path.home()
+    sessions = SessionManager(config.tmux.socket_name, config.agents, config.terminal, home, clock)
     # The folder set in the app wins over the config's (which is where a new installation starts).
     scope = AccessScope(
         read_base_dir() or config.files.base_dir,

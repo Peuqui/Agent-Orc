@@ -319,6 +319,13 @@ def search_claude_conversations(home: Path, folder: Path, query: str) -> list[Se
 CONVERSATION_SOURCES: dict[str, Callable[[Path, Path, Clock], list[Conversation]]] = {
     "claude": list_claude_conversations,
 }
+
+
+def has_conversation(source: str, home: Path, folder: Path, clock: Clock) -> bool:
+    """Whether the folder has any conversation of this source (one that can be continued)."""
+    return bool(CONVERSATION_SOURCES[source](home, folder, clock))
+
+
 CONVERSATION_SEARCHES: dict[str, Callable[[Path, Path, str], list[SearchHit]]] = {
     "claude": search_claude_conversations,
 }

@@ -8,7 +8,8 @@ from typing import Any
 
 import pytest
 
-from agent_orc.config import AgentProfile, TerminalConfig
+from agent_orc.config import AgentProfile, ConversationsConfig, TerminalConfig
+from agent_orc.history import claude_project_dir
 from agent_orc.sessions import (
     TMUX_ESCAPE_MS,
     AgentSession,
@@ -32,6 +33,13 @@ AGENTS = {
     "echo": AgentProfile(
         label="Echo", start=["sh", "-c", "echo started {name}; sleep 60"], resume=["sleep", "60"]
     ),
+    # Keeps its conversations where Claude Code does, so "continue" needs one in the folder.
+    "claude-like": AgentProfile(
+        label="Claude-like",
+        start=["sh", "-c", "echo started; sleep 60"],
+        resume=["sh", "-c", "echo continued; sleep 60"],
+        conversations=ConversationsConfig(source="claude", resume=["sleep", "62"]),
+    ),
     "reader": AgentProfile(label="Reader", start=["cat"], resume=["cat"]),
     "chooser": AgentProfile(
         label="Chooser",
@@ -45,7 +53,7 @@ AGENTS = {
 
 
 @pytest.fixture
-def manager(socket_name: str) -> SessionManager:
+def manager(socket_name: str, home: Path) -> SessionManager:
     terminal = TerminalConfig(
         keys=[],
         submit_delay_ms=50,
@@ -53,7 +61,12 @@ def manager(socket_name: str) -> SessionManager:
         type_chunk_chars=50,
         type_chunk_delay_ms=5,
     )
-    return SessionManager(socket_name, AGENTS, terminal)
+    return SessionManager(socket_name, AGENTS, terminal, home, time.time)
+
+
+@pytest.fixture
+def home(tmp_path: Path) -> Path:
+    return tmp_path / "home"
 
 
 @pytest.fixture
@@ -488,7 +501,9 @@ def exit_agents(marker: Path) -> dict[str, AgentProfile]:
     }
 
 
-def exiting_manager(socket_name: str, marker: Path, wait_seconds: int) -> SessionManager:
+def exiting_manager(
+    socket_name: str, marker: Path, wait_seconds: int, home: Path
+) -> SessionManager:
     terminal = TerminalConfig(
         keys=[],
         submit_delay_ms=50,
@@ -497,14 +512,14 @@ def exiting_manager(socket_name: str, marker: Path, wait_seconds: int) -> Sessio
         type_chunk_delay_ms=5,
         exit_wait_seconds=wait_seconds,
     )
-    return SessionManager(socket_name, exit_agents(marker), terminal)
+    return SessionManager(socket_name, exit_agents(marker), terminal, home, time.time)
 
 
 def test_stop_lets_an_agent_with_an_exit_command_end_by_itself(
     socket_name: str, workdir: Path, tmp_path: Path
 ) -> None:
     marker = tmp_path / "tidied-up"
-    manager = exiting_manager(socket_name, marker, wait_seconds=5)
+    manager = exiting_manager(socket_name, marker, 5, tmp_path)
     session = manager.start("polite", workdir, resume=False)
 
     started = time.monotonic()
@@ -519,7 +534,7 @@ def test_stop_lets_an_agent_with_an_exit_command_end_by_itself(
 def test_stop_kills_an_agent_that_does_not_exit_when_asked(
     socket_name: str, workdir: Path, tmp_path: Path
 ) -> None:
-    manager = exiting_manager(socket_name, tmp_path / "unused", wait_seconds=1)
+    manager = exiting_manager(socket_name, tmp_path / "unused", 1, tmp_path)
     session = manager.start("deaf", workdir, resume=False)
 
     started = time.monotonic()
@@ -534,10 +549,48 @@ def test_restart_lets_an_agent_with_an_exit_command_end_by_itself(
     socket_name: str, workdir: Path, tmp_path: Path
 ) -> None:
     marker = tmp_path / "tidied-up"
-    manager = exiting_manager(socket_name, marker, wait_seconds=5)
+    manager = exiting_manager(socket_name, marker, 5, tmp_path)
     session = manager.start("polite", workdir, resume=False)
 
     restarted = manager.restart(session, {}, None)
 
     assert marker.read_text().strip() == "quit"
     assert (restarted.id, restarted.running) == (session.id, True)
+
+
+def add_conversation(home: Path, folder: Path) -> None:
+    directory = claude_project_dir(home, folder)
+    directory.mkdir(parents=True)
+    (directory / "0b6c1a5e-1111-4222-8333-444455556666.jsonl").write_text("{}\n")
+
+
+def test_restart_without_conversation_in_folder_starts_a_new_one(
+    manager: SessionManager, socket_name: str, workdir: Path
+) -> None:
+    session = manager.start("claude-like", workdir, resume=False)
+    restarted = manager.restart(session, {}, None)
+    assert "started" in pane_command(socket_name, restarted.id)
+
+
+def test_restart_with_conversation_in_folder_continues_it(
+    manager: SessionManager, socket_name: str, workdir: Path, home: Path
+) -> None:
+    session = manager.start("claude-like", workdir, resume=False)
+    add_conversation(home, workdir)
+    restarted = manager.restart(session, {}, None)
+    assert "continued" in pane_command(socket_name, restarted.id)
+
+
+def test_restart_of_profile_without_conversations_keeps_resume(
+    manager: SessionManager, socket_name: str, workdir: Path
+) -> None:
+    session = manager.start("sleeper", workdir, resume=False)
+    restarted = manager.restart(session, {}, None)
+    assert pane_command(socket_name, restarted.id) == "sleep 61"
+
+
+def test_start_resuming_in_folder_without_conversation_starts_a_new_one(
+    manager: SessionManager, socket_name: str, workdir: Path
+) -> None:
+    session = manager.start("claude-like", workdir, resume=True)
+    assert "started" in pane_command(socket_name, session.id)

@@ -3129,6 +3129,9 @@ def test_agent_switches_to_another_profile_in_its_session(
     assert switched.json()["id"] == session_id and switched.json()["profile"] == "talker_too"
     assert pane_command(socket_name, session_id) == "sleep 63"
     # Profiles keeping their conversations in the same place go on with the folder's last one.
+    transcripts = claude_project_dir(home, home / "projects")
+    transcripts.mkdir(parents=True)
+    (transcripts / "1b0c8f2e-0000-4000-8000-00000000abcd.jsonl").write_text("{}\n")
     client.post(url, json={"profile": "talker"})
     assert client.post(url, json={"profile": "talker_too"}).status_code == 200
     assert pane_command(socket_name, session_id) == "sleep 62"

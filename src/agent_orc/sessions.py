@@ -11,6 +11,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+from agent_orc.auth import Clock
 from agent_orc.config import (
     CONVERSATION_PLACEHOLDER,
     MODEL_PLACEHOLDER,
@@ -20,6 +21,7 @@ from agent_orc.config import (
     TerminalConfig,
 )
 from agent_orc.effort import agent_settings_file
+from agent_orc.history import has_conversation
 
 logger = logging.getLogger(__name__)
 
@@ -208,11 +210,19 @@ def text_left_in_input(screen: str, text: str) -> bool:
 
 class SessionManager:
     def __init__(
-        self, socket_name: str, agents: dict[str, AgentProfile], terminal: TerminalConfig
+        self,
+        socket_name: str,
+        agents: dict[str, AgentProfile],
+        terminal: TerminalConfig,
+        home: Path,
+        clock: Clock,
     ) -> None:
         self._socket_name = socket_name
         self._agents = agents
         self._terminal = terminal
+        # Where the agents keep their conversations (to see whether a folder has one).
+        self._home = home
+        self._clock = clock
 
     def list(self) -> list[AgentSession]:
         result = self._tmux("list-sessions", "-F", LIST_FORMAT, check=False)
@@ -349,9 +359,25 @@ class SessionManager:
         else:
             # The folder's last conversation belongs to its first agent: a further one only goes
             # on with its own (by id, above), so it starts anew without one.
-            arguments = profile.resume if resume and suffix is None else profile.start
+            continues = resume and suffix is None
+            if continues and not self._has_conversation_to_continue(profile, path):
+                logger.info(
+                    "No conversation to continue for session %s in %s: starting a new one",
+                    session_id_for(path, profile.terminal, suffix),
+                    path,
+                )
+                continues = False
+            arguments = profile.resume if continues else profile.start
         settings = agent_settings_file(session_id_for(path, profile.terminal, suffix))
         return build_command(arguments, agent_name(path, suffix), model, settings)
+
+    def _has_conversation_to_continue(self, profile: AgentProfile, folder: Path) -> bool:
+        """Whether "continue the last conversation" has one to continue. A profile that does not
+        say where its conversations are kept is trusted to cope itself; Claude Code would end
+        with "No conversation found to continue" in a new folder."""
+        if profile.conversations is None:
+            return True
+        return has_conversation(profile.conversations.source, self._home, folder, self._clock)
 
     def _respawn(
         self,
