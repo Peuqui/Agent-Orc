@@ -27,7 +27,7 @@ files:
 terminal:
   # Extra-keys bar shown above the on-screen keyboard, one list per row.
   # A key either sends a byte sequence (YAML escapes: "\e" is Esc) or is a sticky
-  # modifier (ctrl or alt) that applies to the next key typed.
+  # modifier (ctrl or alt) that applies to the next key typed. A `title` is the key's tooltip.
   keys:
     - - {label: Esc, send: "\e"}
       - {label: Tab, send: "\t"}
@@ -47,7 +47,9 @@ terminal:
       - {label: "~", send: "~"}
       # Ctrl+X Ctrl+K twice: Claude Code stops all its subagents and workflows running in the
       # background (Esc interrupts the agent itself only).
-      - {label: "✕Sub", send: "\x18\x0b\x18\x0b"}
+      - label: "✕Sub"
+        send: "\x18\x0b\x18\x0b"
+        title: "Stop all subagents and workflows running in the background (Ctrl+X Ctrl+K, twice)"
   # Text from the input field is sent first, Enter after this pause, so agents treat it
   # as typed text plus submit rather than as one pasted block.
   submit_delay_ms: 80

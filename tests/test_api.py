@@ -2366,6 +2366,7 @@ def test_extra_keys_arranged_for_every_device(
         "send": "/compact",
         "modifier": None,
         "submit": True,
+        "title": None,
     }
     # A text key needs its text; a key is either a sequence or a modifier.
     broken = [[{"label": "x", "modifier": "ctrl", "submit": True}]]

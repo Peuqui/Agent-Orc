@@ -6,11 +6,11 @@ import type { TerminalKey } from './api'
 export const ESC = '\x1b'
 
 function key(label: string, send: string): TerminalKey {
-  return { label, send, modifier: null, submit: false }
+  return { label, send, modifier: null, submit: false, title: null }
 }
 
 function modifierKey(label: string, modifier: 'ctrl' | 'alt'): TerminalKey {
-  return { label, send: null, modifier, submit: false }
+  return { label, send: null, modifier, submit: false, title: null }
 }
 
 // F1–F4 have their own short form; the rest are numbered with gaps (xterm).

@@ -39,6 +39,14 @@ def test_terminal_keys_parse_escapes() -> None:
     assert sends["✕Sub"] == "\x18\x0b\x18\x0b"
 
 
+def test_a_key_may_say_what_it_does_as_its_tooltip() -> None:
+    keys = [key for row in parse_config(default_config_text()).terminal.keys for key in row]
+    titles = {key.label: key.title for key in keys}
+    assert titles["✕Sub"] and "subagents" in titles["✕Sub"]
+    # Most keys are what their label says: no tooltip.
+    assert titles["Esc"] is None
+
+
 def test_key_needs_exactly_one_action() -> None:
     text = default_config_text().replace('{label: Esc, send: "\\e"}', "{label: Esc}")
     with pytest.raises(ValidationError):

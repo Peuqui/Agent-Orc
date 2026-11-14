@@ -100,7 +100,7 @@ function stopRecording(): void {
 onBeforeUnmount(stopRecording)
 
 function addMacro(): void {
-  add({ label: macroLabel.value.trim(), send: macroText.value, modifier: null, submit: macroSubmit.value })
+  add({ label: macroLabel.value.trim(), send: macroText.value, modifier: null, submit: macroSubmit.value, title: null })
   macroLabel.value = ''
   macroText.value = ''
 }
@@ -143,7 +143,7 @@ async function reset(): Promise<void> {
               drag?.active && drag.target === item.uid && drag.id !== item.uid ? 'ring-2 ring-highlight-400' : '',
               drag?.active && drag.id === item.uid ? 'opacity-50' : '',
             ]"
-            :title="item.key.submit ? $t('keysEditor.macroTitle', { text: item.key.send }) : undefined"
+            :title="item.key.title ?? (item.key.submit ? $t('keysEditor.macroTitle', { text: item.key.send }) : undefined)"
             @pointerdown="reorder.onPointerDown($event, item.uid)"
             @pointermove="reorder.onPointerMove"
             @pointerup="reorder.onPointerUp"

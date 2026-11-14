@@ -81,6 +81,8 @@ class TerminalKey(StrictModel):
     modifier: Literal["ctrl", "alt"] | None = None
     # A text key (macro): Enter follows the text after the submit delay, as for the input field.
     submit: bool = False
+    # What the key does, shown as its tooltip; none: no tooltip.
+    title: str | None = None
 
     @model_validator(mode="after")
     def send_xor_modifier(self) -> Self:

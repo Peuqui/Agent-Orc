@@ -381,6 +381,8 @@ export interface TerminalKey {
   modifier: Modifier | null
   /** A text key (macro): Enter follows the text, as when sending from the input field. */
   submit: boolean
+  /** What the key does, shown as its tooltip. */
+  title: string | null
 }
 
 export interface TerminalSettings {

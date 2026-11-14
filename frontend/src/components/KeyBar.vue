@@ -40,6 +40,7 @@ function press(key: TerminalKey): void {
             ? 'bg-accent-600 text-on-color'
             : 'bg-panel text-main active:bg-raised-strong'
         "
+        :title="key.title ?? undefined"
         @pointerdown.prevent
         @click="press(key)"
       >
