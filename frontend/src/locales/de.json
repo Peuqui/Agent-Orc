@@ -494,7 +494,10 @@
     "thisMachine": "dieser Rechner",
     "preferLoaded": "Bereits geladene lokale Engine bevorzugen",
     "preferLoadedHint": "Läuft schon eine lokale GPU-Engine, die oben an ist, spricht sie zuerst, statt dass eine zweite geladen wird. Cloud- und CPU-Engines sind nicht gemeint.",
-    "pause": "Pause zwischen Absätzen (ms)"
+    "pause": "Pause zwischen Absätzen (ms)",
+    "auto": "Automatik der TTS-Suite",
+    "autoTitle": "Die Suite nimmt ihre eigene Liste statt der unten: Reihenfolge, Ein und Aus und die Textmenge je Engine stellst du auf der Seite der Suite ein.",
+    "autoHint": "Die Suite nimmt ihre eigene Liste (die Automatik): Reihenfolge, Ein und Aus und wie viel Text jede Engine bekommt, stellst du auf der Seite der Suite ein. Hier wählst du nur Stimme, Tempo und Tonhöhe je Engine; sie gelten für die Engines der Automatik."
   },
   "models": {
     "freeUntil": "frei bis {date} (noch {count} Tag | noch {count} Tage)"

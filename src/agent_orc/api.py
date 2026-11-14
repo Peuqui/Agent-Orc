@@ -645,6 +645,9 @@ class TtsChoices(BaseModel):
     paragraph_pause_ms: int = Field(ge=0)
     # Put a GPU engine that is running already first when reading, instead of loading another.
     prefer_loaded: bool
+    # The service's own list (set on its page) speaks instead of `entries`; voice, speed and pitch
+    # per engine still go along.
+    auto: bool
     # The voice of an engine (the same on every machine); an engine without one is not listed.
     voices: dict[str, str]
     # Speed and pitch of an engine, sent with every reading (the service's values for the voice

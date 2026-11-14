@@ -152,14 +152,17 @@ def choose(
     voices: dict[str, str] | None = None,
     tuning: dict[str, dict[str, float | None]] | None = None,
     prefer_loaded: bool = False,
+    auto: bool = False,
 ) -> None:
-    """The user's choice: these entries in this order, with these voices (and speed and pitch)."""
+    """The user's choice: these entries in this order, with these voices (and speed and pitch),
+    or the service's own list (`auto`)."""
     chosen = {
         "entries": list(entries),
         "voices": voices or {},
         "tuning": tuning or {},
         "paragraph_pause_ms": 700,
         "prefer_loaded": prefer_loaded,
+        "auto": auto,
     }
     assert client.put("/api/tts/choices", json=chosen).status_code == 204
 
@@ -229,6 +232,8 @@ def test_before_anything_is_chosen_every_catalog_row_is_listed_and_off(
         ("dashscope_audio3", None, "whole", False),
     ]
     assert chosen["voices"] == {}
+    # Until the user asks for the service's own list, the list of the entries speaks.
+    assert chosen["auto"] is False
 
 
 def test_the_choice_is_kept_and_nothing_is_removed_when_the_catalog_changes(
@@ -277,6 +282,7 @@ def test_an_engine_listed_twice_on_one_machine_is_refused(
         "voices": {},
         "paragraph_pause_ms": 0,
         "prefer_loaded": False,
+        "auto": False,
     }
     assert client.put("/api/tts/choices", json=twice).status_code == 422
     elsewhere = {
@@ -284,6 +290,7 @@ def test_an_engine_listed_twice_on_one_machine_is_refused(
         "voices": {},
         "paragraph_pause_ms": 0,
         "prefer_loaded": False,
+        "auto": False,
     }
     assert client.put("/api/tts/choices", json=elsewhere).status_code == 204
 
@@ -493,3 +500,43 @@ def test_closing_in_the_middle_of_a_read_leaves_the_close_to_the_reading_thread(
     response.release.set()
     reader.join(5)
     assert response.closed.is_set() and result == [b""]
+
+
+def test_the_service_s_own_list_is_asked_for_instead_of_the_entries(
+    clock: FakeClock, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, service: str
+) -> None:
+    client = make_client(clock, tmp_path, monkeypatch, service)
+    choose(
+        client,
+        entry("piper"),
+        entry("edge", enabled=False),
+        voices={"piper": "Thorsten", "edge": "Katja"},
+        tuning={"qwen3local": {"speed": 1.2, "pitch": None}},
+        auto=True,
+    )
+    assert client.get("/api/tts/choices").json()["auto"] is True
+    answer = client.post("/api/tts/speak", json={"text": "Hello.", "language": "en"})
+    assert answer.status_code == 200
+    head = FakeSpeechService.heard[0]
+    assert head["engines"] == "auto"
+    # The service's list may name any engine: what the user set for each goes along, switched on
+    # in the entries or not.
+    assert head["voices"] == {
+        "piper": {"voice": "Thorsten"},
+        "edge": {"voice": "Katja"},
+        "qwen3local": {"speed": 1.2},
+    }
+
+
+def test_the_service_s_own_list_needs_no_entry_switched_on_here(
+    clock: FakeClock, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, service: str
+) -> None:
+    client = make_client(clock, tmp_path, monkeypatch, service)
+    choose(client, entry("piper", enabled=False), auto=True)
+    answer = client.post("/api/tts/speak", json={"text": "Hello.", "language": "en"})
+    assert answer.status_code == 200
+    assert FakeSpeechService.heard[0]["engines"] == "auto"
+    # The own list is the one that needs entries, and says so when none is on.
+    choose(client, entry("piper", enabled=False), auto=False)
+    refused = client.post("/api/tts/speak", json={"text": "Hello.", "language": "en"})
+    assert refused.status_code == 422 and "switched on" in refused.text

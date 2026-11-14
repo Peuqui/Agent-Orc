@@ -146,6 +146,7 @@ def merged_choices(stored: dict[str, Any], rows: list[dict[str, Any]]) -> dict[s
         "tuning": stored["tuning"],
         "paragraph_pause_ms": stored["paragraph_pause_ms"],
         "prefer_loaded": stored["prefer_loaded"],
+        "auto": stored["auto"],
     }
 
 
@@ -196,6 +197,26 @@ def _engine_settings(chosen: dict[str, Any], engines: list[str]) -> dict[str, di
     return settings
 
 
+def _engines_of_reading(chosen: dict[str, Any]) -> tuple[str | list[dict[str, Any]], list[str]]:
+    """What the head of a reading names as `engines`, and the engines whose voice, speed and pitch
+    go along: the entries the user switched on and the service offers (in the order of speaking),
+    or `"auto"`, the service's own list, which may name any engine, so every engine the user set
+    something for goes along."""
+    if chosen["auto"]:
+        return "auto", list(dict.fromkeys([*chosen["voices"], *chosen["tuning"]]))
+    # Without a choice the service refuses (a request names its engines); the user chooses first.
+    on = [entry for entry in chosen["entries"] if entry["enabled"] and entry["offered"]]
+    if not on:
+        raise NothingSwitchedOnError(
+            "no engine of the TTS service is switched on: choose them in the settings"
+            " (Engines of the TTS service)"
+        )
+    listed = [
+        {"engine": entry["engine"], "unit": entry["unit"], "host": entry["host"]} for entry in on
+    ]
+    return listed, list(dict.fromkeys(entry["engine"] for entry in on))
+
+
 def speak(
     config: TtsSuiteConfig,
     directory: Path,
@@ -206,26 +227,17 @@ def speak(
     chosen: dict[str, Any],
 ) -> FrameStream:
     """The frames of the reading, with the entries the user switched on and the service offers
-    (`chosen` as merged_choices has it: `entries` in the order of speaking, `voices` per engine).
+    (`chosen` as merged_choices has it: `entries` in the order of speaking, `voices` per engine),
+    or with the service's own list when the user chose that (`auto`).
     The service answers once the first piece exists, so a
     reading that cannot start raises here, before anything is sent on; later failures are frames."""
-    # Without a choice the service refuses (a request names its engines); the user chooses first.
-    on = [entry for entry in chosen["entries"] if entry["enabled"] and entry["offered"]]
-    if not on:
-        raise NothingSwitchedOnError(
-            "no engine of the TTS service is switched on: choose them in the settings"
-            " (Engines of the TTS service)"
-        )
-    engines = list(dict.fromkeys(entry["engine"] for entry in on))
+    engines, named = _engines_of_reading(chosen)
     head: dict[str, Any] = {
         "text": text,
         "language": language,
         "paragraph_pause_ms": chosen["paragraph_pause_ms"],
-        "engines": [
-            {"engine": entry["engine"], "unit": entry["unit"], "host": entry["host"]}
-            for entry in on
-        ],
-        "voices": _engine_settings(chosen, engines),
+        "engines": engines,
+        "voices": _engine_settings(chosen, named),
     }
     if speed is not None:
         head["speed"] = speed

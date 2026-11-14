@@ -517,6 +517,9 @@ export interface TtsChoices {
   entries: TtsEntry[]
   paragraph_pause_ms: number
   prefer_loaded: boolean
+  /** The service's own list (set on its page) speaks instead of the entries; voice, speed and pitch
+   * per engine still go along. */
+  auto: boolean
   voices: Record<string, string>
   /** Speed and pitch per engine, sent with every reading. */
   tuning: Record<string, TtsTuning>

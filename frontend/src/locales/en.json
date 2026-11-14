@@ -494,7 +494,10 @@
     "thisMachine": "this machine",
     "preferLoaded": "Prefer a local engine that is already loaded",
     "preferLoadedHint": "If a local GPU engine that is switched on above is running already, it speaks first instead of a second one being loaded. Cloud and CPU engines are not meant.",
-    "pause": "Pause between paragraphs (ms)"
+    "pause": "Pause between paragraphs (ms)",
+    "auto": "Automatic list of the TTS-Suite",
+    "autoTitle": "The suite uses its own list instead of the one below: the order, on and off and how much text each engine is given you set on the suite's page.",
+    "autoHint": "The suite uses its own list (the automatic one): the order, on and off and how much text each engine is given you set on the suite's page. Here you only choose voice, speed and pitch per engine; they apply to the engines of the automatic list."
   },
   "models": {
     "freeUntil": "free until {date} ({count} day left | {count} days left)"

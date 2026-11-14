@@ -114,7 +114,8 @@ einen SSH-Tunnel ([Mehrere Rechner](#mehrere-rechner)).
   du in den Einstellungen wählst. Mit einem Abschnitt `tts_suite:` spricht ein
   [TTS-Suite](https://github.com/Peuqui/TTS-Suite)-Dienst auf dem Server: die Engines, die er anbietet (auch auf
   anderen Rechnern und in der Cloud), werden in einem eigenen Fenster der Einstellungen geordnet, angeschaltet
-  und mit einer Stimme versehen, und das erste Stück läuft schon, während der Rest noch entsteht; der Browser
+  und mit einer Stimme versehen (oder es spricht die Automatik-Liste der Suite, mit Stimme, Tempo und Tonhöhe je
+  Engine von hier), und das erste Stück läuft schon, während der Rest noch entsteht; der Browser
   spielt, was der Dienst schickt, und das Token bleibt auf dem Server. Der Vorlese-Knopf „Neue (n)“ wird grau, wenn nichts Neues da ist, wie
   das Häkchen daneben. Das 🔊 vor dem Hörabsatz einer Antwort ist ein Knopf, der ihn noch einmal vorliest; mit der
   TTS-Suite spielt die Wiederholung aus dem Speicher des Browsers (letzte 8 Lesungen, ein Neuladen leert ihn), ohne den

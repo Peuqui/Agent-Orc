@@ -13,7 +13,9 @@ import ToggleSwitch from './ToggleSwitch.vue'
 // The engines of the TTS service for this Agent-Orc: drag to set the order they are tried in, switch
 // them on or off, choose how much text each is given at once and a voice per engine (asked of the
 // service). An engine on another machine is its own row. Kept on the server, as the server asks the
-// service. An engine that fails is followed by the next one that is on.
+// service. An engine that fails is followed by the next one that is on. With the automatic list
+// of the service (`auto`) it is the service's order, switches and units that count: only the voice,
+// speed and pitch of each engine are set here.
 const emit = defineEmits<{ close: [] }>()
 const toast = useToast()
 const { t, locale } = useI18n()
@@ -23,7 +25,7 @@ const own = computed(() => hostsState.value?.self ?? t('ttsSettings.thisMachine'
 loadHosts().catch(toast.error)
 
 const UNITS: TtsUnit[] = ['sentence', 'paragraph', 'whole']
-const choices = ref<TtsChoices>({ entries: [], voices: {}, tuning: {}, paragraph_pause_ms: 0, prefer_loaded: false })
+const choices = ref<TtsChoices>({ entries: [], voices: {}, tuning: {}, paragraph_pause_ms: 0, prefer_loaded: false, auto: false })
 const catalog = ref<TtsCatalogRow[]>([])
 // The voices of each engine, asked when the window opens; an engine without any has no choice.
 const voices = ref<Record<string, { id: string; label: string }[]>>({})
@@ -57,6 +59,7 @@ void load()
 
 /** Switched on, but the machine does not answer: the service skips it when speaking. */
 const unreachable = (entry: TtsEntry): boolean =>
+  !choices.value.auto &&
   entry.enabled &&
   entry.offered &&
   catalog.value.find((row) => placeOf(row) === placeOf(entry))?.status === 'unreachable'
@@ -104,7 +107,9 @@ const reorder = useReorder({
   ignore: '[data-no-drag]',
 })
 const drag = reorder.drag
-const nothingOn = computed(() => loaded.value && !choices.value.entries.some((entry) => entry.enabled && entry.offered))
+const nothingOn = computed(
+  () => loaded.value && !choices.value.auto && !choices.value.entries.some((entry) => entry.enabled && entry.offered),
+)
 
 async function save(): Promise<void> {
   try {
@@ -119,8 +124,14 @@ async function save(): Promise<void> {
 <template>
   <BaseDialog :title="$t('ttsSettings.title')" tall @close="emit('close')">
     <div class="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto text-sm">
-      <p class="text-xs text-hint">{{ $t('ttsSettings.hint') }}</p>
-      <div class="flex items-center justify-between gap-2" :title="$t('ttsSettings.preferLoadedHint')">
+      <div class="flex items-center justify-between gap-2" :title="$t('ttsSettings.autoTitle')">
+        <span>{{ $t('ttsSettings.auto') }}</span>
+        <ToggleSwitch :checked="choices.auto" @click="choices.auto = !choices.auto">
+          <span class="sr-only">{{ $t('ttsSettings.auto') }}</span>
+        </ToggleSwitch>
+      </div>
+      <p class="text-xs text-hint">{{ $t(choices.auto ? 'ttsSettings.autoHint' : 'ttsSettings.hint') }}</p>
+      <div v-if="!choices.auto" class="flex items-center justify-between gap-2" :title="$t('ttsSettings.preferLoadedHint')">
         <span>{{ $t('ttsSettings.preferLoaded') }}</span>
         <ToggleSwitch :checked="choices.prefer_loaded" @click="choices.prefer_loaded = !choices.prefer_loaded">
           <span class="sr-only">{{ $t('ttsSettings.preferLoaded') }}</span>
@@ -135,12 +146,13 @@ async function save(): Promise<void> {
           v-for="entry in choices.entries"
           :key="placeOf(entry)"
           :data-place="placeOf(entry)"
-          class="flex cursor-grab touch-pan-y flex-col gap-2 rounded-lg border border-line bg-panel/60 p-2 select-none [-webkit-touch-callout:none]"
+          class="flex touch-pan-y flex-col gap-2 rounded-lg border border-line bg-panel/60 p-2 select-none [-webkit-touch-callout:none]"
           :class="[
+            choices.auto ? '' : 'cursor-grab',
             drag?.active && drag.target === placeOf(entry) && drag.id !== placeOf(entry) ? 'ring-2 ring-highlight-400' : '',
             drag?.active && drag.id === placeOf(entry) ? 'opacity-50' : '',
           ]"
-          @pointerdown="reorder.onPointerDown($event, placeOf(entry))"
+          @pointerdown="!choices.auto && reorder.onPointerDown($event, placeOf(entry))"
           @pointermove="reorder.onPointerMove"
           @pointerup="reorder.onPointerUp"
           @pointercancel="reorder.cancel"
@@ -156,12 +168,18 @@ async function save(): Promise<void> {
             </div>
             <span v-if="unreachable(entry)" class="shrink-0 text-highlight-400" :title="$t('ttsSettings.unreachable')" aria-hidden="false">⚠</span>
             <span v-if="!entry.offered" class="shrink-0 text-xs text-highlight-400">{{ $t('ttsSettings.notOffered') }}</span>
-            <ToggleSwitch v-else data-no-drag :checked="entry.enabled" @click="entry.enabled = !entry.enabled">
+            <ToggleSwitch v-else-if="!choices.auto" data-no-drag :checked="entry.enabled" @click="entry.enabled = !entry.enabled">
               <span class="sr-only">{{ $t('ttsSettings.on') }}</span>
             </ToggleSwitch>
           </div>
           <div data-no-drag class="flex flex-col gap-1">
-            <SelectMenu v-model="entry.unit" :options="unitOptions" button-class="input text-sm text-main" :aria-label="$t('ttsSettings.unitLabel')" />
+            <SelectMenu
+              v-if="!choices.auto"
+              v-model="entry.unit"
+              :options="unitOptions"
+              button-class="input text-sm text-main"
+              :aria-label="$t('ttsSettings.unitLabel')"
+            />
             <SelectMenu
               v-if="(voices[entry.engine]?.length ?? 0) > 0"
               v-model="choices.voices[entry.engine]"

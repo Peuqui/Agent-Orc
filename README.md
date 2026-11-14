@@ -106,7 +106,8 @@ that run Agent-Orc can be shown in the same app, through an SSH tunnel ([Several
   [AIfred](https://github.com/Peuqui/AIfred-Intelligence), in the room chosen in the settings.
   With a `tts_suite:` section, a [TTS-Suite](https://github.com/Peuqui/TTS-Suite) service on the
   server speaks: the engines it offers (on other machines and in the cloud, too) are put in order,
-  switched on and given a voice in a window of their own in the settings, and the first piece plays
+  switched on and given a voice in a window of their own in the settings (or the suite's own automatic
+  list speaks instead, with a voice, speed and pitch per engine set there), and the first piece plays
   while the rest is still being made; the browser plays what the service sends, and the token stays
   on the server. The speaker button “New (n)” turns grey when nothing is new, like the check mark beside it. The 🔊 in front of an answer's
   paragraph for listening is a button that reads it again; with the TTS-Suite the repeat plays from the browser's memory
