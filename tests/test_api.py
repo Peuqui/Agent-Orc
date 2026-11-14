@@ -26,7 +26,7 @@ from starlette.websockets import WebSocketDisconnect
 from agent_orc.api import BUILD_ID_FILE, BUILD_ID_HEADER, LEVELS_CACHE_SECONDS, create_app
 from agent_orc.approvals import Decision, close_request, open_request, wait_for_decision
 from agent_orc.auth import new_credentials
-from agent_orc.catalog import CatalogBackend, read_catalog
+from agent_orc.catalog import CatalogBackend, CatalogError, read_catalog
 from agent_orc.config import (
     AgentProfile,
     Config,
@@ -3401,6 +3401,45 @@ def test_the_catalogs_go_both_ways_once_a_machine_is_reached(
     assert ("PUT", "api/catalogs/Mini", {"backends": CATALOG}) in sent
     assert fetched[0] == "api/catalog"
     assert read_catalog("Mini").backends["local"].models[0].levels == ["high", "max"]
+
+
+def test_a_catalog_that_cannot_be_taken_is_told_and_the_exchange_goes_on(
+    config: Config,
+    clock: FakeClock,
+    other_machine: None,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    monkeypatch.setattr("agent_orc.api.keep_tunnel_open", idle_tunnel)
+    monkeypatch.setattr("agent_orc.api.HOST_CHECK_SECONDS", 0.05)
+    monkeypatch.setattr("agent_orc.api.CATALOG_SECONDS", 0.05)
+    monkeypatch.setattr("agent_orc.api.served_catalog", lambda _config, _today: {})
+    answers = [
+        {"machine": "Aragon", "backends": {"local": {"models": [{"name": "m", "levels": ["x"]}]}}},
+        {"machine": "../Aragon", "backends": CATALOG},
+        {"backends": CATALOG},
+        {"machine": "Aragon", "backends": CATALOG},
+    ]
+
+    async def answer(_link: HostLink, _path: str) -> Any:
+        return answers.pop(0) if len(answers) > 1 else answers[0]
+
+    monkeypatch.setattr(HostLink, "get_json", answer)
+    hosts = {"Aragon": HostConfig(ssh=[["nowhere"]], socket="unused")}
+    with_hosts = config.model_copy(update={"hosts": hosts})
+    app = create_app(with_hosts, new_credentials(PASSWORD), static_dir=None, clock=clock)
+    deadline = time.monotonic() + 10
+    with TestClient(app):
+        while len(answers) > 1 and time.monotonic() < deadline:
+            time.sleep(0.02)
+        while time.monotonic() < deadline:
+            try:
+                stored = read_catalog("Aragon")
+                break
+            except CatalogError:
+                time.sleep(0.02)
+    assert stored.backends["local"].models[0].name == "DeepSeek-vllm"
+    assert caplog.text.count("its catalog cannot be taken") == 3
 
 
 def test_the_hosts_and_whether_they_answer(mini: TestClient) -> None:

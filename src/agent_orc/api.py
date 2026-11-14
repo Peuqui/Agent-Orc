@@ -40,7 +40,7 @@ from fastapi.responses import (
     StreamingResponse,
 )
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 from starlette.types import Scope
 
 from agent_orc import announce as announcing
@@ -1487,9 +1487,13 @@ def create_app(
             body = {name: backend.model_dump(exclude_none=True) for name, backend in own.items()}
             await link.send("PUT", f"api/catalogs/{machine_name()}", {"backends": body})
         theirs = await link.get_json("api/catalog")
-        if theirs["backends"]:
+        try:
             received = CatalogRequest.model_validate(theirs)
-            await asyncio.to_thread(store_catalog, theirs["machine"], received.backends)
+            if received.backends:
+                await asyncio.to_thread(store_catalog, theirs["machine"], received.backends)
+        except (KeyError, TypeError, ValidationError, UnknownMachineError) as error:
+            # Another version or a broken answer: the others still get theirs, and it is told.
+            logger.warning("host %s: its catalog cannot be taken: %s", link.name, error)
 
     async def mirror_to(link: HostLink) -> None:
         settings = SharedSettings.model_validate(read_settings()).model_dump()
