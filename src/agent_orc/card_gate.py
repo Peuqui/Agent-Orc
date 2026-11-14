@@ -21,27 +21,28 @@ import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 
-from agent_orc.backends import BackendError, fetch_json, reachable_base_url, resolve_key
+from agent_orc.backends import (
+    CHECK_SECONDS,
+    LOCAL_ADDRESS,
+    RUNNING_PATH,
+    BackendError,
+    fetch_json,
+    model_is_ready,
+    reachable_base_url,
+    resolve_key,
+)
 from agent_orc.config import BackendConfig, Config
 from agent_orc.events import SHUTDOWN_GRACE_SECONDS
 from agent_orc.gate_token import token_session
-from agent_orc.gpuorc import gpu_orc_url
+from agent_orc.gpuorc import gpu_orc_token, loading_url
 from agent_orc.hosts import chunks, request_headers, response_headers
 
 METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"]
-# Where llama-swap lists the models that run; the entries are {"model": ..., "state": ...}.
-RUNNING_PATH = "/running"
-RUNNING_STATE = "ready"
-# GPU-Orc's traffic light: {"loading": [...], "held": {"since": ..., "reason": ...} | null}.
-LOADING_PATH = "/loading"
-# What the checks ask of llama-swap and GPU-Orc get this long; a model loading is no check.
-CHECK_SECONDS = 5
 # The headers that carry the session's mark; they must not reach llama-swap.
 MARK_HEADERS = {"x-api-key", "authorization"}
 BEARER_PREFIX = "bearer "
 API_KEY_HEADER = "x-api-key"
 API_KEY_VARIABLE = "ANTHROPIC_API_KEY"
-LOCAL_ADDRESS = "127.0.0.1"
 
 logger = logging.getLogger(__name__)
 
@@ -125,10 +126,7 @@ async def model_runs(
     """Whether llama-swap has the model loaded (a failed check says: not loaded)."""
     try:
         listing = await get_json(session, base_url + RUNNING_PATH, dict([auth]))
-        return any(
-            entry["model"] == model and entry["state"] == RUNNING_STATE
-            for entry in listing["running"]
-        )
+        return model_is_ready(listing, model)
     except (aiohttp.ClientError, OSError, TimeoutError, KeyError, TypeError, ValueError):
         return False
 
@@ -139,12 +137,12 @@ async def hold_of(
     """GPU-Orc's hold of the cards, None when there is none. Raises GpuOrcSilentError when GPU-Orc
     does not answer: without knowing, nothing may be loaded."""
     assert backend.gpu_orc is not None
-    url = gpu_orc_url(base_url, backend.gpu_orc.port) + LOADING_PATH
+    url = loading_url(backend.gpu_orc, base_url)
     headers: dict[str, str] = {}
     try:
-        token_file = backend.gpu_orc.token_file
-        if token_file is not None:
-            headers["authorization"] = f"Bearer {token_file.expanduser().read_text().strip()}"
+        token = gpu_orc_token(backend.gpu_orc)
+        if token is not None:
+            headers["authorization"] = f"Bearer {token}"
         answer = await get_json(session, url, headers)
         return answer["held"]  # type: ignore[no-any-return]
     except (aiohttp.ClientError, OSError, TimeoutError, KeyError, TypeError, ValueError) as error:

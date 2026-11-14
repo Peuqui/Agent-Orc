@@ -26,6 +26,9 @@ HEALTH_SECONDS = 5
 # The outcomes that leave the cards as wanted; any other one is a problem to tell.
 FINE_OUTCOMES = frozenset({"released", "released_forced", "kept"})
 
+# GPU-Orc's traffic light: {"loading": [...], "held": {"since": ..., "reason": ...} | null}.
+LOADING_PATH = "/loading"
+
 # url, body (None: GET), token, timeout → the answer's JSON
 Request = Callable[[str, dict[str, Any] | None, str | None, float], Any]
 
@@ -47,6 +50,24 @@ def gpu_orc_url(base_url: str, port: int) -> str:
     return f"{parts.scheme}://{parts.hostname}:{port}"
 
 
+def gpu_orc_token(gpu_orc: GpuOrcConfig) -> str | None:
+    return gpu_orc.token_file.expanduser().read_text().strip() if gpu_orc.token_file else None
+
+
+def loading_url(gpu_orc: GpuOrcConfig, base_url: str) -> str:
+    return gpu_orc_url(base_url, gpu_orc.port) + LOADING_PATH
+
+
+def held(
+    gpu_orc: GpuOrcConfig, base_url: str, request: Request = request_json
+) -> dict[str, str] | None:
+    """GPU-Orc's hold of the cards ({"since", "reason"}), None when there is none. Raises when
+    GPU-Orc does not answer (the caller decides what that means; see card_gate.hold_of for the
+    gate's asynchronous way, which shares the address and the token with this one)."""
+    answer = request(loading_url(gpu_orc, base_url), None, gpu_orc_token(gpu_orc), HEALTH_SECONDS)
+    return answer["held"]  # type: ignore[no-any-return]
+
+
 def reason() -> str:
     """What GPU-Orc writes into its log: who asks (the agent's folder)."""
     return f"Agent-Orc: agent in {Path.cwd().name}"
@@ -61,7 +82,7 @@ def free_for_model(
     if gpu_orc.model_server is not None:
         body["model_server"] = gpu_orc.model_server
     try:
-        token = gpu_orc.token_file.expanduser().read_text().strip() if gpu_orc.token_file else None
+        token = gpu_orc_token(gpu_orc)
         health = request(f"{url}/health", None, token, HEALTH_SECONDS)
         answer = request(f"{url}/free", body, token, health["caller_timeout_s"])
     except urllib.error.HTTPError as error:

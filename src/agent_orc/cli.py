@@ -90,8 +90,6 @@ def check_config() -> None:
     print(f"{path} fits this version.")
 
 
-
-
 def log_from_info() -> None:
     """The server's own messages from INFO on, to stderr, which systemd keeps in the journal.
     Without a handler of its own only warnings came through (Python's last resort), and the info
@@ -307,7 +305,14 @@ def run_backend(arguments: list[str]) -> None:
                     raise BackendError("name a model: this is not a terminal to choose in")
                 model = named or choose_model(models_lines(backend, date.today()), date.today())
                 launch = prepare_launch(
-                    name, backend, model, wanted, claude_arguments, date.today()
+                    name,
+                    backend,
+                    model,
+                    wanted,
+                    claude_arguments,
+                    date.today(),
+                    gate=config.card_gate,
+                    session_id=os.environ.get(SESSION_ENV),
                 )
                 exec_claude(launch)
             case _:

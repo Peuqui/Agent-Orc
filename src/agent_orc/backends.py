@@ -25,10 +25,12 @@ from agent_orc.config import (
     LEVELS,
     BackendConfig,
     BackendModelConfig,
+    CardGateConfig,
     CatalogSource,
     Config,
 )
-from agent_orc.gpuorc import Request, free_for_model, request_json
+from agent_orc.gate_token import session_token
+from agent_orc.gpuorc import Request, free_for_model, held, request_json
 from agent_orc.llama_swap import LlamaSwapError, embedding_models, model_ttl, template_levels
 
 # What Claude Code asks for without being told (its own default).
@@ -49,6 +51,13 @@ PROBE_SECONDS = 2
 # Loading a model can take minutes (the server loads it on the first request).
 CONTEXT_SECONDS = 900
 LISTING_SECONDS = 30
+# Where llama-swap lists the models that run; the entries are {"model": ..., "state": ...}.
+RUNNING_PATH = "/running"
+RUNNING_STATE = "ready"
+# What the start's check of the running models gets (a model loading is no check).
+CHECK_SECONDS = 5
+# The gate listens here only (nginx does not forward it).
+LOCAL_ADDRESS = "127.0.0.1"
 
 Fetch = Callable[[str, str | None, float], Any]
 # A model's note that is the last day of its free quota (the user interface words it).
@@ -192,8 +201,59 @@ def context_length(
         return None
 
 
+def model_is_ready(listing: Any, model: str) -> bool:
+    """Whether llama-swap's /running listing has the model loaded. One reading for the start
+    (model_runs) and the card gate (card_gate.model_runs)."""
+    return any(
+        entry["model"] == model and entry["state"] == RUNNING_STATE for entry in listing["running"]
+    )
+
+
+def model_runs(backend_url: str, key: str, model: str, fetch: Fetch) -> bool:
+    """Whether llama-swap has the model loaded (a failed check says: not loaded)."""
+    try:
+        return model_is_ready(fetch(backend_url + RUNNING_PATH, key, CHECK_SECONDS), model)
+    except (*FETCH_ERRORS, KeyError, TypeError):
+        return False
+
+
+def refuse_under_hold(
+    backend: BackendConfig,
+    base_url: str,
+    key: str,
+    model: str,
+    gate: CardGateConfig | None,
+    fetch: Fetch,
+    gpu_orc_request: Request,
+) -> None:
+    """Plan docs/PLAN-2026-11-14-kartentor.md: a start that would load a model onto cards GPU-Orc
+    holds for somebody else does not begin. A model that runs already loads nothing. A GPU-Orc
+    that does not answer is no hold: free_for_model tells that, and the gate stops the requests."""
+    if backend.gpu_orc is None or model_runs(base_url, key, model, fetch):
+        return
+    try:
+        hold = held(backend.gpu_orc, base_url, gpu_orc_request)
+    except (*FETCH_ERRORS, KeyError, TypeError):
+        return
+    if hold is None:
+        return
+    if gate is not None:
+        raise BackendError(gate.refusal.format(reason=hold["reason"], since=hold["since"]))
+    raise BackendError(
+        f"the cards are held: {hold['reason']} (since {hold['since']}); "
+        f"{backend.label} would load {model!r} onto them"
+    )
+
+
 def claude_environment(
-    name: str, backend: BackendConfig, base_url: str, model: str, key: str, context: int | None
+    name: str,
+    backend: BackendConfig,
+    base_url: str,
+    model: str,
+    key: str,
+    context: int | None,
+    gate_url: str | None = None,
+    session_id: str | None = None,
 ) -> dict[str, str]:
     """What Claude Code needs to talk to the backend. It sends Anthropic's model names for
     background requests and aliases (sonnet, opus, subagents), which the backend does not know:
@@ -216,6 +276,12 @@ def claude_environment(
         # "Request body format invalid".
         DISABLE_BETAS_VARIABLE: "1",
     }
+    if gate_url is not None:
+        # Through the card gate (plan docs/PLAN-2026-11-14-kartentor.md): it adds the backend's
+        # anthropic_path and the backend's own key itself, and knows the session by this mark.
+        assert session_id is not None
+        environment["ANTHROPIC_BASE_URL"] = gate_url
+        environment[backend.key_variable] = session_token(session_id)
     if backend.api_timeout_ms is not None:
         environment["API_TIMEOUT_MS"] = str(backend.api_timeout_ms)
     if context is not None:
@@ -341,14 +407,20 @@ def prepare_launch(
     today: date,
     fetch: Fetch = fetch_json,
     gpu_orc_request: Request = request_json,
+    gate: CardGateConfig | None = None,
+    session_id: str | None = None,
 ) -> Launch:
-    """Everything for starting Claude Code on the backend with the model."""
+    """Everything for starting Claude Code on the backend with the model. With the card gate and
+    the Agent-Orc session it runs in, on a backend with GPU-Orc, requests go through the gate."""
     key = resolve_key(backend)
     base_url = reachable_base_url(backend, key, fetch)
     if model not in offered(listed_models(backend, base_url, key, fetch), backend, today):
         raise BackendError(
             f"{model!r} is not on offer at {backend.label} (see `agent-orc backend models`)"
         )
+    # Before anything loads the model: free_for_model would clear cards under a hold, and the
+    # context length comes from the server loading the model.
+    refuse_under_hold(backend, base_url, key, model, gate, fetch, gpu_orc_request)
     if backend.gpu_orc is not None:
         for line in free_for_model(backend.gpu_orc, base_url, model, gpu_orc_request):
             print(f"GPU-Orc: {line}", file=sys.stderr)
@@ -367,10 +439,12 @@ def prepare_launch(
     inherited = {
         variable: value for variable, value in os.environ.items() if variable not in left_behind
     }
-    return Launch(
-        arguments,
-        {**inherited, **claude_environment(name, backend, base_url, model, key, context)},
+    through_gate = gate is not None and session_id is not None and backend.gpu_orc is not None
+    gate_url = f"http://{LOCAL_ADDRESS}:{gate.port}/{name}" if through_gate and gate else None
+    environment = claude_environment(
+        name, backend, base_url, model, key, context, gate_url, session_id
     )
+    return Launch(arguments, {**inherited, **environment})
 
 
 def free_cards_message(
