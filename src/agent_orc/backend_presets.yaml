@@ -4,15 +4,17 @@
 local:
   label: Local models (llama-swap, vLLM)
   address: http://127.0.0.1:11435
+  # Having this key makes the preset a llama-swap one: setup asks whether that llama-swap runs on
+  # this machine. Yes: this is the default path of its configuration (the levels of each model
+  # come from its chat template). No: the models and levels come from the machine it runs on
+  # (`catalog_from`), so no path is written.
+  llama_swap_config: ~/.config/llama-swap/config.yaml
   backend:
     label: Local models
     key_variable: ANTHROPIC_API_KEY
     key: no-key   # a local server takes any key
     context_path: /upstream/{model}/v1/models
     api_timeout_ms: 600000
-    # llama-swap's configuration: the levels of each model come from its chat template. Leave it
-    # out for a server that is not this machine's llama-swap (no levels then).
-    llama_swap_config: ~/.config/llama-swap/config.yaml
   profile:
     label: Claude (local)
     hint: Stop other users of the GPUs first, or the models push each other out.

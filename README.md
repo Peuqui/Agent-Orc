@@ -440,7 +440,9 @@ carries its template itself.
 
 When that llama-swap is on another machine,
 `catalog_from: {machine: <its host name>, backend: <its backend>}` takes the models and levels from
-that machine's catalog instead. An Agent-Orc that controls
+that machine's catalog instead. `agent-orc setup` asks which of the two it is: whether the llama-swap
+runs on this machine (then the path of its configuration) or on which one (then its host name and
+its backend there). An Agent-Orc that controls
 others (`hosts`) sends its own catalog to each of them and fetches theirs, as soon as it reaches one
 and then every minute, so the catalogs arrive whichever of the two machines controls the other. A
 machine that reads no llama-swap itself sends none. Each catalog is kept as

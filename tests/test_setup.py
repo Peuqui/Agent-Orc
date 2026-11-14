@@ -6,7 +6,7 @@ import pytest
 import yaml
 
 from agent_orc.auth import load_credentials, verify_password
-from agent_orc.config import Config, default_config_text, load_config
+from agent_orc.config import BackendConfig, Config, default_config_text, load_config
 from agent_orc.setup import (
     SetupAnswers,
     ask_backend,
@@ -117,7 +117,12 @@ def answers_with_backends(backends: dict[str, dict[str, Any]]) -> SetupAnswers:
 
 
 def test_a_local_backend_adds_its_entry_and_a_profile_to_a_valid_config() -> None:
-    entry = backend_entry(backend_presets()["local"], "http://127.0.0.1:11435")
+    preset = backend_presets()["local"]
+    entry = backend_entry(
+        preset,
+        "http://127.0.0.1:11435",
+        {"llama_swap_config": preset["llama_swap_config"]},
+    )
     config = Config.model_validate(
         yaml.safe_load(configured_text(answers_with_backends({"local": entry})))
     )
@@ -198,3 +203,94 @@ def test_an_existing_key_file_gets_the_rights_for_the_user_alone(tmp_path: Path)
     write_key(key_file, "new-key")
     assert key_file.read_text() == "new-key\n"
     assert key_file.stat().st_mode & 0o777 == 0o600
+
+
+def ask_local_backend(
+    monkeypatch: pytest.MonkeyPatch, lines: list[str]
+) -> tuple[dict[str, Any] | None, list[str]]:
+    """Run ask_backend for the local preset with the typed lines; the server lists a model."""
+    typed = answers_from(lines)
+    prompts: list[str] = []
+
+    def type_next(prompt: str) -> str:
+        prompts.append(prompt)
+        return next(typed)
+
+    monkeypatch.setattr("builtins.input", type_next)
+    monkeypatch.setattr(
+        "agent_orc.setup.fetch_json", lambda url, key, timeout: {"data": [{"id": "model-a"}]}
+    )
+    return ask_backend(backend_presets()["local"]), prompts
+
+
+def test_a_llama_swap_on_this_machine_gets_its_configuration_path(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    swap_config = tmp_path / "llama-swap.yaml"
+    swap_config.write_text("models: {}\n")
+    entry, _ = ask_local_backend(monkeypatch, ["y", "http://127.0.0.1:11435", "", str(swap_config)])
+    assert entry is not None
+    assert entry["llama_swap_config"] == str(swap_config)
+    assert "catalog_from" not in entry
+
+
+def test_a_configuration_path_that_is_no_file_is_asked_again(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    swap_config = tmp_path / "llama-swap.yaml"
+    swap_config.write_text("models: {}\n")
+    missing = str(tmp_path / "missing.yaml")
+    entry, prompts = ask_local_backend(
+        monkeypatch, ["y", "http://127.0.0.1:11435", "", missing, str(swap_config)]
+    )
+    assert entry is not None and entry["llama_swap_config"] == str(swap_config)
+    assert f"{missing} is not a file." in capsys.readouterr().out
+    assert sum(prompt.startswith("Path of llama-swap") for prompt in prompts) == 2
+
+
+def test_a_llama_swap_on_another_machine_takes_its_catalog(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    entry, prompts = ask_local_backend(monkeypatch, ["y", "http://10.0.0.2:11435", "", "Mini", ""])
+    assert entry is not None
+    assert entry["catalog_from"] == {"machine": "Mini", "backend": "local"}
+    assert "llama_swap_config" not in entry
+    # The default answer is No for an address that is not this machine.
+    assert any(prompt.endswith("[y/N]: ") for prompt in prompts[2:3])
+    assert "hosts" in capsys.readouterr().out
+    config = BackendConfig.model_validate(entry)
+    assert config.catalog_from is not None and config.catalog_from.machine == "Mini"
+
+
+def test_a_host_name_that_is_not_valid_is_asked_again(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    entry, prompts = ask_local_backend(
+        monkeypatch, ["y", "http://10.0.0.2:11435", "", "../x", "Mini", ""]
+    )
+    assert entry is not None and entry["catalog_from"]["machine"] == "Mini"
+    assert "A host name has letters" in capsys.readouterr().out
+    assert sum(prompt.startswith("Host name of the machine") for prompt in prompts) == 2
+
+
+def test_a_cloud_backend_asks_nothing_about_llama_swap(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    preset = backend_presets()["dashscope"]
+    preset["backend"]["key_file"] = str(tmp_path / "dashscope.key")
+    typed = answers_from(["y", "https://example.org"])
+    prompts: list[str] = []
+
+    def type_next(prompt: str) -> str:
+        prompts.append(prompt)
+        return next(typed)
+
+    monkeypatch.setattr("builtins.input", type_next)
+    monkeypatch.setattr("agent_orc.setup.getpass.getpass", lambda _prompt: "secret-key")
+    monkeypatch.setattr(
+        "agent_orc.setup.fetch_json", lambda url, key, timeout: {"data": [{"id": "qwen-a"}]}
+    )
+    entry = ask_backend(preset)
+    assert entry is not None
+    assert "llama_swap_config" not in entry and "catalog_from" not in entry
+    assert len(prompts) == 2

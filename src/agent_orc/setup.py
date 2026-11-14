@@ -17,6 +17,7 @@ from dataclasses import dataclass, field
 from importlib.resources import files
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 import yaml
 
@@ -25,6 +26,7 @@ from agent_orc.backends import BackendError, fetch_json, listed_models
 from agent_orc.config import (
     CONFIG_FILE_NAME,
     CREDENTIALS_FILE_NAME,
+    HOST_NAME_PATTERN,
     BackendConfig,
     config_dir,
     default_config_text,
@@ -42,6 +44,10 @@ DEFAULT_SOCKET = "~/.local/state/agent-orc/run/agent-orc.sock"
 BACKEND_PRESETS_FILE = "backend_presets.yaml"
 PROFILE_TEMPLATE_FILE = "claude_backend_profile.yaml"
 BACKEND_KEY_FILE_MODE = 0o600
+# Addresses that point to this machine, and the name of the backend a remote llama-swap's models
+# are usually set up under (the `local` preset).
+LOOPBACK_HOSTS = ("127.0.0.1", "localhost", "::1")
+DEFAULT_CATALOG_BACKEND = "local"
 
 
 @dataclass(frozen=True)
@@ -66,10 +72,13 @@ def backend_presets() -> dict[str, Any]:
     return presets
 
 
-def backend_entry(preset: dict[str, Any], address: str) -> dict[str, Any]:
-    """The `backends` entry of a kind: what the preset fixes and the address asked for. Without
-    models named in the preset, every model the server lists is offered."""
-    return {**preset["backend"], "base_urls": [address]}
+def backend_entry(
+    preset: dict[str, Any], address: str, levels_source: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    """The `backends` entry of a kind: what the preset fixes, the address asked for and, for
+    llama-swap, where the levels come from (`llama_swap_config` or `catalog_from`). Without models
+    named in the preset, every model the server lists is offered."""
+    return {**preset["backend"], "base_urls": [address], **(levels_source or {})}
 
 
 def profile_text(kind: str, preset: dict[str, Any]) -> str:
@@ -172,6 +181,29 @@ def ask_yes(question: str, default: bool) -> bool:
     return default if answer == "" else answer in ("y", "yes", "j", "ja")
 
 
+def ask_levels_source(preset: dict[str, Any], address: str) -> dict[str, Any]:
+    """Where the models and levels of a llama-swap come from: its configuration on this machine,
+    or the catalog of the machine it runs on."""
+    host = urlsplit(address).hostname
+    if ask_yes("Does this llama-swap run on this machine?", host in LOOPBACK_HOSTS):
+        while True:
+            path = ask("Path of llama-swap's configuration", preset["llama_swap_config"])
+            if Path(path).expanduser().is_file():
+                return {"llama_swap_config": path}
+            print(f"{path} is not a file.")
+    while True:
+        machine = ask("Host name of the machine it runs on", "")
+        if HOST_NAME_PATTERN.fullmatch(machine):
+            break
+        print("A host name has letters, digits, - and _ only.")
+    backend = ask("Name of its backend of these models there", DEFAULT_CATALOG_BACKEND)
+    print(
+        f"The models and levels come from {machine}. One of the two machines must list the other "
+        "under `hosts` for its catalog to arrive here."
+    )
+    return {"catalog_from": {"machine": machine, "backend": backend}}
+
+
 def write_key(path: Path, key: str) -> None:
     """The API key in a file readable for the user alone."""
     path = path.expanduser()
@@ -210,7 +242,10 @@ def ask_backend(preset: dict[str, Any]) -> dict[str, Any] | None:
     if not listed:
         print(f"Skipped: {address} lists no models.")
         return None
-    return backend_entry(preset, address)
+    # Only a llama-swap preset names its configuration.
+    if "llama_swap_config" not in preset:
+        return backend_entry(preset, address)
+    return backend_entry(preset, address, ask_levels_source(preset, address))
 
 
 def check_programs() -> None:

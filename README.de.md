@@ -462,7 +462,9 @@ nach `--model` oder `vllm serve` nennt: `chat_template.jinja`, sonst `chat_templ
 
 Liegt dieser llama-swap auf einem anderen Rechner, nimmt
 `catalog_from: {machine: <dessen Hostname>, backend: <dessen Backend>}` Modelle und Stufen
-stattdessen aus dessen Katalog. Ein Agent-Orc, der andere steuert (`hosts`),
+stattdessen aus dessen Katalog. `agent-orc setup` fragt, welcher der beiden Fälle vorliegt: ob der llama-swap
+auf diesem Rechner läuft (dann den Pfad seiner Konfiguration) oder auf welchem (dann dessen Hostnamen
+und sein Backend dort). Ein Agent-Orc, der andere steuert (`hosts`),
 schickt jedem von ihnen seinen Katalog und holt dessen Katalog, sobald er einen erreicht, und danach
 jede Minute; so kommen die Kataloge an, egal welcher der beiden Rechner den anderen steuert. Ein
 Rechner, der selbst keinen llama-swap liest, schickt keinen. Jeder Katalog liegt unter
