@@ -342,6 +342,9 @@ def test_a_text_left_in_the_field_logs_the_screen(
     manager._report_unsubmitted(session.id, "eine Nachricht")
     assert "Enter had no effect" in caplog.text
     assert "● Antwort" in caplog.text
+    # The text as typed, with what cannot be seen, and the state of the pane's terminal.
+    assert "Typed (exactly): 'eine Nachricht'" in caplog.text
+    assert "Pane: alternate=" in caplog.text and "clients=" in caplog.text
 
 
 def test_a_submitted_text_logs_nothing(

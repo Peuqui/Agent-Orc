@@ -61,6 +61,14 @@ NO_SERVER_MARKERS = ("no server running", "error connecting")
 INPUT_RULE_PREFIX = "──"
 # How much of a submitted text's end is looked for in the input field.
 SUBMIT_CHECK_TAIL_CHARS = 40
+# What tmux knows of a pane's terminal, logged when an Enter had no effect (_report_unsubmitted).
+PANE_STATE_FORMAT = (
+    "alternate=#{alternate_on} mouse=#{mouse_any_flag} in_mode=#{pane_in_mode}"
+    " input_off=#{pane_input_off} clients=#{session_attached}"
+    " size=#{window_width}x#{window_height}"
+)
+# How much of the typed text goes to that log, as it was typed.
+TYPED_LOG_CHARS = 400
 
 
 class SessionError(RuntimeError):
@@ -387,17 +395,26 @@ class SessionManager:
 
     def _report_unsubmitted(self, session_id: str, line: str) -> None:
         """Log the screen when a submitted text still stands in the input field. It only records
-        the evidence: a further Enter would hide why the first one had no effect."""
+        the evidence: a further Enter would hide why the first one had no effect. Along with it
+        go the text exactly as it was typed (a character that cannot be seen may be the reason)
+        and what tmux knows of the pane's terminal."""
         try:
             screen = self.text(session_id, 0)
         except SessionNotFoundError:
             return  # The line ended the agent (e.g. its exit command).
         if text_left_in_input(screen, line):
+            state = self._tmux(
+                "display-message", "-p", "-t", exact_target(session_id), PANE_STATE_FORMAT,
+                check=False,
+            ).stdout.strip()  # fmt: skip
             logger.warning(
-                "%s: Enter had no effect, text still in the input field after %s ms:\n%s",
+                "%s: Enter had no effect, text still in the input field after %s ms:\n%s\n"
+                "Typed (exactly): %r\nPane: %s",
                 session_id,
                 self._terminal.submit_check_ms,
                 screen,
+                line[:TYPED_LOG_CHARS],
+                state,
             )
 
     def press_enter(self, session_id: str) -> None:
