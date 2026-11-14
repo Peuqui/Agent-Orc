@@ -58,6 +58,37 @@ Weckruf? Prüfen mit einer Wegwerf-Sitzung im Profil `claude-local`, einem kurze
 Absprache, wie bei jeder Kartenaktion) und einer Nachricht an sie. Davon hängt der Wortlaut des
 Wecktexts ab.
 
+### Ergebnis der Probe (14.11., 21:50–21:58)
+
+Eine Wegwerf-Sitzung mit AI-Connect-Plugin hing an einem Testserver, der jede Anfrage mit 503
+(`overloaded_error`, „Karten gehalten: …“) abwies. Sie bekam eine AI-Connect-Nachricht.
+- Der Watcher hat sie geweckt (21:50:34). Claude Code hat es siebenmal versucht (21:50:43 bis
+  21:53:31, Pausen von 9 s bis etwa 35 s) und dann aufgegeben. Den Grund zeigte es sichtbar an:
+  „API Error: 503 Karten gehalten: Test-Hold … check your inference gateway (127.0.0.1:18999)“.
+- Danach lief **kein Watcher mehr**. Er beendet sich beim Wecken und startet nur über den Hook `Stop`
+  neu, und ein Zug, der mit einem API-Fehler endet, löst `Stop` nicht aus. Die Nachricht blieb
+  ungelesen, die Sitzung schlief.
+- Folgen für den Entwurf:
+  - Agent-Orc muss die Sitzung nach dem Hold selbst wecken.
+  - Ein allgemeiner Wecktext reicht. Endet dieser Zug normal, startet der Watcher über `Stop` neu und
+    meldet die ungelesene Nachricht sofort (`since` = letztes `peer_read`).
+  - Das Tor antwortet mit 503 `overloaded_error`. Ein kurzer Hold von unter drei Minuten wird so von
+    Claude Code selbst überbrückt, und der Hook `StopFailure` von Agent-Orc (`matcher: rate_limit`)
+    springt dabei nicht an.
+
+### Einzelheiten aus dem Code
+
+- **Das Zeichen je Sitzung:** `HMAC(Geheimnis, Sitzungs-id)` als `<id>.<hmac>`. Das Geheimnis liegt
+  im Zustandsordner und ist nur für den Benutzer lesbar. `agent-orc backend run` kennt die Sitzung aus
+  `AGENT_ORC_SESSION` und bildet das Zeichen ohne Rückfrage beim Server. Das Tor prüft es, ohne etwas
+  zu speichern.
+- **Die Adresse:** `ANTHROPIC_BASE_URL` = `http://127.0.0.1:<Port des Tors>/<Backend>`. Das Tor holt
+  sich aus der Config des Backends die erreichbare Adresse von llama-swap (`reachable_base_url`) und
+  GPU-Orc (`gpu_orc`, mit Token).
+- **Ein Start außerhalb von Agent-Orc** (`agent-orc backend run` im eigenen Terminal, ohne
+  `AGENT_ORC_SESSION`) hat keine Sitzung zum Wecken. Er geht deshalb direkt zu llama-swap wie heute,
+  prüft aber beim Start den Hold.
+
 ## Arbeitsschritte (je ein kleiner Auftrag, jeder einzeln geprüft)
 
 1. Config: Port des Tors und Wecktext; Zeichen je Sitzung beim Start erzeugen und ablegen.
