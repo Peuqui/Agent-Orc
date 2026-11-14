@@ -1,7 +1,8 @@
-"""The reasoning levels a local model takes, read from its chat template.
+"""What a llama-swap on this machine tells about its models: which ones serve a conversation, and
+the reasoning levels each takes, read from its chat template.
 
-llama-swap starts a model with the command in its configuration; `--model` there names the model:
-a checkpoint folder (vLLM) or a GGUF file (llama.cpp). The chat template in it renders the prompt,
+llama-swap starts a model with the command in its configuration, which names the model: a
+checkpoint folder (vLLM) or a GGUF file (llama.cpp). The chat template in it renders the prompt,
 and the levels it takes are those it compares `reasoning_effort` with. A level it does not know
 makes it refuse the request (the Qwen3.8 template raises an exception, the DeepSeek-V4 encoder
 fails an assert), so the levels on offer must be exactly these.
@@ -18,6 +19,7 @@ import re
 import shlex
 from pathlib import Path
 
+import gguf
 import yaml
 
 from agent_orc.config import LEVELS
@@ -30,30 +32,60 @@ TOKENIZER_CONFIG_FILE = "tokenizer_config.json"
 # DeepSeek checkpoints render their prompt with a bundled encoder in Python, which vLLM calls
 # instead of a Jinja template.
 ENCODER_PATTERN = "encoding/encoding_*.py"
+# Where a GGUF file keeps its template (for a split one: its first part, which llama-swap names).
+GGUF_TEMPLATE_FIELD = "tokenizer.chat_template"
 # What precedes the model in a server's command: llama.cpp's and vLLM's option, `vllm serve`.
 MODEL_MARKERS = ("--model", "serve")
+# A server started with one of these computes embeddings and holds no conversation (llama.cpp).
+EMBEDDING_FLAGS = ("--embedding", "--embeddings")
+# Or with one of these options and values (vLLM: older --task, newer --runner).
+EMBEDDING_OPTIONS = {"--task": "embed", "--runner": "pooling"}
 # How far the branch of a comparison may reach to the assignment that renames its level.
 REMAP_REACH = 60
 
 
-class TemplateError(RuntimeError):
-    """The template of a model cannot be read, said to the user as it is."""
+class LlamaSwapError(RuntimeError):
+    """What llama-swap's configuration or a model's template does not tell, said as it is."""
+
+
+def commands(llama_swap_config: Path) -> dict[str, list[str]]:
+    """Each model's command in llama-swap's configuration, split into its arguments."""
+    try:
+        models = yaml.safe_load(llama_swap_config.read_text(encoding="utf-8"))["models"]
+        return {name: shlex.split(entry["cmd"]) for name, entry in models.items()}
+    except (OSError, yaml.YAMLError, KeyError, TypeError, ValueError) as error:
+        raise LlamaSwapError(f"llama-swap's configuration {llama_swap_config}: {error}") from error
+
+
+def serves_embeddings(command: list[str]) -> bool:
+    """Whether the server the command starts computes embeddings instead of answering."""
+    if any(flag in command for flag in EMBEDDING_FLAGS):
+        return True
+    return any(
+        command[index + 1] == value
+        for index, argument in enumerate(command[:-1])
+        if (value := EMBEDDING_OPTIONS.get(argument)) is not None
+    )
+
+
+def embedding_models(llama_swap_config: Path) -> set[str]:
+    """The models of llama-swap that compute embeddings: no conversation to have with them."""
+    return {
+        name for name, command in commands(llama_swap_config).items() if serves_embeddings(command)
+    }
 
 
 def model_path(llama_swap_config: Path, model: str) -> Path:
     """What llama-swap's command for the model names as its model: after `--model` (llama.cpp,
     vLLM's API server) or after `vllm serve`."""
-    try:
-        models = yaml.safe_load(llama_swap_config.read_text(encoding="utf-8"))["models"]
-    except (OSError, yaml.YAMLError, KeyError, TypeError) as error:
-        raise TemplateError(f"llama-swap's configuration {llama_swap_config}: {error}") from error
-    if model not in models:
-        raise TemplateError(f"{model} is not in llama-swap's configuration {llama_swap_config}")
-    command = shlex.split(models[model]["cmd"])
+    known = commands(llama_swap_config)
+    if model not in known:
+        raise LlamaSwapError(f"{model} is not in llama-swap's configuration {llama_swap_config}")
+    command = known[model]
     for marker in MODEL_MARKERS:
         if marker in command[:-1]:
             return Path(command[command.index(marker) + 1])
-    raise TemplateError(
+    raise LlamaSwapError(
         f"the command of {model} in {llama_swap_config} names no model"
         f" (after {' or '.join(MODEL_MARKERS)})"
     )
@@ -121,13 +153,22 @@ def detect_levels(template: str) -> list[str]:
     return [level for level in LEVELS if level in found]
 
 
+def gguf_template(path: Path) -> str:
+    """The template a GGUF file carries; empty when it carries none."""
+    try:
+        field = gguf.GGUFReader(path).fields.get(GGUF_TEMPLATE_FIELD)
+    except (OSError, ValueError) as error:
+        raise LlamaSwapError(f"the GGUF file {path} cannot be read: {error}") from error
+    return "" if field is None else bytes(field.parts[field.data[0]]).decode("utf-8")
+
+
 def template_levels(llama_swap_config: Path, model: str) -> list[str]:
     """The levels a model of llama-swap takes, from its chat template; none for a model whose
     template has no levels (it thinks without being told how much, or not at all)."""
     path = model_path(llama_swap_config, model)
+    if path.is_file():
+        return detect_levels(gguf_template(path))
     if not path.is_dir():
-        raise TemplateError(
-            f"the template of {model} cannot be read: {path} is no checkpoint folder"
-        )
+        raise LlamaSwapError(f"the model of {model} is not there: {path}")
     levels = detect_levels(checkpoint_template(path))
     return levels or detect_levels(prompt_encoder(path))

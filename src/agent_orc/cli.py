@@ -42,7 +42,6 @@ from agent_orc.backends import (
     prepare_launch,
     split_effort,
 )
-from agent_orc.chat_template import TemplateError
 from agent_orc.config import (
     CONFIG_FILE_NAME,
     CREDENTIALS_FILE_NAME,
@@ -58,6 +57,7 @@ from agent_orc.context import (
 )
 from agent_orc.handover import SESSION_START_SUBCOMMAND, take_resume_request
 from agent_orc.listen import SocketFolderError, prepare_socket
+from agent_orc.llama_swap import LlamaSwapError
 from agent_orc.push import agent_message, deliver
 from agent_orc.schedule import mark_limited
 from agent_orc.sessions import SESSION_ENV
@@ -311,7 +311,7 @@ def run_backend(arguments: list[str]) -> None:
                 exec_claude(launch)
             case _:
                 sys.exit(BACKEND_USAGE)
-    except (BackendError, TemplateError) as error:
+    except (BackendError, LlamaSwapError) as error:
         sys.exit(f"agent-orc backend: {error}")
 
 

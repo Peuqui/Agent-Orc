@@ -198,6 +198,18 @@ def test_on_a_llama_swap_of_this_machine_the_levels_come_from_the_chat_template(
     assert launch.command[-2:] == ["--effort", "high"]
 
 
+def test_a_llama_swap_of_this_machine_offers_no_embedding_server(tmp_path: Path) -> None:
+    llama_swap = tmp_path / "llama-swap.yaml"
+    llama_swap.write_text(
+        "models:\n"
+        "  chat:\n    cmd: vllm serve /m/chat\n"
+        "  bge-embed:\n    cmd: llama-server --model /m/bge.gguf --embedding\n",
+        encoding="utf-8",
+    )
+    config = backend(models=None, llama_swap_config=str(llama_swap))
+    assert offered(["chat", "bge-embed"], config, TODAY) == ["chat"]
+
+
 def test_levels_come_from_the_templates_or_the_configuration_not_both() -> None:
     with pytest.raises(ValidationError, match="levels come from the chat templates"):
         backend(llama_swap_config="~/llama-swap.yaml")

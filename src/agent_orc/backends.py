@@ -19,7 +19,6 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Any
 
-from agent_orc.chat_template import template_levels
 from agent_orc.config import (
     KEY_VARIABLES,
     LEVELS,
@@ -28,6 +27,7 @@ from agent_orc.config import (
     Config,
 )
 from agent_orc.gpuorc import Request, free_for_model, request_json
+from agent_orc.llama_swap import embedding_models, template_levels
 
 # What Claude Code asks for without being told (its own default).
 DEFAULT_LEVEL = "high"
@@ -117,7 +117,11 @@ def readable_note(note: str, today: date) -> str:
 def offered(listed: Sequence[str], backend: BackendConfig, today: date) -> list[str]:
     """Of the models the server lists, those the configuration names and whose quota has not
     ended (afterwards they would be billed), in alphabetical order. Without configured models,
-    every model the server lists is offered."""
+    every model the server lists is offered; of a llama-swap on this machine not those that
+    compute embeddings."""
+    if backend.llama_swap_config is not None:
+        embedding = embedding_models(backend.llama_swap_config)
+        listed = [name for name in listed if name not in embedding]
     if backend.models is None:
         return sorted(listed)
     chosen = []

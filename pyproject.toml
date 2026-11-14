@@ -18,6 +18,8 @@ dependencies = [
     "python-multipart",
     # The tunnels to other machines (HTTP and WebSocket over a socket); pywebpush brings it, too.
     "aiohttp",
+    # The chat template a GGUF model carries, for the reasoning levels it takes (llama_swap.py).
+    "gguf",
 ]
 
 [project.optional-dependencies]

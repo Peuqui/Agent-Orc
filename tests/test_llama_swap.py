@@ -1,13 +1,15 @@
-"""The levels a local model takes, read from its chat template through llama-swap's command."""
+"""What a llama-swap tells about its models: embedding servers, and the levels from templates."""
 
 import json
 from pathlib import Path
 
+import gguf
 import pytest
 
-from agent_orc.chat_template import (
-    TemplateError,
+from agent_orc.llama_swap import (
+    LlamaSwapError,
     detect_levels,
+    embedding_models,
     model_path,
     template_levels,
 )
@@ -101,11 +103,11 @@ def test_the_model_is_what_llama_swaps_command_names_with_model(tmp_path: Path) 
 
 def test_a_model_llama_swap_does_not_know_or_without_model_is_said(tmp_path: Path) -> None:
     config = llama_swap(tmp_path, {"plain": "/bin/server --port ${PORT}"})
-    with pytest.raises(TemplateError, match="other is not in llama-swap's configuration"):
+    with pytest.raises(LlamaSwapError, match="other is not in llama-swap's configuration"):
         model_path(config, "other")
-    with pytest.raises(TemplateError, match="names no model"):
+    with pytest.raises(LlamaSwapError, match="names no model"):
         model_path(config, "plain")
-    with pytest.raises(TemplateError, match="missing.yaml"):
+    with pytest.raises(LlamaSwapError, match="missing.yaml"):
         model_path(tmp_path / "missing.yaml", "plain")
 
 
@@ -146,9 +148,52 @@ def test_without_levels_in_its_template_a_checkpoint_has_its_encoders(tmp_path: 
     assert template_levels(config, "plain") == []
 
 
-def test_a_model_that_is_no_checkpoint_folder_is_said(tmp_path: Path) -> None:
-    gguf = tmp_path / "model.gguf"
-    gguf.write_bytes(b"GGUF")
-    config = llama_swap(tmp_path, {"gguf": f"server --model {gguf}"})
-    with pytest.raises(TemplateError, match="is no checkpoint folder"):
-        template_levels(config, "gguf")
+def gguf_file(path: Path, template: str | None) -> Path:
+    writer = gguf.GGUFWriter(path, "llama")
+    if template is not None:
+        writer.add_chat_template(template)
+    writer.write_header_to_file()
+    writer.write_kv_data_to_file()
+    writer.write_tensors_to_file()
+    writer.close()
+    return path
+
+
+def test_a_gguf_file_has_the_levels_of_the_template_it_carries(tmp_path: Path) -> None:
+    with_levels = gguf_file(tmp_path / "glm.gguf", GLM53)
+    without = gguf_file(tmp_path / "instruct.gguf", None)
+    config = llama_swap(
+        tmp_path,
+        {
+            "glm": f"llama-server --model {with_levels}",
+            "instruct": f"llama-server --model {without}",
+        },
+    )
+    assert template_levels(config, "glm") == ["low", "high", "max"]
+    assert template_levels(config, "instruct") == []
+
+
+def test_a_model_that_is_not_there_or_no_gguf_file_is_said(tmp_path: Path) -> None:
+    broken = tmp_path / "broken.gguf"
+    broken.write_bytes(b"no gguf")
+    config = llama_swap(
+        tmp_path,
+        {"gone": f"server --model {tmp_path / 'gone'}", "broken": f"server --model {broken}"},
+    )
+    with pytest.raises(LlamaSwapError, match="is not there"):
+        template_levels(config, "gone")
+    with pytest.raises(LlamaSwapError, match="cannot be read"):
+        template_levels(config, "broken")
+
+
+def test_embedding_servers_are_told_by_their_command(tmp_path: Path) -> None:
+    config = llama_swap(
+        tmp_path,
+        {
+            "bge": "llama-server --model /m/bge.gguf --embedding --pooling cls",
+            "old-vllm": "vllm serve /m/e --task embed",
+            "new-vllm": "vllm serve /m/e --runner pooling",
+            "chat": "vllm serve /m/c --runner generate",
+        },
+    )
+    assert embedding_models(config) == {"bge", "old-vllm", "new-vllm"}
