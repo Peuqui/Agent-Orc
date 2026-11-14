@@ -265,6 +265,8 @@ export interface AgentSession {
   name: string
   /** The levels its slider offers: the profile's, or those of the chosen model. */
   effort_levels: string[]
+  /** Why the levels could not be told (its slider is missing then); null when they could. */
+  effort_levels_problem: string | null
   /** Reported by the agent itself (Claude: via `agent-orc statusline`); null until it reports. */
   model: string | null
   effort: string | null

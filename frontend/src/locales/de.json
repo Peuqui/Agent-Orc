@@ -30,6 +30,7 @@
     "submit": "Anmelden"
   },
   "sessions": {
+    "levelsProblem": "Denkstufen nicht abrufbar, darum kein Regler: {problem}",
     "workspace": "Arbeitsfläche des Agenten",
     "empty": "Kein Agent läuft. Wähle über „Neuen Agenten starten“ einen Ordner.",
     "running": "läuft",

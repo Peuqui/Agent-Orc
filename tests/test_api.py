@@ -23,10 +23,11 @@ from fastapi.testclient import TestClient
 from starlette.testclient import WebSocketTestSession
 from starlette.websockets import WebSocketDisconnect
 
-from agent_orc.api import BUILD_ID_FILE, BUILD_ID_HEADER, create_app
+from agent_orc.api import BUILD_ID_FILE, BUILD_ID_HEADER, LEVELS_CACHE_SECONDS, create_app
 from agent_orc.approvals import Decision, close_request, open_request, wait_for_decision
 from agent_orc.auth import new_credentials
 from agent_orc.config import (
+    AgentProfile,
     Config,
     DictationConfig,
     HostConfig,
@@ -1998,6 +1999,80 @@ def agent_settings(session_id: str) -> dict[str, Any]:
     """The settings file the agent got at its last start."""
     settings: dict[str, Any] = json.loads(agent_settings_file(session_id).read_text())
     return settings
+
+
+def test_levels_that_cannot_be_told_show_on_that_agents_card_only(
+    config: Config, home: Path, clock: FakeClock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Its levels come from a command that fails while the file in ORC_LEVELS_BROKEN exists, as the
+    # levels command of a backend whose configuration was broken after the start.
+    broken = home / "levels-broken"
+    monkeypatch.setenv("ORC_LEVELS_BROKEN", str(broken))
+    fragile = AgentProfile.model_validate(
+        {
+            "label": "Fragile",
+            "models": ["printf", "thinker\\n"],
+            "start": ["sh", "-c", "echo started {model}; exec cat"],
+            "resume": ["sh", "-c", "echo resumed {model}; exec cat"],
+            "settings": {},
+            "effort": {
+                "levels": ["low", "high"],
+                "default": "low",
+                "levels_command": [
+                    "sh",
+                    "-c",
+                    '[ -e "$ORC_LEVELS_BROKEN" ] && { echo template unreadable >&2; exit 1; };'
+                    " echo low high",
+                ],
+            },
+        }
+    )
+    agents = {**config.agents, "fragile": fragile}
+    client = TestClient(
+        create_app(
+            config.model_copy(update={"agents": agents}),
+            new_credentials(PASSWORD),
+            static_dir=None,
+            clock=clock,
+        )
+    )
+    client.post("/api/login", json={"password": PASSWORD})
+
+    def start(name: str, profile: str, model: str) -> str:
+        (home / "projects" / name).mkdir()
+        body = {
+            "profile": profile,
+            "path": str(home / "projects" / name),
+            "model": model,
+            "resume": False,
+            "effort": None,
+            "ultracode": False,
+            "conversation": None,
+        }
+        session: str = client.post("/api/sessions", json=body).json()["id"]
+        return session
+
+    fragile_id = start("f", "fragile", "thinker")
+    other_id = start("o", "narrow", "wide")
+
+    def levels() -> dict[str, tuple[list[str], str | None]]:
+        listed = client.get("/api/sessions")
+        assert listed.status_code == 200
+        return {
+            s["id"]: (s["effort_levels"], s["effort_levels_problem"]) for s in listed.json()
+        }
+
+    assert levels()[fragile_id] == (["low", "high"], None)
+    broken.touch()
+    clock.advance(LEVELS_CACHE_SECONDS + 1)
+    listed = levels()
+    assert listed[fragile_id] == ([], "template unreadable")
+    assert listed[other_id] == (["low", "high", "max"], None)
+    # The failure is kept like levels are: not asked again at every refresh of the list.
+    broken.unlink()
+    assert levels()[fragile_id] == ([], "template unreadable")
+    clock.advance(LEVELS_CACHE_SECONDS + 1)
+    assert levels()[fragile_id] == (["low", "high"], None)
 
 
 def wait_for_text(client: TestClient, session_id: str, text: str, count: int = 1) -> bool:

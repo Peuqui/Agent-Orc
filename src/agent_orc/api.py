@@ -851,9 +851,14 @@ def create_app(
         return next((s for s in sessions.list() if s.id == session_id), None)
 
     def run_profile_command(command: list[str]) -> str:
-        result = subprocess.run(
-            command, capture_output=True, text=True, timeout=PROFILE_COMMAND_TIMEOUT_SECONDS
-        )
+        try:
+            result = subprocess.run(
+                command, capture_output=True, text=True, timeout=PROFILE_COMMAND_TIMEOUT_SECONDS
+            )
+        except subprocess.TimeoutExpired as error:
+            raise ProfileCommandError(
+                f"{' '.join(command)}: no answer within {PROFILE_COMMAND_TIMEOUT_SECONDS} s"
+            ) from error
         if result.returncode != 0:
             raise ProfileCommandError(result.stderr.strip() or " ".join(command))
         return result.stdout
@@ -893,7 +898,9 @@ def create_app(
         kept = agent_reasoning(session.profile, session.id)
         store_start_reasoning(session.profile, session.id, model, effort, kept.ultracode)
 
-    levels_cache: dict[tuple[str, str | None], tuple[float, list[str]]] = {}
+    # Per profile and model: when it was asked, and its levels or why they could not be told (a
+    # failed command is not run again at every refresh of the list either).
+    levels_cache: dict[tuple[str, str | None], tuple[float, list[str] | str]] = {}
 
     def effort_levels(profile_name: str, model: str | None) -> list[str]:
         """The levels the agent takes: the profile's, or those its chosen model takes."""
@@ -905,11 +912,25 @@ def create_app(
             return effort.levels
         cached = levels_cache.get((profile_name, model))
         if cached is not None and clock() - cached[0] < LEVELS_CACHE_SECONDS:
+            if isinstance(cached[1], str):
+                raise ProfileCommandError(cached[1])
             return cached[1]
         command = [argument.replace(MODEL_PLACEHOLDER, model) for argument in effort.levels_command]
-        levels = run_profile_command(command).split()
+        try:
+            levels = run_profile_command(command).split()
+        except ProfileCommandError as error:
+            levels_cache[(profile_name, model)] = (clock(), str(error))
+            raise
         levels_cache[(profile_name, model)] = (clock(), levels)
         return levels
+
+    def card_levels(session: AgentSession) -> tuple[list[str], str | None]:
+        """The slider's levels and why they could not be told: a failed lookup shows on the
+        agent's own card, the list of the others stays."""
+        try:
+            return effort_levels(session.profile, session.chosen_model), None
+        except ProfileCommandError as error:
+            return [], str(error)
 
     def prepare_start(
         profile_name: str,
@@ -1983,6 +2004,7 @@ def create_app(
     ) -> dict[str, Any]:
         empty = {"model": None, "context_tokens": None, "context_window": None}
         pending = pending_effort.get(session.id)
+        levels, levels_problem = card_levels(session)
         status = session_status(session)
         cache = agent_cache(session)
         own = agent_reasoning(session.profile, session.id)
@@ -2014,8 +2036,10 @@ def create_app(
             "approvals": [
                 approval_entry(r, session.profile) for r in requests if r.session == session.id
             ],
-            # The slider's levels: the profile's, or those of the chosen model.
-            "effort_levels": effort_levels(session.profile, session.chosen_model),
+            # The slider's levels: the profile's, or those of the chosen model; when these could
+            # not be told, why (the card says so instead of the slider).
+            "effort_levels": levels,
+            "effort_levels_problem": levels_problem,
             "scheduled": [asdict(p) for p in scheduled if p.session == session.id],
             "effort_pending": pending is not None,
             "pending_effort": pending.effort if pending else None,

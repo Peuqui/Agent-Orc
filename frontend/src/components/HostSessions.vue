@@ -434,6 +434,13 @@ function resumeWith(session: AgentSession, model: string | null, effort: string 
             @update:model-value="(reasoning) => (effortChange = { session, reasoning })"
           />
         </div>
+        <!-- The levels could not be told (e.g. the model server's configuration): said here only. -->
+        <div
+          v-if="session.running && session.effort_levels_problem"
+          class="rounded-lg border border-accent-700 bg-accent-900/40 px-3 py-2 text-sm break-words text-accent-300"
+        >
+          {{ $t('sessions.levelsProblem', { problem: session.effort_levels_problem }) }}
+        </div>
         <ScheduledList :prompts="session.scheduled" />
         <!-- The context is nearly full: a handover before Claude Code compacts it (also while it works). -->
         <div
