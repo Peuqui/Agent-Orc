@@ -17,6 +17,11 @@ hook marks that start, so agent-idle leaves such an agent working. An answer the
 gets no Stop: the server finds the stop in the transcript (end_interrupted_answer). One stopped
 before it began is not even there (Claude takes the request back): the screen tells
 (shows_no_work, shows_work_again).
+
+Subagents and workflows run on after the agent's answer has ended (Stop). Their own hooks and
+files do not tell reliably when one ends (stopped from the keyboard or by the agent, or after a
+/clear), so the screen's list of them does (shows_subagents); it is kept apart from the agent's
+own activity, which handover, model changes and the like rest on.
 """
 
 import json
@@ -27,7 +32,7 @@ from pathlib import Path
 from typing import Any
 
 from agent_orc.answers import interrupted_at
-from agent_orc.sessions import AgentSession, lines_above_input
+from agent_orc.sessions import AgentSession, lines_above_input, lines_below_input
 from agent_orc.state import state_dir, write_atomically
 
 STATUS_SUFFIX = ".json"
@@ -176,6 +181,36 @@ def shows_work_again(
         return False
     lines = _lines_to_judge(screen, scrolled)
     return lines is not None and any(working.search(line) for line in lines)
+
+
+def shows_subagents(screen: Callable[[], str], listed: re.Pattern[str]) -> bool | None:
+    """Whether the agent lists a running subagent or workflow below its input field; None for a
+    screen without an input field (a dialog, say), which says nothing about them. They work on
+    after the agent's answer ended, and Claude runs no hook of ours when one is stopped (not the
+    SubagentStop one, nor a mark in the agent's files), so the screen is all there is to go by."""
+    lines = lines_below_input(screen())
+    if lines is None:
+        return None
+    return any(listed.search(line) for line in lines)
+
+
+def subagents_after_look(
+    listed: bool | None, working: bool, missed_looks: int, looks_needed: int
+) -> tuple[bool, int]:
+    """Whether subagents count as running after a look at the screen, and how many looks in a row
+    found none listed while they counted as running. They are taken for gone only after
+    `looks_needed` such looks: a screen drawn anew (after /clear, or when the window is resized)
+    lists none for a moment. One that says nothing (None) changes nothing."""
+    if listed is None:
+        return working, missed_looks
+    if listed:
+        return True, 0
+    if not working:
+        return False, 0
+    missed_looks += 1
+    if missed_looks < looks_needed:
+        return True, missed_looks
+    return False, 0
 
 
 def store_status(session_id: str, status: dict[str, Any]) -> Path:

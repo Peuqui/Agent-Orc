@@ -374,10 +374,10 @@ function resumeWith(session: AgentSession, model: string | null, effort: string 
                one line also on phones. -->
           <div class="flex shrink-0 flex-col items-end gap-1">
             <span
-              v-if="session.running && session.busy"
+              v-if="session.running && (session.busy || session.subagents)"
               class="shrink-0 rounded-full bg-highlight-900/40 px-2.5 py-0.5 text-xs font-medium text-highlight-300"
             >
-              {{ $t('sessions.working') }}
+              {{ $t(session.busy ? 'sessions.working' : 'sessions.subagentsWorking') }}
             </span>
             <span
               v-else

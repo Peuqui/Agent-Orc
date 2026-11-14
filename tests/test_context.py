@@ -15,13 +15,27 @@ from agent_orc.context import (
     session_busy,
     session_status,
     shows_no_work,
+    shows_subagents,
     shows_work_again,
     status_file,
     status_line,
     store_activity,
     store_status,
+    subagents_after_look,
 )
 from agent_orc.sessions import AgentSession
+from tests.screens import (
+    AGENT_SELECTED_SCREEN,
+    BACKGROUND_SHELL_SCREEN,
+    INPUT_FIELD,
+    MAIN_SELECTED_SCREEN,
+    MANY_SUBAGENTS_SCREEN,
+    NO_SUBAGENTS_SCREEN,
+    ROW_IN_CONVERSATION_SCREEN,
+    SUBAGENTS_SCREEN,
+    TRUST_QUESTION_SCREEN,
+    WORKFLOW_SCREEN,
+)
 
 SESSION_START = 1_000_000.0
 
@@ -207,7 +221,6 @@ def test_an_answer_going_on_after_the_stop_leaves_the_agent_working(tmp_path: Pa
 
 
 # Claude Code 2.1.318 while it works, and once it is done.
-INPUT_FIELD = "─" * 40 + "\n❯ \n" + "─" * 40
 WORKING_SCREEN = "● Antwort\n\n* Marinating… (27s · thought for 7s)\n\n" + INPUT_FIELD
 # At the very start the spinner shows no time yet.
 STARTING_SCREEN = "● Antwort\n\n❯ Eine Frage…\n\n✻ Reticulating…\n\n" + INPUT_FIELD
@@ -283,3 +296,73 @@ def test_a_resting_agent_showing_its_spinner_works_again(tmp_path: Path) -> None
     store_activity("s-1", busy=True)
     os.utime(activity_file("s-1"), (ASKED_SECONDS, ASKED_SECONDS))
     assert not again(WORKING_SCREEN, later)
+
+
+def listed_subagents(screen: str) -> bool | None:
+    listed = parse_config(default_config_text()).agents["claude"].subagents_line
+    assert listed is not None
+    return shows_subagents(lambda: screen, listed)
+
+
+def test_the_list_below_the_input_field_shows_running_subagents() -> None:
+    for screen in (
+        SUBAGENTS_SCREEN,
+        # Moved into the list with the arrow key: the selected row is led by "❯ ".
+        AGENT_SELECTED_SCREEN,
+        # Five rows and the count of the rest.
+        MANY_SUBAGENTS_SCREEN,
+        # A workflow is one row, without a row of the main agent.
+        WORKFLOW_SCREEN,
+    ):
+        assert listed_subagents(screen) is True, screen
+
+
+def test_no_running_subagent_is_listed_when_only_the_main_agent_is() -> None:
+    for screen in (
+        # Only the main agent's own row is selected (the agents are the other rows, here too).
+        NO_SUBAGENTS_SCREEN,
+        # A shell in the background is no subagent: the mode line only counts it.
+        BACKGROUND_SHELL_SCREEN,
+        # The conversation above the field may show such a row: only the list below counts.
+        ROW_IN_CONVERSATION_SCREEN,
+    ):
+        assert listed_subagents(screen) is False, screen
+
+
+def test_the_selected_main_row_alone_is_no_subagent() -> None:
+    only_main = MAIN_SELECTED_SCREEN.split("\n  ◯")[0]
+    assert listed_subagents(only_main) is False
+    assert listed_subagents(MAIN_SELECTED_SCREEN) is True
+
+
+def test_a_screen_without_an_input_field_says_nothing_about_subagents() -> None:
+    assert listed_subagents(TRUST_QUESTION_SCREEN) is None
+    assert listed_subagents("") is None
+
+
+def test_subagents_count_at_once_but_are_gone_only_after_several_looks_in_a_row() -> None:
+    needed = 3
+    # Nothing known, nothing listed: nothing counts, and there is nothing to miss.
+    assert subagents_after_look(False, False, 0, needed) == (False, 0)
+    # Listed: they count from the first look on.
+    assert subagents_after_look(True, False, 0, needed) == (True, 0)
+    # Missing for a look or two (a screen drawn anew after /clear): they still count.
+    assert subagents_after_look(False, True, 0, needed) == (True, 1)
+    assert subagents_after_look(False, True, 1, needed) == (True, 2)
+    # Missing for the third look in a row: gone.
+    assert subagents_after_look(False, True, 2, needed) == (False, 0)
+    # Listed again in between: the count of misses starts over.
+    assert subagents_after_look(True, True, 2, needed) == (True, 0)
+    # A screen that says nothing changes nothing, neither the state nor the count.
+    assert subagents_after_look(None, True, 2, needed) == (True, 2)
+    assert subagents_after_look(None, False, 0, needed) == (False, 0)
+
+
+def test_a_flicker_of_the_list_does_not_end_the_work() -> None:
+    looks = [True, False, False, True, False, False, False, False]
+    working, missed = False, 0
+    seen = []
+    for listed in looks:
+        working, missed = subagents_after_look(listed, working, missed, 3)
+        seen.append(working)
+    assert seen == [True, True, True, True, True, True, False, False]

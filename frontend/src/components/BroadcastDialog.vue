@@ -52,7 +52,9 @@ async function send(): Promise<void> {
         >
           <input v-model="chosen" type="checkbox" :value="session.id" class="size-4" />
           <span class="font-medium">{{ sessionName(session) }}</span>
-          <span v-if="session.busy" class="text-xs text-highlight-300">{{ $t('sessions.working') }}</span>
+          <span v-if="session.busy || session.subagents" class="text-xs text-highlight-300">{{
+            $t(session.busy ? 'sessions.working' : 'sessions.subagentsWorking')
+          }}</span>
         </label>
       </div>
       <textarea v-model="text" rows="4" class="input text-sm" :placeholder="$t('broadcast.text')" required />

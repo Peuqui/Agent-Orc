@@ -28,8 +28,9 @@ const { zoomFactor, zoomStyle } = useZoomFactor()
 
 const toast = useToast()
 const { sessions } = useSessions()
-// A yes or no: the sessions come anew every few seconds, and a new object would draw anew.
+// A yes or no each: the sessions come anew every few seconds, and a new object would draw anew.
 const busy = computed(() => sessions.value.find((session) => session.id === props.sessionId)?.busy === true)
+const subagentsWorking = computed(() => sessions.value.find((session) => session.id === props.sessionId)?.subagents === true)
 const text = draftOf(props.sessionId)
 const field = ref<HTMLTextAreaElement>()
 
@@ -297,17 +298,18 @@ function onKeydown(event: KeyboardEvent): void {
       </button>
       <template #popup><PromptTemplates ref="templates" @insert="insertTemplate" /></template>
     </AttachMenu>
-    <!-- While the agent works, a small spinner at the lower right of the microphone, which sits higher
-         than the field and leaves room there: in every view, without taking room in a toolbar. -->
+    <!-- While the agent works, or only its subagents do, a small spinner at the lower right of the
+         microphone, which sits higher than the field and leaves room there: in every view, without
+         taking room in a toolbar. -->
     <span class="relative flex">
       <DictationMic :dictation="dictation" />
       <span
-        v-if="busy"
+        v-if="busy || subagentsWorking"
         class="flex size-4 items-center justify-center rounded-full bg-page"
         :class="dictation.microphone ? 'pointer-events-none absolute right-0 bottom-0' : 'mx-1 self-center'"
         role="status"
-        :aria-label="$t('sessions.working')"
-        :title="$t('sessions.working')"
+        :aria-label="$t(busy ? 'sessions.working' : 'sessions.subagentsWorking')"
+        :title="$t(busy ? 'sessions.working' : 'sessions.subagentsWorking')"
       >
         <span class="size-3 animate-tick rounded-full border-2 border-working border-t-transparent" aria-hidden="true" />
       </span>

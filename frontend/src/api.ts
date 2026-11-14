@@ -270,6 +270,8 @@ export interface AgentSession {
   effort: string | null
   /** The agent is working on an answer (reported by its hooks). */
   busy: boolean
+  /** Subagents or workflows still run, also while the agent itself rests (read from its screen). */
+  subagents: boolean
   /** Stored for the folder; the agent reads it at start. */
   ultracode: boolean
   /** Permission mode the folder's sessions start in (the configured one until the folder has

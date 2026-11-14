@@ -53,6 +53,7 @@ from agent_orc.sessions import SESSION_ENV, SessionManager
 from agent_orc.state import state_dir
 from agent_orc.terminal import WS_CLOSE_SERVICE_RESTART, attach_environment
 from tests.conftest import Device, FakeClock, FakePushService, FakeStt
+from tests.screens import NO_SUBAGENTS_SCREEN, SUBAGENTS_SCREEN
 
 PASSWORD = "richtig-langes-passwort"
 
@@ -75,9 +76,18 @@ SWAPPER_SCRIPT = (
 )
 
 
+# Draws the list of running subagents, waits for a line, and draws the screen anew without them.
+LISTER_SCRIPT = (
+    f"cat <<'EOF'\n{SUBAGENTS_SCREEN}\nEOF\n"
+    f"read line; printf '\\033[H\\033[2J'; cat <<'EOF'\n{NO_SUBAGENTS_SCREEN}\nEOF\n"
+    "exec cat"
+)
+
+
 @pytest.fixture
 def config(home: Path, socket_name: str) -> Config:
     raw: dict[str, Any] = yaml.safe_load(default_config_text())
+    subagents_line = raw["agents"]["claude"]["subagents_line"]
     raw["server"]["cookie_secure"] = False  # TestClient talks plain HTTP
     raw["files"]["base_dir"] = str(home / "projects")
     raw["tmux"]["socket_name"] = socket_name
@@ -194,6 +204,13 @@ def config(home: Path, socket_name: str) -> Config:
             "start": ["sh", "-c", 'echo "named {name} [${ORC_SUFFIX-none}]"; exec cat'],
             "resume": ["true"],
             "env": {"ORC_SUFFIX": "{suffix}"},
+        },
+        # Shows what Claude Code shows with two subagents running; after a line of input, with none.
+        "lister": {
+            "label": "Lister",
+            "start": ["sh", "-c", LISTER_SCRIPT],
+            "resume": ["true"],
+            "subagents_line": subagents_line,
         },
         "shell": {
             "label": "Shell",
@@ -3256,3 +3273,42 @@ def refused_code_at(client: TestClient, url: str, headers: dict[str, str]) -> in
         pass
     code: int = refused.value.code
     return code
+
+
+def test_a_card_shows_the_subagents_listed_on_the_agents_screen(
+    config: Config,
+    clock: FakeClock,
+    home: Path,
+    socket_name: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
+    monkeypatch.setattr("agent_orc.api.AGENT_CHECK_SECONDS", 0.1)
+    with TestClient(
+        create_app(config, new_credentials(PASSWORD), static_dir=None, clock=clock)
+    ) as client:
+        client.post("/api/login", json={"password": PASSWORD})
+        start = {
+            "profile": "lister",
+            "path": str(home / "projects"),
+            "resume": False,
+            "effort": None,
+            "ultracode": False,
+            "conversation": None,
+        }
+        session_id = client.post("/api/sessions", json=start).json()["id"]
+
+        def subagents_become(wanted: bool) -> bool:
+            for _ in range(50):
+                if client.get("/api/sessions").json()[0]["subagents"] is wanted:
+                    return True
+                time.sleep(0.1)
+            return False
+
+        assert subagents_become(True)
+        # The agent itself rests (no hook marked it busy): the subagents are no work of its own.
+        assert client.get("/api/sessions").json()[0]["busy"] is False
+        subprocess.run(
+            ["tmux", "-L", socket_name, "send-keys", "-t", f"={session_id}:", "Enter"], check=True
+        )
+        assert subagents_become(False)

@@ -83,8 +83,10 @@ from agent_orc.context import (
     session_status,
     session_transcript,
     shows_no_work,
+    shows_subagents,
     shows_work_again,
     store_activity,
+    subagents_after_look,
     transcript_version,
 )
 from agent_orc.dictation import (
@@ -297,7 +299,8 @@ LEVELS_CACHE_SECONDS = 30
 AGENT_CHECK_SECONDS = 2
 # Looks in a row (AGENT_CHECK_SECONDS apart) at which the screen contradicts the recorded
 # activity (no work on a busy agent's, work on a resting one's), before the record is changed
-# (see context.shows_no_work, shows_work_again).
+# (see context.shows_no_work, shows_work_again); also the looks that find no subagents listed
+# before they count as gone (see context.subagents_after_look).
 WORK_CHANGE_LOOKS = 3
 # How much of the screen above the input field goes to the log when an agent is let rest so.
 SCREEN_LOG_CHARS = 1500
@@ -1283,6 +1286,31 @@ def create_app(
                 shown[-SCREEN_LOG_CHARS:],
             )
 
+    # Whether each running agent lists subagents or workflows below its input field, as last seen
+    # (see context.shows_subagents), and the looks in a row that found none while it was thought to.
+    subagents_working: dict[str, bool] = {}
+    subagents_missed_looks: dict[str, int] = {}
+
+    def look_for_subagents() -> None:
+        listed = sessions.list()
+        running = {s.id for s in listed if s.running}
+        for known in (subagents_working, subagents_missed_looks):
+            for session_id in known.keys() - running:
+                del known[session_id]
+        for session in listed:
+            profile = config.agents.get(session.profile)
+            if not session.running or profile is None or profile.subagents_line is None:
+                continue
+            screen = functools.partial(sessions.text, session.id, 0)
+            subagents_working[session.id], subagents_missed_looks[session.id] = (
+                subagents_after_look(
+                    shows_subagents(screen, profile.subagents_line),
+                    subagents_working.get(session.id, False),
+                    subagents_missed_looks.get(session.id, 0),
+                    WORK_CHANGE_LOOKS,
+                )
+            )
+
     approval_changes = ChangeNotifier()
     host_changes = ChangeNotifier()
     host_states: dict[str, HostState] = {}
@@ -1385,6 +1413,10 @@ def create_app(
                 await asyncio.to_thread(end_interrupted_answers)
             except Exception:
                 logger.exception("looking for stopped answers failed")
+            try:
+                await asyncio.to_thread(look_for_subagents)
+            except Exception:
+                logger.exception("looking for subagents failed")
             try:
                 await asyncio.to_thread(check_handovers)
             except Exception:
@@ -1914,6 +1946,8 @@ def create_app(
             # As the agent reports it; before its first report, the level it started with.
             "effort": status.get("effort") or own.effort,
             "busy": session_busy(session),
+            # Subagents or workflows still run, also while the agent itself rests.
+            "subagents": subagents_working.get(session.id, False),
             # As stored for the agent; it gets them at start.
             "ultracode": own.ultracode,
             "permission_mode": agent_permission_mode(session.profile, session.id),

@@ -323,6 +323,10 @@ agents:
     working_line: '^[^●❯\s] [^…]+…(\s|$)'
     # Shown instead of the spinner while the screen is scrolled back: no judgement then.
     scrolled_line: '\(ctrl\+End\)'
+    # The list below its input field of the subagents and workflows still running ("  ◯ general-purpose
+    # Agent 1  13s", led by "❯ " for the selected one; the main agent's own row is "● main"). They
+    # go on after the answer ended, so the card shows the agent as working.
+    subagents_line: '^\s*(?:❯ )?◯ '
     # A further agent in the folder gets an AI-Connect name of its own (Host:Project-Suffix).
     env: {AI_CONNECT_PEER_SUFFIX: "{suffix}"}
     # Usage limits (five hours, week) as Claude reports them in its status line.

@@ -394,6 +394,11 @@ class AgentProfile(StrictModel):
     # What the agent shows instead of its spinner while its screen is scrolled back (Claude: "1 new
     # message (ctrl+End) ↓"): such a screen says nothing about its work.
     scrolled_line: re.Pattern[str] | None = None
+    # What the agent shows below its input field for each subagent or workflow still running (Claude
+    # Code: "◯ general-purpose  Agent 1  13s · ↓ 11.5k tokens", the selected one led by "❯ "). Such
+    # work goes on after the agent's answer ended and runs no hook of the agent's when it is
+    # stopped, so the screen is what tells; the card then shows the agent as working on.
+    subagents_line: re.Pattern[str] | None = None
     # Prints the models to choose from at start, one per line; the choice fills {model}. A tab
     # may follow the name, then a note shown beside it; the note `free_until=<YYYY-MM-DD>` is the
     # last day the model is free, which the interface words in its own language.

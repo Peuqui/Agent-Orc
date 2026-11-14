@@ -173,6 +173,17 @@ def lines_above_input(screen: str) -> list[str] | None:
     return lines[: rules[-2]]
 
 
+def lines_below_input(screen: str) -> list[str] | None:
+    """The screen's lines below the agent's input field, where Claude Code lists its running
+    subagents, workflows and the like (after its mode line); None for a screen without such a
+    field."""
+    lines = screen.splitlines()
+    rules = _input_rules(lines)
+    if len(rules) < 2:
+        return None
+    return lines[rules[-1] + 1 :]
+
+
 def text_left_in_input(screen: str, text: str) -> bool:
     """Whether the end of `text` still stands in the agent's input field on this screen. An agent
     without such a field never matches. Whitespace does not count: the agent wraps long text."""
