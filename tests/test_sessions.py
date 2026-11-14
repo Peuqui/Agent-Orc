@@ -2,7 +2,9 @@
 
 import subprocess
 import time
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -345,6 +347,101 @@ def test_a_text_left_in_the_field_logs_the_screen(
     # The text as typed, with what cannot be seen, and the state of the pane's terminal.
     assert "Typed (exactly): 'eine Nachricht'" in caplog.text
     assert "Pane: alternate=" in caplog.text and "clients=" in caplog.text
+
+
+class CheckTimers:
+    """Stands in for threading.Timer: records what would run later, runs nothing."""
+
+    started: list[tuple[float, Callable[..., None], tuple[Any, ...]]] = []
+
+    def __init__(self, interval: float, function: Callable[..., None], args: tuple[Any, ...]):
+        self.entry = (interval, function, args)
+        self.daemon = False
+
+    def start(self) -> None:
+        CheckTimers.started.append(self.entry)
+
+
+@pytest.fixture
+def check_timers(monkeypatch: pytest.MonkeyPatch) -> type[CheckTimers]:
+    CheckTimers.started = []
+    monkeypatch.setattr("agent_orc.sessions.threading.Timer", CheckTimers)
+    return CheckTimers
+
+
+def test_a_lost_enter_is_pressed_once_more_and_the_result_is_looked_at(
+    manager: SessionManager,
+    workdir: Path,
+    caplog: pytest.LogCaptureFixture,
+    check_timers: type[CheckTimers],
+) -> None:
+    session = manager.start("reader", workdir, resume=False)
+    pressed: list[str] = []
+    manager.press_enter = lambda session_id: pressed.append(session_id)  # type: ignore[method-assign]
+    screens = {session.id: agent_screen("eine Nachricht")}
+    manager.text = lambda session_id, history_lines: screens[session_id]  # type: ignore[method-assign]
+
+    manager._report_unsubmitted(session.id, "eine Nachricht")
+    assert pressed == [session.id]
+    assert "Pressing Enter once more" in caplog.text
+    # One more look, after the same time, and nothing after that: no loop.
+    assert [entry[1] for entry in check_timers.started] == [manager._report_retried]
+    assert check_timers.started[0][0] == manager._terminal.submit_check_ms / 1000
+    assert check_timers.started[0][2] == (session.id, "eine Nachricht")
+
+    # The second Enter took the text: said so (at warning level, so it is counted).
+    caplog.clear()
+    screens[session.id] = agent_screen("")
+    manager._report_retried(session.id, "eine Nachricht")
+    assert "The second Enter took the text" in caplog.text
+    assert [record.levelname for record in caplog.records] == ["WARNING"]
+    assert len(pressed) == 1
+
+    # It did not: an error with the screen, and still no third Enter.
+    caplog.clear()
+    screens[session.id] = agent_screen("eine Nachricht")
+    manager._report_retried(session.id, "eine Nachricht")
+    assert "had no effect either" in caplog.text
+    assert [record.levelname for record in caplog.records] == ["ERROR"]
+    assert len(pressed) == 1 and len(check_timers.started) == 1
+
+
+def test_a_submitted_text_gets_no_second_enter(
+    manager: SessionManager,
+    workdir: Path,
+    check_timers: type[CheckTimers],
+) -> None:
+    session = manager.start("reader", workdir, resume=False)
+    pressed: list[str] = []
+    manager.press_enter = lambda session_id: pressed.append(session_id)  # type: ignore[method-assign]
+    manager.text = lambda session_id, history_lines: agent_screen("")  # type: ignore[method-assign]
+    manager._report_unsubmitted(session.id, "eine Nachricht")
+    assert pressed == [] and check_timers.started == []
+
+
+def test_a_screen_without_the_input_field_gets_no_second_enter(
+    manager: SessionManager,
+    workdir: Path,
+    check_timers: type[CheckTimers],
+) -> None:
+    # A dialog instead of the field (a permission question, say): an Enter there would answer it.
+    session = manager.start("reader", workdir, resume=False)
+    pressed: list[str] = []
+    manager.press_enter = lambda session_id: pressed.append(session_id)  # type: ignore[method-assign]
+    dialog = "Do you want to proceed?\n❯ 1. Yes\n  2. No\neine Nachricht"
+    manager.text = lambda session_id, history_lines: dialog  # type: ignore[method-assign]
+    manager._report_unsubmitted(session.id, "eine Nachricht")
+    assert pressed == [] and check_timers.started == []
+
+
+def test_typing_a_line_starts_the_first_check_after_the_check_time(
+    manager: SessionManager, workdir: Path, check_timers: type[CheckTimers]
+) -> None:
+    session = manager.start("reader", workdir, resume=False)
+    manager.press_enter = lambda session_id: None  # type: ignore[method-assign]
+    manager.type_line(session.id, "eine Nachricht")
+    assert [entry[1] for entry in check_timers.started] == [manager._report_unsubmitted]
+    assert check_timers.started[0][0] == manager._terminal.submit_check_ms / 1000
 
 
 def test_a_submitted_text_logs_nothing(

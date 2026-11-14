@@ -54,7 +54,8 @@ terminal:
   # as typed text plus submit rather than as one pasted block.
   submit_delay_ms: 80
   # This many milliseconds after the Enter (the default below) the server looks whether the text
-  # left the agent's input field, and logs the screen if not.
+  # left the agent's input field; if not, it logs the screen and presses Enter once more, and
+  # looks again after the same time.
   # submit_check_ms: 1000
   # A long text is typed in pieces of this many characters, this many milliseconds apart (the
   # values below are the defaults): Claude Code takes one big chunk (about 800 characters on)

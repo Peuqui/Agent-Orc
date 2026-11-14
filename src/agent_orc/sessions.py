@@ -7,6 +7,7 @@ import re
 import subprocess
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -385,37 +386,66 @@ class SessionManager:
         # Enter separately, so the agent sees typed text plus submit, not one pasted block.
         time.sleep(self._terminal.submit_delay_ms / MILLISECONDS_PER_SECOND)
         self.press_enter(session_id)
-        check = threading.Timer(
-            self._terminal.submit_check_ms / MILLISECONDS_PER_SECOND,
-            self._report_unsubmitted,
-            (session_id, line),
+        self._check_later(self._report_unsubmitted, session_id, line)
+
+    def _check_later(self, check: Callable[[str, str], None], session_id: str, line: str) -> None:
+        """Run `check` once the submit check time is over (on a thread of its own)."""
+        timer = threading.Timer(
+            self._terminal.submit_check_ms / MILLISECONDS_PER_SECOND, check, (session_id, line)
         )
-        check.daemon = True
-        check.start()
+        timer.daemon = True
+        timer.start()
+
+    def _screen_of_session(self, session_id: str) -> str | None:
+        """The screen, or None for a session that is gone (a line may end the agent, e.g. its exit
+        command)."""
+        try:
+            return self.text(session_id, 0)
+        except SessionNotFoundError:
+            return None
 
     def _report_unsubmitted(self, session_id: str, line: str) -> None:
-        """Log the screen when a submitted text still stands in the input field. It only records
-        the evidence: a further Enter would hide why the first one had no effect. Along with it
-        go the text exactly as it was typed (a character that cannot be seen may be the reason)
-        and what tmux knows of the pane's terminal."""
-        try:
-            screen = self.text(session_id, 0)
-        except SessionNotFoundError:
-            return  # The line ended the agent (e.g. its exit command).
+        """A submitted text that still stands in the input field: the Enter was lost (seen three
+        times in five days, the agent resting, and an Enter by hand went through). Log what is
+        known of it - the screen, the text exactly as it was typed (a character that cannot be
+        seen may be the reason) and what tmux knows of the pane's terminal - and press Enter once
+        more, which is safe: the agent shows its input field with this very text, so no dialog is
+        up, and an Enter on an empty field does nothing. The result is looked at after the same
+        time (see _report_retried)."""
+        screen = self._screen_of_session(session_id)
+        if screen is None or not text_left_in_input(screen, line):
+            return
+        state = self._tmux(
+            "display-message", "-p", "-t", exact_target(session_id), PANE_STATE_FORMAT,
+            check=False,
+        ).stdout.strip()  # fmt: skip
+        logger.warning(
+            "%s: Enter had no effect, text still in the input field after %s ms:\n%s\n"
+            "Typed (exactly): %r\nPane: %s\nPressing Enter once more.",
+            session_id,
+            self._terminal.submit_check_ms,
+            screen,
+            line[:TYPED_LOG_CHARS],
+            state,
+        )
+        self.press_enter(session_id)
+        self._check_later(self._report_retried, session_id, line)
+
+    def _report_retried(self, session_id: str, line: str) -> None:
+        """Whether the second Enter took the text; the log tells how often the first is lost and
+        whether the second helps (if not, the agent is in a state of its own and the cause must
+        be found)."""
+        screen = self._screen_of_session(session_id)
+        if screen is None:
+            return
         if text_left_in_input(screen, line):
-            state = self._tmux(
-                "display-message", "-p", "-t", exact_target(session_id), PANE_STATE_FORMAT,
-                check=False,
-            ).stdout.strip()  # fmt: skip
-            logger.warning(
-                "%s: Enter had no effect, text still in the input field after %s ms:\n%s\n"
-                "Typed (exactly): %r\nPane: %s",
+            logger.error(
+                "%s: The second Enter had no effect either, text still in the input field:\n%s",
                 session_id,
-                self._terminal.submit_check_ms,
                 screen,
-                line[:TYPED_LOG_CHARS],
-                state,
             )
+        else:
+            logger.warning("%s: The second Enter took the text.", session_id)
 
     def press_enter(self, session_id: str) -> None:
         self._tmux("send-keys", "-t", exact_target(session_id), "-l", "\r")
