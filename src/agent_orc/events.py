@@ -14,7 +14,6 @@ KEEP_ALIVE_SECONDS = 25
 SHUTDOWN_GRACE_SECONDS = 5
 
 
-
 class ChangeNotifier:
     """Handlers run in worker threads, the streams in the event loop: notify() hands over to it."""
 

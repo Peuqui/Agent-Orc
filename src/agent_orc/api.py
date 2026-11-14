@@ -62,7 +62,13 @@ from agent_orc.attachments import (
     uploaded_image,
 )
 from agent_orc.auth import Clock, Credentials, LoginGuard, TokenSigner, verify_password
-from agent_orc.backends import served_catalog
+from agent_orc.backends import (
+    BackendError,
+    fetch_json,
+    reachable_base_url,
+    resolve_key,
+    served_catalog,
+)
 from agent_orc.cache import CacheState, cache_state, last_answer
 from agent_orc.card_gate import TurnedAway, create_gate_server
 from agent_orc.catalog import (
@@ -127,6 +133,7 @@ from agent_orc.effort import (
     write_agent_settings,
 )
 from agent_orc.events import KEEP_ALIVE_SECONDS, ChangeNotifier, until_stopped
+from agent_orc.gpuorc import held
 from agent_orc.handover import ADVISED as HANDOVER_ADVISED
 from agent_orc.handover import ASKED as HANDOVER_ASKED
 from agent_orc.handover import (
@@ -1276,6 +1283,52 @@ def create_app(
             message = agent_message("handover_done", session.id, session.name, "")
             deliver(message, config.push)
 
+    # The local sessions the card gate turned away (see card_gate.py); its listener runs in this
+    # process.
+    turned_away = TurnedAway()
+    # When GPU-Orc was last asked for a waiting session (by clock()).
+    cards_asked: dict[str, float] = {}
+
+    def cards_are_free(backend_name: str) -> bool:
+        """Whether GPU-Orc answers without a hold; raises when it cannot be asked."""
+        backend = (config.backends or {})[backend_name]
+        assert backend.gpu_orc is not None
+        base_url = reachable_base_url(backend, resolve_key(backend), fetch_json)
+        return held(backend.gpu_orc, base_url) is None
+
+    def wake_waiting_sessions() -> None:
+        """Type the resume prompt into each session the gate turned away once the hold has ended."""
+        assert config.card_gate is not None
+        for session_id, turned in turned_away.waiting().items():
+            session = find_session(session_id)
+            if session is None or not session.running:
+                turned_away.clear(session_id)
+                cards_asked.pop(session_id, None)
+                continue
+            # Typing into a working session would queue the text behind its failing request.
+            if session_busy(session):
+                continue
+            now = clock()
+            if now - cards_asked.get(session_id, 0.0) < config.card_gate.check_seconds:
+                continue
+            cards_asked[session_id] = now
+            try:
+                free = cards_are_free(turned.backend)
+            except (BackendError, OSError, ValueError, KeyError, TypeError) as error:
+                # Not knowing is no reason to wake it: it stays waiting and is asked again.
+                logger.warning("card gate: GPU-Orc of %s not asked: %s", turned.backend, error)
+                continue
+            if not free:
+                continue
+            logger.info("card gate: the cards are free, waking %s", session_id)
+            sessions.type_line(session_id, config.card_gate.resume_prompt)
+            turned_away.clear(session_id)
+            cards_asked.pop(session_id, None)
+
+    def waiting_for_cards(session_id: str) -> dict[str, str] | None:
+        turned = turned_away.waiting().get(session_id)
+        return {"reason": turned.reason, "since": turned.at.isoformat()} if turned else None
+
     # Where each agent's keep-warm prompts of the current rest stand (see keepwarm.py).
     keep_warm_progress: dict[str, keepwarm.KeepWarmProgress] = {}
 
@@ -1588,6 +1641,11 @@ def create_app(
                 await asyncio.to_thread(deliver_scheduled)
             except Exception:
                 logger.exception("handling scheduled prompts failed")
+            if config.card_gate is not None:
+                try:
+                    await asyncio.to_thread(wake_waiting_sessions)
+                except Exception:
+                    logger.exception("waking the sessions waiting for the cards failed")
 
     # The other machines: a tunnel to each (run in the background) and the socket it ends in.
     host_links = {
@@ -1595,9 +1653,6 @@ def create_app(
         for name, host in (config.hosts or {}).items()
     }
 
-    # The local sessions the card gate turned away (see card_gate.py); its listener runs in this
-    # process.
-    turned_away = TurnedAway()
     gate_server = create_gate_server(config, turned_away) if config.card_gate else None
 
     @asynccontextmanager
@@ -1637,6 +1692,7 @@ def create_app(
     # Set as the server stops (cli.Server): the live streams end, instead of being waited for.
     stopping = asyncio.Event()
     app.state.stopping = stopping
+    app.state.turned_away = turned_away
 
     for error_type, status_code in ERROR_STATUS.items():
         app.add_exception_handler(error_type, _error_handler(status_code))
@@ -2161,6 +2217,7 @@ def create_app(
             # not be told, why (the card says so instead of the slider).
             "effort_levels": levels,
             "effort_levels_problem": levels_problem,
+            "waiting_for_cards": waiting_for_cards(session.id),
             "scheduled": [asdict(p) for p in scheduled if p.session == session.id],
             "effort_pending": pending is not None,
             "pending_effort": pending.effort if pending else None,

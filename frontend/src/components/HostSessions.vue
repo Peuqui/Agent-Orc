@@ -441,6 +441,13 @@ function resumeWith(session: AgentSession, model: string | null, effort: string 
         >
           {{ $t('sessions.levelsProblem', { problem: session.effort_levels_problem }) }}
         </div>
+        <!-- The card gate turned its request away: it is woken when GPU-Orc's hold ends. -->
+        <div
+          v-if="session.running && session.waiting_for_cards"
+          class="rounded-lg border border-accent-700 bg-accent-900/40 px-3 py-2 text-sm break-words text-accent-300"
+        >
+          {{ $t('sessions.waitingForCards', { reason: session.waiting_for_cards.reason }) }}
+        </div>
         <ScheduledList :prompts="session.scheduled" />
         <!-- The context is nearly full: a handover before Claude Code compacts it (also while it works). -->
         <div

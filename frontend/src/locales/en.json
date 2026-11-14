@@ -30,6 +30,7 @@
     "submit": "Log in"
   },
   "sessions": {
+    "waitingForCards": "Waiting for the cards: {reason}",
     "levelsProblem": "Reasoning levels could not be read, so there is no slider: {problem}",
     "workspace": "Workspace of the agent",
     "empty": "No agent is running. Choose a folder via “Start a new agent”.",

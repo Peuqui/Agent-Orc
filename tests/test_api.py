@@ -56,6 +56,7 @@ from agent_orc.state import state_dir
 from agent_orc.terminal import WS_CLOSE_SERVICE_RESTART, attach_environment
 from tests.conftest import Device, FakeClock, FakePushService, FakeStt
 from tests.screens import NO_SUBAGENTS_SCREEN, SUBAGENTS_SCREEN
+from tests.test_card_gate import free_port
 
 PASSWORD = "richtig-langes-passwort"
 
@@ -2404,6 +2405,109 @@ def test_agent_stopped_by_its_limit_resumes_after_the_reset(
         client.delete(f"/api/sessions/{session_id}")
         assert client.get("/api/sessions").json() == []
         assert read_scheduled() == []
+
+
+CARD_HOLD = {"since": "2026-11-14T20:55:00+01:00", "reason": "vllm-research Messung"}
+
+
+def card_gate_app(config: Config, clock: FakeClock, hold: dict[str, Any]) -> TestClient:
+    """An app with a card gate whose GPU-Orc is `hold` (the answer of its hold query; the
+    "hold" key None: free) and whose backend answers at once."""
+    raw = config.model_dump(mode="json")
+    raw["backends"] = {
+        "local": {
+            "label": "Local",
+            "base_urls": ["http://127.0.0.1:1"],
+            "key": "k",
+            "key_variable": "ANTHROPIC_API_KEY",
+            "gpu_orc": {"port": 5070},
+        }
+    }
+    raw["card_gate"] = {
+        "port": free_port(),
+        "refusal": "held: {reason}",
+        "resume_prompt": "Cards are free again.",
+        "check_seconds": 30,
+    }
+    gated = Config.model_validate(raw)
+    return TestClient(create_app(gated, new_credentials(PASSWORD), static_dir=None, clock=clock))
+
+
+def fake_gpu_orc(monkeypatch: pytest.MonkeyPatch, hold: dict[str, Any]) -> list[int]:
+    """Replace the hold query; the list counts the questions."""
+    asked: list[int] = []
+
+    def held(*_: Any) -> dict[str, str] | None:
+        asked.append(1)
+        return hold["hold"]  # type: ignore[no-any-return]
+
+    monkeypatch.setattr("agent_orc.api.held", held)
+    monkeypatch.setattr("agent_orc.api.reachable_base_url", lambda *_: "http://127.0.0.1:1")
+    monkeypatch.setattr("agent_orc.api.AGENT_CHECK_SECONDS", 0.1)
+    return asked
+
+
+def test_a_session_turned_away_by_the_gate_waits_on_its_card_and_is_woken_after_the_hold(
+    config: Config, clock: FakeClock, home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
+    hold: dict[str, Any] = {"hold": CARD_HOLD}
+    asked = fake_gpu_orc(monkeypatch, hold)
+    with card_gate_app(config, clock, hold) as client:
+        client.post("/api/login", json={"password": PASSWORD})
+        session_id = start_shell(client, home / "projects" / "a")
+        assert wait_for_text(client, session_id, "READY")
+        assert client.get("/api/sessions").json()[0]["waiting_for_cards"] is None
+        client.app.state.turned_away.add(session_id, "local", CARD_HOLD["reason"])  # type: ignore[attr-defined]
+        # (a) the card says what it waits for
+        waiting = client.get("/api/sessions").json()[0]["waiting_for_cards"]
+        assert waiting["reason"] == CARD_HOLD["reason"]
+        assert waiting["since"]
+
+        # (b) while the hold lasts, GPU-Orc is asked and nothing is typed
+        for _ in range(30):
+            if asked:
+                break
+            time.sleep(0.1)
+        assert asked
+        time.sleep(0.5)
+        assert (
+            "Cards are free again."
+            not in client.get(f"/api/sessions/{session_id}/text").json()["text"]
+        )
+        assert client.get("/api/sessions").json()[0]["waiting_for_cards"] is not None
+
+        # (c) the hold ends: the prompt is typed and the entry goes
+        hold["hold"] = None
+        clock.advance(31)
+        assert wait_for_text(client, session_id, "Cards are free again.")
+        for _ in range(30):
+            if client.get("/api/sessions").json()[0]["waiting_for_cards"] is None:
+                break
+            time.sleep(0.1)
+        assert client.get("/api/sessions").json()[0]["waiting_for_cards"] is None
+
+
+def test_a_session_that_ended_leaves_the_gates_list_without_being_typed_to(
+    config: Config, clock: FakeClock, home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
+    hold: dict[str, Any] = {"hold": None}
+    asked = fake_gpu_orc(monkeypatch, hold)
+    with card_gate_app(config, clock, hold) as client:
+        client.post("/api/login", json={"password": PASSWORD})
+        session_id = start_shell(client, home / "projects" / "a")
+        assert wait_for_text(client, session_id, "READY")
+        turned_away = client.app.state.turned_away  # type: ignore[attr-defined]
+        client.delete(f"/api/sessions/{session_id}")
+        turned_away.add(session_id, "local", "gone")
+        for _ in range(30):
+            if not turned_away.waiting():
+                break
+            time.sleep(0.1)
+        # (d) removed, and GPU-Orc was not even asked for it
+        assert turned_away.waiting() == {}
+        assert asked == []
 
 
 def test_a_further_agent_in_a_folder_needs_a_suffix_and_gets_it(

@@ -267,6 +267,8 @@ export interface AgentSession {
   effort_levels: string[]
   /** Why the levels could not be told (its slider is missing then); null when they could. */
   effort_levels_problem: string | null
+  /** The card gate turned its request away while GPU-Orc holds the cards; null when it does not wait. */
+  waiting_for_cards: { reason: string; since: string } | null
   /** Reported by the agent itself (Claude: via `agent-orc statusline`); null until it reports. */
   model: string | null
   effort: string | null
