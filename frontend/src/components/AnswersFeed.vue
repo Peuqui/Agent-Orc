@@ -333,14 +333,16 @@ function jog(lines: number): void {
               <span v-if="item.pending"> · {{ $t('answers.pending') }}</span>
             </p>
           </div>
-          <!-- The red edge is 3px thicker than the card's own; the padding gives them back, so the text
-               neither moves nor wraps differently when the answer is marked as read. -->
+          <!-- The red edge of an unread answer changes colours only: the card's own left border turns red
+               and an inset shadow widens it, which takes no room. A wider border given back by the padding
+               did not always add up under zoom and display scaling, and the text then wrapped differently
+               once the answer was marked as read. -->
           <article
             v-else
             :data-anchor="item.id"
             class="card flex flex-col gap-2 p-3"
             :class="[
-              isUnread(item, seen) ? 'border-l-2 border-l-accent-500 pl-[calc(0.75rem-1px)]' : '',
+              isUnread(item, seen) ? 'border-l-accent-500 shadow-[inset_2px_0_0_var(--color-accent-500)]' : '',
               speech.playing.value === item.id ? 'ring-1 ring-highlight-500 bg-panel/70' : '',
             ]"
             :title="isUnread(item, seen) ? $t('answers.clickToMark') : undefined"
