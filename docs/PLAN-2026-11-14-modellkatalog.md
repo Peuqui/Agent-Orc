@@ -1,5 +1,8 @@
 # Plan: Modellkatalog zwischen Agent-Orc-Instanzen (14.11.2026)
 
+**Status (14.11.2026):** umgesetzt in den Commits `3baf4c6` und `e579381`, eingespielt auf Mini und
+Aragon am 14.11.2026.
+
 ## Ziel
 
 Ein Agent-Orc soll Claude Code auf den lokalen Modellen eines **anderen** Rechners starten können,

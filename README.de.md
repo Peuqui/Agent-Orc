@@ -444,15 +444,42 @@ agent-orc backend run <Backend> [<Modell>] ... Claude Code darauf (weitere Argum
 ```
 
 Ein Backend steht im Abschnitt `backends` der Config, ein Profil `claude-<Backend>` benutzt es;
-`agent-orc setup` schreibt beides, wenn du ein Backend möchtest. Der Server muss Anthropics Messages-API unter
-`anthropic_path` anbieten und seine Modelle unter `models_path` auflisten. Angeboten werden nur
-die in der Config genannten Modelle; ein Name darf ein Shell-Muster sein. `levels` nennt die
-Denkstufen eines Modells (eine gewünschte, die es nicht kennt, wird zur nächsthöheren, die es
-kennt); `free_until` blendet ein Modell aus, sobald sein Gratis-Kontingent endet. Der Schlüssel
-kommt aus genau einem von `key`, `key_file` (nur für dich lesbar, `chmod 600`) oder `key_env`. Wo
-der Server sie meldet (vLLM: `max_model_len`), wird die Kontextlänge an Claude Code übergeben, das
-sonst 200k annähme. Hooks der Sitzung finden den Namen des Backends, seine Adresse und das
-Modell in `AGENT_ORC_BACKEND`, `AGENT_ORC_BACKEND_URL` und `AGENT_ORC_BACKEND_MODEL`.
+`agent-orc setup` schreibt beides, wenn du ein Backend möchtest. Der Server muss Anthropics
+Messages-API unter `anthropic_path` anbieten und seine Modelle unter `models_path` auflisten.
+Angeboten wird jedes Modell, das der Server meldet, oder mit `models` nur die dort genannten (ein
+Name darf ein Shell-Muster sein); `free_until` blendet ein Modell aus, sobald sein Gratis-Kontingent
+endet. Eine gewünschte Denkstufe, die ein Modell nicht kennt, wird zur nächsthöheren, die es kennt,
+denn ein Modell lehnt eine Stufe ab, die sein Chat-Template nicht kennt. `levels` in `models` nennt
+die Denkstufen eines Modells, außer `llama_swap_config` oder `catalog_from` ist gesetzt: dann kommen
+die Stufen aus den Chat-Templates, und `models` nennt keine.
+
+Für einen llama-swap auf demselben Rechner nennt `llama_swap_config` seine Konfiguration. Server für
+Embeddings darin (`--embedding`, `--embeddings`, vLLMs `--task embed` oder `--runner pooling`) werden
+nicht angeboten. Die Stufen jedes Modells kommen aus dem Chat-Template des Modells, das sein Befehl
+nach `--model` oder `vllm serve` nennt: `chat_template.jinja`, sonst `chat_template` in
+`tokenizer_config.json`; nennt das keine Stufen, der Prompt-Encoder `encoding/encoding_*.py`
+(DeepSeek). Eine GGUF-Datei trägt ihr Template selbst.
+
+Liegt dieser llama-swap auf einem anderen Rechner, nimmt
+`catalog_from: {machine: <dessen Hostname>, backend: <dessen Backend>}` Modelle und Stufen
+stattdessen aus dessen Katalog. Ein Agent-Orc, der andere steuert (`hosts`),
+schickt jedem von ihnen seinen Katalog und holt dessen Katalog, sobald er einen erreicht, und danach
+jede Minute; so kommen die Kataloge an, egal welcher der beiden Rechner den anderen steuert. Ein
+Rechner, der selbst keinen llama-swap liest, schickt keinen. Jeder Katalog liegt unter
+`~/.local/state/agent-orc/catalogs/<Hostname>.json`; einer, der sich nicht lesen lässt, wird
+protokolliert, und der Austausch geht weiter.
+
+Lassen sich die Stufen eines Modells nicht bestimmen (seine Datei fehlt, oder der Katalog des
+anderen Rechners nennt den Grund), zeigt die Karte des Agenten den Grund statt des Reglers; die
+Sitzungsliste bleibt. Ein fehlgeschlagener Abruf, auch einer, der länger als 15 Sekunden läuft, bleibt
+30 Sekunden im Zwischenspeicher, bevor er erneut gefragt wird.
+
+Der Schlüssel kommt aus genau einem von `key`, `key_file` (nur für dich lesbar, `chmod 600`) oder
+`key_env`. Wo der Server sie meldet (vLLM: `max_model_len`), wird die Kontextlänge an Claude Code
+übergeben, das sonst 200k annähme; wie die Schlüssel-Variablen gibt `agent-orc backend run` eine
+geerbte `CLAUDE_CODE_MAX_CONTEXT_TOKENS` nicht weiter. Hooks der Sitzung finden den Namen des
+Backends, seine Adresse und das Modell in `AGENT_ORC_BACKEND`, `AGENT_ORC_BACKEND_URL` und
+`AGENT_ORC_BACKEND_MODEL`.
 
 Mit `gpu_orc: {port: 5070}` bittet ein Backend [GPU-Orc](https://github.com/Peuqui/GPU-Orc) auf dem
 Rechner seiner Modelle, die Grafikkarten für das Modell freizuräumen, bevor es lädt: beim Start und

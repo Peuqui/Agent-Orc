@@ -423,21 +423,39 @@ agent-orc backend run <backend> [<model>] ...  Claude Code on it (more arguments
 ```
 
 A backend is described in the `backends` section of the config, and a profile `claude-<backend>`
-uses it; `agent-orc setup` writes both when you ask for a backend. The server must offer Anthropic's Messages API
-below `anthropic_path` and list its models below `models_path`. Every model the server lists is
-on offer, or with `models` only those named there (a name may be a shell pattern). A wanted
-reasoning level the model lacks becomes the next higher one it has, as a model refuses a level its
-chat template does not know. For a llama-swap on the same machine, `llama_swap_config` names its
-configuration: the levels of each model come from its chat template then (found through the
-model its command names after `--model` or `vllm serve`), and `models` carries none; servers of
-embeddings (`--embedding`, vLLM's `--task embed` or `--runner pooling`) are not offered. When that
-llama-swap is on another machine, `catalog_from: {machine: <its host name>, backend: <its backend>}`
-takes the models and levels from that machine's catalog instead: an Agent-Orc that controls others
-(`hosts`) sends its own catalog to each of them and fetches theirs, as soon as it reaches one and
-then every minute, so it arrives whichever of the two machines controls the other. Otherwise
-`levels` in `models` lists them; `free_until` hides a model once its free quota has ended. The key comes from exactly one of `key`, `key_file` (readable for
-you alone, `chmod 600`) or `key_env`. Where the server reports it (vLLM: `max_model_len`), the
-context length is handed to Claude Code, which would otherwise assume 200k. Hooks of the session
+uses it; `agent-orc setup` writes both when you ask for a backend. The server must offer Anthropic's
+Messages API below `anthropic_path` and list its models below `models_path`. Every model the server
+lists is on offer, or with `models` only those named there (a name may be a shell pattern);
+`free_until` hides a model once its free quota has ended. A wanted reasoning level the model lacks
+becomes the next higher one it has, as a model refuses a level its chat template does not know.
+`levels` in `models` gives a model's levels, unless `llama_swap_config` or `catalog_from` is set: then
+the levels come from the chat templates, and `models` gives no levels.
+
+For a llama-swap on the same machine, `llama_swap_config` names its configuration. Servers of
+embeddings in it (`--embedding`, `--embeddings`, vLLM's `--task embed` or `--runner pooling`) are not
+offered. The levels of each model come from the chat template of the model its command names after
+`--model` or `vllm serve`: `chat_template.jinja`, else `chat_template` in `tokenizer_config.json`;
+when that names no levels, the prompt encoder `encoding/encoding_*.py` (DeepSeek); a GGUF file
+carries its template itself.
+
+When that llama-swap is on another machine,
+`catalog_from: {machine: <its host name>, backend: <its backend>}` takes the models and levels from
+that machine's catalog instead. An Agent-Orc that controls
+others (`hosts`) sends its own catalog to each of them and fetches theirs, as soon as it reaches one
+and then every minute, so the catalogs arrive whichever of the two machines controls the other. A
+machine that reads no llama-swap itself sends none. Each catalog is kept as
+`~/.local/state/agent-orc/catalogs/<host name>.json`; one that cannot be read is logged, and the
+exchange goes on.
+
+If the levels of a model cannot be told (its file is not there, or the other machine's catalog gives
+the reason), the agent's card shows the reason instead of the slider, and the session list stays. A
+failed lookup, and one that runs longer than 15 seconds, is kept for 30 seconds before it is asked
+again.
+
+The key comes from exactly one of `key`, `key_file` (readable for you alone, `chmod 600`) or
+`key_env`. Where the server reports it (vLLM: `max_model_len`), the context length is handed to
+Claude Code, which would otherwise assume 200k. Like the key variables, an inherited
+`CLAUDE_CODE_MAX_CONTEXT_TOKENS` is not passed on by `agent-orc backend run`. Hooks of the session
 find the backend's name, its address and the model in `AGENT_ORC_BACKEND`,
 `AGENT_ORC_BACKEND_URL` and `AGENT_ORC_BACKEND_MODEL`.
 

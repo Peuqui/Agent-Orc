@@ -240,8 +240,9 @@ tmux:
 #   agent-orc backend run <backend> [<model>] ... Claude Code on it (more arguments go on to Claude)
 # `agent-orc setup` writes the `backends` section (and a profile `claude-<backend>` under `agents`
 # for each); the README ("Other backends") describes every key. Without one there is no section.
-# A llama-swap on this machine: `llama_swap_config` (models and levels from its chat templates);
-# on another machine: `catalog_from` (the models and levels that machine's Agent-Orc read there).
+# A llama-swap on this machine: `llama_swap_config` (models and levels from its chat templates,
+# embedding servers left out); on another machine: `catalog_from` (the models and levels that
+# machine's Agent-Orc read there).
 agents:
   claude:
     label: Claude Code
@@ -379,7 +380,8 @@ agents:
     resume: [aider, --restore-chat-history]
   # A profile may offer a choice of models at start: "models" prints them (one per line), the
   # choice fills {model} in its commands; "effort.levels_command" prints the levels a model takes
-  # (nothing: no level at all), "env" sets the agent's environment ({effort}: the folder's level).
+  # (nothing: no level at all; a failed command: its reason on the agent's card instead of the
+  # slider), "env" sets the agent's environment ({effort}: the folder's level).
   # The profiles `claude-<backend>` that `agent-orc setup` adds follow the same pattern (the
   # template is claude_backend_profile.yaml in the package).
   shell:
