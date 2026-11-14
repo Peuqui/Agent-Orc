@@ -5,6 +5,14 @@ from collections.abc import AsyncGenerator
 
 # A comment line now and then keeps proxies from closing a quiet stream.
 KEEP_ALIVE_SECONDS = 25
+# How long a stop waits for connections that do not end by themselves. The live streams end as
+# the stop begins (cli.Server), and uvicorn closes the terminals' WebSockets itself; what is left (a
+# download, a forwarded request) gets this long. Without a limit the stop hangs until systemd
+# kills the service, and what the app cleans up as it ends (the tunnels to other machines) is
+# not done. The same for the card gate's server (card_gate.py), whose requests
+# may wait minutes for a model.
+SHUTDOWN_GRACE_SECONDS = 5
+
 
 
 class ChangeNotifier:

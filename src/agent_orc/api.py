@@ -64,6 +64,7 @@ from agent_orc.attachments import (
 from agent_orc.auth import Clock, Credentials, LoginGuard, TokenSigner, verify_password
 from agent_orc.backends import served_catalog
 from agent_orc.cache import CacheState, cache_state, last_answer
+from agent_orc.card_gate import TurnedAway, create_gate_server
 from agent_orc.catalog import (
     CatalogBackend,
     UnknownMachineError,
@@ -1594,8 +1595,14 @@ def create_app(
         for name, host in (config.hosts or {}).items()
     }
 
+    # The local sessions the card gate turned away (see card_gate.py); its listener runs in this
+    # process.
+    turned_away = TurnedAway()
+    gate_server = create_gate_server(config, turned_away) if config.card_gate else None
+
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+        gate = asyncio.create_task(gate_server.serve()) if gate_server else None
         watcher = asyncio.create_task(watch_agents())
         approvals = asyncio.create_task(watch_approvals())
         hosts = asyncio.create_task(watch_hosts())
@@ -1620,6 +1627,9 @@ def create_app(
         await asyncio.gather(*tunnels, return_exceptions=True)
         for link in host_links.values():
             await link.close()
+        if gate_server is not None and gate is not None:
+            gate_server.should_exit = True
+            await gate
 
     app = FastAPI(
         title="Agent-Orc", docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan

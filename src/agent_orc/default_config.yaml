@@ -209,6 +209,8 @@ dictation:
 # card_gate:
 #   # Listens on 127.0.0.1 only.
 #   port: 8771
+#   # The answer to a turned-away request; {reason} and {since} are the hold's.
+#   refusal: "Karten gehalten: {reason} (seit {since}). Agent-Orc weckt dich, sobald sie frei sind."
 #   resume_prompt: "Die Karten sind wieder frei. Mach dort weiter, wo deine letzte Anfrage abgewiesen wurde."
 #   # While a session waits, GPU-Orc is asked this often whether the hold has ended.
 #   check_seconds: 30

@@ -107,3 +107,4 @@ def test_card_gate_is_parsed_from_the_commented_default_section() -> None:
     assert gate is not None
     assert (gate.port, gate.check_seconds) == (8771, 30)
     assert "Karten" in gate.resume_prompt
+    assert "{reason}" in gate.refusal and "{since}" in gate.refusal

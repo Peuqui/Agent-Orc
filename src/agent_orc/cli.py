@@ -57,6 +57,7 @@ from agent_orc.context import (
     store_activity,
     store_status,
 )
+from agent_orc.events import SHUTDOWN_GRACE_SECONDS
 from agent_orc.handover import SESSION_START_SUBCOMMAND, take_resume_request
 from agent_orc.listen import SocketFolderError, prepare_socket
 from agent_orc.llama_swap import LlamaSwapError
@@ -89,12 +90,6 @@ def check_config() -> None:
     print(f"{path} fits this version.")
 
 
-# How long a stop waits for connections that do not end by themselves. The live streams end as
-# the stop begins (Server), and uvicorn closes the terminals' WebSockets itself; what is left (a
-# download, a forwarded request) gets this long. Without a limit the stop hangs until systemd
-# kills the service, and what the app cleans up as it ends (the tunnels to other machines) is
-# not done.
-SHUTDOWN_GRACE_SECONDS = 5
 
 
 def log_from_info() -> None:

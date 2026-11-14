@@ -331,18 +331,24 @@ def _upstream_url(path: str, query: str) -> str:
     return f"{UPSTREAM}{path}" + (f"?{query}" if query else "")
 
 
-def _response_headers(headers: Iterable[tuple[str, str]]) -> dict[str, str]:
-    """The other machine's answer headers that go on to the browser. Only its API is handed on,
-    which never redirects, so no address in them needs rewriting."""
+def response_headers(headers: Iterable[tuple[str, str]]) -> dict[str, str]:
+    """The upstream's answer headers that go on to the caller. Only an API is handed on (the other
+    machine's, llama-swap's), which never redirects, so no address in them needs rewriting."""
     return {name: value for name, value in headers if name.lower() not in HOP_BY_HOP}
 
 
-async def _chunks(upstream: aiohttp.ClientResponse) -> AsyncGenerator[bytes]:
+async def chunks(upstream: aiohttp.ClientResponse) -> AsyncGenerator[bytes]:
+    """The upstream's answer as it arrives (the card gate streams with it as well)."""
     try:
         async for chunk in upstream.content.iter_any():
             yield chunk
     finally:
         upstream.close()
+
+
+def request_headers(request: Request) -> list[tuple[str, str]]:
+    """The request's headers that go on to the upstream (the card gate uses them as well)."""
+    return [(name, value) for name, value in request.headers.items() if name not in NOT_FORWARDED]
 
 
 def _has_body(request: Request) -> bool:
@@ -359,9 +365,7 @@ async def forward(request: Request, link: HostLink, path: str, stopping: asyncio
     """The request for /hosts/<name>/<path> as the other machine's Agent-Orc answers it; its
     answer is streamed back, so live streams (server-sent events) arrive as they are sent, until
     this server stops."""
-    headers = [
-        (name, value) for name, value in request.headers.items() if name not in NOT_FORWARDED
-    ]
+    headers = request_headers(request)
     # The body goes on as it arrives, so a large upload does not fill this machine's memory. A
     # length that is known goes along (without one the body is sent in chunks).
     length = request.headers.get("content-length")
@@ -378,9 +382,9 @@ async def forward(request: Request, link: HostLink, path: str, stopping: asyncio
     except (aiohttp.ClientError, OSError, TimeoutError) as error:
         raise HostUnreachableError(link.name) from error
     return StreamingResponse(
-        until_stopped(_chunks(upstream), stopping),
+        until_stopped(chunks(upstream), stopping),
         status_code=upstream.status,
-        headers=_response_headers(upstream.headers.items()),
+        headers=response_headers(upstream.headers.items()),
     )
 
 
