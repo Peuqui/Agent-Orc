@@ -10,6 +10,9 @@ local:
     key: no-key   # a local server takes any key
     context_path: /upstream/{model}/v1/models
     api_timeout_ms: 600000
+    # llama-swap's configuration: the levels of each model come from its chat template. Leave it
+    # out for a server that is not this machine's llama-swap (no levels then).
+    llama_swap_config: ~/.config/llama-swap/config.yaml
   profile:
     label: Claude (local)
     hint: Stop other users of the GPUs first, or the models push each other out.

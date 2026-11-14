@@ -486,8 +486,12 @@ class BackendConfig(StrictModel):
     key_file: Path | None = None
     key_env: str | None = None
     # The models on offer, name (a shell pattern is allowed) to what is known about them. Only
-    # these are listed and chosen from.
-    models: dict[str, BackendModelConfig]
+    # these are listed and chosen from. Without it, every model the server lists is offered.
+    models: dict[str, BackendModelConfig] | None = None
+    # llama-swap's configuration on this machine, for a backend that is this llama-swap: the
+    # levels of each model then come from its chat template (see chat_template.py), not from
+    # `models`.
+    llama_swap_config: Path | None = None
     # The model for Claude Code's background requests (titles, summaries); without it the chosen
     # model does them. On a server that swaps models in and out, never name another one here.
     background_model: str | None = None
@@ -500,11 +504,27 @@ class BackendConfig(StrictModel):
     # How long Claude Code waits for an answer of the server.
     api_timeout_ms: int | None = None
 
+    @field_validator("llama_swap_config")
+    @classmethod
+    def expand_home(cls, value: Path | None) -> Path | None:
+        return value.expanduser() if value is not None else None
+
     @model_validator(mode="after")
     def one_place_for_the_key(self) -> Self:
         given = [source for source in (self.key, self.key_file, self.key_env) if source is not None]
         if len(given) != 1:
             raise ValueError("give the key as exactly one of key, key_file and key_env")
+        return self
+
+    @model_validator(mode="after")
+    def one_place_for_the_levels(self) -> Self:
+        if self.llama_swap_config is not None and any(
+            entry.levels is not None for entry in (self.models or {}).values()
+        ):
+            raise ValueError(
+                "with llama_swap_config the levels come from the chat templates: "
+                "give no levels in models"
+            )
         return self
 
 

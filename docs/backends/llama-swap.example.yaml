@@ -12,9 +12,8 @@
 #       base_urls: [http://127.0.0.1:11435]
 #       key_variable: ANTHROPIC_API_KEY
 #       key: no-key                    # a local server takes any key
-#       models:
-#         my-model: {}                 # name as below; add `levels: [low, medium, high]` if its
-#                                      # chat template takes reasoning levels
+#       # every model below is on offer; its reasoning levels come from its chat template
+#       llama_swap_config: ~/.config/llama-swap/config.yaml
 healthCheckTimeout: 600   # seconds a model may take to load before it counts as failed
 
 models:

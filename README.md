@@ -424,10 +424,13 @@ agent-orc backend run <backend> [<model>] ...  Claude Code on it (more arguments
 
 A backend is described in the `backends` section of the config, and a profile `claude-<backend>`
 uses it; `agent-orc setup` writes both when you ask for a backend. The server must offer Anthropic's Messages API
-below `anthropic_path` and list its models below `models_path`. Only the models named in the
-config are offered; a name may be a shell pattern. `levels` lists the reasoning levels a model
-takes (a wanted level it lacks becomes the next higher one it has); `free_until` hides a model
-once its free quota has ended. The key comes from exactly one of `key`, `key_file` (readable for
+below `anthropic_path` and list its models below `models_path`. Every model the server lists is
+on offer, or with `models` only those named there (a name may be a shell pattern). A wanted
+reasoning level the model lacks becomes the next higher one it has, as a model refuses a level its
+chat template does not know. For a llama-swap on the same machine, `llama_swap_config` names its
+configuration: the levels of each model come from its chat template then (found through the
+model its command names after `--model` or `vllm serve`), and `models` carries none. Otherwise
+`levels` in `models` lists them; `free_until` hides a model once its free quota has ended. The key comes from exactly one of `key`, `key_file` (readable for
 you alone, `chmod 600`) or `key_env`. Where the server reports it (vLLM: `max_model_len`), the
 context length is handed to Claude Code, which would otherwise assume 200k. Hooks of the session
 find the backend's name, its address and the model in `AGENT_ORC_BACKEND`,
@@ -448,8 +451,7 @@ backends:
     base_urls: [http://127.0.0.1:11435]
     key_variable: ANTHROPIC_API_KEY
     key: no-key
-    models:
-      my-model: {levels: [low, medium, xhigh]}
+    llama_swap_config: ~/.config/llama-swap/config.yaml
   dashscope:
     label: Qwen (DashScope)
     base_urls: [https://dashscope-intl.aliyuncs.com]

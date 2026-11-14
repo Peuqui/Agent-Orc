@@ -42,6 +42,7 @@ from agent_orc.backends import (
     prepare_launch,
     split_effort,
 )
+from agent_orc.chat_template import TemplateError
 from agent_orc.config import (
     CONFIG_FILE_NAME,
     CREDENTIALS_FILE_NAME,
@@ -310,7 +311,7 @@ def run_backend(arguments: list[str]) -> None:
                 exec_claude(launch)
             case _:
                 sys.exit(BACKEND_USAGE)
-    except BackendError as error:
+    except (BackendError, TemplateError) as error:
         sys.exit(f"agent-orc backend: {error}")
 
 

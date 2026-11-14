@@ -87,9 +87,18 @@ def test_an_unknown_level_is_refused() -> None:
 
 def test_the_first_entry_that_fits_a_name_counts() -> None:
     config = backend()
+    assert config.models is not None
     assert entry_of(config, "Qwen-Flash-Next-180B") == config.models["Qwen-Flash*"]
     assert entry_of(config, "Qwen-27B-vllm") == config.models["Qwen-27B-vllm"]
     assert entry_of(config, "Something-else") is None
+
+
+def test_without_configured_models_all_are_offered() -> None:
+    listed = ["Any", "Model", "At", "All"]
+    unrestricted = backend(models=None)
+    assert offered(listed, unrestricted, TODAY) == sorted(listed)
+    assert entry_of(unrestricted, "Anything") is None
+    assert levels_of(unrestricted, "Anything") == []
 
 
 def test_only_configured_models_are_offered_and_not_after_their_quota() -> None:
@@ -167,12 +176,41 @@ def test_the_levels_of_a_model_are_those_in_the_configuration() -> None:
     assert levels_of(backend(), "Unknown") == []
 
 
+def test_on_a_llama_swap_of_this_machine_the_levels_come_from_the_chat_template(
+    tmp_path: Path,
+) -> None:
+    checkpoint = tmp_path / "deepseek"
+    (checkpoint / "encoding").mkdir(parents=True)
+    (checkpoint / "encoding" / "encoding_dsv4.py").write_text(
+        "assert reasoning_effort in ['max', None, 'high']\n"
+        "if reasoning_effort == 'max':\n    prompt += MAX\n",
+        encoding="utf-8",
+    )
+    llama_swap = tmp_path / "llama-swap.yaml"
+    llama_swap.write_text(
+        f"models:\n  DeepSeek-vllm:\n    cmd: python -m vllm --model {checkpoint}\n",
+        encoding="utf-8",
+    )
+    config = backend(models=None, llama_swap_config=str(llama_swap))
+    assert levels_of(config, "DeepSeek-vllm") == ["high", "max"]
+    fetch = FakeServer({"http://one/v1/models": server_listing("DeepSeek-vllm")})
+    launch = prepare_launch("local", config, "DeepSeek-vllm", "low", [], TODAY, fetch)
+    assert launch.command[-2:] == ["--effort", "high"]
+
+
+def test_levels_come_from_the_templates_or_the_configuration_not_both() -> None:
+    with pytest.raises(ValidationError, match="levels come from the chat templates"):
+        backend(llama_swap_config="~/llama-swap.yaml")
+    assert backend(llama_swap_config="~/llama-swap.yaml", models={"m": {}}).models == {
+        "m": BackendModelConfig()
+    }
+
+
 def test_a_model_without_levels_gets_no_effort_and_one_with_levels_the_translated_one() -> None:
-    config = backend()
-    assert level_arguments(entry_of(config, "Plain-model"), "high") == []
-    assert level_arguments(entry_of(config, "Qwen-27B-vllm"), "high") == ["--effort", "xhigh"]
+    assert level_arguments([], "high") == []
+    assert level_arguments(["low", "medium", "xhigh"], "high") == ["--effort", "xhigh"]
     # Without a wish Claude Code's own default counts.
-    assert level_arguments(entry_of(config, "Qwen-27B-vllm"), None) == ["--effort", "xhigh"]
+    assert level_arguments(["low", "medium", "xhigh"], None) == ["--effort", "xhigh"]
 
 
 def test_efforts_in_the_arguments_and_in_the_environment_are_told_from_the_rest() -> None:
@@ -259,7 +297,11 @@ def test_the_context_length_the_server_reports_is_handed_to_claude_code() -> Non
     assert launch.environment["CLAUDE_CODE_MAX_CONTEXT_TOKENS"] == "131072"
 
 
-def test_a_server_that_does_not_report_the_context_length_is_not_an_error() -> None:
+def test_a_server_that_does_not_report_the_context_length_is_not_an_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Started from an agent on another model: its context length is not this model's.
+    monkeypatch.setenv("CLAUDE_CODE_MAX_CONTEXT_TOKENS", "307200")
     config = backend(context_path="/upstream/{model}/v1/models")
     launch = prepare_launch("local", config, "Qwen-27B-vllm", None, [], TODAY, listing_fetch())
     assert "CLAUDE_CODE_MAX_CONTEXT_TOKENS" not in launch.environment

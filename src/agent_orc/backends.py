@@ -19,6 +19,7 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Any
 
+from agent_orc.chat_template import template_levels
 from agent_orc.config import (
     KEY_VARIABLES,
     LEVELS,
@@ -39,6 +40,8 @@ DISABLE_BETAS_VARIABLE = "CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS"
 BACKEND_VARIABLE = "AGENT_ORC_BACKEND"
 BASE_URL_VARIABLE = "AGENT_ORC_BACKEND_URL"
 MODEL_VARIABLE = "AGENT_ORC_BACKEND_MODEL"
+# Where Claude Code takes the model's context length from.
+CONTEXT_VARIABLE = "CLAUDE_CODE_MAX_CONTEXT_TOKENS"
 # How long an address gets to answer before the next one is tried.
 PROBE_SECONDS = 2
 # Loading a model can take minutes (the server loads it on the first request).
@@ -85,7 +88,10 @@ def translate_level(wanted: str, allowed: Sequence[str]) -> str:
 
 
 def entry_of(backend: BackendConfig, model: str) -> BackendModelConfig | None:
-    """What the configuration knows about a model: the first entry whose name or pattern fits."""
+    """What the configuration knows about a model: the first entry whose name or pattern fits.
+    Without configured models every one the server lists is unknown (no quota note, no levels)."""
+    if backend.models is None:
+        return None
     return next(
         (entry for pattern, entry in backend.models.items() if fnmatch.fnmatchcase(model, pattern)),
         None,
@@ -110,7 +116,10 @@ def readable_note(note: str, today: date) -> str:
 
 def offered(listed: Sequence[str], backend: BackendConfig, today: date) -> list[str]:
     """Of the models the server lists, those the configuration names and whose quota has not
-    ended (afterwards they would be billed), in alphabetical order."""
+    ended (afterwards they would be billed), in alphabetical order. Without configured models,
+    every model the server lists is offered."""
+    if backend.models is None:
+        return sorted(listed)
     chosen = []
     for name in sorted(listed):
         entry = entry_of(backend, name)
@@ -201,16 +210,16 @@ def claude_environment(
     if backend.api_timeout_ms is not None:
         environment["API_TIMEOUT_MS"] = str(backend.api_timeout_ms)
     if context is not None:
-        environment["CLAUDE_CODE_MAX_CONTEXT_TOKENS"] = str(context)
+        environment[CONTEXT_VARIABLE] = str(context)
     return environment
 
 
-def level_arguments(entry: BackendModelConfig | None, wanted: str | None) -> list[str]:
+def level_arguments(levels: Sequence[str], wanted: str | None) -> list[str]:
     """Claude Code's `--effort` for the model: nothing for a model that takes no levels; for one
     that does, what was wanted (or Claude Code's default) translated to a level it takes."""
-    if entry is None or not entry.levels:
+    if not levels:
         return []
-    return ["--effort", translate_level(wanted or DEFAULT_LEVEL, entry.levels)]
+    return ["--effort", translate_level(wanted or DEFAULT_LEVEL, levels)]
 
 
 def backend_named(config: Config, name: str) -> BackendConfig:
@@ -233,7 +242,10 @@ def models_lines(backend: BackendConfig, today: date, fetch: Fetch = fetch_json)
 
 
 def levels_of(backend: BackendConfig, model: str) -> list[str]:
-    """The levels a model takes (none: Claude Code's own default holds, no slider)."""
+    """The levels a model takes (none: Claude Code's own default holds, no slider): from its chat
+    template on a llama-swap of this machine, otherwise as configured."""
+    if backend.llama_swap_config is not None:
+        return template_levels(backend.llama_swap_config, model)
     entry = entry_of(backend, model)
     return list(entry.levels) if entry is not None and entry.levels else []
 
@@ -264,11 +276,14 @@ def prepare_launch(
         "--model",
         model,
         *claude_arguments,
-        *level_arguments(entry_of(backend, model), wanted_level),
+        *level_arguments(levels_of(backend, model), wanted_level),
     ]
     # The keys of other services stay behind: Claude Code sends every key it finds to the backend.
+    # So does the context length of the model of an agent this start runs in: it is this model's
+    # or none.
+    left_behind = (*KEY_VARIABLES, CONTEXT_VARIABLE)
     inherited = {
-        variable: value for variable, value in os.environ.items() if variable not in KEY_VARIABLES
+        variable: value for variable, value in os.environ.items() if variable not in left_behind
     }
     return Launch(
         arguments,

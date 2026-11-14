@@ -6,7 +6,7 @@ import pytest
 import yaml
 
 from agent_orc.auth import load_credentials, verify_password
-from agent_orc.config import BackendConfig, Config, default_config_text, load_config
+from agent_orc.config import Config, default_config_text, load_config
 from agent_orc.setup import (
     SetupAnswers,
     ask_backend,
@@ -117,12 +117,16 @@ def answers_with_backends(backends: dict[str, dict[str, Any]]) -> SetupAnswers:
 
 
 def test_a_local_backend_adds_its_entry_and_a_profile_to_a_valid_config() -> None:
-    entry = backend_entry(backend_presets()["local"], "http://127.0.0.1:11435", ["m-1", "m-2"])
+    entry = backend_entry(backend_presets()["local"], "http://127.0.0.1:11435")
     config = Config.model_validate(
         yaml.safe_load(configured_text(answers_with_backends({"local": entry})))
     )
     assert config.backends is not None
-    assert list(config.backends["local"].models) == ["m-1", "m-2"]
+    # Every model llama-swap lists is offered, its levels come from its chat template.
+    assert config.backends["local"].models is None
+    assert config.backends["local"].llama_swap_config == Path(
+        "~/.config/llama-swap/config.yaml"
+    ).expanduser()
     assert config.backends["local"].base_urls == ["http://127.0.0.1:11435"]
     profile = config.agents["claude-local"]
     assert profile.start is not None and profile.start[:4] == [
@@ -137,7 +141,7 @@ def test_a_local_backend_adds_its_entry_and_a_profile_to_a_valid_config() -> Non
 
 def test_a_cloud_backend_offers_the_models_the_preset_names_not_every_listed_one() -> None:
     presets = backend_presets()
-    entry = backend_entry(presets["dashscope"], "https://example.org", ["qwen-a", "other"])
+    entry = backend_entry(presets["dashscope"], "https://example.org")
     assert list(entry["models"]) == ["qwen*"]
     config = Config.model_validate(
         yaml.safe_load(configured_text(answers_with_backends({"dashscope": entry})))
@@ -194,13 +198,3 @@ def test_an_existing_key_file_gets_the_rights_for_the_user_alone(tmp_path: Path)
     write_key(key_file, "new-key")
     assert key_file.read_text() == "new-key\n"
     assert key_file.stat().st_mode & 0o777 == 0o600
-
-
-def test_the_name_of_a_model_is_no_pattern_in_the_config() -> None:
-    from agent_orc.backends import entry_of
-
-    name = "qwen3-coder[Q4_K_M]"
-    entry = backend_entry(backend_presets()["local"], "http://127.0.0.1:11435", [name, "other"])
-    config = BackendConfig.model_validate(entry)
-    assert entry_of(config, name) is not None
-    assert entry_of(config, "qwen3-coderQ") is None

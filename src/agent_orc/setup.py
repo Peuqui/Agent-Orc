@@ -6,7 +6,6 @@ comments stay and explain every other setting.
 """
 
 import getpass
-import glob
 import json
 import os
 import re
@@ -67,14 +66,10 @@ def backend_presets() -> dict[str, Any]:
     return presets
 
 
-def backend_entry(preset: dict[str, Any], address: str, listed: list[str]) -> dict[str, Any]:
-    """The `backends` entry of a kind: what the preset fixes, the address asked for, and the
-    models the preset names, otherwise those the server lists."""
-    entry = dict(preset["backend"])
-    entry["base_urls"] = [address]
-    # The names are patterns in the config: what the server calls a model is taken literally.
-    entry.setdefault("models", {glob.escape(name): {} for name in listed})
-    return entry
+def backend_entry(preset: dict[str, Any], address: str) -> dict[str, Any]:
+    """The `backends` entry of a kind: what the preset fixes and the address asked for. Without
+    models named in the preset, every model the server lists is offered."""
+    return {**preset["backend"], "base_urls": [address]}
 
 
 def profile_text(kind: str, preset: dict[str, Any]) -> str:
@@ -204,7 +199,7 @@ def ask_backend(preset: dict[str, Any]) -> dict[str, Any] | None:
         write_key(Path(fixed["key_file"]), key)
     try:
         listed = listed_models(
-            BackendConfig.model_validate(backend_entry(preset, address, [])),
+            BackendConfig.model_validate(backend_entry(preset, address)),
             address,
             key,
             fetch_json,
@@ -215,7 +210,7 @@ def ask_backend(preset: dict[str, Any]) -> dict[str, Any] | None:
     if not listed:
         print(f"Skipped: {address} lists no models.")
         return None
-    return backend_entry(preset, address, listed)
+    return backend_entry(preset, address)
 
 
 def check_programs() -> None:
