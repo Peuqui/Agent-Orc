@@ -40,6 +40,11 @@ Nur was noch aussteht. Erledigtes steht in der Git-Historie.
     läuft, ein einziges `sleep infinity`). Hinweis: Ein Doppelklick auf das VBS bei laufender WSL startet ein weiteres
     `sleep infinity` (harmlos).
 
+## Lokale Modelle
+
+- **Nicht in der Oberfläche gesehen (14.11.):** der Hinweis auf der Karte, wenn die Stufen eines Agenten nicht abrufbar
+  sind (`effort_levels_problem`, `4f26eac`); nur durch Tests abgedeckt.
+
 ## Dateien-Reiter und Oberfläche
 
 - **Nicht geprüft:** der Dateien-Reiter mit Auswahl und zwei Ansichten auf dem Handy. Geprüft (11.10.): Ordner aus dem
