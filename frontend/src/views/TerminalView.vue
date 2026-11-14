@@ -45,6 +45,7 @@ import {
   listenForMenuKey,
 } from '../columns'
 import { ESC } from '../keyCatalog'
+import { isRepeatedEscape } from '../escapeRepeat'
 import { useTouchScroll } from '../composables/useTouchScroll'
 
 const props = defineProps<{ id: string; embedded: boolean }>()
@@ -335,7 +336,16 @@ function send(message: object): void {
   if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message))
 }
 
+// When the last Esc went to an agent (not to a plain terminal, where a double Esc means its own).
+let lastEscapeAt: number | null = null
+const isPlainTerminal = computed(() => sessions.value.find((session) => session.id === props.id)?.terminal === true)
+
 function sendInput(data: string): void {
+  if (data === ESC && !isPlainTerminal.value) {
+    const now = performance.now()
+    if (isRepeatedEscape(lastEscapeAt, now)) return
+    lastEscapeAt = now
+  }
   send({ type: 'input', data })
 }
 

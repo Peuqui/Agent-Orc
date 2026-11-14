@@ -174,7 +174,9 @@ that run Agent-Orc can be shown in the same app, through an SSH tunnel ([Several
 - Extra-keys bar (Esc, Tab, Shift+Tab, arrows, sticky Ctrl/Alt, …) for the on-screen keyboard,
   freely arranged and with text keys (macros); a text view for selecting and copying, clickable
   links. Esc pressed in the message field goes to the agent as well (it interrupts it), unless it
-  closes a menu of the field.
+  closes a menu of the field; a second Esc within a second is left out, so Claude Code's Rewind
+  list does not open by accident. The key ✕Sub stops the agent's subagents and workflows running
+  in the background, which Esc does not.
 - With a mouse, Shift and drag marks text in the terminal itself (a plain drag scrolls, tmux takes
   it); letting go copies it, and Ctrl+C with text marked copies it too instead of interrupting the
   agent.

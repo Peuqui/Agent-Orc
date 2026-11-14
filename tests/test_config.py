@@ -35,6 +35,8 @@ def test_terminal_keys_parse_escapes() -> None:
     assert sends["Esc"] == "\x1b"
     assert sends["⇧Tab"] == "\x1b[Z"
     assert sends["^C"] == "\x03"
+    # Ctrl+X Ctrl+K twice, which stops Claude Code's subagents.
+    assert sends["✕Sub"] == "\x18\x0b\x18\x0b"
 
 
 def test_key_needs_exactly_one_action() -> None:

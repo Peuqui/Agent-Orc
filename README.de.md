@@ -184,7 +184,9 @@ einen SSH-Tunnel ([Mehrere Rechner](#mehrere-rechner)).
 - Sondertasten-Leiste (Esc, Tab, Shift+Tab, Pfeile, einrastendes Strg/Alt, …) für die
   Bildschirmtastatur, frei anpassbar und mit Text-Tasten (Makros); eine Textansicht zum
   Markieren und Kopieren, anklickbare Links. Esc im Eingabefeld geht ebenfalls an den Agenten
-  (unterbricht ihn), außer es schließt ein Menü des Felds.
+  (unterbricht ihn), außer es schließt ein Menü des Felds; ein zweites Esc innerhalb einer Sekunde
+  entfällt, damit die Rewind-Liste von Claude Code nicht versehentlich aufgeht. Die Taste ✕Sub
+  beendet die Subagenten und Workflows des Agenten im Hintergrund, was Esc nicht tut.
 - Mit der Maus markiert Umschalt und Ziehen direkt im Terminal (einfaches Ziehen scrollt, das
   übernimmt tmux); beim Loslassen ist es kopiert, und Strg+C bei einer Markierung kopiert ebenfalls,
   statt den Agenten zu unterbrechen.
