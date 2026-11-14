@@ -15,3 +15,6 @@ frontend/dist/
 
 # Built PWA, bundled into the wheel via hatch artifacts
 src/agent_orc/static/
+
+# Claude Code: local settings and the worktrees of subagents
+.claude/
