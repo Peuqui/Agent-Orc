@@ -468,6 +468,14 @@ class GpuOrcConfig(StrictModel):
     token_file: Path | None = None
 
 
+class CatalogSource(StrictModel):
+    """Where a backend's models and levels come from when its llama-swap is on another machine:
+    that machine's name (its host name) and its backend of these models."""
+
+    machine: str
+    backend: str
+
+
 class BackendConfig(StrictModel):
     """A service that Claude Code can run on instead of Anthropic's: models on a local server
     (llama-swap, vLLM) or in a cloud (Qwen on DashScope). Used by `agent-orc backend`."""
@@ -489,9 +497,12 @@ class BackendConfig(StrictModel):
     # these are listed and chosen from. Without it, every model the server lists is offered.
     models: dict[str, BackendModelConfig] | None = None
     # llama-swap's configuration on this machine, for a backend that is this llama-swap: the
-    # levels of each model then come from its chat template (see chat_template.py), not from
+    # levels of each model then come from its chat template (see llama_swap.py), not from
     # `models`.
     llama_swap_config: Path | None = None
+    # For a backend whose llama-swap is on another machine: the models and their levels come from
+    # the catalog its Agent-Orc reads there (catalog.py).
+    catalog_from: CatalogSource | None = None
     # The model for Claude Code's background requests (titles, summaries); without it the chosen
     # model does them. On a server that swaps models in and out, never name another one here.
     background_model: str | None = None
@@ -518,11 +529,13 @@ class BackendConfig(StrictModel):
 
     @model_validator(mode="after")
     def one_place_for_the_levels(self) -> Self:
-        if self.llama_swap_config is not None and any(
+        if self.llama_swap_config is not None and self.catalog_from is not None:
+            raise ValueError("give llama_swap_config (this machine) or catalog_from, not both")
+        if (self.llama_swap_config is not None or self.catalog_from is not None) and any(
             entry.levels is not None for entry in (self.models or {}).values()
         ):
             raise ValueError(
-                "with llama_swap_config the levels come from the chat templates: "
+                "with llama_swap_config or catalog_from the levels come from the chat templates: "
                 "give no levels in models"
             )
         return self

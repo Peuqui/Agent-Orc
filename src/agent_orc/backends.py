@@ -19,15 +19,17 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Any
 
+from agent_orc.catalog import CatalogBackend, CatalogModel, read_catalog
 from agent_orc.config import (
     KEY_VARIABLES,
     LEVELS,
     BackendConfig,
     BackendModelConfig,
+    CatalogSource,
     Config,
 )
 from agent_orc.gpuorc import Request, free_for_model, request_json
-from agent_orc.llama_swap import embedding_models, template_levels
+from agent_orc.llama_swap import LlamaSwapError, embedding_models, template_levels
 
 # What Claude Code asks for without being told (its own default).
 DEFAULT_LEVEL = "high"
@@ -122,6 +124,9 @@ def offered(listed: Sequence[str], backend: BackendConfig, today: date) -> list[
     if backend.llama_swap_config is not None:
         embedding = embedding_models(backend.llama_swap_config)
         listed = [name for name in listed if name not in embedding]
+    if backend.catalog_from is not None:
+        known = {model.name for model in catalog_backend(backend.catalog_from).models}
+        listed = [name for name in listed if name in known]
     if backend.models is None:
         return sorted(listed)
     chosen = []
@@ -250,8 +255,62 @@ def levels_of(backend: BackendConfig, model: str) -> list[str]:
     template on a llama-swap of this machine, otherwise as configured."""
     if backend.llama_swap_config is not None:
         return template_levels(backend.llama_swap_config, model)
+    if backend.catalog_from is not None:
+        return catalog_levels(backend.catalog_from, model)
     entry = entry_of(backend, model)
     return list(entry.levels) if entry is not None and entry.levels else []
+
+
+def catalog_backend(source: CatalogSource) -> CatalogBackend:
+    """The backend's part of the catalog from the machine its models are on."""
+    entry = read_catalog(source.machine).backends.get(source.backend)
+    if entry is None:
+        raise BackendError(f"the catalog from {source.machine} has no backend {source.backend}")
+    if entry.problem is not None:
+        raise BackendError(
+            f"{source.machine} cannot list the models of its backend {source.backend}:"
+            f" {entry.problem}"
+        )
+    return entry
+
+
+def catalog_levels(source: CatalogSource, model: str) -> list[str]:
+    """The levels of a model as the machine it is on read them from its template."""
+    entry = next((m for m in catalog_backend(source).models if m.name == model), None)
+    if entry is None:
+        raise BackendError(f"{model} is not in the catalog from {source.machine}")
+    if entry.problem is not None:
+        raise BackendError(f"{source.machine} cannot tell the levels of {model}: {entry.problem}")
+    return list(entry.levels)
+
+
+def served_catalog(
+    config: Config, today: date, fetch: Fetch = fetch_json
+) -> dict[str, CatalogBackend]:
+    """This machine's catalog for the others: the backends it reads itself (llama_swap_config),
+    each with its models and their levels; what cannot be read is told in its place."""
+    catalog: dict[str, CatalogBackend] = {}
+    for name, backend in (config.backends or {}).items():
+        if backend.llama_swap_config is None:
+            continue
+        try:
+            lines = models_lines(backend, today, fetch)
+        except (BackendError, LlamaSwapError) as error:
+            catalog[name] = CatalogBackend(problem=str(error))
+            continue
+        models = []
+        for line in lines:
+            model = line.split("\t")[0]
+            try:
+                models.append(
+                    CatalogModel.model_validate(
+                        {"name": model, "levels": levels_of(backend, model)}
+                    )
+                )
+            except (BackendError, LlamaSwapError) as error:
+                models.append(CatalogModel(name=model, problem=str(error)))
+        catalog[name] = CatalogBackend(models=models)
+    return catalog
 
 
 def prepare_launch(

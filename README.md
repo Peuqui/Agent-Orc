@@ -429,7 +429,12 @@ on offer, or with `models` only those named there (a name may be a shell pattern
 reasoning level the model lacks becomes the next higher one it has, as a model refuses a level its
 chat template does not know. For a llama-swap on the same machine, `llama_swap_config` names its
 configuration: the levels of each model come from its chat template then (found through the
-model its command names after `--model` or `vllm serve`), and `models` carries none. Otherwise
+model its command names after `--model` or `vllm serve`), and `models` carries none; servers of
+embeddings (`--embedding`, vLLM's `--task embed` or `--runner pooling`) are not offered. When that
+llama-swap is on another machine, `catalog_from: {machine: <its host name>, backend: <its backend>}`
+takes the models and levels from that machine's catalog instead: an Agent-Orc that controls others
+(`hosts`) sends its own catalog to each of them and fetches theirs, as soon as it reaches one and
+then every minute, so it arrives whichever of the two machines controls the other. Otherwise
 `levels` in `models` lists them; `free_until` hides a model once its free quota has ended. The key comes from exactly one of `key`, `key_file` (readable for
 you alone, `chmod 600`) or `key_env`. Where the server reports it (vLLM: `max_model_len`), the
 context length is handed to Claude Code, which would otherwise assume 200k. Hooks of the session

@@ -300,6 +300,17 @@ class HostLink:
             raise HostUnreachableError(self.name) from error
         return answer["after"], answer["messages"]
 
+    async def get_json(self, path: str) -> Any:
+        """What the machine's app answers to a GET, as JSON (an answer other than a success is an
+        error)."""
+        check = aiohttp.ClientTimeout(total=ONLINE_CHECK_SECONDS)
+        try:
+            async with self.session().get(f"{UPSTREAM}{path}", timeout=check) as response:
+                response.raise_for_status()
+                return await response.json()
+        except (aiohttp.ClientError, OSError, TimeoutError) as error:
+            raise HostUnreachableError(self.name) from error
+
     async def send(self, method: str, path: str, body: Any) -> None:
         """A change for the machine's app, as JSON (an answer other than a success is an error)."""
         check = aiohttp.ClientTimeout(total=ONLINE_CHECK_SECONDS)

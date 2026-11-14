@@ -26,6 +26,7 @@ from starlette.websockets import WebSocketDisconnect
 from agent_orc.api import BUILD_ID_FILE, BUILD_ID_HEADER, LEVELS_CACHE_SECONDS, create_app
 from agent_orc.approvals import Decision, close_request, open_request, wait_for_decision
 from agent_orc.auth import new_credentials
+from agent_orc.catalog import CatalogBackend, read_catalog
 from agent_orc.config import (
     AgentProfile,
     Config,
@@ -3341,6 +3342,65 @@ def test_the_settings_a_machine_applies_itself_go_to_it(
         client.put("/api/handover", json=switched)
         assert arrived(6)[5] == ("PUT", "api/handover", switched)
     assert len(sent) == 6
+
+
+CATALOG = {"local": {"models": [{"name": "DeepSeek-vllm", "levels": ["high", "max"]}]}}
+
+
+def test_a_machine_tells_its_catalog_and_keeps_the_ones_sent_to_it(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("agent_orc.api.machine_name", lambda: "Mini")
+    monkeypatch.setattr(
+        "agent_orc.api.served_catalog",
+        lambda _config, _today: {"local": CatalogBackend.model_validate(CATALOG["local"])},
+    )
+    own = client.get("/api/catalog").json()
+    assert own["machine"] == "Mini"
+    assert own["backends"]["local"]["models"][0]["levels"] == ["high", "max"]
+    assert client.put("/api/catalogs/Mini", json={"backends": CATALOG}).status_code == 204
+    assert read_catalog("Mini").backends["local"].models[0].name == "DeepSeek-vllm"
+    assert client.put("/api/catalogs/x.y", json={"backends": CATALOG}).status_code == 422
+    unknown_level = {"local": {"models": [{"name": "m", "levels": ["ultra"]}]}}
+    assert client.put("/api/catalogs/Mini", json={"backends": unknown_level}).status_code == 422
+
+
+def test_the_catalogs_go_both_ways_once_a_machine_is_reached(
+    config: Config, clock: FakeClock, other_machine: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("agent_orc.api.keep_tunnel_open", idle_tunnel)
+    monkeypatch.setattr("agent_orc.api.HOST_CHECK_SECONDS", 0.05)
+    monkeypatch.setattr("agent_orc.api.machine_name", lambda: "Mini")
+    monkeypatch.setattr(
+        "agent_orc.api.served_catalog",
+        lambda _config, _today: {"local": CatalogBackend.model_validate(CATALOG["local"])},
+    )
+    # The test's two apps share one state folder and one name: what goes over is seen on the way.
+    sent: list[tuple[str, str, Any]] = []
+    fetched: list[str] = []
+    send, get_json = HostLink.send, HostLink.get_json
+
+    async def recorded_send(link: HostLink, method: str, path: str, body: Any) -> None:
+        await send(link, method, path, body)
+        sent.append((method, path, body))
+
+    async def recorded_get(link: HostLink, path: str) -> Any:
+        answer = await get_json(link, path)
+        fetched.append(path)
+        return answer
+
+    monkeypatch.setattr(HostLink, "send", recorded_send)
+    monkeypatch.setattr(HostLink, "get_json", recorded_get)
+    hosts = {"Aragon": HostConfig(ssh=[["nowhere"]], socket="unused")}
+    with_hosts = config.model_copy(update={"hosts": hosts})
+    app = create_app(with_hosts, new_credentials(PASSWORD), static_dir=None, clock=clock)
+    deadline = time.monotonic() + 10
+    with TestClient(app):
+        while "api/catalog" not in fetched and time.monotonic() < deadline:
+            time.sleep(0.02)
+    assert ("PUT", "api/catalogs/Mini", {"backends": CATALOG}) in sent
+    assert fetched[0] == "api/catalog"
+    assert read_catalog("Mini").backends["local"].models[0].levels == ["high", "max"]
 
 
 def test_the_hosts_and_whether_they_answer(mini: TestClient) -> None:

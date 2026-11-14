@@ -240,6 +240,8 @@ tmux:
 #   agent-orc backend run <backend> [<model>] ... Claude Code on it (more arguments go on to Claude)
 # `agent-orc setup` writes the `backends` section (and a profile `claude-<backend>` under `agents`
 # for each); the README ("Other backends") describes every key. Without one there is no section.
+# A llama-swap on this machine: `llama_swap_config` (models and levels from its chat templates);
+# on another machine: `catalog_from` (the models and levels that machine's Agent-Orc read there).
 agents:
   claude:
     label: Claude Code

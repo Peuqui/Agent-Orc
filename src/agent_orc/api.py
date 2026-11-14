@@ -14,7 +14,7 @@ import time
 from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from dataclasses import asdict
-from datetime import datetime
+from datetime import date, datetime
 from os import PathLike
 from pathlib import Path
 from typing import Annotated, Any, BinaryIO, Literal, NamedTuple
@@ -62,7 +62,14 @@ from agent_orc.attachments import (
     uploaded_image,
 )
 from agent_orc.auth import Clock, Credentials, LoginGuard, TokenSigner, verify_password
+from agent_orc.backends import served_catalog
 from agent_orc.cache import CacheState, cache_state
+from agent_orc.catalog import (
+    CatalogBackend,
+    UnknownMachineError,
+    machine_name,
+    store_catalog,
+)
 from agent_orc.changes import (
     ChangeNotFoundError,
     NotAGitRepositoryError,
@@ -353,6 +360,9 @@ SCREEN_LOG_CHARS = 1500
 APPROVAL_CHECK_SECONDS = 0.5
 # How often the other machines are looked at (hosts.HostLink.state).
 HOST_CHECK_SECONDS = 3
+# How often the model catalogs go both ways between this machine and each one it reaches
+# (catalog.py); also as soon as one is reached.
+CATALOG_SECONDS = 60
 # History lines to read with the screen: none, only what is visible (a question being asked).
 SCREEN_ONLY = 0
 
@@ -421,6 +431,7 @@ ERROR_STATUS: dict[type[Exception], int] = {
     UnknownNotesTrashEntryError: status.HTTP_404_NOT_FOUND,
     NotConfiguredError: status.HTTP_404_NOT_FOUND,
     UnknownHostError: status.HTTP_404_NOT_FOUND,
+    UnknownMachineError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     InvalidBaseDirError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     HostUnreachableError: status.HTTP_502_BAD_GATEWAY,
     NotebookExistsError: status.HTTP_409_CONFLICT,
@@ -459,6 +470,10 @@ ERROR_STATUS: dict[type[Exception], int] = {
     peers.UserTokenMissingError: status.HTTP_503_SERVICE_UNAVAILABLE,
     peers.PeerSendError: status.HTTP_502_BAD_GATEWAY,
 }
+
+
+class CatalogRequest(BaseModel):
+    backends: dict[str, CatalogBackend]
 
 
 class PasswordRequest(BaseModel):
@@ -1446,6 +1461,36 @@ def create_app(
         finally:
             machine_settings_changes.unsubscribe(listener)
 
+    async def exchange_catalogs() -> None:
+        """The model catalogs go both ways over the tunnels (catalog.py): this machine's to each
+        machine it reaches, each one's to here, as soon as it is reached and then every
+        CATALOG_SECONDS. An empty catalog (a machine reads no backend itself) is not passed on."""
+        exchanged: dict[str, float] = {}
+        while True:
+            now = time.monotonic()
+            due = []
+            for link in host_links.values():
+                if host_states.get(link.name) != "online":
+                    exchanged.pop(link.name, None)
+                elif now - exchanged.get(link.name, now - CATALOG_SECONDS) >= CATALOG_SECONDS:
+                    due.append(link)
+            if due:
+                own = await asyncio.to_thread(served_catalog, config, date.today())
+                for link in due:
+                    with contextlib.suppress(HostUnreachableError):
+                        await exchange_catalog(link, own)
+                        exchanged[link.name] = now
+            await asyncio.sleep(HOST_CHECK_SECONDS)
+
+    async def exchange_catalog(link: HostLink, own: dict[str, CatalogBackend]) -> None:
+        if own:
+            body = {name: backend.model_dump(exclude_none=True) for name, backend in own.items()}
+            await link.send("PUT", f"api/catalogs/{machine_name()}", {"backends": body})
+        theirs = await link.get_json("api/catalog")
+        if theirs["backends"]:
+            received = CatalogRequest.model_validate(theirs)
+            await asyncio.to_thread(store_catalog, theirs["machine"], received.backends)
+
     async def mirror_to(link: HostLink) -> None:
         settings = SharedSettings.model_validate(read_settings()).model_dump()
         await link.send("PATCH", "api/settings", settings)
@@ -1513,6 +1558,7 @@ def create_app(
         hosts = asyncio.create_task(watch_hosts())
         relay = asyncio.create_task(relay_host_messages())
         mirror = asyncio.create_task(mirror_settings())
+        catalogs = asyncio.create_task(exchange_catalogs())
         tunnels = [
             asyncio.create_task(
                 keep_tunnel_open(name, host_links[name].local_socket, host, look_at_hosts.set)
@@ -1525,6 +1571,7 @@ def create_app(
         hosts.cancel()
         relay.cancel()
         mirror.cancel()
+        catalogs.cancel()
         for tunnel in tunnels:
             tunnel.cancel()
         await asyncio.gather(*tunnels, return_exceptions=True)
@@ -1918,6 +1965,27 @@ def create_app(
     )
     def unsubscribe(endpoint: str) -> None:
         remove_subscription(endpoint)
+
+    @app.get("/api/catalog", dependencies=authenticated)
+    def own_catalog() -> dict[str, Any]:
+        """This machine's model catalog for the others (catalog.py): its name and the backends it
+        reads itself, with their models and levels."""
+        backends = served_catalog(config, date.today())
+        return {
+            "machine": machine_name(),
+            "backends": {
+                name: backend.model_dump(exclude_none=True) for name, backend in backends.items()
+            },
+        }
+
+    @app.put(
+        "/api/catalogs/{machine}",
+        dependencies=authenticated,
+        status_code=status.HTTP_204_NO_CONTENT,
+    )
+    def receive_catalog(machine: str, body: CatalogRequest) -> None:
+        """The catalog another machine sends, which controls this one (catalog.py)."""
+        store_catalog(machine, body.backends)
 
     @app.get("/api/push/outbox", dependencies=authenticated)
     def push_outbox(after: int | None = None) -> dict[str, Any]:

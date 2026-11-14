@@ -42,6 +42,7 @@ from agent_orc.backends import (
     prepare_launch,
     split_effort,
 )
+from agent_orc.catalog import CatalogError
 from agent_orc.config import (
     CONFIG_FILE_NAME,
     CREDENTIALS_FILE_NAME,
@@ -311,7 +312,7 @@ def run_backend(arguments: list[str]) -> None:
                 exec_claude(launch)
             case _:
                 sys.exit(BACKEND_USAGE)
-    except (BackendError, LlamaSwapError) as error:
+    except (BackendError, LlamaSwapError, CatalogError) as error:
         sys.exit(f"agent-orc backend: {error}")
 
 
