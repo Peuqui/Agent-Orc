@@ -45,6 +45,12 @@ Nur was noch aussteht. Erledigtes steht in der Git-Historie.
 - **Nicht in der Oberfläche gesehen (14.11.):** der Hinweis auf der Karte, wenn die Stufen eines Agenten nicht abrufbar
   sind (`effort_levels_problem`, `4f26eac`); nur durch Tests abgedeckt.
 
+- **Kartentor: Wecken nach dem Hold live prüfen** (14.11.): Am 14.11. um 22:34 unter dem echten Hold von
+  vllm-research geprüft: Abweisung mit Grund (503) auf Mini und Aragon, 401 ohne Zeichen, Modellliste geht durch,
+  der Start unter Hold beginnt nicht, nichts geladen. Offen: eine echte `claude-local`-Sitzung, die das Tor abweist,
+  bekommt nach dem Ende eines Holds `resume_prompt` eingetippt und liest dann ihre liegengebliebenen Nachrichten.
+  Kleinigkeit: Beim Start nennt die Abweisung „Agent-Orc weckt dich“, obwohl es dort keine Sitzung zum Wecken gibt.
+
 ## Dateien-Reiter und Oberfläche
 
 - **Nicht geprüft:** der Dateien-Reiter mit Auswahl und zwei Ansichten auf dem Handy. Geprüft (11.10.): Ordner aus dem
