@@ -550,6 +550,18 @@ class BackendConfig(StrictModel):
         return self
 
 
+class CardGateConfig(StrictModel):
+    """The gate in front of llama-swap for local sessions: it turns a request away while GPU-Orc's
+    hold keeps the cards, instead of letting llama-swap load a model onto them."""
+
+    # Listens on 127.0.0.1 only; nginx does not forward it, Claude Code talks to it directly.
+    port: int
+    # Typed into a turned-away session once the cards are free again.
+    resume_prompt: str
+    # While a session waits, Agent-Orc asks GPU-Orc this often whether the hold has ended.
+    check_seconds: int
+
+
 class Config(StrictModel):
     server: ServerConfig
     auth: AuthConfig
@@ -573,6 +585,8 @@ class Config(StrictModel):
     hosts: dict[str, HostConfig] | None = None
     # Without it Claude Code runs on Anthropic's service only; see `agent-orc backend`.
     backends: dict[str, BackendConfig] | None = None
+    # Without it local sessions talk to llama-swap directly and nothing guards the cards.
+    card_gate: CardGateConfig | None = None
     tmux: TmuxConfig
     agents: dict[str, AgentProfile]
 

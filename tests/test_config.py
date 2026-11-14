@@ -93,3 +93,17 @@ def test_check_config_names_what_no_longer_fits(
         cli.check_config()
     assert "does not fit this version" in str(stopped.value.code)
     assert "unexpected" in str(stopped.value.code)
+
+
+def test_card_gate_is_parsed_from_the_commented_default_section() -> None:
+    text = default_config_text()
+    assert parse_config(text).card_gate is None
+    start = text.index("# card_gate:")
+    end = text.index("\n\n", start)
+    section = "\n".join(
+        line.removeprefix("# ").removeprefix("#") for line in text[start:end].splitlines()
+    )
+    gate = parse_config(text + "\n" + section + "\n").card_gate
+    assert gate is not None
+    assert (gate.port, gate.check_seconds) == (8771, 30)
+    assert "Karten" in gate.resume_prompt

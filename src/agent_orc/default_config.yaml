@@ -202,6 +202,17 @@ dictation:
 #   # The agents see what you write as coming from User:<user_name>.
 #   user_name: Ada
 
+# A gate in front of llama-swap for the local sessions of `backends` (profiles claude-<backend>):
+# while GPU-Orc's hold keeps the cards, a request of such a session is turned away with the reason
+# instead of loading a model onto them; the session's card shows that it waits, and once the hold
+# ends resume_prompt is typed into it. Remove the leading "#" to switch it on.
+# card_gate:
+#   # Listens on 127.0.0.1 only.
+#   port: 8771
+#   resume_prompt: "Die Karten sind wieder frei. Mach dort weiter, wo deine letzte Anfrage abgewiesen wurde."
+#   # While a session waits, GPU-Orc is asked this often whether the hold has ended.
+#   check_seconds: 30
+
 # Other machines that run an Agent-Orc of their own (set up there with a socket instead of a port,
 # `agent-orc setup`; update them with deploy/deploy.sh). This one keeps an SSH tunnel to each and
 # shows its app below /hosts/<name>/, so its agents appear next to this machine's own.
