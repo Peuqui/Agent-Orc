@@ -45,7 +45,9 @@ einen SSH-Tunnel ([Mehrere Rechner](#mehrere-rechner)).
 - Hält auf Wunsch den Zwischenspeicher ruhender Agenten warm (eine winzige Bitte kurz vor dem
   Ablauf), je Agent einzuschalten, damit die nächste Nachricht ohne Wartezeit kommt. Der Schalter
   übersteht einen Neustart von Agent-Orc und des Agenten (⟳); ein neuer Agent im Ordner beginnt
-  mit ihm aus.
+  mit ihm aus. Bei einem lokalen Modell an einem llama-swap (siehe „Andere Backends“) ist das
+  Fenster dessen `ttl`: die Bitte hält das Modell geladen, es belegt also weiter die Grafikkarten
+  für andere Programme.
 - Benachrichtigungen aufs Handy oder den Rechner, wenn ein Agent fertig ist oder auf eine
   Freigabe oder Antwort wartet (Web Push, pro Gerät einschaltbar); Antippen öffnet den Agenten.
 - Der Freigabe-Modus, in dem ein Agent startet, pro Projekt (Fragen, Bearbeiten, Auto, Planen;
@@ -440,6 +442,7 @@ verschiedenen Modellen davon verdrängen sich.)
 ```
 agent-orc backend models <Backend>             die angebotenen Modelle, eines je Zeile
 agent-orc backend levels <Backend> <Modell>    die Denkstufen, die ein Modell annimmt
+agent-orc backend ttl <Backend> <Modell>       Sekunden, die der Server es geladen hält (nichts: für immer)
 agent-orc backend run <Backend> [<Modell>] ... Claude Code darauf (weitere Argumente gehen an Claude)
 ```
 
@@ -470,6 +473,13 @@ jede Minute; so kommen die Kataloge an, egal welcher der beiden Rechner den ande
 Rechner, der selbst keinen llama-swap liest, schickt keinen. Jeder Katalog liegt unter
 `~/.local/state/agent-orc/catalogs/<Hostname>.json`; einer, der sich nicht lesen lässt, wird
 protokolliert, und der Austausch geht weiter.
+
+Warmhalten gibt es auch für ein Modell an einem llama-swap: sein Fenster ist die `ttl`, die das Modell
+in der Konfiguration von llama-swap hat (Sekunden ohne Anfrage, bis es entladen wird; fehlt sie oder
+ist 0: nie), gelesen von `agent-orc backend ttl` (dem `model_ttl_command` des Profils) und bei einem
+Backend auf einem anderen Rechner aus dessen Katalog. Die Warmhalte-Bitte hält das Modell dann
+geladen, und es belegt weiter die Karten für andere Programme. Bei einem Cloud-Backend druckt der
+Befehl nichts: kein Fenster, keine Bitte.
 
 Lassen sich die Stufen eines Modells nicht bestimmen (seine Datei fehlt, oder der Katalog des
 anderen Rechners nennt den Grund), zeigt die Karte des Agenten den Grund statt des Reglers; die

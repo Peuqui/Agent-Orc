@@ -5,7 +5,8 @@ subscription), and the next message then reads the whole context in again: slow,
 deal of the usage limit. A tiny prompt shortly before the end reads the cache instead, which
 starts the window anew; a large context costs next to nothing that way.
 
-The cache's window comes from the agent's transcript (cache.py), so nothing here knows an hour.
+The cache's window comes from the agent's transcript (cache.py), or for a local model from the
+ttl of its server (the profile's model_ttl_command), so nothing here knows an hour.
 A prompt is typed only into a resting agent whose cache is still alive but about to expire,
 and only so often in a row: the user's next input starts the count anew, as it ends a handover.
 Switched on per agent, and only for as long as its session lives: the api keeps the switch in

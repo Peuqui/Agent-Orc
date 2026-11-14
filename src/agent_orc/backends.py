@@ -29,7 +29,7 @@ from agent_orc.config import (
     Config,
 )
 from agent_orc.gpuorc import Request, free_for_model, request_json
-from agent_orc.llama_swap import LlamaSwapError, embedding_models, template_levels
+from agent_orc.llama_swap import LlamaSwapError, embedding_models, model_ttl, template_levels
 
 # What Claude Code asks for without being told (its own default).
 DEFAULT_LEVEL = "high"
@@ -274,14 +274,29 @@ def catalog_backend(source: CatalogSource) -> CatalogBackend:
     return entry
 
 
-def catalog_levels(source: CatalogSource, model: str) -> list[str]:
-    """The levels of a model as the machine it is on read them from its template."""
+def catalog_model(source: CatalogSource, model: str, asked: str) -> CatalogModel:
+    """A model of the catalog from the machine it is on, which must be able to tell `asked`."""
     entry = next((m for m in catalog_backend(source).models if m.name == model), None)
     if entry is None:
         raise BackendError(f"{model} is not in the catalog from {source.machine}")
     if entry.problem is not None:
-        raise BackendError(f"{source.machine} cannot tell the levels of {model}: {entry.problem}")
-    return list(entry.levels)
+        raise BackendError(f"{source.machine} cannot tell the {asked} of {model}: {entry.problem}")
+    return entry
+
+
+def catalog_levels(source: CatalogSource, model: str) -> list[str]:
+    """The levels of a model as the machine it is on read them from its template."""
+    return list(catalog_model(source, model, "levels").levels)
+
+
+def ttl_of(backend: BackendConfig, model: str) -> int | None:
+    """Seconds the server keeps the model loaded without a request (None: for good, or not told):
+    from llama-swap's configuration on this machine, or from the catalog of the machine it is on."""
+    if backend.llama_swap_config is not None:
+        return model_ttl(backend.llama_swap_config, model)
+    if backend.catalog_from is not None:
+        return catalog_model(backend.catalog_from, model, "ttl").ttl
+    return None
 
 
 def served_catalog(
@@ -304,7 +319,11 @@ def served_catalog(
             try:
                 models.append(
                     CatalogModel.model_validate(
-                        {"name": model, "levels": levels_of(backend, model)}
+                        {
+                            "name": model,
+                            "levels": levels_of(backend, model),
+                            "ttl": ttl_of(backend, model),
+                        }
                     )
                 )
             except (BackendError, LlamaSwapError) as error:

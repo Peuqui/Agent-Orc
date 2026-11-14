@@ -11,6 +11,7 @@ from agent_orc.llama_swap import (
     detect_levels,
     embedding_models,
     model_path,
+    model_ttl,
     template_levels,
 )
 
@@ -93,7 +94,7 @@ def checkpoint(tmp_path: Path, name: str, files: dict[str, str]) -> Path:
 def test_the_model_is_what_llama_swaps_command_names_with_model(tmp_path: Path) -> None:
     command = (
         "/vllm/bin/python -m vllm.entrypoints.openai.api_server --model /models/q --port ${PORT} "
-        "--speculative-config '{\"method\": \"mtp\"}'"
+        '--speculative-config \'{"method": "mtp"}\''
     )
     serve = "/vllm/bin/vllm serve /models/s --served-model-name s-vllm --port ${PORT}"
     config = llama_swap(tmp_path, {"q-vllm": json.dumps(command), "s-vllm": serve})
@@ -123,8 +124,10 @@ def test_the_levels_come_from_the_jinja_file_or_the_tokenizer_config(tmp_path: P
     )
     config = llama_swap(
         tmp_path,
-        {name: f"server --model {folder}" for name, folder in
-         {"qwen": jinja, "glm": tokenizer, "named": named}.items()},
+        {
+            name: f"server --model {folder}"
+            for name, folder in {"qwen": jinja, "glm": tokenizer, "named": named}.items()
+        },
     )
     assert template_levels(config, "qwen") == ["low", "medium", "xhigh"]
     assert template_levels(config, "glm") == ["low", "high", "max"]
@@ -197,3 +200,20 @@ def test_embedding_servers_are_told_by_their_command(tmp_path: Path) -> None:
         },
     )
     assert embedding_models(config) == {"bge", "old-vllm", "new-vllm"}
+
+
+def test_the_ttl_is_the_seconds_llama_swap_keeps_a_model_loaded(tmp_path: Path) -> None:
+    config = tmp_path / "llama-swap.yaml"
+    config.write_text(
+        "models:\n  kept:\n    cmd: a\n    ttl: 900\n  forever:\n    cmd: b\n"
+        "  never-unloaded:\n    cmd: c\n    ttl: 0\n  odd:\n    cmd: d\n    ttl: soon\n",
+        encoding="utf-8",
+    )
+    assert model_ttl(config, "kept") == 900
+    # Without ttl, or with 0, llama-swap never unloads the model.
+    assert model_ttl(config, "forever") is None
+    assert model_ttl(config, "never-unloaded") is None
+    with pytest.raises(LlamaSwapError, match="ttl of odd .* not a number of seconds"):
+        model_ttl(config, "odd")
+    with pytest.raises(LlamaSwapError, match="unknown is not in llama-swap's configuration"):
+        model_ttl(config, "unknown")

@@ -2,7 +2,7 @@ import json
 from datetime import UTC, datetime
 from pathlib import Path
 
-from agent_orc.cache import CacheState, cache_state
+from agent_orc.cache import CacheState, cache_state, last_answer
 
 ONE_HOUR = {"ephemeral_1h_input_tokens": 724, "ephemeral_5m_input_tokens": 0}
 FIVE_MINUTES = {"ephemeral_1h_input_tokens": 0, "ephemeral_5m_input_tokens": 300}
@@ -49,3 +49,20 @@ def test_a_changed_transcript_is_read_again(tmp_path: Path) -> None:
     with transcript.open("a") as handle:
         handle.write(json.dumps(answer(4000.0, ONE_HOUR)) + "\n")
     assert cache_state(transcript) == CacheState(last_request=4000.0, window_seconds=3600)
+
+
+def test_the_last_answer_is_told_without_anything_written_to_a_cache(tmp_path: Path) -> None:
+    # A local model's answers carry no cache_creation at all.
+    local: dict[str, object] = {
+        "type": "assistant",
+        "timestamp": "2026-11-14T10:00:00Z",
+        "message": {"usage": {"input_tokens": 12}},
+    }
+    transcript = write(tmp_path / "a.jsonl", [local, {"type": "user", "message": {}}])
+    assert cache_state(transcript) is None
+    assert last_answer(transcript) == datetime(2026, 11, 14, 10, 0, tzinfo=UTC).timestamp()
+    empty = write(tmp_path / "b.jsonl", [{"type": "user", "message": {"content": "hi"}}])
+    assert last_answer(empty) is None
+    # Also where an answer wrote to the cache: the newest one counts, not the one that wrote.
+    both = write(tmp_path / "c.jsonl", [answer(1000.0, ONE_HOUR), answer(1500.0, NOTHING_WRITTEN)])
+    assert last_answer(both) == 1500.0

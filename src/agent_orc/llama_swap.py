@@ -18,6 +18,7 @@ import json
 import re
 import shlex
 from pathlib import Path
+from typing import Any
 
 import gguf
 import yaml
@@ -48,13 +49,40 @@ class LlamaSwapError(RuntimeError):
     """What llama-swap's configuration or a model's template does not tell, said as it is."""
 
 
+def model_entries(llama_swap_config: Path) -> dict[str, dict[str, Any]]:
+    """Each model's entry in llama-swap's configuration: the one place the file is read."""
+    try:
+        models = yaml.safe_load(llama_swap_config.read_text(encoding="utf-8"))["models"]
+        return {name: dict(entry) for name, entry in models.items()}
+    except (OSError, yaml.YAMLError, KeyError, TypeError, ValueError) as error:
+        raise LlamaSwapError(f"llama-swap's configuration {llama_swap_config}: {error}") from error
+
+
 def commands(llama_swap_config: Path) -> dict[str, list[str]]:
     """Each model's command in llama-swap's configuration, split into its arguments."""
     try:
-        models = yaml.safe_load(llama_swap_config.read_text(encoding="utf-8"))["models"]
-        return {name: shlex.split(entry["cmd"]) for name, entry in models.items()}
-    except (OSError, yaml.YAMLError, KeyError, TypeError, ValueError) as error:
+        return {
+            name: shlex.split(entry["cmd"])
+            for name, entry in model_entries(llama_swap_config).items()
+        }
+    except (KeyError, TypeError, ValueError) as error:
         raise LlamaSwapError(f"llama-swap's configuration {llama_swap_config}: {error}") from error
+
+
+def model_ttl(llama_swap_config: Path, model: str) -> int | None:
+    """Seconds llama-swap keeps the model loaded without a request, then unloads it; None for a
+    model without `ttl` or with 0, which it never unloads."""
+    entries = model_entries(llama_swap_config)
+    if model not in entries:
+        raise LlamaSwapError(f"{model} is not in llama-swap's configuration {llama_swap_config}")
+    ttl = entries[model].get("ttl")
+    if ttl is None or ttl == 0:
+        return None
+    if isinstance(ttl, bool) or not isinstance(ttl, int) or ttl < 0:
+        raise LlamaSwapError(
+            f"the ttl of {model} in {llama_swap_config} is not a number of seconds: {ttl!r}"
+        )
+    return ttl
 
 
 def serves_embeddings(command: list[str]) -> bool:

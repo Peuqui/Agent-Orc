@@ -2059,9 +2059,7 @@ def test_levels_that_cannot_be_told_show_on_that_agents_card_only(
     def levels() -> dict[str, tuple[list[str], str | None]]:
         listed = client.get("/api/sessions")
         assert listed.status_code == 200
-        return {
-            s["id"]: (s["effort_levels"], s["effort_levels_problem"]) for s in listed.json()
-        }
+        return {s["id"]: (s["effort_levels"], s["effort_levels_problem"]) for s in listed.json()}
 
     assert levels()[fragile_id] == (["low", "high"], None)
     broken.touch()
@@ -2155,6 +2153,98 @@ def test_keep_warm_prompts_a_resting_agent_before_its_cache_expires(
         assert client.get("/api/sessions").json()[0]["keep_warm"]["pings"] == 2
         store_activity(session_id, busy=True)
         assert pings_become(client, 0)
+
+
+def local_model_client(config: Config, clock: FakeClock, ttl_command: list[str]) -> TestClient:
+    """An app with an agent profile of a local model: keep_warm, and the window from a command."""
+    local = AgentProfile.model_validate(
+        {
+            "label": "Local",
+            "models": ["printf", "m\\n"],
+            "start": ["sh", "-c", "echo started {model}; exec cat"],
+            "resume": ["true"],
+            "settings": {},
+            "model_ttl_command": ttl_command,
+            "keep_warm": {"prompt": "Keep-alive: one word.", "lead_minutes": 5},
+        }
+    )
+    app = create_app(
+        config.model_copy(update={"agents": {**config.agents, "local": local}}),
+        new_credentials(PASSWORD),
+        static_dir=None,
+        clock=clock,
+    )
+    return TestClient(app)
+
+
+def start_local_model(client: TestClient, folder: Path) -> str:
+    folder.mkdir(exist_ok=True)
+    body = {
+        "profile": "local",
+        "path": str(folder),
+        "model": "m",
+        "resume": False,
+        "effort": None,
+        "ultracode": False,
+        "conversation": None,
+    }
+    session_id: str = client.post("/api/sessions", json=body).json()["id"]
+    return session_id
+
+
+def answered_locally(transcript: Path, at: float) -> Path:
+    """A transcript whose last answer came at `at`; a local model's usage has no cache_creation."""
+    stamp = datetime.fromtimestamp(at, UTC).isoformat().replace("+00:00", "Z")
+    entry = {"type": "assistant", "timestamp": stamp, "message": {"usage": {"input_tokens": 9}}}
+    transcript.write_text(json.dumps(entry) + "\n")
+    return transcript
+
+
+def test_a_local_models_window_is_its_ttl_after_the_last_answer_and_keep_warm_uses_it(
+    config: Config, clock: FakeClock, home: Path, socket_name: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(home / "state"))
+    monkeypatch.setattr("agent_orc.api.AGENT_CHECK_SECONDS", 0.1)
+    answer_time = clock() - 57 * 60
+    with local_model_client(config, clock, ["sh", "-c", "[ {model} = m ] && echo 3600"]) as client:
+        client.post("/api/login", json={"password": PASSWORD})
+        session_id = start_local_model(client, home / "projects")
+        report_context(session_id, 100, answered_locally(home / "conversation.jsonl", answer_time))
+        store_activity(session_id, busy=False)
+        card = client.get("/api/sessions").json()[0]
+        assert card["cache"]["last_request"] == answer_time
+        assert card["cache"]["window_seconds"] == 3600
+        assert card["keep_warm"]["available"] is True
+
+        # Three minutes before the hour is over, within the lead of five: the prompt is typed.
+        url = f"/api/sessions/{session_id}/keep-warm"
+        assert client.put(url, json={"enabled": True}).status_code == 204
+        assert wait_for_text(client, session_id, "Keep-alive: one word.")
+
+
+def test_a_model_without_a_ttl_has_no_window(
+    config: Config, clock: FakeClock, home: Path, socket_name: str
+) -> None:
+    with local_model_client(config, clock, ["true"]) as client:
+        client.post("/api/login", json={"password": PASSWORD})
+        session_id = start_local_model(client, home / "projects")
+        report_context(session_id, 100, answered_locally(home / "c.jsonl", clock()))
+        assert client.get("/api/sessions").json()[0]["cache"] is None
+
+
+def test_a_failing_ttl_command_leaves_the_list_and_only_that_agent_without_a_window(
+    config: Config, clock: FakeClock, home: Path, socket_name: str, caplog: pytest.LogCaptureFixture
+) -> None:
+    with local_model_client(
+        config, clock, ["sh", "-c", "echo server unreachable >&2; exit 1"]
+    ) as client:
+        client.post("/api/login", json={"password": PASSWORD})
+        session_id = start_local_model(client, home / "projects")
+        report_context(session_id, 100, answered_locally(home / "c.jsonl", clock()))
+        listed = client.get("/api/sessions")
+        assert listed.status_code == 200
+        assert listed.json()[0]["cache"] is None
+    assert "server unreachable" in caplog.text
 
 
 def test_keep_warm_is_switched_on_and_off_per_agent(client: TestClient, home: Path) -> None:

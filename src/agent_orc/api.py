@@ -63,7 +63,7 @@ from agent_orc.attachments import (
 )
 from agent_orc.auth import Clock, Credentials, LoginGuard, TokenSigner, verify_password
 from agent_orc.backends import served_catalog
-from agent_orc.cache import CacheState, cache_state
+from agent_orc.cache import CacheState, cache_state, last_answer
 from agent_orc.catalog import (
     CatalogBackend,
     UnknownMachineError,
@@ -913,9 +913,30 @@ def create_app(
         kept = agent_reasoning(session.profile, session.id)
         store_start_reasoning(session.profile, session.id, model, effort, kept.ultracode)
 
-    # Per profile and model: when it was asked, and its levels or why they could not be told (a
-    # failed command is not run again at every refresh of the list either).
-    levels_cache: dict[tuple[str, str | None], tuple[float, list[str] | str]] = {}
+    # Per command: when it was asked, and its output or why it failed (a failed command is not run
+    # again at every refresh of the list either). The reason is kept as text and raised anew: a
+    # kept exception raised again and again would gather a traceback with each raise.
+    command_cache: dict[tuple[str, ...], tuple[float, str, bool]] = {}
+
+    def cached_profile_command(command: list[str]) -> str:
+        """The command's output, asked again once LEVELS_CACHE_SECONDS have passed."""
+        cached = command_cache.get(tuple(command))
+        if cached is not None and clock() - cached[0] < LEVELS_CACHE_SECONDS:
+            _, text, failed = cached
+            if failed:
+                raise ProfileCommandError(text)
+            return text
+        try:
+            output = run_profile_command(command)
+        except ProfileCommandError as error:
+            logger.warning("profile command failed: %s", error)
+            command_cache[tuple(command)] = (clock(), str(error), True)
+            raise
+        command_cache[tuple(command)] = (clock(), output, False)
+        return output
+
+    def model_command(template: list[str], model: str) -> list[str]:
+        return [argument.replace(MODEL_PLACEHOLDER, model) for argument in template]
 
     def effort_levels(profile_name: str, model: str | None) -> list[str]:
         """The levels the agent takes: the profile's, or those its chosen model takes."""
@@ -925,19 +946,7 @@ def create_app(
             return []
         if effort.levels_command is None or model is None:
             return effort.levels
-        cached = levels_cache.get((profile_name, model))
-        if cached is not None and clock() - cached[0] < LEVELS_CACHE_SECONDS:
-            if isinstance(cached[1], str):
-                raise ProfileCommandError(cached[1])
-            return cached[1]
-        command = [argument.replace(MODEL_PLACEHOLDER, model) for argument in effort.levels_command]
-        try:
-            levels = run_profile_command(command).split()
-        except ProfileCommandError as error:
-            levels_cache[(profile_name, model)] = (clock(), str(error))
-            raise
-        levels_cache[(profile_name, model)] = (clock(), levels)
-        return levels
+        return cached_profile_command(model_command(effort.levels_command, model)).split()
 
     def card_levels(session: AgentSession) -> tuple[list[str], str | None]:
         """The slider's levels and why they could not be told: a failed lookup shows on the
@@ -1152,9 +1161,37 @@ def create_app(
             "max_pings": keep_warm_max_pings(),
         }
 
+    def model_ttl_seconds(command: list[str]) -> int | None:
+        """How long the server keeps the model loaded; None for good (prints nothing)."""
+        printed = cached_profile_command(command).strip()
+        if not printed:
+            return None
+        if not printed.isdecimal():
+            raise ProfileCommandError(f"{' '.join(command)}: no number of seconds: {printed}")
+        return int(printed)
+
+    def model_cache(command: list[str], transcript: Path) -> CacheState | None:
+        """A local model is warm for the server's ttl after its last answer: the transcript
+        tells of no prompt cache there. A failing ttl command leaves this agent without a window,
+        the list of the others stays (as with card_levels)."""
+        try:
+            ttl = model_ttl_seconds(command)
+        except ProfileCommandError:
+            return None
+        answered = last_answer(transcript)
+        if ttl is None or answered is None:
+            return None
+        return CacheState(last_request=answered, window_seconds=ttl)
+
     def agent_cache(session: AgentSession) -> CacheState | None:
         transcript = session_transcript(session)
-        return None if transcript is None else cache_state(transcript)
+        if transcript is None:
+            return None
+        profile = config.agents.get(session.profile)
+        if profile is not None and profile.model_ttl_command and session.chosen_model:
+            command = model_command(profile.model_ttl_command, session.chosen_model)
+            return model_cache(command, transcript)
+        return cache_state(transcript)
 
     def can_take_handover(session: AgentSession) -> bool:
         """Typing reaches the agent's input, not a prompt that waits for an answer (the text

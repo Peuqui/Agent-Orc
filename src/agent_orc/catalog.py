@@ -28,6 +28,8 @@ class CatalogModel(BaseModel):
 
     name: str
     levels: list[Level] = []
+    # Seconds the model server keeps it loaded without a request; None: for as long as it runs.
+    ttl: int | None = None
     problem: str | None = None
 
 

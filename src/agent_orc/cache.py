@@ -25,22 +25,42 @@ class CacheState:
     window_seconds: int
 
 
+@dataclass(frozen=True)
+class Reading:
+    """What one pass through a transcript finds."""
+
+    # Unix time of the newest answer, whether or not it wrote to the cache; None without answers.
+    last_answer: float | None
+    # None until an answer wrote to the cache.
+    state: CacheState | None
+
+
 # Read once per version of a transcript: the session list asks for it every few seconds.
-_known: dict[Path, tuple[int, int, CacheState | None]] = {}
+_known: dict[Path, tuple[int, int, Reading]] = {}
 
 
 def cache_state(transcript: Path) -> CacheState | None:
     """None until the transcript has an answer that wrote to the cache."""
+    return _reading(transcript).state
+
+
+def last_answer(transcript: Path) -> float | None:
+    """Unix time of the newest answer; None without one. For models whose server keeps no cache
+    the transcript tells of (a local model stays loaded for a while after its last request)."""
+    return _reading(transcript).last_answer
+
+
+def _reading(transcript: Path) -> Reading:
     stat = transcript.stat()
     known = _known.get(transcript)
     if known is not None and known[:2] == (stat.st_mtime_ns, stat.st_size):
         return known[2]
-    state = _read_state(transcript)
-    _known[transcript] = (stat.st_mtime_ns, stat.st_size, state)
-    return state
+    reading = _read(transcript)
+    _known[transcript] = (stat.st_mtime_ns, stat.st_size, reading)
+    return reading
 
 
-def _read_state(transcript: Path) -> CacheState | None:
+def _read(transcript: Path) -> Reading:
     last_request: float | None = None
     for line in lines_from_end(transcript, SCAN_BYTES):
         entry = transcript_entry(line, transcript)
@@ -56,5 +76,5 @@ def _read_state(transcript: Path) -> CacheState | None:
             (seconds for key, seconds in WINDOW_SECONDS.items() if written.get(key)), default=None
         )
         if window is not None:
-            return CacheState(last_request=last_request, window_seconds=window)
-    return None
+            return Reading(last_request, CacheState(last_request, window))
+    return Reading(last_request, None)

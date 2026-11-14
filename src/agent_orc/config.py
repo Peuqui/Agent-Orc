@@ -387,6 +387,10 @@ class AgentProfile(StrictModel):
     # Keeping the prompt cache warm of agents that rest; without it the profile has no such thing
     # (the cache of other services than Anthropic's lives by other rules).
     keep_warm: KeepWarmConfig | None = None
+    # For profiles with a choice of models: prints how many seconds the model server keeps the
+    # chosen model ({model}) loaded without a request; nothing means for good. That is the window
+    # of keep_warm where the transcript tells of no prompt cache (a local model).
+    model_ttl_command: list[str] | None = None
     # A plain terminal, no agent: it may run in a folder next to that folder's agent.
     terminal: bool = False
     # What the agent shows in the line above its input field while it works (Claude Code: its

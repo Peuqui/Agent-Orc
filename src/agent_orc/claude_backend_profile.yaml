@@ -24,6 +24,13 @@
     # Agent 1  13s", led by "❯ " for the selected one; the main agent's own row is "● main"). They
     # go on after the answer ended, so the card shows the agent as working.
     subagents_line: '^\s*(?:❯ )?◯ '
+    # How long the server keeps the chosen model loaded without a request (llama-swap's ttl); that
+    # is the window the keep-warm prompt below holds open. A cloud backend prints nothing: no
+    # window, no prompt. Same prompt and lead as Claude's profile (default_config.yaml).
+    model_ttl_command: [agent-orc, backend, ttl, @backend@, "{model}"]
+    keep_warm:
+      prompt: "Keep-alive: answer with the single word Pong."
+      lead_minutes: 10
     effort:
       levels: [low, medium, high, xhigh, max]
       default: high

@@ -41,6 +41,7 @@ from agent_orc.backends import (
     models_lines,
     prepare_launch,
     split_effort,
+    ttl_of,
 )
 from agent_orc.catalog import CatalogError
 from agent_orc.config import (
@@ -281,7 +282,7 @@ def _notify(kind: str, hook: dict[str, Any], text: str) -> None:
 
 
 BACKEND_USAGE = (
-    "usage: agent-orc backend models <backend> | levels <backend> <model>"
+    "usage: agent-orc backend models <backend> | levels <backend> <model> | ttl <backend> <model>"
     " | run <backend> [<model>] [claude arguments]"
 )
 
@@ -295,6 +296,10 @@ def run_backend(arguments: list[str]) -> None:
                 print("\n".join(models_lines(backend_named(config, name), date.today())))
             case ["levels", name, model]:
                 print(" ".join(levels_of(backend_named(config, name), model)))
+            case ["ttl", name, model]:
+                ttl = ttl_of(backend_named(config, name), model)
+                if ttl is not None:
+                    print(ttl)
             case ["run", name, *rest]:
                 backend = backend_named(config, name)
                 if rest and not rest[0]:

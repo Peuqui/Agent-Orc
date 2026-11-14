@@ -13,6 +13,7 @@ from agent_orc.backends import (
     offered,
     prepare_launch,
     served_catalog,
+    ttl_of,
 )
 from agent_orc.catalog import (
     CatalogBackend,
@@ -27,7 +28,7 @@ from agent_orc.config import BackendConfig, Config, default_config_text, parse_c
 TODAY = date(2026, 11, 14)
 MINI_LOCAL = CatalogBackend(
     models=[
-        CatalogModel(name="DeepSeek-vllm", levels=["high", "max"]),
+        CatalogModel(name="DeepSeek-vllm", levels=["high", "max"], ttl=900),
         CatalogModel(name="Instruct-gguf"),
         CatalogModel(name="Broken-vllm", problem="its template cannot be read"),
     ]
@@ -67,6 +68,19 @@ def test_a_backend_on_another_machine_offers_what_its_catalog_lists() -> None:
         levels_of(backend, "Not-in-the-catalog")
 
 
+def test_the_ttl_of_a_model_on_another_machine_comes_from_its_catalog() -> None:
+    store_catalog("Mini", {"local": MINI_LOCAL})
+    backend = remote_backend()
+    assert ttl_of(backend, "DeepSeek-vllm") == 900
+    assert ttl_of(backend, "Instruct-gguf") is None
+    with pytest.raises(BackendError, match="Mini cannot tell the ttl of Broken-vllm"):
+        ttl_of(backend, "Broken-vllm")
+    with pytest.raises(BackendError, match="Not-in-the-catalog is not in the catalog from Mini"):
+        ttl_of(backend, "Not-in-the-catalog")
+    # Neither a llama-swap here nor a catalog: nothing tells it.
+    assert ttl_of(remote_backend(catalog_from=None), "DeepSeek-vllm") is None
+
+
 def test_the_start_on_another_machines_model_takes_its_levels() -> None:
     store_catalog("Mini", {"local": MINI_LOCAL})
 
@@ -104,7 +118,7 @@ def test_this_machines_catalog_holds_the_backends_it_reads_itself(tmp_path: Path
     )
     llama_swap = tmp_path / "llama-swap.yaml"
     llama_swap.write_text(
-        f"models:\n  qwen:\n    cmd: vllm serve {checkpoint}\n"
+        f"models:\n  qwen:\n    cmd: vllm serve {checkpoint}\n    ttl: 900\n"
         f"  gone:\n    cmd: vllm serve {tmp_path / 'gone'}\n",
         encoding="utf-8",
     )
@@ -137,7 +151,7 @@ def test_this_machines_catalog_holds_the_backends_it_reads_itself(tmp_path: Path
     catalog = served_catalog(config, TODAY, fetch)
     # A cloud backend is not read here: its models stay where they are configured.
     assert set(catalog) == {"local", "down"}
-    assert catalog["local"].models[1] == CatalogModel(name="qwen", levels=["low", "xhigh"])
+    assert catalog["local"].models[1] == CatalogModel(name="qwen", levels=["low", "xhigh"], ttl=900)
     assert catalog["local"].models[0].name == "gone"
     assert "is not there" in (catalog["local"].models[0].problem or "")
     assert "does not answer at http://nowhere" in (catalog["down"].problem or "")

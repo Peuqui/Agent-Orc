@@ -423,6 +423,32 @@ def test_the_command_lists_the_models_and_their_levels_from_a_real_server(
     assert capsys.readouterr().out.strip() == "low medium xhigh"
 
 
+def test_the_command_tells_the_ttl_of_a_model_or_nothing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+    write_config(tmp_path, "http://127.0.0.1:1")
+    llama_swap = tmp_path / "llama-swap.yaml"
+    llama_swap.write_text(
+        "models:\n  Kept:\n    cmd: a\n    ttl: 900\n  Forever:\n    cmd: b\n", encoding="utf-8"
+    )
+    config_file = tmp_path / "agent-orc" / "config.yaml"
+    config_file.write_text(
+        config_file.read_text(encoding="utf-8")
+        + f'  swap:\n    label: Swap\n    base_urls: ["http://127.0.0.1:1"]\n    key: no-key\n'
+        f"    llama_swap_config: {llama_swap}\n",
+        encoding="utf-8",
+    )
+
+    cli.run_backend(["ttl", "swap", "Kept"])
+    assert capsys.readouterr().out == "900\n"
+    cli.run_backend(["ttl", "swap", "Forever"])
+    assert capsys.readouterr().out == ""
+    # A backend that is no llama-swap of this machine tells nothing either.
+    cli.run_backend(["ttl", "local", "Plain-model"])
+    assert capsys.readouterr().out == ""
+
+
 def test_the_command_starts_claude_code_with_what_the_profile_handed_over(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, served_models: str
 ) -> None:

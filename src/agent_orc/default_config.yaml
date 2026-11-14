@@ -381,7 +381,10 @@ agents:
   # A profile may offer a choice of models at start: "models" prints them (one per line), the
   # choice fills {model} in its commands; "effort.levels_command" prints the levels a model takes
   # (nothing: no level at all; a failed command: its reason on the agent's card instead of the
-  # slider), "env" sets the agent's environment ({effort}: the folder's level).
+  # slider), "model_ttl_command" prints the seconds the server keeps the model loaded without a
+  # request (the window of keep_warm for a local model, which has no prompt cache in its
+  # transcript; nothing: for good), "env" sets the agent's environment ({effort}: the folder's
+  # level).
   # The profiles `claude-<backend>` that `agent-orc setup` adds follow the same pattern (the
   # template is claude_backend_profile.yaml in the package).
   shell:

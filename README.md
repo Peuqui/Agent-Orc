@@ -39,7 +39,9 @@ that run Agent-Orc can be shown in the same app, through an SSH tunnel ([Several
   (before anything another hook wakes it with) and goes on; the answers view shows both.
 - Optionally keeps the prompt cache of resting agents warm (a tiny request shortly before it
   expires), switched on per agent, so the next message needs no wait. The switch stays on across
-  restarts of Agent-Orc and of the agent (⟳); a new agent in the folder starts with it off.
+  restarts of Agent-Orc and of the agent (⟳); a new agent in the folder starts with it off. For a
+  local model on a llama-swap (see “Other backends”) the window is the model's `ttl` there: the
+  request keeps the model loaded, so it goes on holding the graphics cards for other programs.
 - Notifications on your phone or desktop when an agent is done or waits for a permission or an
   answer (Web Push, switched on per device); tapping one opens the agent.
 - The permission mode an agent starts in, per project (ask, edit, auto, plan; auto by default).
@@ -419,6 +421,7 @@ models of it push each other out.)
 ```
 agent-orc backend models <backend>             the models on offer, one per line
 agent-orc backend levels <backend> <model>     the reasoning levels a model takes
+agent-orc backend ttl <backend> <model>        seconds the server keeps it loaded (nothing: for good)
 agent-orc backend run <backend> [<model>] ...  Claude Code on it (more arguments go to Claude)
 ```
 
@@ -448,6 +451,12 @@ and then every minute, so the catalogs arrive whichever of the two machines cont
 machine that reads no llama-swap itself sends none. Each catalog is kept as
 `~/.local/state/agent-orc/catalogs/<host name>.json`; one that cannot be read is logged, and the
 exchange goes on.
+
+Keep warm works for a model of a llama-swap, too: its window is the `ttl` the model has in
+llama-swap's configuration (seconds without a request until it is unloaded; none or 0: never), read
+by `agent-orc backend ttl` (the profile's `model_ttl_command`) and, for a backend on another machine,
+taken from its catalog. The keep-warm request then keeps the model loaded, and it goes on holding
+the cards for other programs. For a cloud backend the command prints nothing: no window, no request.
 
 If the levels of a model cannot be told (its file is not there, or the other machine's catalog gives
 the reason), the agent's card shows the reason instead of the slider, and the session list stays. A
