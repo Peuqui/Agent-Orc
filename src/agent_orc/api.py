@@ -1472,7 +1472,9 @@ def create_app(
             for link in host_links.values():
                 if host_states.get(link.name) != "online":
                     exchanged.pop(link.name, None)
-                elif now - exchanged.get(link.name, now - CATALOG_SECONDS) >= CATALOG_SECONDS:
+                elif link.name not in exchanged or now - exchanged[link.name] >= CATALOG_SECONDS:
+                    # Not "now - CATALOG_SECONDS" as a default: in floating point the difference can
+                    # come out a hair short, and a machine never exchanged with would never be due.
                     due.append(link)
             if due:
                 own = await asyncio.to_thread(served_catalog, config, date.today())
