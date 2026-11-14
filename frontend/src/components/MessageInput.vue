@@ -25,6 +25,9 @@ const props = defineProps<{ sessionId: string }>()
 // Esc in the field goes to the agent, as the Esc of the extra keys: it interrupts it.
 const emit = defineEmits<{ escape: [] }>()
 const { zoomFactor, zoomStyle } = useZoomFactor()
+// How far the field grows with a long text, in percent of the view's height: more of it than this
+// pushes the conversation away; the rest of the text scrolls inside the field.
+const FIELD_MAX_HEIGHT_PERCENT = 20
 
 const toast = useToast()
 const { sessions } = useSessions()
@@ -320,7 +323,7 @@ function onKeydown(event: KeyboardEvent): void {
       v-model="text"
       :[MESSAGE_FIELD_ATTRIBUTE]="''"
       class="input min-h-10 flex-1 resize-none py-2 field-sizing-content"
-      :style="{ maxHeight: `calc(40cqh / ${zoomFactor})` }"
+      :style="{ maxHeight: `calc(${FIELD_MAX_HEIGHT_PERCENT}cqh / ${zoomFactor})` }"
       :placeholder="dictation.state === 'transcribing' || transcribingElsewhere ? $t('dictation.transcribing') : $t('terminal.placeholder')"
       enterkeyhint="send"
       @keydown="onKeydown"
