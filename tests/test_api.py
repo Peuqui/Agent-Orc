@@ -653,6 +653,84 @@ def test_serves_pwa_next_to_api(config: Config, clock: FakeClock, tmp_path: Path
     assert client.get("/api/me").headers[BUILD_ID_HEADER] == "build-2"
 
 
+START_PAGE = (
+    '<title>Agent-Orc</title><script type="module" crossorigin src="./assets/index-1.js"></script>'
+    '<link rel="stylesheet" crossorigin href="./assets/index-1.css">'
+)
+
+
+def test_a_start_page_without_its_scripts_asks_the_browser_to_try_again(
+    config: Config, clock: FakeClock, tmp_path: Path
+) -> None:
+    static = tmp_path / "static"
+    (static / "assets").mkdir(parents=True)
+    (static / BUILD_ID_FILE).write_text("build-1")
+    client = TestClient(
+        create_app(config, new_credentials(PASSWORD), static_dir=static, clock=clock)
+    )
+
+    # A version being installed: the files are there one after the other.
+    for stage in ("nothing", "page only", "page and script"):
+        if stage != "nothing":
+            (static / "index.html").write_text(START_PAGE)
+        if stage == "page and script":
+            (static / "assets" / "index-1.js").write_text("//")
+        for url in ("/", "/index.html"):
+            answer = client.get(url)
+            assert answer.status_code == 503, (stage, url)
+            assert answer.headers["Retry-After"] == "2"
+            assert answer.headers["Cache-Control"] == "no-store"
+            # It reloads by itself (not by a meta refresh, which Chrome ignores after a reload).
+            assert "location.reload()" in answer.text
+        assert client.get("/assets/index-1.css").status_code == 404
+
+    (static / "assets" / "index-1.css").write_text("/**/")
+    done = client.get("/")
+    assert done.status_code == 200 and "Agent-Orc" in done.text
+    assert client.get("/index.html").status_code == 200
+
+
+def test_the_start_page_of_another_machine_waits_for_the_installation_too(
+    config: Config, clock: FakeClock, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("agent_orc.api.keep_tunnel_open", idle_tunnel)
+    static = tmp_path / "pwa"
+    (static / "assets").mkdir(parents=True)
+    (static / "index.html").write_text(START_PAGE)
+    (static / BUILD_ID_FILE).write_text("this-build")
+    hosts = {"Aragon": HostConfig(ssh=[["nowhere"]], socket="unused")}
+    app = create_app(
+        config.model_copy(update={"hosts": hosts}),
+        new_credentials(PASSWORD),
+        static_dir=static,
+        clock=clock,
+    )
+    with TestClient(app) as client:
+        assert client.post("/api/login", json={"password": PASSWORD}).status_code == 204
+        assert client.get("/hosts/Aragon/").status_code == 503
+        (static / "assets" / "index-1.js").write_text("//")
+        (static / "assets" / "index-1.css").write_text("/**/")
+        assert client.get("/hosts/Aragon/").status_code == 200
+
+
+def test_answers_go_on_while_the_build_id_is_gone_for_a_moment(
+    config: Config, clock: FakeClock, tmp_path: Path
+) -> None:
+    static = tmp_path / "static"
+    static.mkdir()
+    (static / "index.html").write_text("<title>Agent-Orc</title>")
+    (static / BUILD_ID_FILE).write_text("build-1")
+    client = TestClient(
+        create_app(config, new_credentials(PASSWORD), static_dir=static, clock=clock)
+    )
+    # An update is replacing the files: no id to send for a moment, but no error either.
+    (static / BUILD_ID_FILE).unlink()
+    answer = client.get("/api/me")
+    assert answer.status_code == 401 and BUILD_ID_HEADER not in answer.headers
+    (static / BUILD_ID_FILE).write_text("build-2")
+    assert client.get("/api/me").headers[BUILD_ID_HEADER] == "build-2"
+
+
 @pytest.fixture
 def trusted(config: Config, home: Path, clock: FakeClock) -> TestClient:
     """The server on a socket: nobody logs in."""

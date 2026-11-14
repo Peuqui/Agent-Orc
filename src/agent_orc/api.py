@@ -7,6 +7,7 @@ import hmac
 import logging
 import mimetypes
 import os
+import re
 import socket
 import subprocess
 import time
@@ -31,7 +32,13 @@ from fastapi import (
     WebSocket,
     status,
 )
-from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, StreamingResponse
+from fastapi.responses import (
+    FileResponse,
+    HTMLResponse,
+    JSONResponse,
+    RedirectResponse,
+    StreamingResponse,
+)
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from starlette.types import Scope
@@ -258,17 +265,55 @@ SESSION_COOKIE = "agent_orc_session"
 # response, so an open app notices that a newer build has been installed.
 BUILD_ID_FILE = "build-id.txt"
 BUILD_ID_HEADER = "X-Build-Id"
+# The start page asks for a new try this often while a version is being installed.
+INSTALLING_RETRY_SECONDS = 2
+# What the start page loads at once (its scripts and styles): all of it must be installed.
+START_PAGE_PARTS = re.compile(r'(?:src|href)="\./(assets/[^"]+)"')
+# The paths of the start page below the mount ("/" is "."; the other machines' pages come through
+# the same way).
+START_PAGE_PATHS = (".", "index.html")
+INSTALLING_PAGE = f"""<!doctype html>
+<html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent-Ørc</title>
+<style>
+body {{ margin: 0; min-height: 100vh; display: grid; place-items: center;
+  background: #0a0a0a; color: #9ca3af; font: 16px system-ui, sans-serif }}
+</style></head><body>
+<p>Agent-Ørc wird aktualisiert … / is being updated …</p>
+<script>setTimeout(() => location.reload(), {INSTALLING_RETRY_SECONDS * 1000})</script>
+</body></html>"""
 
 
 class PwaFiles(StaticFiles):
     """The built PWA. Its pages are asked for anew each time (a 304 when unchanged): with no
     caching header, a browser keeps a page for a while by its age, and an old tablet then started
     the workspace's columns (iframes of the start page) from the page of the version before an
-    update, whose scripts the update had removed, so the columns stayed empty."""
+    update, whose scripts the update had removed, so the columns stayed empty.
+
+    While a version is being installed its files come and go: the start page then asks the
+    browser to try again soon, instead of showing a page without its scripts, which stays blank."""
 
     def __init__(self, directory: Path) -> None:
         super().__init__(directory=directory, html=True)
         self.build_id_file = directory / BUILD_ID_FILE
+        self._directory = directory
+
+    def _start_page_installed(self) -> bool:
+        try:
+            page = (self._directory / "index.html").read_text(encoding="utf-8")
+        except FileNotFoundError:
+            return False
+        return all((self._directory / part).is_file() for part in START_PAGE_PARTS.findall(page))
+
+    async def get_response(self, path: str, scope: Scope) -> Response:
+        if path in START_PAGE_PATHS and not await asyncio.to_thread(self._start_page_installed):
+            return HTMLResponse(
+                INSTALLING_PAGE,
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                headers={"Retry-After": str(INSTALLING_RETRY_SECONDS), "Cache-Control": "no-store"},
+            )
+        return await super().get_response(path, scope)
 
     def file_response(
         self,
@@ -3032,7 +3077,9 @@ def create_app(
             # Read every time: an update may replace the files while this server runs, and the
             # header must name the build a reload would actually get. Also over another machine's
             # API: its page is this app's, so a reload gets this build, whatever that machine runs.
-            response.headers[BUILD_ID_HEADER] = pwa.build_id_file.read_text(encoding="utf-8")
+            with contextlib.suppress(FileNotFoundError):
+                # Gone for a moment while a version is being installed: there is none to tell.
+                response.headers[BUILD_ID_HEADER] = pwa.build_id_file.read_text(encoding="utf-8")
             return response
 
         # Mounted last, so the API routes above take precedence.
