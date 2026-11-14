@@ -287,10 +287,11 @@ export interface AgentSession {
   /** Handing over to a fresh session (handover.py): advised from the advice share of the context
    * on, due from the threshold on (just below Claude Code's own compaction); where it stands. */
   handover: { recommended: boolean; due: boolean; progress: HandoverProgress | null }
-  /** When the prompt cache expires: the last request (Unix seconds) plus its window; the
-   * age turns amber warning_seconds before. Null until the agent has answered. */
-  cache: { last_request: number; window_seconds: number; warning_seconds: number } | null
-  /** Keeping the prompt cache warm (keepwarm.py): whether the profile has it, whether it is on for
+  /** When the window ends: the last request (Unix seconds) plus its window; the age turns amber
+   * warning_seconds before. `kind` says what ends: the prompt cache, or the local model that its
+   * server unloads. Null until the agent has answered. */
+  cache: { last_request: number; window_seconds: number; warning_seconds: number; kind: 'prompt_cache' | 'model' } | null
+  /** Keeping the prompt cache or the local model warm (keepwarm.py): whether the profile has it, whether it is on for
    * this agent, and the prompts typed during this rest. */
   keep_warm: { available: boolean; enabled: boolean; pings: number; max_pings: number }
   /** The answers show every text the agent wrote (the default), not only the summaries. Kept by

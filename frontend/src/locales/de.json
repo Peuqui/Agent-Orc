@@ -368,7 +368,7 @@
           "Fragt ein Agent um Erlaubnis, zeigt seine Karte den Befehl mit „Erlauben“. Ablehnen geht mit einem Hinweis, was Claude anders machen soll, oder ohne, dann hält Claude an wie bei Esc. Einen Plan gibst du in einem Freigabe-Modus frei oder lässt mit einem Hinweis weiterplanen. Im Terminal steht dieselbe Frage; wo zuerst geantwortet wird, das gilt.",
           "**„Änderungen“** (Zweig-Symbol, auf der Karte und im Kopf jedes Terminals) zeigt, was der Agent im Projekt geändert hat: geänderte, neue und gelöschte Dateien seit dem letzten Commit, ein Tipp zeigt den Diff. „Datei öffnen“ an einer Datei öffnet sie im Editor, „Ordner öffnen“ den Ordner in der Dateiansicht.",
           "Bevor Claude Code den Kontext bei etwa 97 % selbst komprimiert, empfiehlt die Karte eine Übergabe an eine frische Sitzung (Voreinstellung ab 90 %); „Übergabe schreiben lassen“ (auf der Karte und jederzeit im Menü ⋮) bittet den Agenten um ein Übergabe-Dokument, auch mitten in der Arbeit; vor der Hinweis-Schwelle mit einer schlichten Bitte ohne Warnung. Im Menü ☰ unter „Übergabe“ stehen die Schwellen; dort lässt es sich automatisch anstoßen (Voreinstellung ab 95 %), sonst kommt eine Benachrichtigung.",
-          "**„warm halten“** (Schalter auf der Karte und im Kopf des Terminals, aus bis du ihn für diesen Agenten einschaltest): Ein ruhender Agent verliert nach etwa einer Stunde seinen Zwischenspeicher (Cache), und die nächste Nachricht liest den ganzen Kontext neu ein – langsam, und es kostet Nutzungsgrenze. Ist das Warmhalten an, tippt Agent-Orc ihm kurz davor eine winzige Bitte ein, auf die er mit einem Wort antwortet; das verlängert den Zwischenspeicher. Höchstens so viele Bitten hintereinander, wie unter ☰ → Übergabe und Warmhalten eingestellt, danach darf er kalt werden, und deine nächste Eingabe zählt von vorn. Gilt nur für Agenten, deren Profil das kann (Claude).",
+          "**„warm halten“** (Schalter auf der Karte und im Kopf des Terminals, aus bis du ihn für diesen Agenten einschaltest): Bei einem ruhenden Agenten läuft nach etwa einer Stunde der Zwischenspeicher (Cache) ab (Claude); ein lokales Modell entlädt llama-swap nach dessen ttl. Die nächste Nachricht liest dann den ganzen Kontext neu ein (beim Modell lädt sie es erst neu, einige Minuten) – langsam, und bei Claude kostet es Nutzungsgrenze. Ist das Warmhalten an, tippt Agent-Orc ihm kurz davor eine winzige Bitte ein, auf die er mit einem Wort antwortet; das verlängert den Zwischenspeicher bzw. hält das Modell geladen. Höchstens so viele Bitten hintereinander, wie unter ☰ → Übergabe und Warmhalten eingestellt, danach darf er kalt werden, und deine nächste Eingabe zählt von vorn. Gilt nur für Agenten, deren Profil das kann (Claude und lokale Modelle).",
           "**„In eigenem Worktree starten“** (Startdialog): Der Agent arbeitet in einer zweiten Arbeitskopie auf einem neuen Branch neben dem Projekt; ist er beendet, entfernt „Worktree entfernen“ auf der Karte sie wieder – ohne ungesicherte Arbeit zu verlieren.",
           "**Neu starten** (Menü ⋮ der Karte und der Agentenseite) startet den Agenten neu und setzt das Gespräch fort, etwa wenn er hängt oder geänderte Einstellungen lesen soll. Vorher kommt eine Rückfrage; eine laufende Antwort und Hintergrundaufgaben enden dabei. Hat ein Agent noch kein gespeichertes Modell (gestartet vor der Modellwahl), fragt Agent-Orc beim Neustart und beim Fortsetzen danach – ohne Modell startet kein Agent.",
           "**Prompt planen** (Menü ⋮ der Karte und der Agentenseite): einen Prompt für später planen, etwa „Tests laufen lassen und berichten“ um 7 Uhr. Er wird zur Zeit eingetippt, sobald der Agent fertig ist; geplante Prompts stehen auf der Karte und lassen sich mit × entfernen.",
@@ -376,7 +376,7 @@
           "**„An mehrere“** (neben den Arbeitsflächen, ab zwei laufenden Agenten): denselben Prompt an mehrere Agenten schicken, etwa „committe und pushe“. „Abschicken“ aus: der Text landet nur im Eingabefeld der Agenten, du liest ihn dort und sendest ihn selbst.",
           "**„>_“** (Karte und Terminalleiste) öffnet ein normales Terminal im Projektordner, auch neben dem laufenden Agenten; läuft schon eins, öffnet es dieses. Ohne Agenten öffnest du eins unter Dateien mit „Terminal hier öffnen“ (für den gezeigten Ordner oder im Menü eines Ordners); „>_“ neben „Neuen Agenten starten“ führt dorthin. Einen weiteren Agenten im Ordner startest du über „Agent hier starten“ (mit eigenem Namenszusatz), nicht von Hand im Terminal, sonst kennt Agent-Orc ihn nicht.",
           "Das Menü ⋮ auf der Karte (rechts unten) und auf der Agentenseite sammelt, was man seltener braucht oder was Folgen hat: Prompt planen, Modell wechseln, Kontext komprimieren, Kontext leeren, Neu starten und, abgesetzt und rot, Beenden. Häufiges bleibt sichtbar: „Terminal“ (öffnet die Agentenseite), Änderungen und „>_“.",
-          "**Modell wechseln** (Menü ⋮, nur bei Agenten mit Modellauswahl): Der Agent wechselt das Modell im laufenden Betrieb, wo seine Profil-Einstellung das erlaubt (Claude: /model); Gespräch, laufende Antwort und Hintergrundaufgaben bleiben, nur der Prompt-Cache beginnt für das neue Modell von vorn. Arbeitet er gerade, wird der Wechsel vorgemerkt (gelbe Zeile mit „Verwerfen“) und nach der Antwort eingetippt. Kann ein Agent das nicht, startet Agent-Orc ihn mit dem Modell neu und setzt das Gespräch fort.",
+          "**Modell wechseln** (Menü ⋮, nur bei Agenten mit Modellauswahl): Der Agent wechselt das Modell im laufenden Betrieb, wo seine Profil-Einstellung das erlaubt (Claude: /model); Gespräch, laufende Antwort und Hintergrundaufgaben bleiben, nur der Kontext wird für das neue Modell neu eingelesen. Arbeitet er gerade, wird der Wechsel vorgemerkt (gelbe Zeile mit „Verwerfen“) und nach der Antwort eingetippt. Kann ein Agent das nicht, startet Agent-Orc ihn mit dem Modell neu und setzt das Gespräch fort.",
           "**Kontext komprimieren und Kontext leeren** (Menü ⋮, wo das Profil sie kennt; Claude: /compact und /clear): wirken in den laufenden Agenten, ohne Neustart. Komprimieren fasst das Gespräch zusammen, Leeren vergisst es; beides nur zwischen zwei Antworten, bei laufender Antwort ist der Punkt gesperrt. Beides fragt vorher nach.",
           "**„Beenden“** (Menü ⋮) beendet den Agenten; das Gespräch bleibt gespeichert und lässt sich später mit „Fortsetzen“ auf der Karte wieder aufnehmen. Bei einem beendeten Agenten stehen „Fortsetzen“, „Worktree entfernen“ (falls er einen hatte) und Beenden (entfernt die Karte) direkt auf der Karte.",
           "Der Name oben auf der Karte zeigt den Ordner, darunter Pfad, Agent-Art und Modell. „läuft“ wechselt zu „arbeitet …“, solange der Agent eine Antwort schreibt, und zu „Subagenten arbeiten …“, solange nur noch seine Subagenten oder Workflows laufen."
@@ -570,8 +570,14 @@
   },
   "cache": {
     "active": "aktiv",
-    "expiresIn": "Zwischenspeicher (Cache) läuft in {time} ab",
-    "coldFor": "Zwischenspeicher seit {time} kalt: die nächste Nachricht liest den ganzen Kontext neu ein",
+    "prompt_cache": {
+      "expiresIn": "Zwischenspeicher (Cache) läuft in {time} ab",
+      "coldFor": "Zwischenspeicher seit {time} abgelaufen: die nächste Nachricht liest den ganzen Kontext neu ein"
+    },
+    "model": {
+      "expiresIn": "Modell wird in {time} entladen",
+      "coldFor": "Modell seit {time} entladen: die nächste Nachricht lädt es neu und liest den ganzen Kontext ein"
+    },
     "handover": {
       "asked": "Übergabe angefordert",
       "working": "Übergabe läuft",
@@ -594,10 +600,10 @@
   },
   "keepWarm": {
     "label": "warm halten",
-    "onHint": "Zwischenspeicher wird warm gehalten (diese Ruhepause bisher {count} von höchstens {max} Bitten). Klicken schaltet aus.",
-    "offHint": "Zwischenspeicher wird nicht warm gehalten. Klicken schaltet ein.",
+    "onHint": "Warmhalten ist an (diese Ruhepause bisher {count} von höchstens {max} Bitten). Klicken schaltet aus.",
+    "offHint": "Warmhalten ist aus. Klicken schaltet ein.",
     "maxPings": "Warmhalten: Bitten hintereinander",
-    "maxPingsHint": "So oft tippt Agent-Orc einem ruhenden Agenten mit eingeschaltetem Warmhalten die kleine Bitte ein, bevor er ihn kalt werden lässt; jede kurz bevor sein Zwischenspeicher abläuft. Jede Bitte hält den Zwischenspeicher eine weitere Stunde und liest dafür den ganzen Kontext aus dem Cache, das zählt auf die Nutzungsgrenzen. Ist der Agent kalt, komprimiert Claude Code einen großen Kontext nach 55 Minuten selbst. Deine nächste Eingabe zählt von vorn. Gilt für die Agenten dieses Rechners."
+    "maxPingsHint": "So oft tippt Agent-Orc einem ruhenden Agenten mit eingeschaltetem Warmhalten die kleine Bitte ein, bevor er ihn kalt werden lässt; jede kurz bevor sein Zwischenspeicher abläuft bzw. sein Modell entladen wird. Bei Claude hält jede Bitte den Zwischenspeicher eine weitere Stunde und liest dafür den ganzen Kontext aus dem Cache, das zählt auf die Nutzungsgrenzen; bei einem lokalen Modell hält sie es für eine weitere ttl geladen. Ist ein Claude-Agent kalt, komprimiert Claude Code einen großen Kontext nach 55 Minuten selbst. Deine nächste Eingabe zählt von vorn. Gilt für die Agenten dieses Rechners."
   },
   "consumption": {
     "title": "Verbrauch",
@@ -657,7 +663,7 @@
     "quadrillion": " Brd."
   },
   "restart": {
-    "changeModelLive": "Modell für „{name}“ wählen. Der Agent wechselt es im laufenden Betrieb, bei laufender Antwort danach; Gespräch und Hintergrundaufgaben bleiben, nur der Prompt-Cache beginnt für das neue Modell von vorn. Mit demselben Modell ändert sich nur die Stufe.",
+    "changeModelLive": "Modell für „{name}“ wählen. Der Agent wechselt es im laufenden Betrieb, bei laufender Antwort danach; Gespräch und Hintergrundaufgaben bleiben, nur der Kontext wird für das neue Modell neu eingelesen. Mit demselben Modell ändert sich nur die Stufe.",
     "modelScheduled": "„{name}“ wechselt nach der aktuellen Antwort auf {model}.",
     "modelChanged": "„{name}“ läuft jetzt mit {model}.",
     "modelTitle": "Agent oder Modell wechseln",

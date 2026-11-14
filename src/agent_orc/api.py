@@ -1122,7 +1122,7 @@ def create_app(
         handover_progress[session.id] = HANDOVER_DONE
         deliver(agent_message("handover_done", session.id, session.name, ""), config.push)
 
-    def cache_entry(cache: CacheState | None) -> dict[str, float] | None:
+    def cache_entry(cache: CacheState | None) -> dict[str, float | str] | None:
         """When the cache expires (the page counts down itself) and how long before that its age
         turns amber."""
         if cache is None:
@@ -1181,7 +1181,7 @@ def create_app(
         answered = last_answer(transcript)
         if ttl is None or answered is None:
             return None
-        return CacheState(last_request=answered, window_seconds=ttl)
+        return CacheState(last_request=answered, window_seconds=ttl, kind="model")
 
     def agent_cache(session: AgentSession) -> CacheState | None:
         transcript = session_transcript(session)

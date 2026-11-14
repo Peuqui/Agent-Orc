@@ -34,6 +34,17 @@ def test_not_due_when_the_window_is_no_longer_than_the_lead_time() -> None:
     assert not due(CONFIG, cache_ending_in(100, window=300), NOW, pings=0, max_pings=MAX_PINGS)
 
 
+def test_a_short_window_takes_the_short_lead_where_the_profile_has_one() -> None:
+    # A local model with five minutes of ttl: asked two minutes before it is unloaded.
+    local = KeepWarmConfig(prompt="Keep-alive", lead_minutes=10, short_lead_minutes=2)
+    assert due(local, cache_ending_in(119, window=300), NOW, pings=0, max_pings=MAX_PINGS)
+    assert not due(local, cache_ending_in(121, window=300), NOW, pings=0, max_pings=MAX_PINGS)
+    # A long window keeps the long lead.
+    assert due(local, cache_ending_in(599), NOW, pings=0, max_pings=MAX_PINGS)
+    # A window no longer than the short lead either gets none.
+    assert not due(local, cache_ending_in(60, window=120), NOW, pings=0, max_pings=MAX_PINGS)
+
+
 def test_a_prompt_runs_its_course_and_the_users_input_ends_the_rest() -> None:
     progress = KeepWarmProgress.typed(2)
     assert progress.progress == ASKED and progress.pings == 2 and not progress.answered

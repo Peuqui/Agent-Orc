@@ -5,7 +5,7 @@ import type { AgentSession } from '../api'
 import { useNow } from '../composables/useNow'
 import { formatMinutes } from '../format'
 
-// How old the agent's prompt cache is, next to its name: warm (green), shortly before it expires
+// How old the agent's prompt cache (or local model: the time since its last answer) is, next to its name: warm (green), shortly before it expires
 // (amber: the next message soon reads it all in again), cold (red: the next message reads the whole context in again).
 // Compact (a terminal's narrow header) it leaves where a handover stands to the tooltip.
 const props = defineProps<{ session: AgentSession; compact?: boolean }>()
@@ -32,11 +32,12 @@ const handover = computed(() => {
   return progress === null ? null : t(`cache.handover.${progress}`)
 })
 const title = computed(() => {
-  if (remaining.value === null) return ''
+  const cache = props.session.cache
+  if (remaining.value === null || cache === null) return ''
   const state =
     remaining.value > 0
-      ? t('cache.expiresIn', { time: formatMinutes(remaining.value) })
-      : t('cache.coldFor', { time: formatMinutes(-remaining.value) })
+      ? t(`cache.${cache.kind}.expiresIn`, { time: formatMinutes(remaining.value) })
+      : t(`cache.${cache.kind}.coldFor`, { time: formatMinutes(-remaining.value) })
   return handover.value && props.compact ? `${state} · ${handover.value}` : state
 })
 </script>

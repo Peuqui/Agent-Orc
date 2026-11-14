@@ -42,12 +42,15 @@ einen SSH-Tunnel ([Mehrere Rechner](#mehrere-rechner)).
   Der Agent schreibt `.agent-orc/handover.md` und hört auf, `/clear` beginnt ein neues Gespräch
   im Ordner, das zuerst die Übergabe liest (vor allem, womit ein anderer Hook es weckt) und
   weitermacht; die Antworten-Ansicht zeigt beide.
-- Hält auf Wunsch den Zwischenspeicher ruhender Agenten warm (eine winzige Bitte kurz vor dem
-  Ablauf), je Agent einzuschalten, damit die nächste Nachricht ohne Wartezeit kommt. Der Schalter
+- Hält auf Wunsch ruhende Agenten warm (eine winzige Bitte kurz vor dem Ende des Fensters), je
+  Agent einzuschalten, damit die nächste Nachricht ohne Wartezeit kommt. Bei Claude endet das
+  Fenster, wenn der Zwischenspeicher (Prompt-Cache) abläuft (etwa eine Stunde); die nächste Nachricht
+  liest dann den ganzen Kontext neu ein. Der Schalter
   übersteht einen Neustart von Agent-Orc und des Agenten (⟳); ein neuer Agent im Ordner beginnt
   mit ihm aus. Bei einem lokalen Modell an einem llama-swap (siehe „Andere Backends“) ist das
-  Fenster dessen `ttl`: die Bitte hält das Modell geladen, es belegt also weiter die Grafikkarten
-  für andere Programme.
+  Fenster dessen `ttl`: am Ende wird das Modell entladen, und die nächste Nachricht lädt es neu (einige
+  Minuten). Die Bitte hält das Modell geladen, es belegt also weiter die Grafikkarten für andere
+  Programme.
 - Benachrichtigungen aufs Handy oder den Rechner, wenn ein Agent fertig ist oder auf eine
   Freigabe oder Antwort wartet (Web Push, pro Gerät einschaltbar); Antippen öffnet den Agenten.
 - Der Freigabe-Modus, in dem ein Agent startet, pro Projekt (Fragen, Bearbeiten, Auto, Planen;
@@ -474,12 +477,16 @@ Rechner, der selbst keinen llama-swap liest, schickt keinen. Jeder Katalog liegt
 `~/.local/state/agent-orc/catalogs/<Hostname>.json`; einer, der sich nicht lesen lässt, wird
 protokolliert, und der Austausch geht weiter.
 
-Warmhalten gibt es auch für ein Modell an einem llama-swap: sein Fenster ist die `ttl`, die das Modell
+Warmhalten gibt es auch für ein Modell an einem llama-swap. Was das Fenster beendet, ist verschieden:
+bei Claude läuft der Zwischenspeicher ab, bei einem lokalen Modell entlädt llama-swap das Modell. Sein Fenster ist die `ttl`, die das Modell
 in der Konfiguration von llama-swap hat (Sekunden ohne Anfrage, bis es entladen wird; fehlt sie oder
 ist 0: nie), gelesen von `agent-orc backend ttl` (dem `model_ttl_command` des Profils) und bei einem
 Backend auf einem anderen Rechner aus dessen Katalog. Die Warmhalte-Bitte hält das Modell dann
 geladen, und es belegt weiter die Karten für andere Programme. Bei einem Cloud-Backend druckt der
-Befehl nichts: kein Fenster, keine Bitte.
+Befehl nichts: kein Fenster, keine Bitte. Ein Fenster, das nicht länger als `lead_minutes` ist (eine
+kurze ttl), bekommt seine Bitte `short_lead_minutes` vor dem Ende, wo `keep_warm` des Profils das
+nennt (das lokale Profil: zwei Minuten); das Profil von Claude nennt es nicht, sein Fünf-Minuten-Cache
+über dem Kontingent bekommt deshalb keine Bitten.
 
 Lassen sich die Stufen eines Modells nicht bestimmen (seine Datei fehlt, oder der Katalog des
 anderen Rechners nennt den Grund), zeigt die Karte des Agenten den Grund statt des Reglers; die

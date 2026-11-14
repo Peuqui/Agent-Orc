@@ -37,11 +37,13 @@ that run Agent-Orc can be shown in the same app, through an SSH tunnel ([Several
   on by default, switched off in the settings menu): the agent writes `.agent-orc/handover.md`
   and stops, `/clear` starts a new conversation in the folder, which reads the handover first
   (before anything another hook wakes it with) and goes on; the answers view shows both.
-- Optionally keeps the prompt cache of resting agents warm (a tiny request shortly before it
-  expires), switched on per agent, so the next message needs no wait. The switch stays on across
+- Optionally keeps resting agents warm (a tiny request shortly before the window ends), switched on
+  per agent, so the next message needs no wait. For Claude the window ends when the prompt cache
+  expires (about an hour); then the next message reads the whole context in again. The switch stays on across
   restarts of Agent-Orc and of the agent (⟳); a new agent in the folder starts with it off. For a
   local model on a llama-swap (see “Other backends”) the window is the model's `ttl` there: the
-  request keeps the model loaded, so it goes on holding the graphics cards for other programs.
+  model is unloaded when it ends, and the next message loads it again (a few minutes). The request
+  keeps the model loaded, so it goes on holding the graphics cards for other programs.
 - Notifications on your phone or desktop when an agent is done or waits for a permission or an
   answer (Web Push, switched on per device); tapping one opens the agent.
 - The permission mode an agent starts in, per project (ask, edit, auto, plan; auto by default).
@@ -452,11 +454,15 @@ machine that reads no llama-swap itself sends none. Each catalog is kept as
 `~/.local/state/agent-orc/catalogs/<host name>.json`; one that cannot be read is logged, and the
 exchange goes on.
 
-Keep warm works for a model of a llama-swap, too: its window is the `ttl` the model has in
+Keep warm works for a model of a llama-swap, too. What ends the window differs: with Claude the
+prompt cache expires, with a local model llama-swap unloads the model. Its window is the `ttl` the model has in
 llama-swap's configuration (seconds without a request until it is unloaded; none or 0: never), read
 by `agent-orc backend ttl` (the profile's `model_ttl_command`) and, for a backend on another machine,
 taken from its catalog. The keep-warm request then keeps the model loaded, and it goes on holding
 the cards for other programs. For a cloud backend the command prints nothing: no window, no request.
+A window no longer than `lead_minutes` (a short ttl) gets its request `short_lead_minutes` before
+its end, where the profile's `keep_warm` gives it (the local profile: two minutes); Claude's
+profile gives none, so its five-minute cache over the quota gets no requests.
 
 If the levels of a model cannot be told (its file is not there, or the other machine's catalog gives
 the reason), the agent's card shows the reason instead of the slider, and the session list stays. A

@@ -162,6 +162,11 @@ class KeepWarmConfig(StrictModel):
     # This long before the cache expires, the prompt is typed. It must be shorter than the
     # cache's window, or the agent would be asked again and again.
     lead_minutes: int
+    # For a window no longer than lead_minutes: the prompt comes this long before its end instead.
+    # Without it such a window gets no prompt (Claude's five-minute cache once the account is over
+    # its quota, where prompts every few minutes would only cost); a local model with a short ttl
+    # is better asked a little early than unloaded.
+    short_lead_minutes: int | None = None
 
 
 class ApprovalsConfig(StrictModel):

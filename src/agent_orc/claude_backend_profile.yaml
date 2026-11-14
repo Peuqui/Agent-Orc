@@ -31,6 +31,8 @@
     keep_warm:
       prompt: "Keep-alive: answer with the single word Pong."
       lead_minutes: 10
+      # A model with a ttl of ten minutes or less is asked this long before it is unloaded.
+      short_lead_minutes: 2
     effort:
       levels: [low, medium, high, xhigh, max]
       default: high

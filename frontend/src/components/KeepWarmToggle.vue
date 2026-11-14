@@ -5,7 +5,7 @@ import { useApi } from '../composables/useHostContext'
 import { useToast } from '../composables/useToast'
 import AppIcon from './AppIcon.vue'
 
-// Keeping this agent's prompt cache warm: on (amber) or off.
+// Keeping this agent's prompt cache (or local model) warm: on (amber) or off.
 // Compact (a terminal's narrow header, where the agent's name needs the room) it is only a flame.
 const props = defineProps<{ session: AgentSession; compact?: boolean }>()
 const api = useApi()

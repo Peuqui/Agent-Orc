@@ -1534,6 +1534,7 @@ def test_handover_is_advised_then_due_and_typed_even_into_a_working_agent(
     assert listed["cache"] == {
         "last_request": clock(),
         "window_seconds": 3600,
+        "kind": "prompt_cache",
         "warning_seconds": 10 * 60,
     }
 
@@ -2214,6 +2215,7 @@ def test_a_local_models_window_is_its_ttl_after_the_last_answer_and_keep_warm_us
         card = client.get("/api/sessions").json()[0]
         assert card["cache"]["last_request"] == answer_time
         assert card["cache"]["window_seconds"] == 3600
+        assert card["cache"]["kind"] == "model"
         assert card["keep_warm"]["available"] is True
 
         # Three minutes before the hour is over, within the lead of five: the prompt is typed.

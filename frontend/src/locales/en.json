@@ -368,7 +368,7 @@
           "When an agent asks for permission, its card shows the command with “Allow”. Denying works with a hint what Claude should do instead, or without one, which stops Claude as Esc does. A plan is approved in a permission mode, or Claude keeps planning with a hint. The terminal asks the same; the first answer counts.",
           "**“Changes”** (branch icon, on the card and in the header of every terminal) shows what the agent changed in the project: changed, new and deleted files since the last commit; a tap shows the diff. “Open file” on a file opens it in the editor, “Open folder” the folder in the file view.",
           "Before Claude Code compacts the context by itself at about 97 %, the card advises a handover to a fresh session (from 90 % by default); “Ask for a handover” (on the card, and any time in the ⋮ menu) asks the agent for a handover document, also while it works; before the advice share with a plain request without the warning. The ☰ menu’s “Handover” shows the shares; there it can be made automatic (from 95 % by default), otherwise a notification comes.",
-          "**“keep warm”** (switch on the card and in the terminal’s header, off until you switch it on for that agent): a resting agent loses its prompt cache after about an hour, and the next message reads the whole context in again – slow, and it costs usage limit. With keep warm on, Agent-Orc types a tiny request into it shortly before, which it answers with one word; that extends the cache. At most as many requests in a row as set under ☰ → Handover and keep warm, then it may go cold, and your next input counts from the start. Only for agents whose profile can do it (Claude).",
+          "**“keep warm”** (switch on the card and in the terminal’s header, off until you switch it on for that agent): for a resting agent the prompt cache expires after about an hour (Claude); for a local model on a llama-swap, llama-swap unloads the model after its ttl. The next message then reads the whole context in again (for the model it loads it first, a few minutes) – slow, and with Claude it costs usage limit. With keep warm on, Agent-Orc types a tiny request into it shortly before, which it answers with one word; that extends the cache or keeps the model loaded. At most as many requests in a row as set under ☰ → Handover and keep warm, then it may go cold, and your next input counts from the start. Only for agents whose profile can do it (Claude and local models).",
           "**“Start in a worktree of its own”** (start dialog): the agent works in a second working copy on a new branch next to the project; once it has ended, “Remove worktree” on the card removes it again – without losing unsaved work.",
           "**Restart** (menu ⋮ of the card and of the agent's page) restarts the agent and resumes the conversation, e.g. when it hangs or should read changed settings. A confirmation comes first; a running answer and background tasks end. If an agent has no stored model yet (started before the choice of models), Agent-Orc asks on restart and on resume afterwards – no agent starts without a model.",
           "**Schedule a prompt** (menu ⋮ of the card and of the agent's page): plan a prompt for later, e.g. \"run the tests and report\" at 7 o'clock. It is typed in at that time, once the agent has finished; scheduled prompts show on the card and can be removed with ×.",
@@ -376,7 +376,7 @@
           "**“To several”** (next to the workspaces, from two running agents on): send the same prompt to several agents, e.g. “commit and push”. With “Submit” off the text only lands in the agents’ input field, where you read it and send it yourself.",
           "**“>_”** (card and terminal bar) opens a plain terminal in the project folder, also next to the running agent; if one runs already, it opens that one. Without an agent, open one under Files with “Open terminal here” (for the folder shown, or in a folder's menu); “>_” beside “Start a new agent” leads there. Start a further agent in the folder with \"Start agent here\" (with a suffix of its own), not by hand in the terminal, or Agent-Orc does not know it.",
           "The ⋮ menu on the card (bottom right) and on the agent's page collects what is needed less often or has consequences: Schedule a prompt, Change model, Compact context, Clear context, Restart and, set apart and in red, Stop. What is used often stays visible: \"Terminal\" (opens the agent's page), Changes and \">_\".",
-          "**Change model** (menu ⋮, only for agents with a choice of models): the agent switches the model in place where its profile allows it (Claude: /model); the conversation, a running answer and background tasks stay, only the prompt cache starts over for the new model. If it is working, the change is scheduled (yellow line with \"Discard\") and typed in after the answer. An agent that cannot do this is restarted with the model and the conversation is resumed.",
+          "**Change model** (menu ⋮, only for agents with a choice of models): the agent switches the model in place where its profile allows it (Claude: /model); the conversation, a running answer and background tasks stay, only the context is read in again for the new model. If it is working, the change is scheduled (yellow line with \"Discard\") and typed in after the answer. An agent that cannot do this is restarted with the model and the conversation is resumed.",
           "**Compact context and Clear context** (menu ⋮, where the profile has them; Claude: /compact and /clear): act in the running agent, without a restart. Compacting summarises the conversation, clearing forgets it; both only between two answers, the item is disabled while an answer runs. Both ask first.",
           "**\"Stop\"** (menu ⋮) ends the agent; the conversation stays saved and can be taken up again later with \"Resume\" on the card. For an ended agent, \"Resume\", \"Remove worktree\" (if it had one) and Stop (removes the card) are right on the card.",
           "The name at the top of the card shows the folder, below it path, kind of agent and model. \"running\" turns into \"working …\" while the agent writes an answer, and into \"subagents working …\" while only its subagents or workflows are still running."
@@ -570,8 +570,14 @@
   },
   "cache": {
     "active": "active",
-    "expiresIn": "Prompt cache expires in {time}",
-    "coldFor": "Prompt cache cold for {time}: the next message reads the whole context in again",
+    "prompt_cache": {
+      "expiresIn": "Prompt cache expires in {time}",
+      "coldFor": "Prompt cache expired {time} ago: the next message reads the whole context in again"
+    },
+    "model": {
+      "expiresIn": "Model is unloaded in {time}",
+      "coldFor": "Model unloaded {time} ago: the next message loads it again and reads the whole context in"
+    },
     "handover": {
       "asked": "handover asked",
       "working": "handover in progress",
@@ -594,10 +600,10 @@
   },
   "keepWarm": {
     "label": "keep warm",
-    "onHint": "The cache is kept warm ({count} of at most {max} requests so far in this rest). Click to switch off.",
-    "offHint": "The cache is not kept warm. Click to switch on.",
+    "onHint": "Keep warm is on ({count} of at most {max} requests so far in this rest). Click to switch off.",
+    "offHint": "Keep warm is off. Click to switch on.",
     "maxPings": "Keep warm: requests in a row",
-    "maxPingsHint": "How often Agent-Orc types the tiny request into a resting agent with keep warm on before it lets it go cold; each shortly before its cache expires. Each request keeps the cache for another hour and reads the whole context from the cache for it, which counts toward the usage limits. Once the agent is cold, Claude Code compacts a large context by itself after 55 minutes. Your next input counts from the start. Applies to the agents of this machine."
+    "maxPingsHint": "How often Agent-Orc types the tiny request into a resting agent with keep warm on before it lets it go cold; each shortly before its cache expires or its model is unloaded. With Claude each request keeps the cache for another hour and reads the whole context from the cache for it, which counts toward the usage limits; with a local model it keeps the model loaded for another ttl. Once a Claude agent is cold, Claude Code compacts a large context by itself after 55 minutes. Your next input counts from the start. Applies to the agents of this machine."
   },
   "consumption": {
     "title": "Usage",
@@ -657,7 +663,7 @@
     "quadrillion": "Q"
   },
   "restart": {
-    "changeModelLive": "Choose the model for “{name}”. The agent switches in place, after its answer if it is working; the conversation and background tasks stay, only the prompt cache starts over for the new model. With the same model only the level changes.",
+    "changeModelLive": "Choose the model for “{name}”. The agent switches in place, after its answer if it is working; the conversation and background tasks stay, only the context is read in again for the new model. With the same model only the level changes.",
     "modelScheduled": "“{name}” switches to {model} after the current answer.",
     "modelChanged": "“{name}” now runs with {model}.",
     "modelTitle": "Change agent or model",

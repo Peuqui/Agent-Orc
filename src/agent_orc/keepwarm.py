@@ -50,11 +50,16 @@ def due(
     config: KeepWarmConfig, cache: CacheState | None, now: float, pings: int, max_pings: int
 ) -> bool:
     """The cache is alive but within the lead time of its end. An expired cache is left alone:
-    a prompt would only pay for reading it in again, which the next message does anyway. With a
-    window no longer than the lead time (five minutes once the account is over its quota) a
-    prompt would be due all the time, so there is none."""
+    a prompt would only pay for reading it in again, which the next message does anyway. A
+    window no longer than the lead time takes the short lead instead, where the profile has one;
+    without it (Claude's five minutes once the account is over its quota) a prompt would be due
+    all the time, so there is none."""
     if cache is None or pings >= max_pings:
         return False
     lead = config.lead_minutes * SECONDS_PER_MINUTE
+    if cache.window_seconds <= lead:
+        if config.short_lead_minutes is None:
+            return False
+        lead = config.short_lead_minutes * SECONDS_PER_MINUTE
     remaining = cache.last_request + cache.window_seconds - now
     return lead < cache.window_seconds and 0 < remaining < lead

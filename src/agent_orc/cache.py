@@ -10,6 +10,7 @@ write nothing, so the window comes from the newest answer that wrote to it.
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
+from typing import Literal
 
 from agent_orc.history import lines_from_end, transcript_entry
 
@@ -23,6 +24,9 @@ class CacheState:
     # Unix time of the newest answer, i.e. of the last request.
     last_request: float
     window_seconds: int
+    # What runs out at the end of the window: the prompt cache (read from the transcript), or a
+    # local model that its server unloads. The page words its texts by it.
+    kind: Literal["prompt_cache", "model"] = "prompt_cache"
 
 
 @dataclass(frozen=True)
