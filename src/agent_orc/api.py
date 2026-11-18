@@ -267,6 +267,7 @@ from agent_orc.voicelog import (
     requests_to_agent,
     store_recording,
 )
+from agent_orc.wake import WakeNotConfiguredError, send_magic_packet
 from agent_orc.worktrees import (
     InvalidBranchError,
     WorktreeError,
@@ -440,6 +441,7 @@ ERROR_STATUS: dict[type[Exception], int] = {
     UnknownNotesTrashEntryError: status.HTTP_404_NOT_FOUND,
     NotConfiguredError: status.HTTP_404_NOT_FOUND,
     UnknownHostError: status.HTTP_404_NOT_FOUND,
+    WakeNotConfiguredError: status.HTTP_409_CONFLICT,
     UnknownMachineError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     InvalidBaseDirError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     HostUnreachableError: status.HTTP_502_BAD_GATEWAY,
@@ -3065,8 +3067,26 @@ def create_app(
         await host_states_known.wait()
         return {
             "self": socket.gethostname(),
-            "hosts": [{"name": name, "state": state} for name, state in host_states.items()],
+            "hosts": [
+                {
+                    "name": name,
+                    "state": state,
+                    "can_wake": host_link(name).config.wake is not None,
+                }
+                for name, state in host_states.items()
+            ],
         }
+
+    @app.post("/api/hosts/{name}/wake", status_code=status.HTTP_204_NO_CONTENT,
+              dependencies=authenticated)  # fmt: skip
+    async def wake_host(name: str) -> None:
+        """Sends the machine its Wake-on-LAN packet. The target is only the configured one; the
+        request carries nothing. It does not wait for the machine: its state shows when it is up."""
+        wake = host_link(name).config.wake
+        if wake is None:
+            raise WakeNotConfiguredError(name)
+        await asyncio.to_thread(send_magic_packet, wake.mac, wake.broadcast, wake.port)
+        logger.info("wake-on-lan: sent to host %s (mac %s)", name, wake.mac)
 
     @app.get("/hosts/{name}", dependencies=authenticated)
     def host_start(name: str) -> RedirectResponse:

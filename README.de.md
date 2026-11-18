@@ -386,6 +386,24 @@ endet mit der Benutzersitzung des Rechners; `loginctl enable-linger` (einmal als
 ohne Anmeldung am Laufen. Ein Rechner, der aus ist oder dessen Tunnel steht, erscheint als nicht
 erreichbar.
 
+#### Einen ausgeschalteten Rechner wecken
+
+Mit `wake` am Rechner bekommt dessen Karte auf der Übersicht einen Knopf „Wecken“, solange er nicht
+erreichbar ist (Wake-on-LAN muss im BIOS und an der Netzwerkkarte an sein):
+
+```yaml
+hosts:
+  Anderer:
+    ...
+    wake: {mac: "aa:bb:cc:dd:ee:ff", broadcast: "192.168.0.255"}   # Port 9, sonst `port:`
+```
+
+`mac` ist die Netzwerkkarte, auf die der Rechner aufwacht, `broadcast` die Broadcast-Adresse des
+Heimnetzes (beim Laden der Config als IPv4-Adresse geprüft). Der Knopf schickt ein Magic Packet
+(UDP-Broadcast) und zeigt „wird geweckt …“, bis der Rechner antwortet. Sicherheit: Das Ziel kommt
+nur aus der Config; die Anfrage (`POST /api/hosts/<Name>/wake`) enthält keine Adresse und liegt wie
+alles andere hinter dem Login. Das Paket schaltet den Rechner nur ein.
+
 #### Ein WSL unter Windows als anderer Rechner
 
 WSL beendet eine Distribution kurz nach dem letzten offenen WSL-Fenster, und weder der SSH-Tunnel

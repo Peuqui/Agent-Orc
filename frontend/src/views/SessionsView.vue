@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { HostStatus } from '../api'
 import HostSessions from '../components/HostSessions.vue'
 import QuotaPanel from '../components/QuotaPanel.vue'
 import { useHosts } from '../composables/useHosts'
 import { useToast } from '../composables/useToast'
 import { useViewZoom } from '../composables/useViewZoom'
+import { api } from '../api'
+import { offersWake, WAKE_PATIENCE_MS } from '../wake'
 
 // The agents of all machines, this one's own first and each other machine below, set apart.
 const { state, loadHosts, keepFresh } = useHosts()
@@ -15,9 +18,33 @@ keepFresh()
 
 // `host` is what the agents are asked of: null for this machine's own.
 const machines = computed(() => [
-  { name: state.value?.self ?? '', host: null, state: 'online' as HostStatus },
-  ...(state.value?.hosts ?? []).map((other) => ({ name: other.name, host: other.name, state: other.state })),
+  { name: state.value?.self ?? '', host: null, state: 'online' as HostStatus, canWake: false },
+  ...(state.value?.hosts ?? []).map((other) => ({ name: other.name, host: other.name, state: other.state, canWake: other.can_wake })),
 ])
+
+// The machines that were sent a wake-up packet and have not answered yet. The server tells when one
+// does (keepFresh), so nothing polls; a machine that never comes up gets its button back after a while.
+const waking = ref<string[]>([])
+const { t } = useI18n()
+
+function stopWaking(name: string): void {
+  waking.value = waking.value.filter((other) => other !== name)
+}
+
+async function wake(name: string): Promise<void> {
+  waking.value = [...waking.value, name]
+  setTimeout(() => stopWaking(name), WAKE_PATIENCE_MS)
+  try {
+    await api.wakeHost(name)
+  } catch (error) {
+    stopWaking(name)
+    toast.error(error)
+  }
+}
+
+watch(state, (hosts) => {
+  for (const host of hosts?.hosts ?? []) if (host.state === 'online') stopWaking(host.name)
+})
 
 // The views' font size scales what this page shows (see useViewZoom).
 const zoomed = ref<HTMLElement>()
@@ -44,7 +71,17 @@ const { zoomStyle } = useViewZoom(zoomed)
         </div>
       </template>
       <HostSessions v-if="machine.state === 'online'" :host="machine.host" />
-      <p v-else class="card p-4 text-sm text-dim">{{ $t(`hosts.reason.${machine.state}`) }}</p>
+      <div v-else class="card flex items-center justify-between gap-3 p-4 text-sm text-dim">
+        <p>{{ $t(`hosts.reason.${machine.state}`) }}</p>
+        <button
+          v-if="offersWake(machine)"
+          class="btn-secondary btn-small shrink-0"
+          :disabled="waking.includes(machine.name)"
+          @click="wake(machine.name)"
+        >
+          {{ waking.includes(machine.name) ? t('hosts.waking') : t('hosts.wake') }}
+        </button>
+      </div>
     </section>
   </section>
 </template>

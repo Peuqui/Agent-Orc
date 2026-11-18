@@ -1,5 +1,6 @@
 """Loading and validating the Agent-Orc configuration file."""
 
+import ipaddress
 import os
 import re
 from datetime import date
@@ -292,6 +293,35 @@ class PeersConfig(StrictModel):
 HOST_NAME_PATTERN = re.compile(r"[A-Za-z0-9_-]+")
 
 
+MAC_PATTERN = re.compile(r"[0-9A-Fa-f]{2}(:[0-9A-Fa-f]{2}){5}")
+
+
+class WakeConfig(StrictModel):
+    """Where the Wake-on-LAN packet that switches a machine on goes (see wake.py)."""
+
+    # The network card's address, six hex pairs separated by colons.
+    mac: str
+    # The broadcast address of the machine's network, an IPv4 address (e.g. 192.168.0.255).
+    broadcast: str
+    port: int = Field(default=9, ge=1, le=65535)
+
+    @field_validator("mac")
+    @classmethod
+    def mac_is_well_formed(cls, value: str) -> str:
+        if not MAC_PATTERN.fullmatch(value):
+            raise ValueError(f"{value!r} is not a MAC address like aa:bb:cc:dd:ee:ff")
+        return value
+
+    @field_validator("broadcast")
+    @classmethod
+    def broadcast_is_ipv4(cls, value: str) -> str:
+        try:
+            ipaddress.IPv4Address(value)
+        except ValueError as error:
+            raise ValueError(f"{value!r} is not an IPv4 address: {error}") from error
+        return value
+
+
 class HostConfig(StrictModel):
     """Another machine whose Agent-Orc this one reaches through an SSH tunnel (see hosts.py)."""
 
@@ -303,6 +333,8 @@ class HostConfig(StrictModel):
     # That Agent-Orc's socket on the machine (its server.socket), spelled out: ssh does not
     # expand "~".
     socket: str
+    # Without it the machine cannot be woken from here.
+    wake: WakeConfig | None = None
 
 
 class TmuxConfig(StrictModel):

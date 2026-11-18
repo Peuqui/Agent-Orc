@@ -883,6 +883,8 @@
   },
   "hosts": {
     "machine": "Machine",
+    "wake": "Wake",
+    "waking": "waking …",
     "short": { "online": "reachable", "service_off": "Agent-Orc does not answer", "ssh_down": "SSH is off", "off": "not reachable" },
     "reason": {
       "service_off": "The machine is there but its Agent-Orc does not answer right now. The tunnel is being set up again.",

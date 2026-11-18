@@ -368,6 +368,24 @@ code, like `deploy/install.sh`). Agents there keep running across it. The servic
 machine's user session; `loginctl enable-linger` (as root, once) keeps it running without a login.
 A machine that is off, or whose tunnel is down, shows as unreachable.
 
+#### Waking a machine that is off
+
+Add `wake` to the machine and its card on the overview gets a "Wake" button while it is
+unreachable (Wake-on-LAN must be on in its BIOS and network card):
+
+```yaml
+hosts:
+  Other:
+    ...
+    wake: {mac: "aa:bb:cc:dd:ee:ff", broadcast: "192.168.0.255"}   # port 9 unless `port:` says otherwise
+```
+
+`mac` is the network card the machine wakes on, `broadcast` your home network's broadcast
+address (checked as an IPv4 address when the config loads). The button sends one magic packet
+(UDP broadcast) and shows "waking ..." until the machine answers. Security: the target comes only
+from the config; the request (`POST /api/hosts/<name>/wake`) carries no address and sits behind
+the login like the rest. The packet only switches the machine on.
+
 #### A WSL on Windows as the other machine
 
 WSL ends a distribution a short while after its last open WSL window is gone, and neither the

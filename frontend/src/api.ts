@@ -411,7 +411,7 @@ export type HostStatus = 'online' | 'service_off' | 'ssh_down' | 'off'
 export interface HostsState {
   /** This machine's name. */
   self: string
-  hosts: { name: string; state: HostStatus }[]
+  hosts: { name: string; state: HostStatus; /** The config tells how to wake it (Wake-on-LAN). */ can_wake: boolean }[]
 }
 
 export interface CleanupConversation extends Conversation {
@@ -659,6 +659,8 @@ function createApi(host?: string | null) {
     sessions: () => request<AgentSession[]>('GET', 'sessions'),
     /** This machine's name and the others', from this machine's own app (also from another's page). */
     hosts: () => request<HostsState>('GET', 'hosts', { fromRoot: true }),
+    /** Sends the machine its Wake-on-LAN packet (to the target of the config); it does not wait for the machine. */
+    wakeHost: (host: string) => request<void>('POST', `hosts/${encodeURIComponent(host)}/wake`, { fromRoot: true }),
     /** The agents of another machine, as that machine's own app reports them. */
     hostSessions: (host: string) => request<AgentSession[]>('GET', 'sessions', { host, fromRoot: true }),
     /**

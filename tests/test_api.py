@@ -33,6 +33,7 @@ from agent_orc.config import (
     DictationConfig,
     HostConfig,
     ServerConfig,
+    WakeConfig,
     default_config_text,
     parse_config,
 )
@@ -54,6 +55,7 @@ from agent_orc.schedule import mark_limited, read_scheduled
 from agent_orc.sessions import SESSION_ENV, SessionManager
 from agent_orc.state import state_dir
 from agent_orc.terminal import WS_CLOSE_SERVICE_RESTART, attach_environment
+from agent_orc.wake import magic_packet
 from tests.conftest import Device, FakeClock, FakePushService, FakeStt
 from tests.screens import NO_SUBAGENTS_SCREEN, SUBAGENTS_SCREEN
 from tests.test_card_gate import free_port
@@ -3433,7 +3435,14 @@ def mini(
 ) -> Iterator[TestClient]:
     """This machine's Agent-Orc, logged in; its hosts: "Aragon" (up) and "Gone" (nothing there)."""
     monkeypatch.setattr("agent_orc.api.keep_tunnel_open", idle_tunnel)
-    hosts = {name: HostConfig(ssh=[["nowhere"]], socket="unused") for name in ("Aragon", "Gone")}
+    hosts = {
+        "Aragon": HostConfig(
+            ssh=[["nowhere"]],
+            socket="unused",
+            wake=WakeConfig(mac="aa:bb:cc:dd:ee:ff", broadcast="192.168.0.255"),
+        ),
+        "Gone": HostConfig(ssh=[["nowhere"]], socket="unused"),
+    }
     with_hosts = config.model_copy(update={"hosts": hosts})
     # Entered, so the app keeps one event loop (its HTTP sessions belong to it).
     with TestClient(
@@ -3648,6 +3657,71 @@ def test_the_hosts_and_whether_they_answer(mini: TestClient) -> None:
     assert states["Aragon"] == "online"
     # Nothing answers there: which of the other states is for the tests of hosts.py (it asks ssh).
     assert states["Gone"] in {"service_off", "ssh_down", "off"}
+    # The page offers waking only where the config says how.
+    assert {host["name"]: host["can_wake"] for host in listed["hosts"]} == {
+        "Aragon": True,
+        "Gone": False,
+    }
+
+
+class SentPackets:
+    """Stands in for the UDP socket: notes what would go onto the network."""
+
+    def __init__(self) -> None:
+        self.sent: list[tuple[bytes, tuple[str, int]]] = []
+        self.options: list[tuple[int, int, int]] = []
+
+    def __call__(self, *_arguments: object, **_keywords: object) -> "SentPackets":
+        return self
+
+    def __enter__(self) -> "SentPackets":
+        return self
+
+    def __exit__(self, *_exception: object) -> None:
+        return None
+
+    def setsockopt(self, level: int, option: int, value: int) -> None:
+        self.options.append((level, option, value))
+
+    def sendto(self, data: bytes, address: tuple[str, int]) -> None:
+        self.sent.append((data, address))
+
+
+@pytest.fixture
+def udp(monkeypatch: pytest.MonkeyPatch) -> SentPackets:
+    packets = SentPackets()
+    monkeypatch.setattr("agent_orc.wake.socket.socket", packets)
+    return packets
+
+
+def test_wake_sends_one_packet_to_the_configured_broadcast(
+    mini: TestClient, udp: SentPackets
+) -> None:
+    assert mini.post("/api/hosts/Aragon/wake").status_code == 204
+    assert udp.sent == [(magic_packet("aa:bb:cc:dd:ee:ff"), ("192.168.0.255", 9))]
+    assert (socket.SOL_SOCKET, socket.SO_BROADCAST, 1) in udp.options
+
+
+def test_the_request_cannot_choose_the_target(mini: TestClient, udp: SentPackets) -> None:
+    body = {"mac": "11:22:33:44:55:66", "broadcast": "10.0.0.255", "port": 7}
+    assert mini.post("/api/hosts/Aragon/wake", json=body).status_code == 204
+    query = "?mac=11:22:33:44:55:66&broadcast=10.0.0.255"
+    assert mini.post(f"/api/hosts/Aragon/wake{query}").status_code == 204
+    assert udp.sent == [(magic_packet("aa:bb:cc:dd:ee:ff"), ("192.168.0.255", 9))] * 2
+
+
+def test_wake_refuses_unknown_hosts_and_hosts_without_wake(
+    mini: TestClient, udp: SentPackets
+) -> None:
+    assert mini.post("/api/hosts/Nowhere/wake").status_code == 404
+    assert mini.post("/api/hosts/Gone/wake").status_code == 409
+    assert udp.sent == []
+
+
+def test_wake_needs_the_login(mini: TestClient, udp: SentPackets) -> None:
+    mini.cookies.clear()
+    assert mini.post("/api/hosts/Aragon/wake").status_code == 401
+    assert udp.sent == []
 
 
 def test_another_machines_app_is_handed_on_through_this_ones_login(mini: TestClient) -> None:

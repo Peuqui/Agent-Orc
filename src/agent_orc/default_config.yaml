@@ -226,6 +226,10 @@ dictation:
 #     ssh: [["-p", "2222", "mp@10.0.0.2"], ["-p", "2222", "mp@192.168.0.20"]]
 #     # That machine's Agent-Orc socket (its server.socket), spelled out: ssh does not expand "~".
 #     socket: /home/mp/.local/state/agent-orc/run/agent-orc.sock
+#     # Optional: a button wakes the machine when it is off (Wake-on-LAN, UDP port 9 unless `port`
+#     # says otherwise). mac: the network card the router wakes; broadcast: your home network's
+#     # broadcast address. Wake-on-LAN must be on in the machine's BIOS and network card.
+#     wake: {mac: "aa:bb:cc:dd:ee:ff", broadcast: "192.168.0.255"}
 
 tmux:
   # Dedicated tmux server socket, so Agent-Orc never touches your own tmux sessions.
