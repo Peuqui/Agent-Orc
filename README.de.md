@@ -423,6 +423,13 @@ bekommt „Wecken“). Der Rechner führt `systemctl suspend` bzw. `systemctl po
 Befehle, nichts aus der Anfrage) und antwortet mit 202; lehnt systemctl sofort ab, kommt dessen
 Meldung als Fehler zurück. Ob noch Agenten arbeiten, prüft Agent-Orc nicht.
 
+**Unter WSL** ist der Rechner Windows, nicht das Linux von WSL (`systemctl suspend` friert dort nur
+WSL ein, Windows läuft weiter). Agent-Orc erkennt WSL am Kernel und nimmt stattdessen die
+Windows-Programme vom Laufwerk C:: Standby über PowerShell (`SetSuspendState('Suspend', …)`, Standby
+und nicht Ruhezustand, Wake-on-LAN bleibt erlaubt) und `shutdown.exe /s /t 0`. Eine polkit-Regel
+braucht es dort nicht. Läuft ein Befehl nach 5 s noch, gilt er als angenommen (der Standby von
+Windows kehrt erst nach dem Aufwachen zurück).
+
 Die Anfrage kommt aus einem Dienst ohne Sitzung am Bildschirm, deshalb muss polkit sie für den
 Benutzer des Dienstes erlauben. Als root auf dem Rechner, der geschaltet wird (`mp` durch den
 Benutzer des Dienstes ersetzen), die Datei `/etc/polkit-1/rules.d/50-agent-orc-power.rules` anlegen:

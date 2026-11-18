@@ -51,7 +51,7 @@ from agent_orc.handover import (
 from agent_orc.history import claude_project_dir
 from agent_orc.hosts import HostLink
 from agent_orc.listen import prepare_socket
-from agent_orc.power import POWER_COMMANDS, PowerAction
+from agent_orc.power import PowerAction, machine_commands
 from agent_orc.push import agent_message, deliver
 from agent_orc.schedule import mark_limited, read_scheduled
 from agent_orc.sessions import SESSION_ENV, SessionManager
@@ -3898,7 +3898,7 @@ def test_an_action_runs_only_where_the_config_allows_it(
         response = client.post(f"/api/power/{action}")
     if power is not None and getattr(power, action):
         assert response.status_code == 202
-        assert systemctl.runs == [POWER_COMMANDS[action]]
+        assert systemctl.runs == [machine_commands()[action]]
     else:
         assert response.status_code == 409
         assert systemctl.runs == []
@@ -3910,7 +3910,7 @@ def test_only_the_allowed_action_runs(
     with target(config, clock, PowerConfig(suspend=True)) as client:
         assert client.post("/api/power/poweroff").status_code == 409
         assert client.post("/api/power/suspend").status_code == 202
-    assert systemctl.runs == [["systemctl", "--no-ask-password", "suspend"]]
+    assert systemctl.runs == [machine_commands()["suspend"]]
 
 
 def test_the_request_cannot_change_the_command(
@@ -3923,7 +3923,7 @@ def test_the_request_cannot_change_the_command(
         # Not one of the two actions: never reaches a command.
         assert client.post("/api/power/reboot").status_code == 422
         assert client.post("/api/power/suspend --force").status_code in {404, 422}
-    assert systemctl.runs == [POWER_COMMANDS["suspend"]] * 2
+    assert systemctl.runs == [machine_commands()["suspend"]] * 2
 
 
 def test_a_failing_command_answers_with_what_it_said(

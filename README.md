@@ -404,6 +404,12 @@ runs `systemctl suspend` or `systemctl poweroff` (fixed commands, nothing from t
 answers 202; if systemctl refuses at once, its message comes back as the error. Agent-Orc does not
 check whether agents are still working.
 
+**Under WSL** the machine is Windows, not the Linux of WSL (`systemctl suspend` there only freezes
+WSL, and Windows runs on). Agent-Orc recognises WSL by its kernel and uses Windows' own programs from
+the C: drive instead: standby through PowerShell (`SetSuspendState('Suspend', …)`, standby and not
+hibernation, Wake-on-LAN stays allowed) and `shutdown.exe /s /t 0`. No polkit rule is needed there.
+A command still running after 5 s counts as accepted (Windows' standby returns only after waking).
+
 The request comes from a service without a seat or terminal, so polkit must allow it for the
 service's user. As root on the machine that is switched (replace `mp` by the service's user),
 create `/etc/polkit-1/rules.d/50-agent-orc-power.rules`:
