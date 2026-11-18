@@ -67,9 +67,14 @@ def test_a_bad_power_setting_is_refused_at_load(power_setting: str, message: str
 
 
 @pytest.mark.anyio
-async def test_the_runner_reports_exit_code_and_stderr() -> None:
+async def test_the_runner_reports_exit_code_and_what_it_wrote() -> None:
     # A harmless stand-in command: the real ones are never run by a test.
     assert await run_command(["sh", "-c", "echo refused >&2; exit 2"]) == (2, "refused")
+    # Windows' shutdown.exe writes its refusals to stdout: that counts too (it was lost before).
+    assert await run_command(["sh", "-c", "echo zugriff verweigert; exit 5"]) == (
+        5,
+        "zugriff verweigert",
+    )
     assert await run_command(["true"]) == (0, "")
 
 

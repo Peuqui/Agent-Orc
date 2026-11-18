@@ -3934,6 +3934,7 @@ def test_a_failing_command_answers_with_what_it_said(
         response = client.post("/api/power/suspend")
     assert response.status_code == 500
     assert "Interactive authentication required" in response.json()["detail"]
+    assert "exit code 1" in response.json()["detail"]  # the code too, also with a message
 
 
 def test_a_failing_command_without_a_message_still_says_so(

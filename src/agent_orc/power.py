@@ -88,12 +88,13 @@ def machine_commands() -> dict[PowerAction, list[str]]:
 
 async def run_command(argv: list[str]) -> tuple[int, str] | None:
     """Starts the command and waits for its end up to ACCEPTED_AFTER_SECONDS: its exit code and what
-    it wrote to stderr, or None while it still runs (accepted; it is reaped in the background)."""
+    it wrote, or None while it still runs (accepted; it is reaped in the background). Both streams
+    are read as one: Windows' shutdown.exe writes its refusals to stdout."""
     process = await asyncio.create_subprocess_exec(
         *argv,
         stdin=asyncio.subprocess.DEVNULL,
-        stdout=asyncio.subprocess.DEVNULL,
-        stderr=asyncio.subprocess.PIPE,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.STDOUT,
     )
     finished = asyncio.ensure_future(process.communicate())
     done, _ = await asyncio.wait({finished}, timeout=ACCEPTED_AFTER_SECONDS)
@@ -102,8 +103,8 @@ async def run_command(argv: list[str]) -> tuple[int, str] | None:
         _still_running.add(finished)
         finished.add_done_callback(_still_running.discard)
         return None
-    _, stderr = finished.result()
-    return process.returncode or 0, stderr.decode(errors="replace").strip()
+    output, _ = finished.result()
+    return process.returncode or 0, output.decode(errors="replace").strip()
 
 
 async def power(action: PowerAction) -> None:
@@ -113,7 +114,10 @@ async def power(action: PowerAction) -> None:
     logger.info("power: %s via %s", action, Path(argv[0]).name)
     result = await run_command(argv)
     if result is None:
+        logger.info("power: %s still running after %s s, taken as accepted", action,
+                    ACCEPTED_AFTER_SECONDS)  # fmt: skip
         return
-    code, stderr = result
+    code, output = result
+    logger.info("power: %s ended with exit code %s: %s", action, code, output or "(no output)")
     if code != 0:
-        raise PowerCommandError(stderr or f"{action} failed with exit code {code}")
+        raise PowerCommandError(f"{action} failed with exit code {code}: {output or 'no output'}")
