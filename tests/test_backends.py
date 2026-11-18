@@ -3,6 +3,7 @@
 import http.client
 import json
 import threading
+from collections.abc import Sequence
 from datetime import date
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
@@ -33,6 +34,7 @@ from agent_orc.backends import (
 )
 from agent_orc.config import BackendConfig, BackendModelConfig, CardGateConfig
 from agent_orc.gate_token import token_session
+from agent_orc.gpu_orc_client import FreeAction, FreeResult, GpuOrcError, TrafficLight
 
 TODAY = date(2026, 10, 11)
 
@@ -326,52 +328,31 @@ def test_a_model_that_is_not_on_offer_is_refused() -> None:
 
 
 def test_gpu_orc_beside_the_server_frees_the_cards_before_the_start(
-    capsys: pytest.CaptureFixture[str],
+    capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    asked: list[tuple[str, dict[str, Any] | None]] = []
-
-    def gpu_orc(url: str, body: dict[str, Any] | None, token: str | None, timeout: float) -> Any:
-        asked.append((url, body))
-        if url.endswith("/loading"):
-            return {"loading": [], "held": None}
-        if body is None:
-            return {"caller_timeout_s": 690}
-        action = {"consumer": "stt-suite", "item": "gpu-worker", "outcome": "released"}
-        return {"already_running": False, "actions": [action], "free": True}
-
+    gpu_orc = GpuOrcDouble(monkeypatch)
     config = backend(gpu_orc={"port": 5070})
-    launch = prepare_launch(
-        "local", config, "Qwen-27B-vllm", None, [], TODAY, listing_fetch(), gpu_orc
-    )
-    assert [url for url, _ in asked] == [
-        "http://one:5070/loading",
-        "http://one:5070/health",
-        "http://one:5070/free",
-    ]
-    assert asked[2][1] is not None and asked[2][1]["model"] == "Qwen-27B-vllm"
+    launch = prepare_launch("local", config, "Qwen-27B-vllm", None, [], TODAY, listing_fetch())
+    assert gpu_orc.asked == ["http://one:5070/loading", "http://one:5070/free"]
+    assert gpu_orc.freed == ["Qwen-27B-vllm"]
     assert launch.command[:3] == ["claude", "--model", "Qwen-27B-vllm"]
     assert "GPU-Orc: stt-suite gpu-worker: released" in capsys.readouterr().err
 
 
 def test_gpu_orc_that_does_not_answer_is_told_and_the_start_goes_on(
-    capsys: pytest.CaptureFixture[str],
+    capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    def silent(url: str, body: dict[str, Any] | None, token: str | None, timeout: float) -> Any:
-        raise OSError("connection refused")
-
+    GpuOrcDouble(monkeypatch, down=True)
     config = backend(gpu_orc={"port": 5070})
-    launch = prepare_launch(
-        "local", config, "Qwen-27B-vllm", None, [], TODAY, listing_fetch(), silent
-    )
+    launch = prepare_launch("local", config, "Qwen-27B-vllm", None, [], TODAY, listing_fetch())
     assert launch.command[:3] == ["claude", "--model", "Qwen-27B-vllm"]
     assert "GPU-Orc: problem: GPU-Orc at http://one:5070" in capsys.readouterr().err
 
 
-def test_without_gpu_orc_nothing_is_asked() -> None:
-    def never(url: str, body: dict[str, Any] | None, token: str | None, timeout: float) -> Any:
-        raise AssertionError("asked")
-
-    prepare_launch("local", backend(), "Qwen-27B-vllm", None, [], TODAY, listing_fetch(), never)
+def test_without_gpu_orc_nothing_is_asked(monkeypatch: pytest.MonkeyPatch) -> None:
+    gpu_orc = GpuOrcDouble(monkeypatch)
+    prepare_launch("local", backend(), "Qwen-27B-vllm", None, [], TODAY, listing_fetch())
+    assert gpu_orc.asked == []
 
 
 def test_the_model_is_chosen_by_number_or_name() -> None:
@@ -549,21 +530,41 @@ RUNNING_URL = "http://one/running"
 
 
 class GpuOrcDouble:
-    """A GPU-Orc that answers /loading with the hold (or none) and counts what else is asked."""
+    """Stands in for the GPU-Orc client (its protocol is tested in GPU-Orc against the real server)
+    and notes what is asked: the hold (or none) on /loading, "free" for a request to free."""
 
-    def __init__(self, hold: dict[str, str] | None) -> None:
+    def __init__(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        hold: dict[str, str] | None = None,
+        down: bool = False,
+    ) -> None:
         self.hold = hold
+        self.down = down
         self.asked: list[str] = []
+        self.freed: list[str] = []  # the models GPU-Orc was asked to free the cards for
+        self.url = ""
+        monkeypatch.setattr("agent_orc.gpuorc.GpuOrc", self.create)
 
-    def __call__(
-        self, url: str, body: dict[str, Any] | None, token: str | None, timeout: float
-    ) -> Any:
-        self.asked.append(url)
-        if url.endswith("/loading"):
-            return {"loading": [], "held": self.hold}
-        if url.endswith("/health"):
-            return {"caller_timeout_s": 690}
-        return {"already_running": True}
+    def create(self, url: str, token: str | None = None) -> "GpuOrcDouble":
+        self.url = url
+        return self
+
+    def loading(self) -> TrafficLight:
+        self.asked.append(f"{self.url}/loading")
+        if self.down:
+            raise GpuOrcError("GPU-Orc not reachable")
+        return TrafficLight((), self.hold)
+
+    def free_for_model(
+        self, model: str, reason: str, keep: Sequence[str] = (), model_server: str | None = None
+    ) -> FreeResult:
+        self.asked.append(f"{self.url}/free")
+        self.freed.append(model)
+        if self.down:
+            raise GpuOrcError("GPU-Orc not reachable")
+        action = FreeAction("stt-suite", "gpu-worker", "released")
+        return FreeResult(free=True, already_running=False, actions=(action,))
 
 
 def running(model: str) -> tuple[str, Any]:
@@ -575,8 +576,10 @@ def gate_state(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
 
 
-def test_a_hold_stops_the_start_before_anything_is_freed_or_loaded() -> None:
-    gpu_orc = GpuOrcDouble(HOLD)
+def test_a_hold_stops_the_start_before_anything_is_freed_or_loaded(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    gpu_orc = GpuOrcDouble(monkeypatch, HOLD)
     fetch = listing_fetch()
     # Not the gate's refusal, which promises to wake a session: the start leaves none.
     with pytest.raises(BackendError, match="the cards are held: vllm-research measures"):
@@ -588,14 +591,16 @@ def test_a_hold_stops_the_start_before_anything_is_freed_or_loaded() -> None:
             [],
             TODAY,
             fetch,
-            gpu_orc,
             GATE,
         )
     assert gpu_orc.asked == ["http://one:5070/loading"]
     assert not any("/v1/context" in url for url, _ in fetch.asked)
 
 
-def test_a_hold_without_the_gate_config_stops_the_start_in_plain_words() -> None:
+def test_a_hold_without_the_gate_config_stops_the_start_in_plain_words(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    GpuOrcDouble(monkeypatch, HOLD)
     with pytest.raises(BackendError, match="the cards are held: vllm-research measures"):
         prepare_launch(
             "local",
@@ -605,12 +610,11 @@ def test_a_hold_without_the_gate_config_stops_the_start_in_plain_words() -> None
             [],
             TODAY,
             listing_fetch(),
-            GpuOrcDouble(HOLD),
         )
 
 
-def test_a_hold_does_not_stop_a_model_that_runs() -> None:
-    gpu_orc = GpuOrcDouble(HOLD)
+def test_a_hold_does_not_stop_a_model_that_runs(monkeypatch: pytest.MonkeyPatch) -> None:
+    gpu_orc = GpuOrcDouble(monkeypatch, HOLD)
     launch = prepare_launch(
         "local",
         backend(gpu_orc={"port": 5070}),
@@ -619,15 +623,14 @@ def test_a_hold_does_not_stop_a_model_that_runs() -> None:
         [],
         TODAY,
         listing_fetch(running("Qwen-27B-vllm")),
-        gpu_orc,
         GATE,
     )
     assert launch.command[:3] == ["claude", "--model", "Qwen-27B-vllm"]
     assert "http://one:5070/loading" not in gpu_orc.asked
 
 
-def test_without_a_hold_the_start_goes_as_before() -> None:
-    gpu_orc = GpuOrcDouble(None)
+def test_without_a_hold_the_start_goes_as_before(monkeypatch: pytest.MonkeyPatch) -> None:
+    gpu_orc = GpuOrcDouble(monkeypatch)
     launch = prepare_launch(
         "local",
         backend(gpu_orc={"port": 5070}),
@@ -636,14 +639,16 @@ def test_without_a_hold_the_start_goes_as_before() -> None:
         [],
         TODAY,
         listing_fetch(),
-        gpu_orc,
         GATE,
     )
     assert launch.command[:3] == ["claude", "--model", "Qwen-27B-vllm"]
     assert "http://one:5070/free" in gpu_orc.asked
 
 
-def test_with_the_gate_and_a_session_claude_code_talks_to_the_gate(gate_state: None) -> None:
+def test_with_the_gate_and_a_session_claude_code_talks_to_the_gate(
+    gate_state: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    GpuOrcDouble(monkeypatch)
     launch = prepare_launch(
         "local",
         backend(gpu_orc={"port": 5070}, key_variable="ANTHROPIC_API_KEY"),
@@ -652,7 +657,6 @@ def test_with_the_gate_and_a_session_claude_code_talks_to_the_gate(gate_state: N
         [],
         TODAY,
         listing_fetch(),
-        GpuOrcDouble(None),
         GATE,
         "session-1",
     )
@@ -664,8 +668,9 @@ def test_with_the_gate_and_a_session_claude_code_talks_to_the_gate(gate_state: N
 
 @pytest.mark.parametrize("case", ["no session", "no gate", "no gpu_orc"])
 def test_without_session_gate_or_gpu_orc_claude_code_talks_to_the_server(
-    case: str, gate_state: None
+    case: str, gate_state: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    GpuOrcDouble(monkeypatch)
     config = backend(
         gpu_orc={"port": 5070} if case != "no gpu_orc" else None, key_variable="ANTHROPIC_API_KEY"
     )
@@ -677,7 +682,6 @@ def test_without_session_gate_or_gpu_orc_claude_code_talks_to_the_server(
         [],
         TODAY,
         listing_fetch(),
-        GpuOrcDouble(None),
         None if case == "no gate" else GATE,
         None if case == "no session" else "session-1",
     )
@@ -686,11 +690,9 @@ def test_without_session_gate_or_gpu_orc_claude_code_talks_to_the_server(
 
 
 def test_a_gpu_orc_that_is_silent_at_the_start_is_told_and_the_start_goes_on(
-    capsys: pytest.CaptureFixture[str],
+    capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    def silent(url: str, body: dict[str, Any] | None, token: str | None, timeout: float) -> Any:
-        raise OSError("connection refused")
-
+    GpuOrcDouble(monkeypatch, down=True)
     launch = prepare_launch(
         "local",
         backend(gpu_orc={"port": 5070}),
@@ -699,7 +701,6 @@ def test_a_gpu_orc_that_is_silent_at_the_start_is_told_and_the_start_goes_on(
         [],
         TODAY,
         listing_fetch(),
-        silent,
         GATE,
     )
     assert launch.command[:3] == ["claude", "--model", "Qwen-27B-vllm"]

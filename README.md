@@ -482,7 +482,9 @@ through the hook `agent-orc agent-free-cards` at every input (a server may have 
 after its idle time). GPU-Orc runs beside the model server, at the backend's address with its own
 port; from another machine it needs its token (`token_file`), and `model_server` names its model
 server when it has more than one. What it did is shown; when it does not answer or the cards stay
-held, that is shown as a problem, and the start or the input goes on.
+held, that is shown as a problem, and the start or the input goes on. A backend without `gpu_orc`
+asks GPU-Orc nothing. The protocol is `src/agent_orc/gpu_orc_client.py`, a copy of GPU-Orc's shared
+client (edit it in GPU-Orc, never here; `gpuorc.py` is Agent-Orc's thin side of it).
 
 A hold of GPU-Orc (somebody keeps the cards) stops the start of a local session whose model is not
 loaded yet, with the reason. With `card_gate` in the config (port, `refusal`, `resume_prompt`,

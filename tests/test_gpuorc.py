@@ -12,6 +12,7 @@ import pytest
 
 from agent_orc import cli
 from agent_orc.config import GpuOrcConfig, default_config_text
+from agent_orc.gpu_orc_client import FreeAction, FreeResult
 from agent_orc.gpuorc import free_for_model, gpu_orc_url, report
 
 
@@ -22,7 +23,7 @@ class FakeGpuOrc(HTTPServer):
         super().__init__(("127.0.0.1", 0), GpuOrcHandler)
         self.requests: list[tuple[str, str | None, Any]] = []
         self.free_status = 200
-        self.free_answer: Any = {"already_running": True}
+        self.free_answer: Any = {"already_running": True, "free": True, "actions": []}
 
 
 class GpuOrcHandler(BaseHTTPRequestHandler):
@@ -64,20 +65,20 @@ def test_gpu_orc_is_asked_beside_the_model_server() -> None:
 
 
 def test_a_running_model_needs_nothing_said() -> None:
-    assert report({"already_running": True, "actions": [], "free": True}, "m") == []
+    assert report(FreeResult(free=True, already_running=True, actions=()), "m") == []
 
 
 def test_what_went_wrong_is_marked_and_what_went_right_told() -> None:
-    answer = {
-        "already_running": False,
-        "actions": [
-            {"consumer": "stt-suite", "item": "gpu-worker", "outcome": "released_forced"},
-            {"consumer": "tts-suite", "item": "xtts", "outcome": "refused_busy", "detail": "reads"},
-            {"consumer": "llama-swap", "item": "embed", "outcome": "not_freed"},
-        ],
-        "free": False,
-    }
-    assert report(answer, "big-model") == [
+    result = FreeResult(
+        free=False,
+        already_running=False,
+        actions=(
+            FreeAction("stt-suite", "gpu-worker", "released_forced"),
+            FreeAction("tts-suite", "xtts", "refused_busy", "reads"),
+            FreeAction("llama-swap", "embed", "not_freed"),
+        ),
+    )
+    assert report(result, "big-model") == [
         "stt-suite gpu-worker: released_forced",
         "problem: tts-suite xtts: refused_busy (reads)",
         "problem: llama-swap embed: not_freed",
@@ -111,7 +112,7 @@ def test_a_refusal_is_told_with_gpu_orcs_own_words(gpu_orc: FakeGpuOrc) -> None:
 
     (line,) = free_for_model(config, "http://127.0.0.1:11435", "big-model")
     assert line.startswith("problem: GPU-Orc at http://127.0.0.1:")
-    assert "(400)" in line and "unknown model: big-model" in line
+    assert "HTTP 400" in line and "unknown model: big-model" in line
 
 
 @pytest.fixture

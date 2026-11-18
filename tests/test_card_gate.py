@@ -1,6 +1,7 @@
 import asyncio
 import json
 import socket
+import time
 import urllib.error
 import urllib.request
 from collections.abc import AsyncIterator, Awaitable, Callable
@@ -32,6 +33,18 @@ def free_port() -> int:
     with socket.socket() as probe:
         probe.bind(("127.0.0.1", 0))
         return int(probe.getsockname()[1])
+
+
+def wait_until_listening(port: int, timeout_s: float = 10) -> None:
+    deadline = time.monotonic() + timeout_s
+    while True:
+        try:
+            socket.create_connection(("127.0.0.1", port), timeout=1).close()
+            return
+        except ConnectionRefusedError:
+            if time.monotonic() > deadline:
+                raise
+            time.sleep(0.01)
 
 
 @dataclass
@@ -309,6 +322,8 @@ def test_the_app_runs_the_gate_beside_itself_and_ends_it(tmp_path: Path) -> None
         raise AssertionError("the gate let a request without a mark through")
 
     with TestClient(create_app(config, new_credentials("a-long-enough-password"), static_dir=None)):
+        # The app starts the gate as a task and does not wait for its socket: the test does.
+        wait_until_listening(config.card_gate.port)
         assert ask() == 401
     with pytest.raises(urllib.error.URLError):
         ask()

@@ -30,7 +30,8 @@ from agent_orc.config import (
     Config,
 )
 from agent_orc.gate_token import session_token
-from agent_orc.gpuorc import Request, free_for_model, held, request_json
+from agent_orc.gpu_orc_client import GpuOrcError
+from agent_orc.gpuorc import free_for_model, held
 from agent_orc.llama_swap import LlamaSwapError, embedding_models, model_ttl, template_levels
 
 # What Claude Code asks for without being told (its own default).
@@ -223,7 +224,6 @@ def refuse_under_hold(
     key: str,
     model: str,
     fetch: Fetch,
-    gpu_orc_request: Request,
 ) -> None:
     """Plan docs/PLAN-2026-11-14-kartentor.md: a start that would load a model onto cards GPU-Orc
     holds for somebody else does not begin. A model that runs already loads nothing. A GPU-Orc
@@ -233,8 +233,8 @@ def refuse_under_hold(
     if backend.gpu_orc is None or model_runs(base_url, key, model, fetch):
         return
     try:
-        hold = held(backend.gpu_orc, base_url, gpu_orc_request)
-    except (*FETCH_ERRORS, KeyError, TypeError):
+        hold = held(backend.gpu_orc, base_url)
+    except (GpuOrcError, OSError):
         return
     if hold is None:
         return
@@ -405,7 +405,6 @@ def prepare_launch(
     claude_arguments: Sequence[str],
     today: date,
     fetch: Fetch = fetch_json,
-    gpu_orc_request: Request = request_json,
     gate: CardGateConfig | None = None,
     session_id: str | None = None,
 ) -> Launch:
@@ -419,9 +418,9 @@ def prepare_launch(
         )
     # Before anything loads the model: free_for_model would clear cards under a hold, and the
     # context length comes from the server loading the model.
-    refuse_under_hold(backend, base_url, key, model, fetch, gpu_orc_request)
+    refuse_under_hold(backend, base_url, key, model, fetch)
     if backend.gpu_orc is not None:
-        for line in free_for_model(backend.gpu_orc, base_url, model, gpu_orc_request):
+        for line in free_for_model(backend.gpu_orc, base_url, model):
             print(f"GPU-Orc: {line}", file=sys.stderr)
     context = context_length(backend, base_url, model, key, fetch)
     arguments = [
@@ -446,9 +445,7 @@ def prepare_launch(
     return Launch(arguments, {**inherited, **environment})
 
 
-def free_cards_message(
-    config: Config, environment: Mapping[str, str], request: Request = request_json
-) -> str | None:
+def free_cards_message(config: Config, environment: Mapping[str, str]) -> str | None:
     """At an input of an agent on a backend with GPU-Orc: free the cards for its model, which the
     server may have unloaded after its idle time. What to tell the user, if anything."""
     name = environment.get(BACKEND_VARIABLE)
@@ -458,7 +455,7 @@ def free_cards_message(
     if gpu_orc is None:
         return None
     base_url, model = environment[BASE_URL_VARIABLE], environment[MODEL_VARIABLE]
-    lines = free_for_model(gpu_orc, base_url, model, request)
+    lines = free_for_model(gpu_orc, base_url, model)
     return "\n".join(f"GPU-Orc: {line}" for line in lines) or None
 
 

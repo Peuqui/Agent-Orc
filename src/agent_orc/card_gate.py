@@ -34,7 +34,8 @@ from agent_orc.backends import (
 from agent_orc.config import BackendConfig, Config
 from agent_orc.events import SHUTDOWN_GRACE_SECONDS
 from agent_orc.gate_token import token_session
-from agent_orc.gpuorc import gpu_orc_token, loading_url
+from agent_orc.gpu_orc_client import GpuOrcError
+from agent_orc.gpuorc import held
 from agent_orc.hosts import chunks, request_headers, response_headers
 
 METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"]
@@ -131,22 +132,14 @@ async def model_runs(
         return False
 
 
-async def hold_of(
-    session: aiohttp.ClientSession, backend: BackendConfig, base_url: str
-) -> dict[str, str] | None:
+async def hold_of(backend: BackendConfig, base_url: str) -> dict[str, str] | None:
     """GPU-Orc's hold of the cards, None when there is none. Raises GpuOrcSilentError when GPU-Orc
     does not answer: without knowing, nothing may be loaded."""
     assert backend.gpu_orc is not None
-    url = loading_url(backend.gpu_orc, base_url)
-    headers: dict[str, str] = {}
     try:
-        token = gpu_orc_token(backend.gpu_orc)
-        if token is not None:
-            headers["authorization"] = f"Bearer {token}"
-        answer = await get_json(session, url, headers)
-        return answer["held"]  # type: ignore[no-any-return]
-    except (aiohttp.ClientError, OSError, TimeoutError, KeyError, TypeError, ValueError) as error:
-        raise GpuOrcSilentError(f"GPU-Orc at {url} does not answer: {error}") from error
+        return await asyncio.to_thread(held, backend.gpu_orc, base_url)
+    except (GpuOrcError, OSError) as error:
+        raise GpuOrcSilentError(str(error)) from error
 
 
 def create_gate_app(config: Config, turned_away: TurnedAway) -> FastAPI:
@@ -189,7 +182,7 @@ def create_gate_app(config: Config, turned_away: TurnedAway) -> FastAPI:
         if await model_runs(session, base_url, auth, model):
             return None
         try:
-            hold = await hold_of(session, backend, base_url)
+            hold = await hold_of(backend, base_url)
         except GpuOrcSilentError as error:
             # Remembered as well: the waking asks GPU-Orc again and wakes the session once it
             # answers without a hold.

@@ -133,6 +133,7 @@ from agent_orc.effort import (
     write_agent_settings,
 )
 from agent_orc.events import KEEP_ALIVE_SECONDS, ChangeNotifier, until_stopped
+from agent_orc.gpu_orc_client import GpuOrcError
 from agent_orc.gpuorc import held
 from agent_orc.handover import ADVISED as HANDOVER_ADVISED
 from agent_orc.handover import ASKED as HANDOVER_ASKED
@@ -1314,7 +1315,7 @@ def create_app(
             cards_asked[session_id] = now
             try:
                 free = cards_are_free(turned.backend)
-            except (BackendError, OSError, ValueError, KeyError, TypeError) as error:
+            except (BackendError, GpuOrcError, OSError, ValueError, KeyError, TypeError) as error:
                 # Not knowing is no reason to wake it: it stays waiting and is asked again.
                 logger.warning("card gate: GPU-Orc of %s not asked: %s", turned.backend, error)
                 continue

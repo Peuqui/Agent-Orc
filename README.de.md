@@ -507,7 +507,9 @@ Leerlaufzeit entladen haben). GPU-Orc läuft neben dem Modellserver, unter der A
 mit eigenem Port; von einem anderen Rechner aus braucht er sein Token (`token_file`), und
 `model_server` nennt seinen Modellserver, wenn er mehrere kennt. Was er getan hat, wird angezeigt;
 antwortet er nicht oder bleiben Karten belegt, erscheint das als Problem, und Start oder Eingabe
-gehen weiter.
+gehen weiter. Ein Backend ohne `gpu_orc` fragt GPU-Orc nichts. Das Protokoll steht in
+`src/agent_orc/gpu_orc_client.py`, einer Kopie des gemeinsamen Clients von GPU-Orc (dort ändern, nie
+hier; `gpuorc.py` ist Agent-Orcs dünner Anschluss daran).
 
 Ein Hold von GPU-Orc (jemand hält die Karten fest) verhindert den Start einer lokalen Sitzung, deren
 Modell noch nicht geladen ist, mit Grund. Mit `card_gate` in der Config (Port, `refusal`,

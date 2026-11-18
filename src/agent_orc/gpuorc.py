@@ -8,40 +8,17 @@ model that runs already costs one quick answer.
 
 What GPU-Orc did is told; what went wrong is told loudly, and the start or the input goes on (the
 model may then fail to load at a card still held). There is no other way to free the cards.
+
+The protocol itself is gpu_orc_client.py, a copy of GPU-Orc's shared client (GPU-Orc-client repo,
+scripts/sync_clients.py; never edited here). This file is what Agent-Orc decides: where GPU-Orc is,
+the token, the reason, and the words of the report.
 """
 
-import http.client
-import json
-import urllib.error
 import urllib.parse
-import urllib.request
-from collections.abc import Callable
 from pathlib import Path
-from typing import Any
 
 from agent_orc.config import GpuOrcConfig
-
-# GPU-Orc answers its health at once; the time a request to free may take comes from there.
-HEALTH_SECONDS = 5
-# The outcomes that leave the cards as wanted; any other one is a problem to tell.
-FINE_OUTCOMES = frozenset({"released", "released_forced", "kept"})
-
-# GPU-Orc's traffic light: {"loading": [...], "held": {"since": ..., "reason": ...} | null}.
-LOADING_PATH = "/loading"
-
-# url, body (None: GET), token, timeout → the answer's JSON
-Request = Callable[[str, dict[str, Any] | None, str | None, float], Any]
-
-
-def request_json(url: str, body: dict[str, Any] | None, token: str | None, timeout: float) -> Any:
-    data = None if body is None else json.dumps(body).encode()
-    request = urllib.request.Request(url, data=data, method="GET" if body is None else "POST")
-    if body is not None:
-        request.add_header("Content-Type", "application/json")
-    if token:
-        request.add_header("Authorization", f"Bearer {token}")
-    with urllib.request.urlopen(request, timeout=timeout) as response:
-        return json.load(response)
+from agent_orc.gpu_orc_client import FINE_OUTCOMES, FreeResult, GpuOrc, GpuOrcError
 
 
 def gpu_orc_url(base_url: str, port: int) -> str:
@@ -54,18 +31,16 @@ def gpu_orc_token(gpu_orc: GpuOrcConfig) -> str | None:
     return gpu_orc.token_file.expanduser().read_text().strip() if gpu_orc.token_file else None
 
 
-def loading_url(gpu_orc: GpuOrcConfig, base_url: str) -> str:
-    return gpu_orc_url(base_url, gpu_orc.port) + LOADING_PATH
+def client(gpu_orc: GpuOrcConfig, base_url: str) -> GpuOrc:
+    """Raises OSError when the token file cannot be read."""
+    return GpuOrc(gpu_orc_url(base_url, gpu_orc.port), gpu_orc_token(gpu_orc))
 
 
-def held(
-    gpu_orc: GpuOrcConfig, base_url: str, request: Request = request_json
-) -> dict[str, str] | None:
-    """GPU-Orc's hold of the cards ({"since", "reason"}), None when there is none. Raises when
-    GPU-Orc does not answer (the caller decides what that means; see card_gate.hold_of for the
-    gate's asynchronous way, which shares the address and the token with this one)."""
-    answer = request(loading_url(gpu_orc, base_url), None, gpu_orc_token(gpu_orc), HEALTH_SECONDS)
-    return answer["held"]  # type: ignore[no-any-return]
+def held(gpu_orc: GpuOrcConfig, base_url: str) -> dict[str, str] | None:
+    """GPU-Orc's hold of the cards ({"since", "reason"}), None when there is none. Raises
+    GpuOrcError (or OSError for the token file) when GPU-Orc cannot be asked (the caller decides
+    what that means; see card_gate.hold_of for the gate's way)."""
+    return client(gpu_orc, base_url).loading().held
 
 
 def reason() -> str:
@@ -73,35 +48,26 @@ def reason() -> str:
     return f"Agent-Orc: agent in {Path.cwd().name}"
 
 
-def free_for_model(
-    gpu_orc: GpuOrcConfig, base_url: str, model: str, request: Request = request_json
-) -> list[str]:
+def free_for_model(gpu_orc: GpuOrcConfig, base_url: str, model: str) -> list[str]:
     """Ask GPU-Orc to free the cards for the model; the lines to tell, problems marked as such."""
-    url = gpu_orc_url(base_url, gpu_orc.port)
-    body: dict[str, Any] = {"model": model, "reason": reason()}
-    if gpu_orc.model_server is not None:
-        body["model_server"] = gpu_orc.model_server
     try:
-        token = gpu_orc_token(gpu_orc)
-        health = request(f"{url}/health", None, token, HEALTH_SECONDS)
-        answer = request(f"{url}/free", body, token, health["caller_timeout_s"])
-    except urllib.error.HTTPError as error:
-        refusal = error.read().decode(errors="replace").strip()
-        return [f"problem: GPU-Orc at {url} refused to free the cards ({error.code}): {refusal}"]
-    except (OSError, ValueError, http.client.HTTPException, KeyError, TypeError) as error:
+        orc = client(gpu_orc, base_url)
+        result = orc.free_for_model(model, reason(), model_server=gpu_orc.model_server)
+    except (GpuOrcError, OSError) as error:
+        url = gpu_orc_url(base_url, gpu_orc.port)
         return [f"problem: GPU-Orc at {url} did not free the cards for {model}: {error}"]
-    return report(answer, model)
+    return report(result, model)
 
 
-def report(answer: dict[str, Any], model: str) -> list[str]:
-    if answer["already_running"]:
+def report(result: FreeResult, model: str) -> list[str]:
+    if result.already_running:
         return []
     lines = []
-    for action in answer["actions"]:
-        text = f"{action['consumer']} {action['item']}: {action['outcome']}"
-        if action.get("detail"):
-            text += f" ({action['detail']})"
-        lines.append(text if action["outcome"] in FINE_OUTCOMES else f"problem: {text}")
-    if not answer["free"]:
+    for action in result.actions:
+        text = f"{action.consumer} {action.item}: {action.outcome}"
+        if action.detail:
+            text += f" ({action.detail})"
+        lines.append(text if action.outcome in FINE_OUTCOMES else f"problem: {text}")
+    if not result.free:
         lines.append(f"problem: the cards for {model} are not free, it may fail to load")
     return lines
