@@ -56,7 +56,9 @@ def windows_commands(system32: Path) -> dict[PowerAction, list[str]]:
     powershell = system32 / "WindowsPowerShell" / "v1.0" / "powershell.exe"
     return {
         "suspend": [str(powershell), "-NoProfile", "-NonInteractive", "-Command", WINDOWS_SUSPEND],
-        "poweroff": [str(system32 / "shutdown.exe"), "/s", "/t", "0"],
+        # /f: a locked Windows (as after a wake without input) refuses a shutdown without it
+        # ("Der Computer ist gesperrt …" (1271), 18.11.2026); open programs are closed unasked.
+        "poweroff": [str(system32 / "shutdown.exe"), "/s", "/f", "/t", "0"],
     }
 
 

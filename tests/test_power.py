@@ -32,7 +32,8 @@ def test_wsl_switches_windows_and_not_its_own_linux(tmp_path: Path) -> None:
     system32 = tmp_path / "c" / "Windows" / "System32"
     commands = commands_for(WSL_RELEASE, mounts)
     assert commands == windows_commands(system32)
-    assert commands["poweroff"] == [str(system32 / "shutdown.exe"), "/s", "/t", "0"]
+    # A full shutdown (no /hybrid), forced: a locked Windows refuses one without /f (1271).
+    assert commands["poweroff"] == [str(system32 / "shutdown.exe"), "/s", "/f", "/t", "0"]
     suspend = commands["suspend"]
     assert suspend[0] == str(system32 / "WindowsPowerShell" / "v1.0" / "powershell.exe")
     # Standby, not hibernation, and Wake-on-LAN stays allowed (disableWakeEvent false).

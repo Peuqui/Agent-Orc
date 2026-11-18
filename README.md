@@ -407,7 +407,7 @@ check whether agents are still working.
 **Under WSL** the machine is Windows, not the Linux of WSL (`systemctl suspend` there only freezes
 WSL, and Windows runs on). Agent-Orc recognises WSL by its kernel and uses Windows' own programs from
 the C: drive instead: standby through PowerShell (`SetSuspendState('Suspend', …)`, standby and not
-hibernation, Wake-on-LAN stays allowed) and `shutdown.exe /s /t 0`. No polkit rule is needed there.
+hibernation, Wake-on-LAN stays allowed) and `shutdown.exe /s /f /t 0` (a full shutdown; `/f` because a locked Windows, as after a wake without input, refuses one without it, and open programs are closed unasked). No polkit rule is needed there.
 A command still running after 5 s counts as accepted (Windows' standby returns only after waking).
 
 The request comes from a service without a seat or terminal, so polkit must allow it for the

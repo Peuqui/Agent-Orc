@@ -426,7 +426,7 @@ Meldung als Fehler zurück. Ob noch Agenten arbeiten, prüft Agent-Orc nicht.
 **Unter WSL** ist der Rechner Windows, nicht das Linux von WSL (`systemctl suspend` friert dort nur
 WSL ein, Windows läuft weiter). Agent-Orc erkennt WSL am Kernel und nimmt stattdessen die
 Windows-Programme vom Laufwerk C:: Standby über PowerShell (`SetSuspendState('Suspend', …)`, Standby
-und nicht Ruhezustand, Wake-on-LAN bleibt erlaubt) und `shutdown.exe /s /t 0`. Eine polkit-Regel
+und nicht Ruhezustand, Wake-on-LAN bleibt erlaubt) und `shutdown.exe /s /f /t 0` (vollständiges Herunterfahren; `/f`, weil ein gesperrtes Windows, wie nach einem Wecken ohne Eingabe, es sonst verweigert, und offene Programme werden ohne Rückfrage geschlossen). Eine polkit-Regel
 braucht es dort nicht. Läuft ein Befehl nach 5 s noch, gilt er als angenommen (der Standby von
 Windows kehrt erst nach dem Aufwachen zurück).
 
