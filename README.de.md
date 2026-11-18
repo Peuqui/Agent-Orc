@@ -404,6 +404,47 @@ Heimnetzes (beim Laden der Config als IPv4-Adresse geprüft). Der Knopf schickt 
 nur aus der Config; die Anfrage (`POST /api/hosts/<Name>/wake`) enthält keine Adresse und liegt wie
 alles andere hinter dem Login. Das Paket schaltet den Rechner nur ein.
 
+#### Einen Rechner schlafen legen oder herunterfahren
+
+Die Übersicht kann einen anderen Rechner schlafen legen („Schlafen“) oder herunterfahren
+(„Herunterfahren“). Der Rechner, der geschaltet wird, entscheidet in seiner eigenen Config; beides
+ist aus, solange es nicht erlaubt ist:
+
+```yaml
+power:
+  suspend: true
+  poweroff: true
+```
+
+Dieses Agent-Orc fragt jeden erreichbaren anderen Rechner (`GET /api/power` durch den Tunnel), was
+er erlaubt, und zeigt auf dessen Karte nur diese Knöpfe, jeweils nach einer Rückfrage. Auf der
+Karte des eigenen Rechners erscheinen sie nie, und für einen Rechner, der aus ist, auch nicht (er
+bekommt „Wecken“). Der Rechner führt `systemctl suspend` bzw. `systemctl poweroff` aus (feste
+Befehle, nichts aus der Anfrage) und antwortet mit 202; lehnt systemctl sofort ab, kommt dessen
+Meldung als Fehler zurück. Ob noch Agenten arbeiten, prüft Agent-Orc nicht.
+
+Die Anfrage kommt aus einem Dienst ohne Sitzung am Bildschirm, deshalb muss polkit sie für den
+Benutzer des Dienstes erlauben. Als root auf dem Rechner, der geschaltet wird (`mp` durch den
+Benutzer des Dienstes ersetzen), die Datei `/etc/polkit-1/rules.d/50-agent-orc-power.rules` anlegen:
+
+```js
+polkit.addRule(function(action, subject) {
+    var ids = [
+        "org.freedesktop.login1.suspend",
+        "org.freedesktop.login1.suspend-multiple-sessions",
+        "org.freedesktop.login1.power-off",
+        "org.freedesktop.login1.power-off-multiple-sessions"
+    ];
+    if (ids.indexOf(action.id) >= 0 && subject.user == "mp") {
+        return polkit.Result.YES;
+    }
+});
+```
+
+Die `-ignore-inhibit`-Aktionen sind absichtlich nicht freigegeben: Ein Programm mit Sperre
+(Inhibitor, z. B. ein laufender Download oder eine offene Sitzung an der Konsole) hält die Aktion
+weiter auf, und das erscheint als Fehler am Knopf.
+
 #### Ein WSL unter Windows als anderer Rechner
 
 WSL beendet eine Distribution kurz nach dem letzten offenen WSL-Fenster, und weder der SSH-Tunnel

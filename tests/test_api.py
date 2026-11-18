@@ -32,6 +32,7 @@ from agent_orc.config import (
     Config,
     DictationConfig,
     HostConfig,
+    PowerConfig,
     ServerConfig,
     WakeConfig,
     default_config_text,
@@ -50,6 +51,7 @@ from agent_orc.handover import (
 from agent_orc.history import claude_project_dir
 from agent_orc.hosts import HostLink
 from agent_orc.listen import prepare_socket
+from agent_orc.power import POWER_COMMANDS, PowerAction
 from agent_orc.push import agent_message, deliver
 from agent_orc.schedule import mark_limited, read_scheduled
 from agent_orc.sessions import SESSION_ENV, SessionManager
@@ -3838,3 +3840,115 @@ def test_a_card_shows_the_subagents_listed_on_the_agents_screen(
             ["tmux", "-L", socket_name, "send-keys", "-t", f"={session_id}:", "Enter"], check=True
         )
         assert subagents_become(False)
+
+
+class FakeSystemctl:
+    """Stands in for the command runner: nothing is ever switched off by a test."""
+
+    def __init__(self) -> None:
+        self.runs: list[list[str]] = []
+        self.result: tuple[int, str] = (0, "")
+
+    async def __call__(self, argv: list[str]) -> tuple[int, str]:
+        self.runs.append(argv)
+        return self.result
+
+
+@pytest.fixture
+def systemctl(monkeypatch: pytest.MonkeyPatch) -> FakeSystemctl:
+    runner = FakeSystemctl()
+    monkeypatch.setattr("agent_orc.power.run_command", runner)
+    return runner
+
+
+def target(
+    config: Config, clock: FakeClock, power: PowerConfig | None, *, login: bool = True
+) -> TestClient:
+    allowed = config.model_copy(update={"power": power})
+    client = TestClient(
+        create_app(allowed, new_credentials(PASSWORD), static_dir=None, clock=clock)
+    )
+    if login:
+        assert client.post("/api/login", json={"password": PASSWORD}).status_code == 204
+    return client
+
+
+def test_the_permissions_follow_the_config(config: Config, clock: FakeClock) -> None:
+    for power, expected in [
+        (None, {"suspend": False, "poweroff": False}),
+        (PowerConfig(), {"suspend": False, "poweroff": False}),
+        (PowerConfig(suspend=True), {"suspend": True, "poweroff": False}),
+        (PowerConfig(poweroff=True), {"suspend": False, "poweroff": True}),
+        (PowerConfig(suspend=True, poweroff=True), {"suspend": True, "poweroff": True}),
+    ]:
+        with target(config, clock, power) as client:
+            assert client.get("/api/power").json() == expected
+
+
+@pytest.mark.parametrize("action", ["suspend", "poweroff"])
+@pytest.mark.parametrize("power", [None, PowerConfig(), PowerConfig(suspend=True, poweroff=True)])
+def test_an_action_runs_only_where_the_config_allows_it(
+    config: Config,
+    clock: FakeClock,
+    systemctl: FakeSystemctl,
+    action: PowerAction,
+    power: PowerConfig | None,
+) -> None:
+    with target(config, clock, power) as client:
+        response = client.post(f"/api/power/{action}")
+    if power is not None and getattr(power, action):
+        assert response.status_code == 202
+        assert systemctl.runs == [POWER_COMMANDS[action]]
+    else:
+        assert response.status_code == 409
+        assert systemctl.runs == []
+
+
+def test_only_the_allowed_action_runs(
+    config: Config, clock: FakeClock, systemctl: FakeSystemctl
+) -> None:
+    with target(config, clock, PowerConfig(suspend=True)) as client:
+        assert client.post("/api/power/poweroff").status_code == 409
+        assert client.post("/api/power/suspend").status_code == 202
+    assert systemctl.runs == [["systemctl", "--no-ask-password", "suspend"]]
+
+
+def test_the_request_cannot_change_the_command(
+    config: Config, clock: FakeClock, systemctl: FakeSystemctl
+) -> None:
+    with target(config, clock, PowerConfig(suspend=True, poweroff=True)) as client:
+        body = {"argv": ["rm", "-rf", "/"], "action": "poweroff", "command": "reboot"}
+        assert client.post("/api/power/suspend", json=body).status_code == 202
+        assert client.post("/api/power/suspend?command=reboot&argv=x").status_code == 202
+        # Not one of the two actions: never reaches a command.
+        assert client.post("/api/power/reboot").status_code == 422
+        assert client.post("/api/power/suspend --force").status_code in {404, 422}
+    assert systemctl.runs == [POWER_COMMANDS["suspend"]] * 2
+
+
+def test_a_failing_command_answers_with_what_it_said(
+    config: Config, clock: FakeClock, systemctl: FakeSystemctl
+) -> None:
+    systemctl.result = (1, "Call to Suspend failed: Interactive authentication required.")
+    with target(config, clock, PowerConfig(suspend=True)) as client:
+        response = client.post("/api/power/suspend")
+    assert response.status_code == 500
+    assert "Interactive authentication required" in response.json()["detail"]
+
+
+def test_a_failing_command_without_a_message_still_says_so(
+    config: Config, clock: FakeClock, systemctl: FakeSystemctl
+) -> None:
+    systemctl.result = (3, "")
+    with target(config, clock, PowerConfig(poweroff=True)) as client:
+        response = client.post("/api/power/poweroff")
+    assert response.status_code == 500
+    assert "exit code 3" in response.json()["detail"]
+
+
+def test_power_needs_the_login(config: Config, clock: FakeClock, systemctl: FakeSystemctl) -> None:
+    with target(config, clock, PowerConfig(suspend=True, poweroff=True), login=False) as client:
+        assert client.get("/api/power").status_code == 401
+        assert client.post("/api/power/suspend").status_code == 401
+        assert client.post("/api/power/poweroff").status_code == 401
+    assert systemctl.runs == []

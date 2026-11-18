@@ -337,6 +337,13 @@ class HostConfig(StrictModel):
     wake: WakeConfig | None = None
 
 
+class PowerConfig(StrictModel):
+    """What this machine lets another Agent-Orc do to it: put it to sleep, switch it off."""
+
+    suspend: bool = False
+    poweroff: bool = False
+
+
 class TmuxConfig(StrictModel):
     socket_name: str
 
@@ -617,6 +624,8 @@ class Config(StrictModel):
     peers: PeersConfig | None = None
     # Without it there are no other machines. A name is part of the address: /hosts/<name>/.
     hosts: dict[str, HostConfig] | None = None
+    # Without it nobody can put this machine to sleep or switch it off through Agent-Orc.
+    power: PowerConfig | None = None
     # Without it Claude Code runs on Anthropic's service only; see `agent-orc backend`.
     backends: dict[str, BackendConfig] | None = None
     # Without it local sessions talk to llama-swap directly and nothing guards the cards.

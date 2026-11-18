@@ -231,6 +231,14 @@ dictation:
 #     # broadcast address. Wake-on-LAN must be on in the machine's BIOS and network card.
 #     wake: {mac: "aa:bb:cc:dd:ee:ff", broadcast: "192.168.0.255"}
 
+# What another Agent-Orc may do to THIS machine from its overview: put it to sleep ("Schlafen")
+# and switch it off ("Herunterfahren"). Both are off unless allowed here; only this machine
+# decides. The service also needs polkit permission for it (see README, "Putting a machine to
+# sleep or switching it off"). Remove the leading "#" to switch it on.
+# power:
+#   suspend: true
+#   poweroff: true
+
 tmux:
   # Dedicated tmux server socket, so Agent-Orc never touches your own tmux sessions.
   socket_name: agent-orc

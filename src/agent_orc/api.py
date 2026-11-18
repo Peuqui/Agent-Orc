@@ -188,6 +188,7 @@ from agent_orc.notebooks import (
     trash_note,
     trash_notebook,
 )
+from agent_orc.power import PowerAction, PowerCommandError, PowerNotAllowedError, power
 from agent_orc.push import (
     add_subscription,
     agent_message,
@@ -442,6 +443,8 @@ ERROR_STATUS: dict[type[Exception], int] = {
     NotConfiguredError: status.HTTP_404_NOT_FOUND,
     UnknownHostError: status.HTTP_404_NOT_FOUND,
     WakeNotConfiguredError: status.HTTP_409_CONFLICT,
+    PowerNotAllowedError: status.HTTP_409_CONFLICT,
+    PowerCommandError: status.HTTP_500_INTERNAL_SERVER_ERROR,
     UnknownMachineError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     InvalidBaseDirError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     HostUnreachableError: status.HTTP_502_BAD_GATEWAY,
@@ -3087,6 +3090,28 @@ def create_app(
             raise WakeNotConfiguredError(name)
         await asyncio.to_thread(send_magic_packet, wake.mac, wake.broadcast, wake.port)
         logger.info("wake-on-lan: sent to host %s (mac %s)", name, wake.mac)
+
+    def power_allowed() -> dict[PowerAction, bool]:
+        allowed = config.power
+        return {
+            "suspend": allowed is not None and allowed.suspend,
+            "poweroff": allowed is not None and allowed.poweroff,
+        }
+
+    @app.get("/api/power", dependencies=authenticated)
+    def power_permissions() -> dict[PowerAction, bool]:
+        """What this machine's own config lets another Agent-Orc do to it."""
+        return power_allowed()
+
+    @app.post("/api/power/{action}", status_code=status.HTTP_202_ACCEPTED,
+              dependencies=authenticated)  # fmt: skip
+    async def power_this_machine(action: PowerAction) -> None:
+        """Puts this machine to sleep or switches it off, if its config allows. The command is
+        fixed; the request carries nothing. The answer follows the command's own: logind accepts
+        the request first and acts after, so the answer normally leaves before the machine goes."""
+        if not power_allowed()[action]:
+            raise PowerNotAllowedError(action)
+        await power(action)
 
     @app.get("/hosts/{name}", dependencies=authenticated)
     def host_start(name: str) -> RedirectResponse:

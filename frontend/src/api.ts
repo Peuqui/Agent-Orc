@@ -1,6 +1,7 @@
 import { ref } from 'vue'
 import { hostOf, rootOf } from './hostPaths'
 import type { PermissionSuggestion } from './permissionSuggestions'
+import type { PowerAction, PowerPermissions } from './power'
 import { answeredByProxyLogin } from './proxyLogin'
 import { messageSent } from './sentMessage'
 
@@ -661,6 +662,11 @@ function createApi(host?: string | null) {
     hosts: () => request<HostsState>('GET', 'hosts', { fromRoot: true }),
     /** Sends the machine its Wake-on-LAN packet (to the target of the config); it does not wait for the machine. */
     wakeHost: (host: string) => request<void>('POST', `hosts/${encodeURIComponent(host)}/wake`, { fromRoot: true }),
+    /** What the machine's own config lets this one do to it (put it to sleep, switch it off). */
+    hostPower: (host: string) => request<PowerPermissions>('GET', 'power', { host, fromRoot: true }),
+    /** Puts the machine to sleep or switches it off; the machine may be gone before the answer arrives. */
+    powerHost: (host: string, action: PowerAction) =>
+      request<void>('POST', `power/${action}`, { host, fromRoot: true }),
     /** The agents of another machine, as that machine's own app reports them. */
     hostSessions: (host: string) => request<AgentSession[]>('GET', 'sessions', { host, fromRoot: true }),
     /**

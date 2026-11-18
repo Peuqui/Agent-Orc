@@ -386,6 +386,46 @@ address (checked as an IPv4 address when the config loads). The button sends one
 from the config; the request (`POST /api/hosts/<name>/wake`) carries no address and sits behind
 the login like the rest. The packet only switches the machine on.
 
+#### Putting a machine to sleep or switching it off
+
+The overview can put another machine to sleep ("Sleep") or switch it off ("Shut down"). The
+machine that is switched decides, in its own config; both are off unless allowed:
+
+```yaml
+power:
+  suspend: true
+  poweroff: true
+```
+
+This Agent-Orc asks each reachable other machine (`GET /api/power` through the tunnel) what it
+allows and shows only those buttons on its card, each after a confirmation. They never appear on a
+machine's own card, and not for a machine that is off (it gets "Wake" instead). The machine
+runs `systemctl suspend` or `systemctl poweroff` (fixed commands, nothing from the request) and
+answers 202; if systemctl refuses at once, its message comes back as the error. Agent-Orc does not
+check whether agents are still working.
+
+The request comes from a service without a seat or terminal, so polkit must allow it for the
+service's user. As root on the machine that is switched (replace `mp` by the service's user),
+create `/etc/polkit-1/rules.d/50-agent-orc-power.rules`:
+
+```js
+polkit.addRule(function(action, subject) {
+    var ids = [
+        "org.freedesktop.login1.suspend",
+        "org.freedesktop.login1.suspend-multiple-sessions",
+        "org.freedesktop.login1.power-off",
+        "org.freedesktop.login1.power-off-multiple-sessions"
+    ];
+    if (ids.indexOf(action.id) >= 0 && subject.user == "mp") {
+        return polkit.Result.YES;
+    }
+});
+```
+
+The `-ignore-inhibit` actions are deliberately not granted: a program holding an inhibitor lock
+(a running download, an open session on the console) still blocks the action, and that shows as an
+error on the button.
+
 #### A WSL on Windows as the other machine
 
 WSL ends a distribution a short while after its last open WSL window is gone, and neither the
