@@ -48,9 +48,7 @@ def test_the_tunnel_is_opened_again_when_it_ends(
     async def run() -> None:
         task = asyncio.create_task(
             hosts.keep_tunnel_open(
-                "A",
-                tmp_path / "run" / "host-A.sock",
-                HostConfig(ssh=[["x"]], socket=""),
+                HostLink("A", tmp_path / "run" / "host-A.sock", HostConfig(ssh=[["x"]], socket="")),
                 lambda: ended.append(None),
             )
         )
@@ -84,9 +82,11 @@ def test_a_way_that_fails_is_followed_at_once_by_the_next(
     async def run() -> None:
         task = asyncio.create_task(
             hosts.keep_tunnel_open(
-                "A",
-                tmp_path / "run" / "host-A.sock",
-                HostConfig(ssh=[["cable"], ["home"]], socket=""),
+                HostLink(
+                    "A",
+                    tmp_path / "run" / "host-A.sock",
+                    HostConfig(ssh=[["cable"], ["home"]], socket=""),
+                ),
                 lambda: None,
             )
         )
@@ -140,9 +140,7 @@ def test_a_tunnel_that_never_shows_its_socket_is_ended_and_opened_again(
     async def run() -> None:
         task = asyncio.create_task(
             hosts.keep_tunnel_open(
-                "A",
-                tmp_path / "run" / "host-A.sock",
-                HostConfig(ssh=[["x"]], socket=""),
+                HostLink("A", tmp_path / "run" / "host-A.sock", HostConfig(ssh=[["x"]], socket="")),
                 lambda: ended.append(None),
             )
         )
@@ -285,3 +283,101 @@ def test_a_machine_is_in_the_state_its_agent_orc_and_its_port_say(
 
         monkeypatch.setattr("agent_orc.hosts.probe", answers)
         assert asyncio.run(link.state()) == state
+
+
+def stale_link(
+    monkeypatch: pytest.MonkeyPatch, connection: str, up_for: float | None
+) -> HostLink:
+    """A link whose Agent-Orc is silent and whose port says `connection`; its tunnel has been up
+    for `up_for` seconds (None: no tunnel running)."""
+    link = HostLink("Aragon", Path("/nonexistent/host.sock"), HostConfig(ssh=[["x"]], socket="x"))
+    link.tunnel_up_since = None if up_for is None else time.monotonic() - up_for
+
+    async def offline() -> bool:
+        return False
+
+    async def address(_way: list[str]) -> tuple[str, int]:
+        return "10.0.0.2", 2222
+
+    async def answers(_address: str, _port: int) -> str:
+        return connection
+
+    monkeypatch.setattr(link, "is_online", offline)
+    monkeypatch.setattr("agent_orc.hosts.ssh_address", address)
+    monkeypatch.setattr("agent_orc.hosts.probe", answers)
+    return link
+
+
+def test_a_tunnel_that_ssh_keeps_but_the_agent_orc_does_not_answer_through_is_restarted(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    link = stale_link(monkeypatch, "open", up_for=hosts.TUNNEL_SETUP_SECONDS + 5)
+    assert asyncio.run(link.state()) == "service_off"
+    assert link.restart.is_set()
+
+
+def test_a_tunnel_that_is_still_being_set_up_is_not_restarted(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    link = stale_link(monkeypatch, "open", up_for=1.0)
+    assert asyncio.run(link.state()) == "service_off"
+    assert not link.restart.is_set()
+
+
+def test_a_stale_tunnel_is_restarted_once_a_minute_at_most(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    link = stale_link(monkeypatch, "open", up_for=hosts.TUNNEL_SETUP_SECONDS + 5)
+    assert asyncio.run(link.state()) == "service_off"
+    link.restart.clear()  # keep_tunnel_open took the request; the new tunnel is silent as well
+    link.tunnel_up_since = time.monotonic() - hosts.TUNNEL_SETUP_SECONDS - 5
+    assert asyncio.run(link.state()) == "service_off"
+    assert not link.restart.is_set()
+    link._last_restart = time.monotonic() - hosts.STALE_RESTART_PAUSE_SECONDS - 1
+    assert asyncio.run(link.state()) == "service_off"
+    assert link.restart.is_set()
+
+
+@pytest.mark.parametrize("connection", ["refused", "off"])
+def test_a_machine_that_takes_no_ssh_connection_gets_no_restart(
+    monkeypatch: pytest.MonkeyPatch, connection: str
+) -> None:
+    link = stale_link(monkeypatch, connection, up_for=hosts.TUNNEL_SETUP_SECONDS + 5)
+    asyncio.run(link.state())
+    assert not link.restart.is_set()
+
+
+def test_a_restart_ends_ssh_and_opens_the_tunnel_again_without_a_pause(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    starts = tmp_path / "starts"
+    # Stands in for an ssh that holds the tunnel: notes the start, then waits.
+    monkeypatch.setattr(
+        hosts, "tunnel_command", lambda *_: ["sh", "-c", f"echo x >> {starts}; exec sleep 30"]
+    )
+    # A pause would keep the second start away for the whole test.
+    monkeypatch.setattr(hosts, "RECONNECT_FIRST_SECONDS", 30.0)
+    link = HostLink("A", tmp_path / "run" / "host-A.sock", HostConfig(ssh=[["x"]], socket=""))
+    ended: list[None] = []
+
+    async def starts_count() -> int:
+        return len(starts.read_text().splitlines()) if starts.exists() else 0
+
+    async def run() -> None:
+        task = asyncio.create_task(hosts.keep_tunnel_open(link, lambda: ended.append(None)))
+        for _ in range(100):
+            await asyncio.sleep(0.05)
+            if await starts_count() == 1 and link.tunnel_up_since is not None:
+                break
+        link.restart.set()
+        for _ in range(100):
+            await asyncio.sleep(0.05)
+            if await starts_count() == 2:
+                break
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+
+    asyncio.run(run())
+    assert len(starts.read_text().splitlines()) == 2
+    assert len(ended) == 1

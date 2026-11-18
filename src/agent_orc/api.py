@@ -1671,10 +1671,8 @@ def create_app(
         mirror = asyncio.create_task(mirror_settings())
         catalogs = asyncio.create_task(exchange_catalogs())
         tunnels = [
-            asyncio.create_task(
-                keep_tunnel_open(name, host_links[name].local_socket, host, look_at_hosts.set)
-            )
-            for name, host in (config.hosts or {}).items()
+            asyncio.create_task(keep_tunnel_open(host_links[name], look_at_hosts.set))
+            for name in host_links
         ]
         yield
         watcher.cancel()

@@ -40,6 +40,11 @@ ALIVE_INTERVAL_SECONDS = 15
 # connection but never answers keeps it for ever): the local socket must show within this time.
 TUNNEL_SETUP_SECONDS = 20.0
 TUNNEL_SETUP_POLL_SECONDS = 0.2
+# A tunnel that ssh keeps but whose Agent-Orc stays silent while the machine takes SSH connections
+# is stale (the machine slept and woke up; ssh notices only after three missed alive messages).
+# It is ended at once, but not within the setup time of a new one, and not more often than this
+# (a machine whose Agent-Orc is really off would otherwise get a new tunnel at every look).
+STALE_RESTART_PAUSE_SECONDS = 60.0
 CONNECT_TIMEOUT_SECONDS = 5
 # ssh gives up on a way that does not answer after this long, so the next way is tried soon.
 SSH_CONNECT_TIMEOUT_SECONDS = 5
@@ -137,16 +142,32 @@ async def end_unless_listening(process: asyncio.subprocess.Process, local_socket
     process.terminate()
 
 
-async def keep_tunnel_open(
-    name: str, local_socket: Path, config: HostConfig, on_ended: Callable[[], None]
-) -> None:
+async def run_tunnel(link: "HostLink", process: asyncio.subprocess.Process) -> bytes:
+    """Waits for the tunnel's ssh to end; returns what it wrote to stderr. If the link asks for a
+    restart meanwhile (see HostLink.restart_if_stale), ssh is ended."""
+    ended = asyncio.create_task(process.communicate())
+    restart = asyncio.create_task(link.restart.wait())
+    try:
+        await asyncio.wait({ended, restart}, return_when=asyncio.FIRST_COMPLETED)
+        if restart.done():
+            process.terminate()
+        _, errors = await ended
+        return errors
+    finally:
+        restart.cancel()
+        ended.cancel()
+
+
+async def keep_tunnel_open(link: "HostLink", on_ended: Callable[[], None]) -> None:
     """Runs the tunnel to the machine, and again whenever it ends, until cancelled. `on_ended` is
     called each time it ended: the machine may be gone, which is worth looking at at once.
 
     The ways to it are tried in their order: one that fails is followed at once by the next; once
     all have failed, the first is tried again after a pause. A tunnel that held a while starts
-    again from the first way (the cable may be back)."""
-    commands = [tunnel_command(local_socket, config.socket, way) for way in config.ssh]
+    again from the first way (the cable may be back). A tunnel the link ended as stale is followed
+    at once by the first way, without a pause."""
+    name, local_socket = link.name, link.local_socket
+    commands = [tunnel_command(local_socket, link.config.socket, way) for way in link.config.ssh]
     delay = RECONNECT_FIRST_SECONDS
     for command in commands:
         for orphan in end_orphan_tunnels(command):
@@ -159,6 +180,7 @@ async def keep_tunnel_open(
             logger.error("host %s: %s", name, error)
             return
         started = time.monotonic()
+        link.restart.clear()
         try:
             process = await asyncio.create_subprocess_exec(
                 *commands[way],
@@ -169,10 +191,12 @@ async def keep_tunnel_open(
         except OSError as error:
             logger.error("host %s: ssh does not start: %s", name, error)
         else:
+            link.tunnel_up_since = started
             setup_watch = asyncio.create_task(end_unless_listening(process, local_socket))
             try:
-                _, errors = await process.communicate()
+                errors = await run_tunnel(link, process)
             finally:
+                link.tunnel_up_since = None
                 setup_watch.cancel()
                 if process.returncode is None:
                     process.terminate()
@@ -184,6 +208,10 @@ async def keep_tunnel_open(
                 errors.decode(errors="replace").strip(),
             )
             on_ended()
+            if link.restart.is_set():
+                delay = RECONNECT_FIRST_SECONDS
+                way = 0
+                continue  # a stale tunnel: the machine is there, so the first way at once
         if time.monotonic() - started > RECONNECT_LAST_SECONDS:
             delay = RECONNECT_FIRST_SECONDS  # it held for a while: begin again quickly
             way = 0
@@ -250,6 +278,11 @@ class HostLink:
         self.config = config
         self._addresses: list[tuple[str, int]] | None = None
         self._session: aiohttp.ClientSession | None = None
+        # Set by keep_tunnel_open while its ssh runs (time.monotonic of the start).
+        self.tunnel_up_since: float | None = None
+        # Set to have keep_tunnel_open end the running ssh and open the tunnel again at once.
+        self.restart = asyncio.Event()
+        self._last_restart: float | None = None
 
     def session(self) -> aiohttp.ClientSession:
         # Made on first use, inside the running loop. A connection is not kept after its request:
@@ -280,10 +313,30 @@ class HostLink:
         # The machine is as near as its nearest way.
         found = {await probe(*address) for address in self._addresses}
         if "open" in found:
+            self.restart_if_stale()
             return "service_off"
         if "refused" in found:
             return "ssh_down"
         return "off"
+
+    def restart_if_stale(self) -> None:
+        """Called when the machine takes SSH connections but its Agent-Orc is silent: a tunnel that
+        has been up longer than it needs to be set up, and that was not restarted for this reason
+        just now, is stale and is ended (keep_tunnel_open opens it again)."""
+        now = time.monotonic()
+        if self.tunnel_up_since is None or now - self.tunnel_up_since < TUNNEL_SETUP_SECONDS:
+            return
+        recently = self._last_restart is not None and (
+            now - self._last_restart < STALE_RESTART_PAUSE_SECONDS
+        )
+        if recently:
+            return
+        logger.warning(
+            "host %s: tunnel stale (ssh answers, Agent-Orc does not through it), restarting",
+            self.name,
+        )
+        self._last_restart = now
+        self.restart.set()
 
     async def outbox(self, after: int | None) -> tuple[int, list[dict[str, Any]]]:
         """The agents' messages the machine left since `after` (a time of its clock), and the
