@@ -595,7 +595,8 @@ class CardGateConfig(StrictModel):
 
     # Listens on 127.0.0.1 only; nginx does not forward it, Claude Code talks to it directly.
     port: int
-    # The answer to a turned-away request; {reason} and {since} are the hold's (from GPU-Orc).
+    # The answer to a turned-away request; {reason}, {since} and {state} ("requested" or "active")
+    # are the hold's (from GPU-Orc).
     refusal: str
     # Typed into a turned-away session once the cards are free again.
     resume_prompt: str

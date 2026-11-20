@@ -34,7 +34,7 @@ from agent_orc.backends import (
 )
 from agent_orc.config import BackendConfig, BackendModelConfig, CardGateConfig
 from agent_orc.gate_token import token_session
-from agent_orc.gpu_orc_client import FreeAction, FreeResult, GpuOrcError, TrafficLight
+from agent_orc.gpu_orc_client import FreeAction, FreeResult, GpuOrcError, Hold, TrafficLight
 
 TODAY = date(2026, 10, 11)
 
@@ -525,7 +525,8 @@ GATE = CardGateConfig(
     resume_prompt="go on",
     check_seconds=30,
 )
-HOLD = {"since": "2026-11-14T20:55", "reason": "vllm-research measures"}
+HOLD = Hold("vllm-research", "vllm-research measures", "2026-11-14T20:55", "active", None)
+REQUESTED = Hold("vllm-research", "vllm-research measures", "2026-11-14T20:55", "requested", None)
 RUNNING_URL = "http://one/running"
 
 
@@ -536,10 +537,12 @@ class GpuOrcDouble:
     def __init__(
         self,
         monkeypatch: pytest.MonkeyPatch,
-        hold: dict[str, str] | None = None,
+        hold: Hold | None = None,
         down: bool = False,
+        requested: Hold | None = None,
     ) -> None:
         self.hold = hold
+        self.requested = requested
         self.down = down
         self.asked: list[str] = []
         self.freed: list[str] = []  # the models GPU-Orc was asked to free the cards for
@@ -554,7 +557,7 @@ class GpuOrcDouble:
         self.asked.append(f"{self.url}/loading")
         if self.down:
             raise GpuOrcError("GPU-Orc not reachable")
-        return TrafficLight((), self.hold)
+        return TrafficLight((), self.hold, self.requested)
 
     def free_for_model(
         self, model: str, reason: str, keep: Sequence[str] = (), model_server: str | None = None
@@ -582,7 +585,9 @@ def test_a_hold_stops_the_start_before_anything_is_freed_or_loaded(
     gpu_orc = GpuOrcDouble(monkeypatch, HOLD)
     fetch = listing_fetch()
     # Not the gate's refusal, which promises to wake a session: the start leaves none.
-    with pytest.raises(BackendError, match="the cards are held: vllm-research measures"):
+    with pytest.raises(
+        BackendError, match=r"the cards are held \(active\): vllm-research measures"
+    ):
         prepare_launch(
             "local",
             backend(gpu_orc={"port": 5070}),
@@ -601,7 +606,9 @@ def test_a_hold_without_the_gate_config_stops_the_start_in_plain_words(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     GpuOrcDouble(monkeypatch, HOLD)
-    with pytest.raises(BackendError, match="the cards are held: vllm-research measures"):
+    with pytest.raises(
+        BackendError, match=r"the cards are held \(active\): vllm-research measures"
+    ):
         prepare_launch(
             "local",
             backend(gpu_orc={"port": 5070}),
@@ -610,6 +617,24 @@ def test_a_hold_without_the_gate_config_stops_the_start_in_plain_words(
             [],
             TODAY,
             listing_fetch(),
+        )
+
+
+def test_a_requested_hold_stops_the_start_too(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Agent-Orc reports no work: GPU-Orc would clear the model once the work it waits for ends.
+    GpuOrcDouble(monkeypatch, requested=REQUESTED)
+    with pytest.raises(
+        BackendError, match=r"the cards are held \(requested\): vllm-research measures"
+    ):
+        prepare_launch(
+            "local",
+            backend(gpu_orc={"port": 5070}),
+            "Qwen-27B-vllm",
+            None,
+            [],
+            TODAY,
+            listing_fetch(),
+            GATE,
         )
 
 

@@ -25,7 +25,13 @@ from agent_orc.gate_token import session_token
 BACKEND_KEY = "backend-secret"
 SESSION = "horarium-a1b2c3"
 MODEL = "glm-x"
-HOLD = {"since": "2026-11-14T20:55:00+01:00", "reason": "vllm-research Messung"}
+HOLD = {
+    "owner": "vllm-research",
+    "reason": "vllm-research Messung",
+    "since": "2026-11-14T20:55:00+01:00",
+    "state": "active",
+    "free": None,
+}
 MESSAGE = {"model": MODEL, "messages": [{"role": "user", "content": "hi"}]}
 
 
@@ -52,7 +58,8 @@ class Fake:
     """llama-swap and GPU-Orc as far as the gate asks them."""
 
     running: list[dict[str, str]] = field(default_factory=list)
-    held: dict[str, str] | None = None
+    held: dict[str, Any] | None = None
+    hold_requested: dict[str, Any] | None = None
     seen: list[web.Request] = field(default_factory=list)
     messages: int = 0
 
@@ -96,7 +103,12 @@ def llama_swap_app(fake: Fake) -> web.Application:
 
 def gpu_orc_app(fake: Fake) -> web.Application:
     async def loading(request: web.Request) -> web.Response:
-        return web.json_response({"loading": [], "held": fake.held})
+        answer: dict[str, Any] = {
+            "loading": [],
+            "held": fake.held,
+            "hold_requested": fake.hold_requested,
+        }
+        return web.json_response(answer)
 
     app = web.Application()
     app.router.add_get("/loading", loading)
@@ -116,7 +128,7 @@ def gate_config(llama_swap_port: int, gpu_orc_port: int | None, gate_port: int) 
     }
     raw["card_gate"] = {
         "port": gate_port,
-        "refusal": "Karten gehalten: {reason} (seit {since}).",
+        "refusal": "Karten gehalten ({state}): {reason} (seit {since}).",
         "resume_prompt": "weiter",
         "check_seconds": 30,
     }
@@ -219,7 +231,8 @@ def test_a_model_that_does_not_run_under_a_hold_is_turned_away_and_remembered() 
         assert body["type"] == "error"
         assert body["error"]["type"] == "overloaded_error"
         assert (
-            body["error"]["message"] == f"Karten gehalten: {HOLD['reason']} (seit {HOLD['since']})."
+            body["error"]["message"]
+            == f"Karten gehalten (active): {HOLD['reason']} (seit {HOLD['since']})."
         )
         assert fake.messages == 0
         waiting = turned.waiting()
@@ -227,6 +240,24 @@ def test_a_model_that_does_not_run_under_a_hold_is_turned_away_and_remembered() 
         assert (waiting[SESSION].backend, waiting[SESSION].reason) == ("local", HOLD["reason"])
         turned.clear(SESSION)
         assert turned.waiting() == {}
+
+    run_gate(scenario)
+
+
+def test_a_requested_hold_turns_the_request_away_as_well() -> None:
+    async def scenario(
+        base: str, fake: Fake, turned: TurnedAway, client: aiohttp.ClientSession
+    ) -> None:
+        fake.running = [{"model": "other", "state": "ready"}]
+        fake.hold_requested = {**HOLD, "state": "requested"}
+        async with client.post(f"{base}/v1/messages", json=MESSAGE, headers=api_key()) as answer:
+            assert answer.status == 503
+            body = await answer.json()
+        assert body["error"]["message"] == (
+            f"Karten gehalten (requested): {HOLD['reason']} (seit {HOLD['since']})."
+        )
+        assert fake.messages == 0
+        assert list(turned.waiting()) == [SESSION]
 
     run_gate(scenario)
 

@@ -551,8 +551,9 @@ asks GPU-Orc nothing. The protocol is `src/agent_orc/gpu_orc_client.py`, a copy 
 client (edit it in GPU-Orc, never here; `gpuorc.py` is Agent-Orc's thin side of it).
 
 A hold of GPU-Orc (somebody keeps the cards) stops the start of a local session whose model is not
-loaded yet, with the reason. With `card_gate` in the config (port, `refusal`, `resume_prompt`,
-`check_seconds`) the sessions Agent-Orc starts on a backend with `gpu_orc` talk to a gate on
+loaded yet, with the reason; a hold only requested does too, since Agent-Orc reports no work and
+GPU-Orc would clear a model loaded now in the middle of the session. With `card_gate` in the config (port, `refusal`, `resume_prompt`,
+`check_seconds`; `refusal` knows `{reason}`, `{since}` and `{state}`) the sessions Agent-Orc starts on a backend with `gpu_orc` talk to a gate on
 127.0.0.1 instead of the server: each with a mark of its own as its key, which the gate checks. A
 request whose model is not loaded is turned away while the cards are held (or while GPU-Orc does not
 answer), with `refusal` as the reason; this covers what bypasses the hooks, such as a session woken by

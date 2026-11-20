@@ -41,6 +41,7 @@ from agent_orc.config import (
 from agent_orc.context import begin_compaction, end_compaction, store_activity, store_status
 from agent_orc.effort import agent_settings_file, write_agent_settings
 from agent_orc.events import ChangeNotifier
+from agent_orc.gpu_orc_client import Hold
 from agent_orc.handover import (
     HandoverSwitches,
     read_state,
@@ -2411,7 +2412,9 @@ def test_agent_stopped_by_its_limit_resumes_after_the_reset(
         assert read_scheduled() == []
 
 
-CARD_HOLD = {"since": "2026-11-14T20:55:00+01:00", "reason": "vllm-research Messung"}
+CARD_HOLD = Hold(
+    "vllm-research", "vllm-research Messung", "2026-11-14T20:55:00+01:00", "active", None
+)
 
 
 def card_gate_app(config: Config, clock: FakeClock, hold: dict[str, Any]) -> TestClient:
@@ -2441,7 +2444,7 @@ def fake_gpu_orc(monkeypatch: pytest.MonkeyPatch, hold: dict[str, Any]) -> list[
     """Replace the hold query; the list counts the questions."""
     asked: list[int] = []
 
-    def held(*_: Any) -> dict[str, str] | None:
+    def held(*_: Any) -> Hold | None:
         asked.append(1)
         return hold["hold"]  # type: ignore[no-any-return]
 
@@ -2462,10 +2465,10 @@ def test_a_session_turned_away_by_the_gate_waits_on_its_card_and_is_woken_after_
         session_id = start_shell(client, home / "projects" / "a")
         assert wait_for_text(client, session_id, "READY")
         assert client.get("/api/sessions").json()[0]["waiting_for_cards"] is None
-        client.app.state.turned_away.add(session_id, "local", CARD_HOLD["reason"])  # type: ignore[attr-defined]
+        client.app.state.turned_away.add(session_id, "local", CARD_HOLD.reason)  # type: ignore[attr-defined]
         # (a) the card says what it waits for
         waiting = client.get("/api/sessions").json()[0]["waiting_for_cards"]
-        assert waiting["reason"] == CARD_HOLD["reason"]
+        assert waiting["reason"] == CARD_HOLD.reason
         assert waiting["since"]
 
         # (b) while the hold lasts, GPU-Orc is asked and nothing is typed

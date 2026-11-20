@@ -578,8 +578,9 @@ gehen weiter. Ein Backend ohne `gpu_orc` fragt GPU-Orc nichts. Das Protokoll ste
 hier; `gpuorc.py` ist Agent-Orcs dünner Anschluss daran).
 
 Ein Hold von GPU-Orc (jemand hält die Karten fest) verhindert den Start einer lokalen Sitzung, deren
-Modell noch nicht geladen ist, mit Grund. Mit `card_gate` in der Config (Port, `refusal`,
-`resume_prompt`, `check_seconds`) sprechen die Sitzungen, die Agent-Orc auf einem Backend mit
+Modell noch nicht geladen ist, mit Grund; schon ein nur angeforderter Hold, denn Agent-Orc meldet
+keine Arbeit, und GPU-Orc räumte ein jetzt geladenes Modell mitten in der Sitzung ab. Mit `card_gate` in der Config (Port, `refusal`,
+`resume_prompt`, `check_seconds`; `refusal` kennt `{reason}`, `{since}` und `{state}`) sprechen die Sitzungen, die Agent-Orc auf einem Backend mit
 `gpu_orc` startet, statt mit dem Server mit einem Tor auf 127.0.0.1: jede mit einem eigenen Zeichen
 als Schlüssel, das das Tor prüft. Eine Anfrage, deren Modell nicht geladen ist, weist es ab, solange
 die Karten gehalten sind (oder GPU-Orc nicht antwortet), mit `refusal` als Grund; das erfasst auch,

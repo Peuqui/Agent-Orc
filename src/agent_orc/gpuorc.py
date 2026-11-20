@@ -18,7 +18,7 @@ import urllib.parse
 from pathlib import Path
 
 from agent_orc.config import GpuOrcConfig
-from agent_orc.gpu_orc_client import FINE_OUTCOMES, FreeResult, GpuOrc, GpuOrcError
+from agent_orc.gpu_orc_client import FINE_OUTCOMES, FreeResult, GpuOrc, GpuOrcError, Hold
 
 
 def gpu_orc_url(base_url: str, port: int) -> str:
@@ -36,11 +36,15 @@ def client(gpu_orc: GpuOrcConfig, base_url: str) -> GpuOrc:
     return GpuOrc(gpu_orc_url(base_url, gpu_orc.port), gpu_orc_token(gpu_orc))
 
 
-def held(gpu_orc: GpuOrcConfig, base_url: str) -> dict[str, str] | None:
-    """GPU-Orc's hold of the cards ({"since", "reason"}), None when there is none. Raises
-    GpuOrcError (or OSError for the token file) when GPU-Orc cannot be asked (the caller decides
-    what that means; see card_gate.hold_of for the gate's way)."""
-    return client(gpu_orc, base_url).loading().held
+def held(gpu_orc: GpuOrcConfig, base_url: str) -> Hold | None:
+    """GPU-Orc's hold of the cards, active or only requested; None when there is none. A requested
+    hold counts as well: Agent-Orc reports no work, so nothing of its keeps the hold back, and
+    GPU-Orc would clear a model loaded now as soon as the work it waits for ends, in the middle of
+    a session.
+    Raises GpuOrcError (or OSError for the token file) when GPU-Orc cannot be asked (the caller
+    decides what that means; see card_gate.hold_of for the gate's way)."""
+    light = client(gpu_orc, base_url).loading()
+    return light.held or light.hold_requested
 
 
 def reason() -> str:

@@ -34,7 +34,7 @@ from agent_orc.backends import (
 from agent_orc.config import BackendConfig, Config
 from agent_orc.events import SHUTDOWN_GRACE_SECONDS
 from agent_orc.gate_token import token_session
-from agent_orc.gpu_orc_client import GpuOrcError
+from agent_orc.gpu_orc_client import GpuOrcError, Hold
 from agent_orc.gpuorc import held
 from agent_orc.hosts import chunks, request_headers, response_headers
 
@@ -132,7 +132,7 @@ async def model_runs(
         return False
 
 
-async def hold_of(backend: BackendConfig, base_url: str) -> dict[str, str] | None:
+async def hold_of(backend: BackendConfig, base_url: str) -> Hold | None:
     """GPU-Orc's hold of the cards, None when there is none. Raises GpuOrcSilentError when GPU-Orc
     does not answer: without knowing, nothing may be loaded."""
     assert backend.gpu_orc is not None
@@ -192,10 +192,12 @@ def create_gate_app(config: Config, turned_away: TurnedAway) -> FastAPI:
             return error_response(503, "overloaded_error", reason)
         if hold is None:
             return None
-        turned_away.add(session_id, name, hold["reason"])
-        logger.info("card gate: %s turned away for %s: held: %s", session_id, model, hold["reason"])
+        turned_away.add(session_id, name, hold.reason)
+        logger.info("card gate: %s turned away for %s: held: %s", session_id, model, hold.reason)
         return error_response(
-            503, "overloaded_error", gate.refusal.format(reason=hold["reason"], since=hold["since"])
+            503,
+            "overloaded_error",
+            gate.refusal.format(reason=hold.reason, since=hold.since, state=hold.state),
         )
 
     @app.api_route("/{backend}/{path:path}", methods=METHODS)

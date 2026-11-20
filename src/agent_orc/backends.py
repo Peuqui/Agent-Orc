@@ -239,7 +239,7 @@ def refuse_under_hold(
     if hold is None:
         return
     raise BackendError(
-        f"the cards are held: {hold['reason']} (since {hold['since']}); "
+        f"the cards are held ({hold.state}): {hold.reason} (since {hold.since}); "
         f"{backend.label} would load {model!r} onto them"
     )
 
