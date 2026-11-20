@@ -551,8 +551,8 @@ asks GPU-Orc nothing. The protocol is `src/agent_orc/gpu_orc_client.py`, a copy 
 client (edit it in GPU-Orc, never here; `gpuorc.py` is Agent-Orc's thin side of it).
 
 A hold of GPU-Orc (somebody keeps the cards) stops the start of a local session whose model is not
-loaded yet, with the reason; a hold only requested does too, since Agent-Orc reports no work and
-GPU-Orc would clear a model loaded now in the middle of the session. With `card_gate` in the config (port, `refusal`, `resume_prompt`,
+loaded yet, with the reason; a hold only requested does too, since GPU-Orc would clear a model loaded now
+in the middle of the session once a person grants the hold and no session works. With `card_gate` in the config (port, `refusal`, `resume_prompt`,
 `check_seconds`; `refusal` knows `{reason}`, `{since}` and `{state}`) the sessions Agent-Orc starts on a backend with `gpu_orc` talk to a gate on
 127.0.0.1 instead of the server: each with a mark of its own as its key, which the gate checks. A
 request whose model is not loaded is turned away while the cards are held (or while GPU-Orc does not
@@ -569,6 +569,18 @@ button "Hand over the cards": it tells GPU-Orc that a person lets the owner have
 hold of another owner, is shown as the error). The name GPU-Orc is told as the one who handed them
 over is `gpu_orc_grant_by` in the config (default `agent-orc`; the login knows no user name). "Later" folds the banner into a
 small notice in this browser only.
+
+So that a click on "Hand over the cards" does not break off an answer that is running, Agent-Orc
+tells every GPU-Orc of its backends while a running session on one of them works (`POST /work`; one
+report per GPU-Orc however many backends name it), and ends the report when the last of them rests.
+GPU-Orc clears a handed-over hold only once no work of anybody else is reported. A session turned away by
+the card gate and waiting for the cards does not count: GPU-Orc would wait for it and it for the hold. Which
+backend a session works on is the one its profile starts (`agent-orc backend run <name>` in `start`). The
+report is renewed every `gpu_orc_work_poll_seconds` (default 15) and ends by itself after
+`gpu_orc_work_ttl_seconds` (default 60) without renewal; its name is
+`agent-orc@<host name>`, so that Agent-Orcs on several machines never end each other's report). A
+GPU-Orc that does not answer is logged once, not on every poll. Without a backend with `gpu_orc`
+nothing is reported.
 
 ```yaml
 backends:

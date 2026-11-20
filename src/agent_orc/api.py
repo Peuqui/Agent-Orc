@@ -270,6 +270,7 @@ from agent_orc.voicelog import (
     store_recording,
 )
 from agent_orc.wake import WakeNotConfiguredError, send_magic_packet
+from agent_orc.work_report import WorkReporter
 from agent_orc.worktrees import (
     InvalidBranchError,
     WorktreeError,
@@ -1669,6 +1670,12 @@ def create_app(
     }
 
     gate_server = create_gate_server(config, turned_away) if config.card_gate else None
+    # Only for a machine whose backends name a GPU-Orc: there is nobody to report to otherwise.
+    work_reporter = (
+        WorkReporter(config, fetch_json, sessions.list, lambda: turned_away.waiting().keys())
+        if any(b.gpu_orc is not None for b in (config.backends or {}).values())
+        else None
+    )
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
@@ -1679,6 +1686,7 @@ def create_app(
         relay = asyncio.create_task(relay_host_messages())
         mirror = asyncio.create_task(mirror_settings())
         catalogs = asyncio.create_task(exchange_catalogs())
+        work = asyncio.create_task(work_reporter.run()) if work_reporter else None
         tunnels = [
             asyncio.create_task(keep_tunnel_open(host_links[name], look_at_hosts.set))
             for name in host_links
@@ -1692,6 +1700,10 @@ def create_app(
         catalogs.cancel()
         for tunnel in tunnels:
             tunnel.cancel()
+        if work is not None:
+            # Awaited: it ends the leases at GPU-Orc on its way out.
+            work.cancel()
+            await asyncio.gather(work, return_exceptions=True)
         await asyncio.gather(*tunnels, return_exceptions=True)
         for link in host_links.values():
             await link.close()

@@ -219,6 +219,13 @@ dictation:
 # "Hand over the cards" in the banner that shows the holds of the GPU-Orcs of `backends`.
 # gpu_orc_grant_by: agent-orc
 
+# While a running session on a backend with GPU-Orc works, Agent-Orc reports that work to it, so that
+# a hold you handed the cards waits for the answer. Renewed this often (seconds), and GPU-Orc ends
+# the report by itself after ttl seconds without renewal. The report's name is
+# agent-orc@<host name>.
+# gpu_orc_work_poll_seconds: 15
+# gpu_orc_work_ttl_seconds: 60
+
 # Other machines that run an Agent-Orc of their own (set up there with a socket instead of a port,
 # `agent-orc setup`; update them with deploy/deploy.sh). This one keeps an SSH tunnel to each and
 # shows its app below /hosts/<name>/, so its agents appear next to this machine's own.

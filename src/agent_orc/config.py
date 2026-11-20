@@ -634,6 +634,12 @@ class Config(StrictModel):
     # Who GPU-Orc is told has handed a requested hold the cards ("Hand over the cards" on the page);
     # the login knows no user name.
     gpu_orc_grant_by: str = "agent-orc"
+    # Agent-Orc tells the GPU-Orc of its backends while a session on them works (POST /work), so
+    # that a hold handed over by a click waits for the answer. The lease is renewed every
+    # poll_seconds and ends by itself after ttl_seconds without renewal (a crash holds nothing
+    # back).
+    gpu_orc_work_poll_seconds: float = 15
+    gpu_orc_work_ttl_seconds: float = 60
     tmux: TmuxConfig
     agents: dict[str, AgentProfile]
 

@@ -38,9 +38,8 @@ def client(gpu_orc: GpuOrcConfig, base_url: str) -> GpuOrc:
 
 def held(gpu_orc: GpuOrcConfig, base_url: str) -> Hold | None:
     """GPU-Orc's hold of the cards, active or only requested; None when there is none. A requested
-    hold counts as well: Agent-Orc reports no work, so nothing of its keeps the hold back, and
-    GPU-Orc would clear a model loaded now as soon as the work it waits for ends, in the middle of
-    a session.
+    hold counts as well: once a person grants it, GPU-Orc clears a model loaded now as soon as no
+    session works (work_report.py), in the middle of a session that rests.
     Raises GpuOrcError (or OSError for the token file) when GPU-Orc cannot be asked (the caller
     decides what that means; see card_gate.hold_of for the gate's way)."""
     light = client(gpu_orc, base_url).loading()

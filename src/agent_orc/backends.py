@@ -23,6 +23,7 @@ from agent_orc.catalog import CatalogBackend, CatalogModel, read_catalog
 from agent_orc.config import (
     KEY_VARIABLES,
     LEVELS,
+    AgentProfile,
     BackendConfig,
     BackendModelConfig,
     CardGateConfig,
@@ -43,6 +44,8 @@ EFFORT_VARIABLE = "AGENT_ORC_EFFORT"
 DISABLE_BETAS_VARIABLE = "CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS"
 # What a start tells the hooks of its session: which backend, where it is and which model runs.
 BACKEND_VARIABLE = "AGENT_ORC_BACKEND"
+# The arguments of a profile's start command that precede the backend's name.
+BACKEND_RUN = ["backend", "run"]
 BASE_URL_VARIABLE = "AGENT_ORC_BACKEND_URL"
 MODEL_VARIABLE = "AGENT_ORC_BACKEND_MODEL"
 # Where Claude Code takes the model's context length from.
@@ -294,6 +297,16 @@ def level_arguments(levels: Sequence[str], wanted: str | None) -> list[str]:
     if not levels:
         return []
     return ["--effort", translate_level(wanted or DEFAULT_LEVEL, levels)]
+
+
+def backend_of_profile(profile: AgentProfile) -> str | None:
+    """The backend a profile starts Claude Code on: the name its start command gives to
+    `agent-orc backend run <name>` (see claude_backend_profile.yaml); None for any other profile."""
+    start = profile.start
+    for position in range(len(start) - len(BACKEND_RUN)):
+        if start[position : position + len(BACKEND_RUN)] == BACKEND_RUN:
+            return start[position + len(BACKEND_RUN)]
+    return None
 
 
 def backend_named(config: Config, name: str) -> BackendConfig:
