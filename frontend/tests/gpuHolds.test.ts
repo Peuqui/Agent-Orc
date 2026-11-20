@@ -29,6 +29,8 @@ test('a requested hold nobody handed over can be handed the cards, with no reaso
     stateKey: 'gpuHold.state.requested',
     canGrant: true,
     blockedKey: null,
+    shortKey: 'gpuHold.short.requested',
+    pulses: true,
   })
 })
 
@@ -37,6 +39,8 @@ test('a requested hold already handed over says so and the button is blocked wit
     stateKey: 'gpuHold.state.granted',
     canGrant: false,
     blockedKey: 'gpuHold.blocked.granted',
+    shortKey: 'gpuHold.short.granted',
+    pulses: false,
   })
 })
 
@@ -45,6 +49,8 @@ test('an active hold cannot be handed anything, the reason is told', () => {
     stateKey: 'gpuHold.state.active',
     canGrant: false,
     blockedKey: 'gpuHold.blocked.active',
+    shortKey: 'gpuHold.short.active',
+    pulses: false,
   })
   assert.equal(holdView({ ...requested, state: 'active', granted_by: 'Peuqui' }).canGrant, false)
 })
@@ -75,4 +81,11 @@ test('a storage that throws is nothing folded and does not break folding', () =>
   assert.equal(isFolded('x', requested, broken), false)
   setFolded('x', requested, true, broken)
   setFolded('x', requested, false, broken)
+})
+
+test('the folded chip pulses only while a decision is open, not when effective and not when handed over', () => {
+  assert.equal(holdView(requested).pulses, true)
+  assert.equal(holdView({ ...requested, state: 'active' }).pulses, false)
+  assert.equal(holdView({ ...requested, state: 'active', granted_by: 'Peuqui' }).pulses, false)
+  assert.equal(holdView({ ...requested, granted_by: 'Peuqui' }).pulses, false)
 })

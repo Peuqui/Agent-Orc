@@ -20,6 +20,7 @@ import {
 } from '../columns'
 import AddColumnMenu from '../components/AddColumnMenu.vue'
 import AppIcon from '../components/AppIcon.vue'
+import GpuHoldChips from '../components/GpuHoldChips.vue'
 import SpeakerIcon from '../components/SpeakerIcon.vue'
 import ColumnCountControl from '../components/ColumnCountControl.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
@@ -474,6 +475,7 @@ function deleteThis(): void {
              row is short of it, the panel and the buttons wrap as a whole instead of overlapping. -->
         <QuotaPanel v-if="!phone" class="min-w-36 flex-1 sm:px-3" />
         <div class="ml-auto flex shrink-0 items-center gap-1">
+          <GpuHoldChips />
           <AddColumnMenu :candidates="candidates" @open="open" />
           <ColumnCountControl
             v-if="!phone"

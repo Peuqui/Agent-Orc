@@ -9,6 +9,7 @@ import HelpButton from './HelpButton.vue'
 import SettingsMenu from './SettingsMenu.vue'
 import AppLogo from './AppLogo.vue'
 import HostSwitcher from './HostSwitcher.vue'
+import GpuHoldChips from './GpuHoldChips.vue'
 import SelectMenu from './SelectMenu.vue'
 
 const { locale } = useI18n()
@@ -35,6 +36,7 @@ async function logout(): Promise<void> {
         </div>
         <!-- Compact buttons, so the logo keeps its room on narrow screens. -->
         <div class="flex shrink-0 items-center [&_.btn-icon]:size-8">
+          <GpuHoldChips />
           <HostSwitcher />
           <SelectMenu
             class="mr-1"

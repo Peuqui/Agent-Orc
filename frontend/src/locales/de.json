@@ -541,8 +541,12 @@
       "granted": "Schon überlassen."
     },
     "later": "Später",
-    "unfold": "Aufklappen",
-    "folded": "{owner}: {state}"
+    "chip": "{owner}: {state} Tippen zum Aufklappen.",
+    "short": {
+      "requested": "angefordert",
+      "granted": "überlassen",
+      "active": "hält"
+    }
   },
   "approval": {
     "asks": "Möchte {tool} ausführen",

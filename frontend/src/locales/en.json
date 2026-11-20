@@ -541,8 +541,12 @@
       "granted": "Already handed over."
     },
     "later": "Later",
-    "unfold": "Expand",
-    "folded": "{owner}: {state}"
+    "chip": "{owner}: {state} Tap to expand.",
+    "short": {
+      "requested": "requested",
+      "granted": "handed over",
+      "active": "holds"
+    }
   },
   "approval": {
     "asks": "Wants to run {tool}",

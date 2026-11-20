@@ -26,16 +26,20 @@ export interface HoldView {
   canGrant: boolean
   /** Why the button is grayed out, as a key; null while it can be pressed. */
   blockedKey: string | null
+  /** Key of the short state word in the folded chip. */
+  shortKey: string
+  /** A decision is still open (requested, nobody handed over): the folded chip's dot pulses. */
+  pulses: boolean
 }
 
 export function holdView(hold: GpuHold): HoldView {
   if (hold.state === 'active') {
-    return { stateKey: 'gpuHold.state.active', canGrant: false, blockedKey: 'gpuHold.blocked.active' }
+    return { stateKey: 'gpuHold.state.active', canGrant: false, blockedKey: 'gpuHold.blocked.active', shortKey: 'gpuHold.short.active', pulses: false }
   }
   if (hold.granted_by !== null) {
-    return { stateKey: 'gpuHold.state.granted', canGrant: false, blockedKey: 'gpuHold.blocked.granted' }
+    return { stateKey: 'gpuHold.state.granted', canGrant: false, blockedKey: 'gpuHold.blocked.granted', shortKey: 'gpuHold.short.granted', pulses: false }
   }
-  return { stateKey: 'gpuHold.state.requested', canGrant: true, blockedKey: null }
+  return { stateKey: 'gpuHold.state.requested', canGrant: true, blockedKey: null, shortKey: 'gpuHold.short.requested', pulses: true }
 }
 
 /** What makes a hold the same one again: a new hold of the same owner has a new start. */
