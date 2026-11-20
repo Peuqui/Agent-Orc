@@ -41,7 +41,7 @@ from agent_orc.config import (
 from agent_orc.context import begin_compaction, end_compaction, store_activity, store_status
 from agent_orc.effort import agent_settings_file, write_agent_settings
 from agent_orc.events import ChangeNotifier
-from agent_orc.gpu_orc_client import Hold
+from agent_orc.gpu_orc_client import GpuOrcError, Hold, TrafficLight
 from agent_orc.handover import (
     HandoverSwitches,
     read_state,
@@ -2413,7 +2413,14 @@ def test_agent_stopped_by_its_limit_resumes_after_the_reset(
 
 
 CARD_HOLD = Hold(
-    "vllm-research", "vllm-research Messung", "2026-11-14T20:55:00+01:00", "active", None
+    "vllm-research",
+    "vllm-research Messung",
+    None,
+    None,
+    "2026-11-14T20:55:00+01:00",
+    "active",
+    None,
+    None,
 )
 
 
@@ -3956,3 +3963,168 @@ def test_power_needs_the_login(config: Config, clock: FakeClock, systemctl: Fake
         assert client.post("/api/power/suspend").status_code == 401
         assert client.post("/api/power/poweroff").status_code == 401
     assert systemctl.runs == []
+
+
+def backend_entry(label: str, url: str) -> dict[str, Any]:
+    return {
+        "label": label,
+        "base_urls": [url],
+        "key": "k",
+        "key_variable": "ANTHROPIC_API_KEY",
+        "gpu_orc": {"port": 5070},
+    }
+
+
+class GpuOrcByAddress:
+    """The GPU-Orcs of the tests, by the address the client is made for: each answers /loading
+    with its hold, grants like the real one (404 without a hold, 409 for another owner) or does
+    not answer."""
+
+    def __init__(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        self.holds: dict[str, Hold | None] = {}
+        self.down: set[str] = set()
+        self.granted: list[tuple[str, str, str]] = []  # (address, owner, by)
+        monkeypatch.setattr("agent_orc.gpuorc.GpuOrc", lambda url, token=None: Bound(self, url))
+        # The address of a backend is its first address here: nothing is probed.
+        monkeypatch.setattr("agent_orc.holds.reachable_base_url", lambda b, *_: b.base_urls[0])
+
+
+class Bound:
+    def __init__(self, orcs: GpuOrcByAddress, url: str) -> None:
+        self.orcs = orcs
+        self.url = url
+
+    def loading(self) -> TrafficLight:
+        if self.url in self.orcs.down:
+            raise GpuOrcError(f"GPU-Orc not reachable at {self.url}")
+        hold = self.orcs.holds.get(self.url)
+        requested = hold is not None and hold.state == "requested"
+        return TrafficLight((), None if requested else hold, hold if requested else None)
+
+    def grant_hold(self, owner: str, by: str) -> Hold:
+        if self.url in self.orcs.down:
+            raise GpuOrcError(f"GPU-Orc not reachable at {self.url}")
+        hold = self.orcs.holds.get(self.url)
+        if hold is None:
+            raise GpuOrcError("GPU-Orc refused /hold/grant (HTTP 404): no hold")
+        if hold.owner != owner:
+            raise GpuOrcError("GPU-Orc refused /hold/grant (HTTP 409): hold of another owner")
+        self.orcs.granted.append((self.url, owner, by))
+        return Hold(owner, hold.reason, None, None, hold.since, hold.state, None, by)
+
+
+REQUESTED_HOLD = Hold(
+    "vllm-research", "Messung", "m", "vllm", "2026-11-14T20:55:00+01:00", "requested", None, None
+)
+
+
+def holds_app(config: Config, clock: FakeClock, monkeypatch: pytest.MonkeyPatch) -> TestClient:
+    raw = config.model_dump(mode="json")
+    raw["backends"] = {
+        "local": backend_entry("Local", "http://mini:8080"),
+        "local-vllm": backend_entry("Local vLLM", "http://mini:8000"),  # the same GPU-Orc
+        "far": backend_entry("Far", "http://aragon:8080"),
+        "cloud": {**backend_entry("Cloud", "https://cloud"), "gpu_orc": None},
+    }
+    raw["gpu_orc_grant_by"] = "Peuqui"
+    app = create_app(
+        Config.model_validate(raw), new_credentials(PASSWORD), static_dir=None, clock=clock
+    )
+    client = TestClient(app)
+    assert client.post("/api/login", json={"password": PASSWORD}).status_code == 204
+    return client
+
+
+def test_the_holds_of_each_gpu_orc_are_listed_once_per_gpu_orc(
+    config: Config, clock: FakeClock, home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    orcs = GpuOrcByAddress(monkeypatch)
+    orcs.holds["http://mini:5070"] = REQUESTED_HOLD
+    client = holds_app(config, clock, monkeypatch)
+    listed = client.get("/api/gpu-orc/holds").json()
+    # "local-vllm" is on the same GPU-Orc as "local", "cloud" has none: two entries.
+    assert [(e["backend"], e["label"], e["url"]) for e in listed] == [
+        ("local", "Local", "http://mini:5070"),
+        ("far", "Far", "http://aragon:5070"),
+    ]
+    assert listed[0]["hold"] == {
+        "owner": "vllm-research",
+        "reason": "Messung",
+        "model": "m",
+        "state": "requested",
+        "granted_by": None,
+        "since": "2026-11-14T20:55:00+01:00",
+    }
+    assert listed[1]["hold"] is None
+
+
+def test_an_active_hold_is_listed_as_it_is(
+    config: Config, clock: FakeClock, home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    orcs = GpuOrcByAddress(monkeypatch)
+    orcs.holds["http://aragon:5070"] = CARD_HOLD
+    listed = holds_app(config, clock, monkeypatch).get("/api/gpu-orc/holds").json()
+    assert listed[1]["hold"]["state"] == "active"
+
+
+def test_a_gpu_orc_that_does_not_answer_is_listed_with_its_error(
+    config: Config, clock: FakeClock, home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    orcs = GpuOrcByAddress(monkeypatch)
+    orcs.down.add("http://mini:5070")
+    listed = holds_app(config, clock, monkeypatch).get("/api/gpu-orc/holds").json()
+    assert listed[0]["hold"] is None
+    assert "not reachable at http://mini:5070" in listed[0]["error"]
+    assert listed[1]["error"] is None
+
+
+def test_the_hand_over_goes_to_the_gpu_orc_of_the_backend_with_the_configured_name(
+    config: Config, clock: FakeClock, home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    orcs = GpuOrcByAddress(monkeypatch)
+    orcs.holds["http://aragon:5070"] = REQUESTED_HOLD
+    client = holds_app(config, clock, monkeypatch)
+    answer = client.post(
+        "/api/gpu-orc/holds/grant", json={"backend": "far", "owner": "vllm-research"}
+    )
+    assert answer.status_code == 200
+    assert answer.json()["granted_by"] == "Peuqui"
+    assert orcs.granted == [("http://aragon:5070", "vllm-research", "Peuqui")]
+
+
+def test_a_hand_over_without_a_hold_or_for_another_owner_is_refused_with_gpu_orcs_words(
+    config: Config, clock: FakeClock, home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    orcs = GpuOrcByAddress(monkeypatch)
+    orcs.holds["http://aragon:5070"] = REQUESTED_HOLD
+    client = holds_app(config, clock, monkeypatch)
+    none = client.post("/api/gpu-orc/holds/grant", json={"backend": "local", "owner": "x"})
+    assert (none.status_code, none.json()["error"]) == (502, "GpuOrcError")
+    assert "HTTP 404" in none.json()["detail"]
+    other = client.post("/api/gpu-orc/holds/grant", json={"backend": "far", "owner": "x"})
+    assert other.status_code == 502
+    assert "HTTP 409" in other.json()["detail"]
+    assert orcs.granted == []
+
+
+def test_a_hand_over_to_a_gpu_orc_that_does_not_answer_or_a_backend_without_one_is_refused(
+    config: Config, clock: FakeClock, home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    orcs = GpuOrcByAddress(monkeypatch)
+    orcs.down.add("http://aragon:5070")
+    orcs.holds["http://aragon:5070"] = REQUESTED_HOLD
+    client = holds_app(config, clock, monkeypatch)
+    down = client.post("/api/gpu-orc/holds/grant", json={"backend": "far", "owner": "o"})
+    assert (down.status_code, down.json()["error"]) == (502, "GpuOrcError")
+    assert "not reachable" in down.json()["detail"]
+    cloud = client.post("/api/gpu-orc/holds/grant", json={"backend": "cloud", "owner": "o"})
+    assert (cloud.status_code, cloud.json()["error"]) == (502, "BackendError")
+    assert "names no GPU-Orc" in cloud.json()["detail"]
+
+
+def test_the_hold_endpoints_need_the_login(
+    anonymous: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    assert anonymous.get("/api/gpu-orc/holds").status_code == 401
+    body = {"backend": "far", "owner": "o"}
+    assert anonymous.post("/api/gpu-orc/holds/grant", json=body).status_code == 401

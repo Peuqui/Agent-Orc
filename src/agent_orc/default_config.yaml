@@ -215,6 +215,10 @@ dictation:
 #   # While a session waits, GPU-Orc is asked this often whether the hold has ended.
 #   check_seconds: 30
 
+# GPU-Orc is told this name as the one who handed a requested hold the cards, when you press
+# "Hand over the cards" in the banner that shows the holds of the GPU-Orcs of `backends`.
+# gpu_orc_grant_by: agent-orc
+
 # Other machines that run an Agent-Orc of their own (set up there with a socket instead of a port,
 # `agent-orc setup`; update them with deploy/deploy.sh). This one keeps an SSH tunnel to each and
 # shows its app below /hosts/<name>/, so its agents appear next to this machine's own.

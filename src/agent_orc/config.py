@@ -631,6 +631,9 @@ class Config(StrictModel):
     backends: dict[str, BackendConfig] | None = None
     # Without it local sessions talk to llama-swap directly and nothing guards the cards.
     card_gate: CardGateConfig | None = None
+    # Who GPU-Orc is told has handed a requested hold the cards ("Hand over the cards" on the page);
+    # the login knows no user name.
+    gpu_orc_grant_by: str = "agent-orc"
     tmux: TmuxConfig
     agents: dict[str, AgentProfile]
 

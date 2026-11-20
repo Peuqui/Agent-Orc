@@ -1,4 +1,5 @@
 import { ref } from 'vue'
+import type { GpuHold, GpuOrcHolds } from './gpuHolds'
 import { hostOf, rootOf } from './hostPaths'
 import type { PermissionSuggestion } from './permissionSuggestions'
 import type { PowerAction, PowerPermissions } from './power'
@@ -660,6 +661,11 @@ function createApi(host?: string | null) {
     sessions: () => request<AgentSession[]>('GET', 'sessions'),
     /** This machine's name and the others', from this machine's own app (also from another's page). */
     hosts: () => request<HostsState>('GET', 'hosts', { fromRoot: true }),
+    /** The hold of each GPU-Orc the backends of this machine name, or why one could not be asked. */
+    gpuOrcHolds: () => request<GpuOrcHolds[]>('GET', 'gpu-orc/holds', { fromRoot: true }),
+    /** A person hands the cards to the requested hold of `owner` at the GPU-Orc of the backend. */
+    grantGpuOrcHold: (backend: string, owner: string) =>
+      request<GpuHold>('POST', 'gpu-orc/holds/grant', { body: { backend, owner }, fromRoot: true }),
     /** Sends the machine its Wake-on-LAN packet (to the target of the config); it does not wait for the machine. */
     wakeHost: (host: string) => request<void>('POST', `hosts/${encodeURIComponent(host)}/wake`, { fromRoot: true }),
     /** What the machine's own config lets this one do to it (put it to sleep, switch it off). */

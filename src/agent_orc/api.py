@@ -167,6 +167,7 @@ from agent_orc.history import (
     delete_claude_conversation,
     list_all_claude_conversations,
 )
+from agent_orc.holds import grant_hold, hold_json, holds_of_backends
 from agent_orc.hosts import (
     HostLink,
     HostState,
@@ -483,11 +484,19 @@ ERROR_STATUS: dict[type[Exception], int] = {
     peers.UserTokenRefusedError: status.HTTP_403_FORBIDDEN,
     peers.UserTokenMissingError: status.HTTP_503_SERVICE_UNAVAILABLE,
     peers.PeerSendError: status.HTTP_502_BAD_GATEWAY,
+    # GPU-Orc's own words (no hold, a hold of another owner, not reachable) are the detail.
+    GpuOrcError: status.HTTP_502_BAD_GATEWAY,
+    BackendError: status.HTTP_502_BAD_GATEWAY,
 }
 
 
 class CatalogRequest(BaseModel):
     backends: dict[str, CatalogBackend]
+
+
+class GrantHoldRequest(BaseModel):
+    backend: str
+    owner: str
 
 
 class PasswordRequest(BaseModel):
@@ -2164,6 +2173,17 @@ def create_app(
         # The call to the STT-Suite blocks for seconds, on the CPU even longer.
         result = await asyncio.to_thread(transcribe, audio, content_type, device, config.dictation)
         return {"text": result.text, "device": result.device}
+
+    @app.get("/api/gpu-orc/holds", dependencies=authenticated)
+    def gpu_orc_holds() -> list[dict[str, Any]]:
+        """The hold (requested or active) of each GPU-Orc the backends name, or why it could not
+        be asked."""
+        return [entry.as_json() for entry in holds_of_backends(config, fetch_json)]
+
+    @app.post("/api/gpu-orc/holds/grant", dependencies=authenticated)
+    def grant_gpu_orc_hold(body: GrantHoldRequest) -> dict[str, Any]:
+        """A person hands the cards to a requested hold; answers with the hold as it is now."""
+        return hold_json(grant_hold(config, body.backend, body.owner, fetch_json))
 
     @app.get("/api/approvals/events", dependencies=authenticated)
     async def approval_events() -> StreamingResponse:

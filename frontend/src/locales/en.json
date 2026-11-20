@@ -210,6 +210,8 @@
     "HostUnreachableError": "The machine does not answer (tunnel, or Agent-Orc there).",
     "UnknownHostError": "No such machine.",
     "InvalidBaseDirError": "That is not an existing folder in the home directory.",
+    "GpuOrcError": "GPU-Orc: {detail}",
+    "BackendError": "{detail}",
     "PeerSendError": "AI-Connect did not take the message.",
     "UserTokenMissingError": "AI-Connect has no user token yet. Create it in a terminal with installer.py user-token and restart the bridge.",
     "NothingSwitchedOnError": "No engine of the TTS-Suite is switched on in the settings (Read aloud → Engines of the TTS service …).",
@@ -524,6 +526,23 @@
     "denied": "Notifications are blocked in the browser – allow them in its site settings.",
     "test": "Send a test message",
     "testSent": "Test message sent to {count} device(s)."
+  },
+  "gpuHold": {
+    "title": "{owner}: cards of {machine}",
+    "state": {
+      "requested": "Requested: waits for the loaded model to go, or for your release.",
+      "active": "Effective: the cards are cleared for the owner.",
+      "granted": "Handed over by {by}: waits for the running work."
+    },
+    "reason": "Reason: {reason}",
+    "grant": "Hand over the cards",
+    "blocked": {
+      "active": "The cards are already cleared.",
+      "granted": "Already handed over."
+    },
+    "later": "Later",
+    "unfold": "Expand",
+    "folded": "{owner}: {state}"
   },
   "approval": {
     "asks": "Wants to run {tool}",

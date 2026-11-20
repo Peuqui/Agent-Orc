@@ -28,9 +28,12 @@ MODEL = "glm-x"
 HOLD = {
     "owner": "vllm-research",
     "reason": "vllm-research Messung",
+    "model": None,
+    "model_server": None,
     "since": "2026-11-14T20:55:00+01:00",
     "state": "active",
     "free": None,
+    "granted_by": None,
 }
 MESSAGE = {"model": MODEL, "messages": [{"role": "user", "content": "hi"}]}
 

@@ -525,8 +525,19 @@ GATE = CardGateConfig(
     resume_prompt="go on",
     check_seconds=30,
 )
-HOLD = Hold("vllm-research", "vllm-research measures", "2026-11-14T20:55", "active", None)
-REQUESTED = Hold("vllm-research", "vllm-research measures", "2026-11-14T20:55", "requested", None)
+HOLD = Hold(
+    "vllm-research", "vllm-research measures", None, None, "2026-11-14T20:55", "active", None, None
+)
+REQUESTED = Hold(
+    "vllm-research",
+    "vllm-research measures",
+    None,
+    None,
+    "2026-11-14T20:55",
+    "requested",
+    None,
+    None,
+)
 RUNNING_URL = "http://one/running"
 
 

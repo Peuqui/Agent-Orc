@@ -210,6 +210,8 @@
     "HostUnreachableError": "Der Rechner antwortet nicht (Tunnel oder Agent-Orc dort).",
     "UnknownHostError": "Diesen Rechner gibt es nicht.",
     "InvalidBaseDirError": "Das ist kein vorhandener Ordner im Home-Verzeichnis.",
+    "GpuOrcError": "GPU-Orc: {detail}",
+    "BackendError": "{detail}",
     "PeerSendError": "AI-Connect hat die Nachricht nicht angenommen.",
     "UserTokenMissingError": "AI-Connect hat noch kein User-Token. Erzeuge es im Terminal mit installer.py user-token und starte die Bridge neu.",
     "NothingSwitchedOnError": "In den Einstellungen ist keine Engine der TTS-Suite eingeschaltet (Vorlesen → Engines des TTS-Dienstes …).",
@@ -524,6 +526,23 @@
     "denied": "Benachrichtigungen sind im Browser blockiert – dort in den Website-Einstellungen erlauben.",
     "test": "Testnachricht senden",
     "testSent": "Testnachricht an {count} Gerät(e) gesendet."
+  },
+  "gpuHold": {
+    "title": "{owner}: Karten von {machine}",
+    "state": {
+      "requested": "Angefordert: wartet darauf, dass das geladene Modell geht, oder auf deine Freigabe.",
+      "active": "Wirksam: die Karten sind für den Inhaber geräumt.",
+      "granted": "Überlassen von {by}: wartet auf die laufende Arbeit."
+    },
+    "reason": "Grund: {reason}",
+    "grant": "Karten überlassen",
+    "blocked": {
+      "active": "Die Karten sind schon geräumt.",
+      "granted": "Schon überlassen."
+    },
+    "later": "Später",
+    "unfold": "Aufklappen",
+    "folded": "{owner}: {state}"
   },
   "approval": {
     "asks": "Möchte {tool} ausführen",
