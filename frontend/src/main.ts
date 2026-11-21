@@ -1,9 +1,11 @@
 import { createApp } from 'vue'
 import { registerSW } from 'virtual:pwa-register'
 import App from './App.vue'
-import { currentHost } from './api'
+import { api, currentHost } from './api'
 import { hostTranscription } from './dictationHost'
 import { hostDictationPointer, reportPointerMoves } from './dictationPointer'
+import { hostDictationService } from './dictationService'
+import { useToast } from './composables/useToast'
 import { hostSpeech } from './speechHost'
 import { setMachine } from './composables/useWorkspaceTab'
 import { i18n } from './i18n'
@@ -37,6 +39,7 @@ window.addEventListener('vite:preloadError', (event) => {
 
 // Before a workspace column can dictate or read aloud.
 hostTranscription()
+hostDictationService(api.dictationSettings, (error) => useToast().error(error))
 hostSpeech()
 hostDictationPointer()
 reportPointerMoves()

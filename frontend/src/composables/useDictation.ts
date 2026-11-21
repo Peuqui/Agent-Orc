@@ -1,6 +1,7 @@
 import { computed, onScopeDispose, ref, type UnwrapNestedRefs } from 'vue'
 import { api } from '../api'
 import { transcribeForAgent } from '../dictationHost'
+import { refreshDictationService, watchDictationService } from '../dictationService'
 import { useSettings, type DictationEngine } from './useSettings'
 import { loadSignals, playSignal } from '../sounds'
 
@@ -53,16 +54,20 @@ export function useDictation(
   const active = computed(() => state.value === 'recording' || state.value === 'listening')
   // What recognises (this device's choice) and where the STT-Suite transcribes (the same on every device).
   const { dictationDevice: device, dictationEngine, dictationSounds } = useSettings()
-  // Unknown until the server's settings have arrived.
+  // The service's state, the same for every field of the tab (dictationService.ts). Unknown until the server's
+  // settings have arrived.
   const stt = ref<boolean | null>(null)
-  // Whether the service has a model on the GPU: asked at the start and after every dictation, which is
-  // what loads it (with "auto" the service decides where a dictation runs) or finds it gone. The idle
-  // GPU worker ends itself after a time the service reports, so it is asked again when that is over: the
-  // answer says whether someone else used the GPU meanwhile (the time starts anew) or the model is gone.
+  // Whether the service has a model on the GPU: a dictation from any field may load it (with "auto" the
+  // service decides where a dictation runs) or find it gone.
   const gpuLoaded = ref(false)
-  let unloadCheck: ReturnType<typeof setTimeout> | undefined
-  onScopeDispose(() => clearTimeout(unloadCheck))
   const language = ref('')
+  onScopeDispose(
+    watchDictationService((settings) => {
+      stt.value = settings.stt
+      language.value = settings.language
+      gpuLoaded.value = settings.service?.gpu_loaded ?? false
+    }),
+  )
   // Kept when the STT-Suite failed, so the dictation is not lost: it can be sent again, e.g. on the CPU.
   const failedAudio = ref<Blob | null>(null)
   let recorder: MediaRecorder | null = null
@@ -93,22 +98,8 @@ export function useDictation(
     () => engine.value === 'stt-suite' || (engine.value === 'browser' && hasBrowserRecognition),
   )
 
-  function refreshService(): Promise<void> {
-    return api
-      .dictationSettings()
-      .then((settings) => {
-        stt.value = settings.stt
-        language.value = settings.language
-        gpuLoaded.value = settings.service?.gpu_loaded ?? false
-        clearTimeout(unloadCheck)
-        const remaining = settings.service?.gpu_ttl_remaining_seconds
-        if (gpuLoaded.value && remaining != null) {
-          unloadCheck = setTimeout(() => void refreshService(), (remaining + 1) * 1000)
-        }
-      })
-      .catch(onError)
-  }
-  void refreshService()
+  // A field opened anew sees the service as it is now, and so does every other field.
+  void refreshDictationService()
   // Ahead of the first dictation, so its tone sounds at once.
   loadSignals(dictationSounds.value).catch(onError)
 
@@ -155,7 +146,7 @@ export function useDictation(
       onError(error)
     } finally {
       state.value = 'idle'
-      void refreshService()
+      void refreshDictationService()
     }
   }
 
