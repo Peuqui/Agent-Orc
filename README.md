@@ -567,13 +567,22 @@ handed the cards yet), otherwise as a pill in the page's header that a tap opens
 (`GET /api/gpu-orc/holds`, one entry per GPU-Orc however many backends name it). A requested hold that nobody handed the cards yet has the
 button "Hand over the cards": it tells GPU-Orc that a person lets the owner have them
 (`POST /api/gpu-orc/holds/grant` with `backend` and `owner`; GPU-Orc's answer, such as no hold or the
-hold of another owner, is shown as the error). The name GPU-Orc is told as the one who handed them
-over is `gpu_orc_grant_by` in the config (default `agent-orc`; the login knows no user name). "End hold"
-ends a hold, requested or active, after a second press in the banner (`POST /api/gpu-orc/holds/end`
-with `backend` and `owner`). It goes to GPU-Orc in the owner's name and without force, so a hold that
-another owner took meanwhile is refused instead of ended; GPU-Orc then records no person, so
-Agent-Orc logs the end itself. Ending a hold stops no process: the owner's running work goes on, but
-others may take the cards. "Later" folds the banner into the pill in this browser only.
+hold of another owner, is shown as the error). The name GPU-Orc is told as the person who handed them
+over, or asked for the end of a hold, is `gpu_orc_person` in the config (default `agent-orc`; the login
+knows no user name). "Ask for the end" asks the owner to end its hold (`POST /api/gpu-orc/holds/end` with `backend` and `owner`; the
+answer is `{"hold": ...}`). A requested hold has nothing on the cards and is withdrawn at once (`"hold": null`); an
+active one stays, marked `end_requested_by` (the banner shows who asked), until its owner lets go itself, because
+it first has to end its work cleanly (a chain of the owner asks GPU-Orc's `hold-continues` between its steps).
+GPU-Orc tells nobody, so Agent-Orc does: with `hold_end_notice` in the config (`text` with `{owner}`, `{machine}`
+and `{by}`, and `check_seconds`; without the block no one is told) a watcher asks the GPU-Orcs of the backends
+every `check_seconds` and types `text` once into the session whose folder name is the hold's owner, at once, also
+while it works (Claude Code queues an input during a turn). A hold is told once (key: GPU-Orc, owner and the hold's
+start); after a restart of Agent-Orc a request still pending is typed once more. Only when the owner does not
+react, "Release now" lets go of the hold for it (`POST /api/gpu-orc/holds/release` with `backend` and `owner`,
+answer 204). That goes to GPU-Orc in the owner's name and without force, so a hold that another owner took
+meanwhile is refused instead of ended; GPU-Orc then records no person, so Agent-Orc logs the release itself.
+Releasing stops no process: the owner's running work goes on, but others may take the cards. "Later" folds the
+banner into the pill in this browser only.
 
 So that a click on "Hand over the cards" does not break off an answer that is running, Agent-Orc
 tells every GPU-Orc of its backends while a running session on one of them works (`POST /work`; one

@@ -604,6 +604,29 @@ class CardGateConfig(StrictModel):
     check_seconds: int
 
 
+class HoldEndNoticeConfig(StrictModel):
+    """The watcher that tells the owner of a GPU-Orc hold, in its session, that a person asked for
+    the end of the hold (see hold_end_notice.py)."""
+
+    # Typed into the owner's session once; {owner} is the hold's owner, {machine} the label of the
+    # backend that names its GPU-Orc, {by} the person who asked for the end.
+    text: str
+    # GPU-Orc is asked this often (seconds) whether an end was requested.
+    check_seconds: float
+
+    @field_validator("text")
+    @classmethod
+    def known_placeholders(cls, value: str) -> str:
+        # A wrong placeholder shows when the config is loaded, not first when a hold's end is asked.
+        try:
+            value.format(owner="", machine="", by="")
+        except (KeyError, IndexError, ValueError) as error:
+            raise ValueError(
+                f"text: only {{owner}}, {{machine}} and {{by}} are known ({error!r})"
+            ) from error
+        return value
+
+
 class Config(StrictModel):
     server: ServerConfig
     auth: AuthConfig
@@ -631,9 +654,11 @@ class Config(StrictModel):
     backends: dict[str, BackendConfig] | None = None
     # Without it local sessions talk to llama-swap directly and nothing guards the cards.
     card_gate: CardGateConfig | None = None
-    # Who GPU-Orc is told has handed a requested hold the cards ("Hand over the cards" on the page);
-    # the login knows no user name.
-    gpu_orc_grant_by: str = "agent-orc"
+    # Without it nobody tells the owner of a hold in its session that a person asked for the end.
+    hold_end_notice: HoldEndNoticeConfig | None = None
+    # The name GPU-Orc is told for the person who handed a requested hold the cards or asked for the
+    # end of a hold (the page's buttons); the login knows no user name.
+    gpu_orc_person: str = "agent-orc"
     # Agent-Orc tells the GPU-Orc of its backends while a session on them works (POST /work), so
     # that a hold handed over by a click waits for the answer. The lease is renewed every
     # poll_seconds and ends by itself after ttl_seconds without renewal (a crash holds nothing

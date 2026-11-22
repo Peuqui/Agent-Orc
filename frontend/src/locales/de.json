@@ -532,7 +532,8 @@
     "state": {
       "requested": "Angefordert: wartet darauf, dass das geladene Modell geht, oder auf deine Freigabe.",
       "active": "Wirksam: die Karten sind für den Inhaber geräumt.",
-      "granted": "Überlassen von {by}: wartet auf die laufende Arbeit."
+      "granted": "Überlassen von {by}: wartet auf die laufende Arbeit.",
+      "ending": "Ende angefordert von {by}: wartet, bis {owner} aufhört, die Karten räumt und freigibt."
     },
     "reason": "Grund: {reason}",
     "grant": "Karten überlassen",
@@ -541,14 +542,21 @@
       "granted": "Schon überlassen."
     },
     "later": "Später",
-    "end": "Hold beenden",
-    "endNow": "Ja, beenden",
-    "endConfirm": "Der Hold von {owner} auf den Karten von {machine} endet. Laufende Arbeit von {owner} bricht das nicht ab, sie kann aber gestört werden, sobald jemand anderes die Karten belegt.",
+    "end": "Ende anfordern",
+    "endNow": "Ja, anfordern",
+    "endBlocked": "Ende schon angefordert.",
+    "endConfirm": "{owner} wird gebeten, an der nächsten sauberen Stelle aufzuhören, die Karten von {machine} zu räumen und freizugeben. Bis dahin bleiben die Karten gesperrt.",
+    "endConfirmRequested": "Der angeforderte Hold von {owner} wird zurückgezogen; {owner} hat noch nichts auf den Karten von {machine}.",
+    "release": "Sofort freigeben",
+    "releaseNow": "Ja, sofort freigeben",
+    "releaseBlocked": "Erst nach „Ende anfordern“, falls {owner} nicht reagiert.",
+    "releaseConfirm": "Nur wenn {owner} nicht mehr reagiert: Der Hold auf den Karten von {machine} endet sofort. Laufende Arbeit von {owner} bricht das nicht ab, sie kann aber gestört werden, sobald jemand anderes die Karten belegt.",
     "chip": "{owner}: {state} Tippen zum Aufklappen.",
     "short": {
       "requested": "angefordert",
       "granted": "überlassen",
-      "active": "hält"
+      "active": "hält",
+      "ending": "endet"
     }
   },
   "approval": {

@@ -12,6 +12,7 @@ import threading
 import time
 from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -2421,6 +2422,7 @@ CARD_HOLD = Hold(
     "active",
     None,
     None,
+    None,
 )
 
 
@@ -3985,6 +3987,7 @@ class GpuOrcByAddress:
         self.holds: dict[str, Hold | None] = {}
         self.down: set[str] = set()
         self.granted: list[tuple[str, str, str]] = []  # (address, owner, by)
+        self.end_requests: list[tuple[str, str, str]] = []  # (address, owner, by)
         self.released: list[tuple[str, str]] = []  # (address, owner of the hold let go of)
         monkeypatch.setattr("agent_orc.gpuorc.GpuOrc", lambda url, token=None: Bound(self, url))
         # The address of a backend is its first address here: nothing is probed.
@@ -4012,7 +4015,24 @@ class Bound:
         if hold.owner != owner:
             raise GpuOrcError("GPU-Orc refused /hold/grant (HTTP 409): hold of another owner")
         self.orcs.granted.append((self.url, owner, by))
-        return Hold(owner, hold.reason, None, None, hold.since, hold.state, None, by)
+        return Hold(owner, hold.reason, None, None, hold.since, hold.state, None, by, None)
+
+    def request_hold_end(self, owner: str, by: str) -> Hold | None:
+        if self.url in self.orcs.down:
+            raise GpuOrcError(f"GPU-Orc not reachable at {self.url}")
+        hold = self.orcs.holds.get(self.url)
+        if hold is None:
+            raise GpuOrcError("GPU-Orc refused /hold/end (HTTP 404): no hold")
+        if hold.owner != owner:
+            raise GpuOrcError("GPU-Orc refused /hold/end (HTTP 409): hold of another owner")
+        self.orcs.end_requests.append((self.url, owner, by))
+        if hold.state == "requested":
+            self.orcs.holds[self.url] = None
+            return None
+        # A second request changes nothing: the first person stays.
+        asked = replace(hold, end_requested_by=hold.end_requested_by or by)
+        self.orcs.holds[self.url] = asked
+        return asked
 
     def release_hold(self, owner: str, force: bool = False) -> None:
         if self.url in self.orcs.down:
@@ -4027,7 +4047,15 @@ class Bound:
 
 
 REQUESTED_HOLD = Hold(
-    "vllm-research", "Messung", "m", "vllm", "2026-11-14T20:55:00+01:00", "requested", None, None
+    "vllm-research",
+    "Messung",
+    "m",
+    "vllm",
+    "2026-11-14T20:55:00+01:00",
+    "requested",
+    None,
+    None,
+    None,
 )
 
 
@@ -4039,7 +4067,7 @@ def holds_app(config: Config, clock: FakeClock, monkeypatch: pytest.MonkeyPatch)
         "far": backend_entry("Far", "http://aragon:8080"),
         "cloud": {**backend_entry("Cloud", "https://cloud"), "gpu_orc": None},
     }
-    raw["gpu_orc_grant_by"] = "Peuqui"
+    raw["gpu_orc_person"] = "Peuqui"
     app = create_app(
         Config.model_validate(raw), new_credentials(PASSWORD), static_dir=None, clock=clock
     )
@@ -4066,6 +4094,7 @@ def test_the_holds_of_each_gpu_orc_are_listed_once_per_gpu_orc(
         "model": "m",
         "state": "requested",
         "granted_by": None,
+        "end_requested_by": None,
         "since": "2026-11-14T20:55:00+01:00",
     }
     assert listed[1]["hold"] is None
@@ -4135,7 +4164,70 @@ def test_a_hand_over_to_a_gpu_orc_that_does_not_answer_or_a_backend_without_one_
     assert "names no GPU-Orc" in cloud.json()["detail"]
 
 
-def test_ending_a_hold_lets_go_of_it_at_the_gpu_orc_of_the_backend_requested_or_active(
+def test_asking_for_the_end_marks_an_active_hold_with_the_configured_person(
+    config: Config, clock: FakeClock, home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    orcs = GpuOrcByAddress(monkeypatch)
+    orcs.holds["http://aragon:5070"] = CARD_HOLD
+    client = holds_app(config, clock, monkeypatch)
+    answer = client.post(
+        "/api/gpu-orc/holds/end", json={"backend": "far", "owner": CARD_HOLD.owner}
+    )
+    assert answer.status_code == 200
+    assert answer.json()["hold"]["end_requested_by"] == "Peuqui"
+    assert answer.json()["hold"]["state"] == "active"
+    assert orcs.end_requests == [("http://aragon:5070", CARD_HOLD.owner, "Peuqui")]
+    # The hold stays, the banner shows who asked.
+    listed = client.get("/api/gpu-orc/holds").json()
+    assert listed[1]["hold"]["end_requested_by"] == "Peuqui"
+    assert orcs.released == []
+
+
+def test_asking_for_the_end_of_a_requested_hold_withdraws_it_at_once(
+    config: Config, clock: FakeClock, home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    orcs = GpuOrcByAddress(monkeypatch)
+    orcs.holds["http://mini:5070"] = REQUESTED_HOLD
+    client = holds_app(config, clock, monkeypatch)
+    answer = client.post(
+        "/api/gpu-orc/holds/end", json={"backend": "local", "owner": "vllm-research"}
+    )
+    assert (answer.status_code, answer.json()) == (200, {"hold": None})
+    assert [entry["hold"] for entry in client.get("/api/gpu-orc/holds").json()] == [None, None]
+
+
+def test_asking_for_the_end_never_hits_the_hold_another_owner_took(
+    config: Config, clock: FakeClock, home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    orcs = GpuOrcByAddress(monkeypatch)
+    orcs.holds["http://aragon:5070"] = CARD_HOLD
+    client = holds_app(config, clock, monkeypatch)
+    other = client.post("/api/gpu-orc/holds/end", json={"backend": "far", "owner": "someone-else"})
+    assert (other.status_code, other.json()["error"]) == (502, "GpuOrcError")
+    assert "HTTP 409" in other.json()["detail"]
+    none = client.post("/api/gpu-orc/holds/end", json={"backend": "local", "owner": "x"})
+    assert none.status_code == 502
+    assert "HTTP 404" in none.json()["detail"]
+    assert orcs.end_requests == []
+    assert orcs.holds["http://aragon:5070"] == CARD_HOLD
+
+
+def test_asking_for_the_end_at_a_gpu_orc_that_does_not_answer_or_a_backend_without_one_is_refused(
+    config: Config, clock: FakeClock, home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    orcs = GpuOrcByAddress(monkeypatch)
+    orcs.down.add("http://aragon:5070")
+    client = holds_app(config, clock, monkeypatch)
+    down = client.post("/api/gpu-orc/holds/end", json={"backend": "far", "owner": "o"})
+    assert (down.status_code, down.json()["error"]) == (502, "GpuOrcError")
+    assert "not reachable" in down.json()["detail"]
+    cloud = client.post("/api/gpu-orc/holds/end", json={"backend": "cloud", "owner": "o"})
+    assert (cloud.status_code, cloud.json()["error"]) == (502, "BackendError")
+    assert "names no GPU-Orc" in cloud.json()["detail"]
+    assert orcs.end_requests == []
+
+
+def test_releasing_lets_go_of_the_hold_at_the_gpu_orc_of_the_backend_requested_or_active(
     config: Config, clock: FakeClock, home: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     orcs = GpuOrcByAddress(monkeypatch)
@@ -4143,11 +4235,11 @@ def test_ending_a_hold_lets_go_of_it_at_the_gpu_orc_of_the_backend_requested_or_
     orcs.holds["http://mini:5070"] = REQUESTED_HOLD
     client = holds_app(config, clock, monkeypatch)
     active = client.post(
-        "/api/gpu-orc/holds/end", json={"backend": "far", "owner": CARD_HOLD.owner}
+        "/api/gpu-orc/holds/release", json={"backend": "far", "owner": CARD_HOLD.owner}
     )
     assert active.status_code == 204
     requested = client.post(
-        "/api/gpu-orc/holds/end", json={"backend": "local", "owner": "vllm-research"}
+        "/api/gpu-orc/holds/release", json={"backend": "local", "owner": "vllm-research"}
     )
     assert requested.status_code == 204
     assert orcs.released == [
@@ -4157,28 +4249,30 @@ def test_ending_a_hold_lets_go_of_it_at_the_gpu_orc_of_the_backend_requested_or_
     assert [entry["hold"] for entry in client.get("/api/gpu-orc/holds").json()] == [None, None]
 
 
-def test_ending_never_hits_the_hold_another_owner_took_meanwhile(
+def test_releasing_never_hits_the_hold_another_owner_took_meanwhile(
     config: Config, clock: FakeClock, home: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     orcs = GpuOrcByAddress(monkeypatch)
     orcs.holds["http://aragon:5070"] = REQUESTED_HOLD
     client = holds_app(config, clock, monkeypatch)
-    other = client.post("/api/gpu-orc/holds/end", json={"backend": "far", "owner": "someone-else"})
+    other = client.post(
+        "/api/gpu-orc/holds/release", json={"backend": "far", "owner": "someone-else"}
+    )
     assert (other.status_code, other.json()["error"]) == (502, "GpuOrcError")
     assert "HTTP 409" in other.json()["detail"]
     assert orcs.released == []
     assert orcs.holds["http://aragon:5070"] == REQUESTED_HOLD
 
 
-def test_ending_at_a_gpu_orc_that_does_not_answer_or_a_backend_without_one_is_refused(
+def test_releasing_at_a_gpu_orc_that_does_not_answer_or_a_backend_without_one_is_refused(
     config: Config, clock: FakeClock, home: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     orcs = GpuOrcByAddress(monkeypatch)
     orcs.down.add("http://aragon:5070")
     client = holds_app(config, clock, monkeypatch)
-    down = client.post("/api/gpu-orc/holds/end", json={"backend": "far", "owner": "o"})
+    down = client.post("/api/gpu-orc/holds/release", json={"backend": "far", "owner": "o"})
     assert (down.status_code, down.json()["error"]) == (502, "GpuOrcError")
-    cloud = client.post("/api/gpu-orc/holds/end", json={"backend": "cloud", "owner": "o"})
+    cloud = client.post("/api/gpu-orc/holds/release", json={"backend": "cloud", "owner": "o"})
     assert (cloud.status_code, cloud.json()["error"]) == (502, "BackendError")
     assert orcs.released == []
 
@@ -4190,3 +4284,4 @@ def test_the_hold_endpoints_need_the_login(
     body = {"backend": "far", "owner": "o"}
     assert anonymous.post("/api/gpu-orc/holds/grant", json=body).status_code == 401
     assert anonymous.post("/api/gpu-orc/holds/end", json=body).status_code == 401
+    assert anonymous.post("/api/gpu-orc/holds/release", json=body).status_code == 401

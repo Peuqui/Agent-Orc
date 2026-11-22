@@ -167,7 +167,14 @@ from agent_orc.history import (
     delete_claude_conversation,
     list_all_claude_conversations,
 )
-from agent_orc.holds import end_hold, grant_hold, hold_json, holds_of_backends
+from agent_orc.hold_end_notice import HoldEndNotice
+from agent_orc.holds import (
+    grant_hold,
+    hold_json,
+    holds_of_backends,
+    release_hold_now,
+    request_hold_end,
+)
 from agent_orc.hosts import (
     HostLink,
     HostState,
@@ -1673,9 +1680,16 @@ def create_app(
 
     gate_server = create_gate_server(config, turned_away) if config.card_gate else None
     # Only for a machine whose backends name a GPU-Orc: there is nobody to report to otherwise.
+    has_gpu_orc = any(b.gpu_orc is not None for b in (config.backends or {}).values())
     work_reporter = (
         WorkReporter(config, fetch_json, sessions.list, lambda: turned_away.waiting().keys())
-        if any(b.gpu_orc is not None for b in (config.backends or {}).values())
+        if has_gpu_orc
+        else None
+    )
+    # Needs the block that holds the text as well.
+    hold_end_notice = (
+        HoldEndNotice(config, config.hold_end_notice, fetch_json, sessions.list, sessions.type_line)
+        if has_gpu_orc and config.hold_end_notice
         else None
     )
 
@@ -1689,6 +1703,7 @@ def create_app(
         mirror = asyncio.create_task(mirror_settings())
         catalogs = asyncio.create_task(exchange_catalogs())
         work = asyncio.create_task(work_reporter.run()) if work_reporter else None
+        end_notice = asyncio.create_task(hold_end_notice.run()) if hold_end_notice else None
         tunnels = [
             asyncio.create_task(keep_tunnel_open(host_links[name], look_at_hosts.set))
             for name in host_links
@@ -1700,6 +1715,8 @@ def create_app(
         relay.cancel()
         mirror.cancel()
         catalogs.cancel()
+        if end_notice is not None:
+            end_notice.cancel()
         for tunnel in tunnels:
             tunnel.cancel()
         if work is not None:
@@ -2199,11 +2216,20 @@ def create_app(
         """A person hands the cards to a requested hold; answers with the hold as it is now."""
         return hold_json(grant_hold(config, body.backend, body.owner, fetch_json))
 
-    @app.post("/api/gpu-orc/holds/end", status_code=204, dependencies=authenticated)
-    def end_gpu_orc_hold(body: HoldRequest) -> None:
-        """A person ends a hold, requested or active. It goes to GPU-Orc in the owner's name, so
-        GPU-Orc records no person: it is logged here."""
-        end_hold(config, body.backend, body.owner, fetch_json)
+    @app.post("/api/gpu-orc/holds/end", dependencies=authenticated)
+    def end_gpu_orc_hold(body: HoldRequest) -> dict[str, Any]:
+        """A person asks the owner to end its hold. A requested hold is withdrawn at once (the
+        answer's "hold" is null); an active one stays, marked with the person, until its owner lets
+        go (hold_end_notice.py tells it)."""
+        hold = request_hold_end(config, body.backend, body.owner, fetch_json)
+        return {"hold": None if hold is None else hold_json(hold)}
+
+    @app.post("/api/gpu-orc/holds/release", status_code=204, dependencies=authenticated)
+    def release_gpu_orc_hold(body: HoldRequest) -> None:
+        """A person lets go of a hold, requested or active, for an owner that does not react to the
+        request for the end. It goes to GPU-Orc in the owner's name, so GPU-Orc records no person:
+        it is logged here."""
+        release_hold_now(config, body.backend, body.owner, fetch_json)
         logger.warning(
             "The page ended the GPU-Orc hold of %r (backend %s)", body.owner, body.backend
         )

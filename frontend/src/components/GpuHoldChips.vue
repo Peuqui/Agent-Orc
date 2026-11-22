@@ -14,7 +14,7 @@ const { held, folded, fold } = useGpuHolds()
       v-if="folded(address, hold)"
       type="button"
       class="flex shrink-0 items-center gap-1.5 rounded-full bg-highlight-500 px-2 py-0.5 text-xs font-semibold text-on-highlight"
-      :aria-label="$t('gpuHold.chip', { owner: hold.owner, state: $t(holdView(hold).stateKey, { by: hold.granted_by }) })"
+      :aria-label="$t('gpuHold.chip', { owner: hold.owner, state: $t(holdView(hold).stateKey, { by: holdView(hold).by, owner: hold.owner }) })"
       @click="fold(address, hold, false)"
     >
       <span class="size-2 shrink-0 rounded-full bg-on-highlight" :class="{ 'motion-safe:animate-pulse': holdView(hold).decisionOpen }" />

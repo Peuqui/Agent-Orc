@@ -108,3 +108,29 @@ def test_card_gate_is_parsed_from_the_commented_default_section() -> None:
     assert (gate.port, gate.check_seconds) == (8771, 30)
     assert "Karten" in gate.resume_prompt
     assert "{reason}" in gate.refusal and "{since}" in gate.refusal
+
+
+def test_hold_end_notice_is_parsed_from_the_commented_default_section() -> None:
+    text = default_config_text()
+    assert parse_config(text).hold_end_notice is None
+    start = text.index("# hold_end_notice:")
+    end = text.index("\n\n", start)
+    section = "\n".join(
+        line.removeprefix("# ").removeprefix("#") for line in text[start:end].splitlines()
+    )
+    notice = parse_config(text + "\n" + section + "\n").hold_end_notice
+    assert notice is not None
+    assert notice.check_seconds == 10
+    assert all(placeholder in notice.text for placeholder in ("{machine}", "{by}"))
+    notice.text.format(owner="o", machine="m", by="b")
+
+
+def test_a_hold_end_notice_with_an_unknown_placeholder_is_refused_when_loaded() -> None:
+    section = 'hold_end_notice:\n  text: "Ende für {owner} von {person}"\n  check_seconds: 10\n'
+    with pytest.raises(ValueError, match="only {owner}, {machine} and {by}"):
+        parse_config(default_config_text() + "\n" + section)
+
+
+def test_the_person_gpu_orc_is_told_is_configurable_with_a_default() -> None:
+    assert parse_config(default_config_text()).gpu_orc_person == "agent-orc"
+    assert parse_config(default_config_text() + "\ngpu_orc_person: Ada\n").gpu_orc_person == "Ada"

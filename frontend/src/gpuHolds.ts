@@ -7,6 +7,8 @@ export interface GpuHold {
   state: 'requested' | 'active'
   /** Who handed the requested hold the cards by hand; null if nobody did. */
   granted_by: string | null
+  /** Who asked the owner of the active hold to end it; null if nobody did. */
+  end_requested_by: string | null
   since: string
 }
 
@@ -20,8 +22,10 @@ export interface GpuOrcHolds {
 }
 
 export interface HoldView {
-  /** Key of the text that says the state, `{by}` is the one who handed the cards over. */
+  /** Key of the text that says the state; `{by}` is `by`, `{owner}` the hold's owner. */
   stateKey: string
+  /** Who handed the cards over or asked for the end, for the state text; null if nobody. */
+  by: string | null
   /** The person may hand the cards over: only a requested hold nobody has handed over yet. */
   canGrant: boolean
   /** Why the button is grayed out, as a key; null while it can be pressed. */
@@ -31,16 +35,22 @@ export interface HoldView {
   /** A decision is still open (requested, nobody handed over): the banner opens by itself and the
    * folded chip's dot pulses. Otherwise the hold shows as the chip until a tap opens it. */
   decisionOpen: boolean
+  /** Somebody asked the owner of the active hold to end it: asking again does nothing, and letting
+   * go at once is for an owner that does not react to that request. */
+  endAsked: boolean
 }
 
 export function holdView(hold: GpuHold): HoldView {
+  if (hold.state === 'active' && hold.end_requested_by !== null) {
+    return { stateKey: 'gpuHold.state.ending', by: hold.end_requested_by, canGrant: false, blockedKey: 'gpuHold.blocked.active', shortKey: 'gpuHold.short.ending', decisionOpen: false, endAsked: true }
+  }
   if (hold.state === 'active') {
-    return { stateKey: 'gpuHold.state.active', canGrant: false, blockedKey: 'gpuHold.blocked.active', shortKey: 'gpuHold.short.active', decisionOpen: false }
+    return { stateKey: 'gpuHold.state.active', by: null, canGrant: false, blockedKey: 'gpuHold.blocked.active', shortKey: 'gpuHold.short.active', decisionOpen: false, endAsked: false }
   }
   if (hold.granted_by !== null) {
-    return { stateKey: 'gpuHold.state.granted', canGrant: false, blockedKey: 'gpuHold.blocked.granted', shortKey: 'gpuHold.short.granted', decisionOpen: false }
+    return { stateKey: 'gpuHold.state.granted', by: hold.granted_by, canGrant: false, blockedKey: 'gpuHold.blocked.granted', shortKey: 'gpuHold.short.granted', decisionOpen: false, endAsked: false }
   }
-  return { stateKey: 'gpuHold.state.requested', canGrant: true, blockedKey: null, shortKey: 'gpuHold.short.requested', decisionOpen: true }
+  return { stateKey: 'gpuHold.state.requested', by: null, canGrant: true, blockedKey: null, shortKey: 'gpuHold.short.requested', decisionOpen: true, endAsked: false }
 }
 
 /** What makes a hold the same one again: a new hold of the same owner has a new start. */

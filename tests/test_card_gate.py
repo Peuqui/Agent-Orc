@@ -34,6 +34,7 @@ HOLD = {
     "state": "active",
     "free": None,
     "granted_by": None,
+    "end_requested_by": None,
 }
 MESSAGE = {"model": MODEL, "messages": [{"role": "user", "content": "hi"}]}
 

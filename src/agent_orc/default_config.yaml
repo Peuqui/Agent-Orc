@@ -215,9 +215,19 @@ dictation:
 #   # While a session waits, GPU-Orc is asked this often whether the hold has ended.
 #   check_seconds: 30
 
-# GPU-Orc is told this name as the one who handed a requested hold the cards, when you press
-# "Hand over the cards" in the banner that shows the holds of the GPU-Orcs of `backends`.
-# gpu_orc_grant_by: agent-orc
+# GPU-Orc is told this name as the person who handed a requested hold the cards or asked for the
+# end of a hold, when you press "Hand over the cards" or "Ask for the end" in the banner that shows
+# the holds of the GPU-Orcs of `backends`.
+# gpu_orc_person: agent-orc
+
+# A hold whose end a person asked for stays until its owner lets go. This watcher types the text into
+# the session of the owner (the session whose folder name is the hold's owner), once and at once, also
+# while it works (Claude Code queues an input during a turn). Remove the leading "#" to switch it on.
+# hold_end_notice:
+#   # {owner} is the hold's owner, {machine} the label of the backend of its GPU-Orc, {by} who asked.
+#   text: "GPU-Orc: Für deinen Hold auf den Karten von {machine} hat {by} das Ende angefordert. Beende deine laufende Arbeit an der nächsten sauberen Stelle (deine Kette prüft das mit hold-continues), räume die Karten und gib den Hold frei (DELETE /hold mit deinem owner). Sag Bescheid, wenn du später weitermachen willst."
+#   # GPU-Orc is asked this often (seconds).
+#   check_seconds: 10
 
 # While a running session on a backend with GPU-Orc works, Agent-Orc reports that work to it, so that
 # a hold you handed the cards waits for the answer. Renewed this often (seconds), and GPU-Orc ends

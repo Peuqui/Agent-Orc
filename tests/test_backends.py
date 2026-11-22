@@ -526,7 +526,15 @@ GATE = CardGateConfig(
     check_seconds=30,
 )
 HOLD = Hold(
-    "vllm-research", "vllm-research measures", None, None, "2026-11-14T20:55", "active", None, None
+    "vllm-research",
+    "vllm-research measures",
+    None,
+    None,
+    "2026-11-14T20:55",
+    "active",
+    None,
+    None,
+    None,
 )
 REQUESTED = Hold(
     "vllm-research",
@@ -535,6 +543,7 @@ REQUESTED = Hold(
     None,
     "2026-11-14T20:55",
     "requested",
+    None,
     None,
     None,
 )

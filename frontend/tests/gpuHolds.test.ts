@@ -8,6 +8,7 @@ const requested: GpuHold = {
   model: null,
   state: 'requested',
   granted_by: null,
+  end_requested_by: null,
   since: '2026-11-14T20:55:00+01:00',
 }
 
@@ -24,30 +25,36 @@ class MemoryStorage {
 test('a requested hold nobody handed over can be handed the cards, with no reason against it', () => {
   assert.deepEqual(holdView(requested), {
     stateKey: 'gpuHold.state.requested',
+    by: null,
     canGrant: true,
     blockedKey: null,
     shortKey: 'gpuHold.short.requested',
     decisionOpen: true,
+    endAsked: false,
   })
 })
 
 test('a requested hold already handed over says so and the button is blocked with that reason', () => {
   assert.deepEqual(holdView({ ...requested, granted_by: 'Peuqui' }), {
     stateKey: 'gpuHold.state.granted',
+    by: 'Peuqui',
     canGrant: false,
     blockedKey: 'gpuHold.blocked.granted',
     shortKey: 'gpuHold.short.granted',
     decisionOpen: false,
+    endAsked: false,
   })
 })
 
 test('an active hold cannot be handed anything, the reason is told', () => {
   assert.deepEqual(holdView({ ...requested, state: 'active' }), {
     stateKey: 'gpuHold.state.active',
+    by: null,
     canGrant: false,
     blockedKey: 'gpuHold.blocked.active',
     shortKey: 'gpuHold.short.active',
     decisionOpen: false,
+    endAsked: false,
   })
   assert.equal(holdView({ ...requested, state: 'active', granted_by: 'Peuqui' }).canGrant, false)
 })
@@ -103,4 +110,20 @@ test('a decision is open only while requested and not handed over, not when effe
   assert.equal(holdView({ ...requested, state: 'active' }).decisionOpen, false)
   assert.equal(holdView({ ...requested, state: 'active', granted_by: 'Peuqui' }).decisionOpen, false)
   assert.equal(holdView({ ...requested, granted_by: 'Peuqui' }).decisionOpen, false)
+})
+
+test('an active hold whose end was asked for says who asked, shows as the chip, and only then can be released at once', () => {
+  const ending = holdView({ ...requested, state: 'active', end_requested_by: 'AIfred: Telegram' })
+  assert.deepEqual(ending, {
+    stateKey: 'gpuHold.state.ending',
+    by: 'AIfred: Telegram',
+    canGrant: false,
+    blockedKey: 'gpuHold.blocked.active',
+    shortKey: 'gpuHold.short.ending',
+    decisionOpen: false,
+    endAsked: true,
+  })
+  assert.equal(holdView({ ...requested, state: 'active' }).endAsked, false)
+  assert.equal(holdView(requested).endAsked, false)
+  assert.equal(isFolded('http://mini:5070', { ...requested, state: 'active', end_requested_by: 'x' }, new MemoryStorage()), true)
 })

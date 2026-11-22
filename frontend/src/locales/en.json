@@ -532,7 +532,8 @@
     "state": {
       "requested": "Requested: waits for the loaded model to go, or for your release.",
       "active": "Effective: the cards are cleared for the owner.",
-      "granted": "Handed over by {by}: waits for the running work."
+      "granted": "Handed over by {by}: waits for the running work.",
+      "ending": "End asked for by {by}: waits until {owner} stops, clears the cards and lets go."
     },
     "reason": "Reason: {reason}",
     "grant": "Hand over the cards",
@@ -541,14 +542,21 @@
       "granted": "Already handed over."
     },
     "later": "Later",
-    "end": "End hold",
-    "endNow": "Yes, end it",
-    "endConfirm": "The hold of {owner} on the cards of {machine} ends. Running work of {owner} is not stopped, but it can be disturbed as soon as somebody else takes the cards.",
+    "end": "Ask for the end",
+    "endNow": "Yes, ask",
+    "endBlocked": "The end is asked for already.",
+    "endConfirm": "{owner} is asked to stop at the next clean point, clear the cards of {machine} and let go. Until then the cards stay locked.",
+    "endConfirmRequested": "The requested hold of {owner} is withdrawn; {owner} has nothing on the cards of {machine} yet.",
+    "release": "Release now",
+    "releaseNow": "Yes, release now",
+    "releaseBlocked": "Only after “Ask for the end”, if {owner} does not react.",
+    "releaseConfirm": "Only if {owner} does not react any more: the hold on the cards of {machine} ends at once. Running work of {owner} is not stopped, but it can be disturbed as soon as somebody else takes the cards.",
     "chip": "{owner}: {state} Tap to expand.",
     "short": {
       "requested": "requested",
       "granted": "handed over",
-      "active": "holds"
+      "active": "holds",
+      "ending": "ending"
     }
   },
   "approval": {
