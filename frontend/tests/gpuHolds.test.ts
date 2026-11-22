@@ -19,9 +19,6 @@ class MemoryStorage {
   setItem(key: string, value: string): void {
     this.items.set(key, value)
   }
-  removeItem(key: string): void {
-    this.items.delete(key)
-  }
 }
 
 test('a requested hold nobody handed over can be handed the cards, with no reason against it', () => {
@@ -30,7 +27,7 @@ test('a requested hold nobody handed over can be handed the cards, with no reaso
     canGrant: true,
     blockedKey: null,
     shortKey: 'gpuHold.short.requested',
-    pulses: true,
+    decisionOpen: true,
   })
 })
 
@@ -40,7 +37,7 @@ test('a requested hold already handed over says so and the button is blocked wit
     canGrant: false,
     blockedKey: 'gpuHold.blocked.granted',
     shortKey: 'gpuHold.short.granted',
-    pulses: false,
+    decisionOpen: false,
   })
 })
 
@@ -50,7 +47,7 @@ test('an active hold cannot be handed anything, the reason is told', () => {
     canGrant: false,
     blockedKey: 'gpuHold.blocked.active',
     shortKey: 'gpuHold.short.active',
-    pulses: false,
+    decisionOpen: false,
   })
   assert.equal(holdView({ ...requested, state: 'active', granted_by: 'Peuqui' }).canGrant, false)
 })
@@ -74,18 +71,36 @@ test('a storage that throws is nothing folded and does not break folding', () =>
     setItem: (): never => {
       throw new Error('blocked')
     },
-    removeItem: (): never => {
-      throw new Error('blocked')
-    },
   }
   assert.equal(isFolded('x', requested, broken), false)
+  assert.equal(isFolded('x', { ...requested, state: 'active' }, broken), true)
   setFolded('x', requested, true, broken)
   setFolded('x', requested, false, broken)
 })
 
-test('the folded chip pulses only while a decision is open, not when effective and not when handed over', () => {
-  assert.equal(holdView(requested).pulses, true)
-  assert.equal(holdView({ ...requested, state: 'active' }).pulses, false)
-  assert.equal(holdView({ ...requested, state: 'active', granted_by: 'Peuqui' }).pulses, false)
-  assert.equal(holdView({ ...requested, granted_by: 'Peuqui' }).pulses, false)
+test('a hold with nothing to decide shows as the chip at once, and a tap opens it until "Later"', () => {
+  const storage = new MemoryStorage()
+  const active: GpuHold = { ...requested, state: 'active' }
+  const granted: GpuHold = { ...requested, granted_by: 'Peuqui' }
+  assert.equal(isFolded('http://mini:5070', active, storage), true)
+  assert.equal(isFolded('http://mini:5070', granted, storage), true)
+  setFolded('http://mini:5070', active, false, storage)
+  assert.equal(isFolded('http://mini:5070', active, storage), false)
+  setFolded('http://mini:5070', active, true, storage)
+  assert.equal(isFolded('http://mini:5070', active, storage), true)
+})
+
+test('a requested hold folds by itself once it is effective, a folded one stays folded', () => {
+  const storage = new MemoryStorage()
+  assert.equal(isFolded('http://mini:5070', requested, storage), false)
+  assert.equal(isFolded('http://mini:5070', { ...requested, state: 'active' }, storage), true)
+  setFolded('http://mini:5070', requested, true, storage)
+  assert.equal(isFolded('http://mini:5070', { ...requested, state: 'active' }, storage), true)
+})
+
+test('a decision is open only while requested and not handed over, not when effective and not when handed over', () => {
+  assert.equal(holdView(requested).decisionOpen, true)
+  assert.equal(holdView({ ...requested, state: 'active' }).decisionOpen, false)
+  assert.equal(holdView({ ...requested, state: 'active', granted_by: 'Peuqui' }).decisionOpen, false)
+  assert.equal(holdView({ ...requested, granted_by: 'Peuqui' }).decisionOpen, false)
 })

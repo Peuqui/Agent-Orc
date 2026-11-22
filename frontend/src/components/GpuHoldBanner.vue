@@ -8,9 +8,10 @@ import { holdView } from '../gpuHolds'
 // Somebody (a measurement, a training) asks for or keeps the graphics cards of a machine: shown at
 // the top of every page, with the owner, the state and the reason as text (a phone has no
 // mouse-over). Only a requested hold can be handed the cards by hand; the button is grayed out
-// otherwise, with the reason beside it. "Later" folds the banner to a small chip in the
-// page's header (GpuHoldChips) in this browser; a tap on it opens the banner again,
-// a new hold shows in full again.
+// otherwise, with the reason beside it. The banner opens by itself only while that decision is
+// open; an effective or handed-over hold shows as a small chip in the page's header
+// (GpuHoldChips) right away, as there is nothing to decide. "Later" folds the banner to that chip
+// in this browser; a tap on it opens the banner again, a new hold shows by its state again.
 const toast = useToast()
 const { held, refresh, folded, fold } = useGpuHolds()
 

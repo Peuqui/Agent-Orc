@@ -28,18 +28,19 @@ export interface HoldView {
   blockedKey: string | null
   /** Key of the short state word in the folded chip. */
   shortKey: string
-  /** A decision is still open (requested, nobody handed over): the folded chip's dot pulses. */
-  pulses: boolean
+  /** A decision is still open (requested, nobody handed over): the banner opens by itself and the
+   * folded chip's dot pulses. Otherwise the hold shows as the chip until a tap opens it. */
+  decisionOpen: boolean
 }
 
 export function holdView(hold: GpuHold): HoldView {
   if (hold.state === 'active') {
-    return { stateKey: 'gpuHold.state.active', canGrant: false, blockedKey: 'gpuHold.blocked.active', shortKey: 'gpuHold.short.active', pulses: false }
+    return { stateKey: 'gpuHold.state.active', canGrant: false, blockedKey: 'gpuHold.blocked.active', shortKey: 'gpuHold.short.active', decisionOpen: false }
   }
   if (hold.granted_by !== null) {
-    return { stateKey: 'gpuHold.state.granted', canGrant: false, blockedKey: 'gpuHold.blocked.granted', shortKey: 'gpuHold.short.granted', pulses: false }
+    return { stateKey: 'gpuHold.state.granted', canGrant: false, blockedKey: 'gpuHold.blocked.granted', shortKey: 'gpuHold.short.granted', decisionOpen: false }
   }
-  return { stateKey: 'gpuHold.state.requested', canGrant: true, blockedKey: null, shortKey: 'gpuHold.short.requested', pulses: true }
+  return { stateKey: 'gpuHold.state.requested', canGrant: true, blockedKey: null, shortKey: 'gpuHold.short.requested', decisionOpen: true }
 }
 
 /** What makes a hold the same one again: a new hold of the same owner has a new start. */
@@ -49,28 +50,32 @@ export function holdIdentity(hold: GpuHold): string {
 
 const FOLDED_KEY_PREFIX = 'gpuHoldFolded:'
 
-/** Whether this browser folded this hold into the small notice. Storage that cannot be used
- * (private window, blocked site data) is nothing folded. */
+/** Whether this browser shows this hold as the small chip: as the person last chose for this
+ * hold ("Later" or a tap on the chip), otherwise folded unless a decision is open. Storage that
+ * cannot be used (private window, blocked site data) counts as no choice. */
 export function isFolded(address: string, hold: GpuHold, storage: Pick<Storage, 'getItem'> = localStorage): boolean {
+  let stored: string | null = null
   try {
-    return storage.getItem(FOLDED_KEY_PREFIX + address) === holdIdentity(hold)
+    stored = storage.getItem(FOLDED_KEY_PREFIX + address)
   } catch {
-    return false
+    // No choice readable: the state decides.
   }
+  if (stored === `${holdIdentity(hold)}|folded`) return true
+  if (stored === `${holdIdentity(hold)}|open`) return false
+  return !holdView(hold).decisionOpen
 }
 
 /** Folds the hold (or opens it again) for this browser only. A storage that cannot be written
- * leaves the banner as it is. */
+ * leaves the hold as its state shows it. */
 export function setFolded(
   address: string,
   hold: GpuHold,
   folded: boolean,
-  storage: Pick<Storage, 'setItem' | 'removeItem'> = localStorage,
+  storage: Pick<Storage, 'setItem'> = localStorage,
 ): void {
   try {
-    if (folded) storage.setItem(FOLDED_KEY_PREFIX + address, holdIdentity(hold))
-    else storage.removeItem(FOLDED_KEY_PREFIX + address)
+    storage.setItem(FOLDED_KEY_PREFIX + address, `${holdIdentity(hold)}|${folded ? 'folded' : 'open'}`)
   } catch {
-    // Not saved: the banner shows as before.
+    // Not saved: the hold shows as its state says.
   }
 }
