@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useMachineName } from '../composables/useHostContext'
 import { useScope } from '../composables/useScope'
 import { useToast } from '../composables/useToast'
 
@@ -8,6 +9,7 @@ import { useToast } from '../composables/useToast'
 // confirmed with the password (it widens what the file manager reaches), unless the machine has
 // no login (it is controlled over SSH).
 const { scope, load, setBaseDir } = useScope()
+const machine = useMachineName()
 const toast = useToast()
 const { t } = useI18n()
 const path = ref('')
@@ -37,7 +39,7 @@ async function save(): Promise<void> {
 
 <template>
   <form v-if="scope" class="text-sm text-soft" @submit.prevent="save">
-    <label for="base-dir">{{ $t('settings.baseDir') }}</label>
+    <label for="base-dir">{{ $t('settings.baseDir', { machine }) }}</label>
     <input id="base-dir" v-model="path" class="input mt-1 w-full text-xs" spellcheck="false" autocomplete="off" />
     <input
       v-if="scope.password_required"

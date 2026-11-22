@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { api, type DictationService } from '../../api'
 import { hasBrowserRecognition } from '../../composables/useDictation'
+import { useServiceMachineName } from '../../composables/useHostContext'
 import { useSettings } from '../../composables/useSettings'
 import { useToast } from '../../composables/useToast'
 import ToggleSwitch from '../ToggleSwitch.vue'
@@ -11,6 +12,7 @@ import ToggleSwitch from '../ToggleSwitch.vue'
 // the STT-Suite uses is its own business and only shown.
 const { dictationEngine, dictationDevice, dictationSendsAtOnce, dictationSounds } = useSettings()
 const toast = useToast()
+const serviceMachine = useServiceMachineName()
 // Whether an STT-Suite service is configured, and what it transcribes with; asked when the window opens.
 const stt = ref(false)
 const service = ref<DictationService | null>(null)
@@ -46,7 +48,7 @@ onMounted(async () => {
           </button>
         </div>
       </div>
-      <p class="mt-1 text-xs text-hint">{{ $t('settings.dictationEngineHint') }}</p>
+      <p class="mt-1 text-xs text-hint">{{ $t('settings.dictationEngineHint', { machine: serviceMachine }) }}</p>
       <p v-if="!hasBrowserRecognition" class="mt-1 text-xs text-hint">{{ $t('settings.dictationEngineMissing') }}</p>
     </div>
     <div v-if="usesService && service" class="mt-4 text-sm text-soft">

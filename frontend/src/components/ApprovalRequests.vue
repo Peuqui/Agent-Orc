@@ -7,7 +7,7 @@ import { type PermissionSuggestion, suggestionText } from '../permissionSuggesti
 import { APPROVAL_ATTRIBUTE, APPROVAL_FIRST_ATTRIBUTE } from '../columns'
 import AppIcon from './AppIcon.vue'
 import { sessionName, useSessions } from '../composables/useSessions'
-import { useApi } from '../composables/useHostContext'
+import { useApi, useMachineName } from '../composables/useHostContext'
 import { useToast } from '../composables/useToast'
 
 // named: shows whose request it is, with a button that goes to that agent (`open`) to see what it
@@ -20,6 +20,8 @@ const emit = defineEmits<{ open: []; leave: [] }>()
 const { refresh } = useSessions()
 const toast = useToast()
 const api = useApi()
+// The machine the agent runs on (the surroundings name it), which its local settings belong to.
+const machine = useMachineName()
 const { t } = useI18n()
 
 /** Claude Code's offers to stop asking that the web app shows, with their index in the request. */
@@ -33,7 +35,7 @@ function offers(approval: Approval): { index: number; label: string; title: stri
         : text.kind === 'mode'
           ? t('approval.alwaysMode', { mode: t(`permission.modes.${text.mode}`) })
           : t('approval.alwaysDirectories', { what: text.text })
-    const where = t(`approval.where.${suggestion.destination}`)
+    const where = t(`approval.where.${suggestion.destination}`, { machine: machine.value })
     return [{ index, label: t('approval.always', { what }), title: t('approval.alwaysTitle', { where }) }]
   })
 }

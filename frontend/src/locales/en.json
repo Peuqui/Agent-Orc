@@ -281,7 +281,7 @@
   },
   "settings": {
     "title": "Settings",
-    "baseDir": "This machine's start folder",
+    "baseDir": "Start folder of {machine}",
     "baseDirHint": "Where files and new agents begin; only folders in the home directory.",
     "baseDirSaved": "Start folder changed.",
     "scrollLines": "Scrolling: lines per step",
@@ -302,7 +302,7 @@
     "dictationEngine": "Dictation recognised by",
     "dictationEngine_stt-suite": "STT-Suite",
     "dictationEngine_browser": "Browser",
-    "dictationEngineHint": "STT-Suite: local, on this machine's GPU or CPU. Browser: the browser's own speech recognition, without local computing time; the audio goes to the browser's maker for it (Chrome: Google, Edge: Microsoft, Safari: Apple). Both listen until you press the microphone again. For this device.",
+    "dictationEngineHint": "STT-Suite: the speech recognition of {machine}, on GPU or CPU (depending on the settings of the STT-Suite also on another machine). Browser: the browser's own speech recognition, without local computing time; the audio goes to the browser's maker for it (Chrome: Google, Edge: Microsoft, Safari: Apple). Both listen until you press the microphone again. For this device.",
     "dictationEngineMissing": "This browser has no speech recognition of its own (Firefox, for one), only the STT-Suite works here.",
     "dictationService": "Dictation service",
     "dictationServiceLine": "GPU {gpu} · CPU {cpu}",
@@ -453,7 +453,7 @@
       {
         "title": "Usage",
         "items": [
-          "Tokens from all Claude conversations on this machine, per day, project and model, for 7, 14 or 30 days – from the terminal, VS Code and subagents too. Large figures are written in the language of the interface (k, M, B, T, Q, or in German Tsd., Mio., Mrd., Bio., Brd.)."
+          "Tokens from all Claude conversations on all machines, per day, project and model, for 7, 14 or 30 days – from the terminal, VS Code and subagents too. Large figures are written in the language of the interface (k, M, B, T, Q, or in German Tsd., Mio., Mrd., Bio., Brd.)."
         ]
       },
       {
@@ -495,7 +495,6 @@
     "speed": "Speed",
     "pitch": "Pitch",
     "serviceValue": "service default",
-    "thisMachine": "this machine",
     "preferLoaded": "Prefer a local engine that is already loaded",
     "preferLoadedHint": "If a local GPU engine that is switched on above is running already, it speaks first instead of a second one being loaded. Cloud and CPU engines are not meant.",
     "pause": "Pause between paragraphs (ms)",
@@ -579,7 +578,7 @@
     "alwaysDirectories": "folders {what}",
     "where": {
       "session": "until the session ends",
-      "localSettings": "in this project (on this machine only)",
+      "localSettings": "in this project (on {machine} only)",
       "projectSettings": "in this project (for everyone who uses it)",
       "userSettings": "in all projects"
     }
@@ -638,7 +637,7 @@
     "onHint": "Keep warm is on ({count} of at most {max} requests so far in this rest). Click to switch off.",
     "offHint": "Keep warm is off. Click to switch on.",
     "maxPings": "Keep warm: requests in a row",
-    "maxPingsHint": "How often Agent-Orc types the tiny request into a resting agent with keep warm on before it lets it go cold; each shortly before its cache expires or its model is unloaded. With Claude each request keeps the cache for another hour and reads the whole context from the cache for it, which counts toward the usage limits; with a local model it keeps the model loaded for another ttl. Once a Claude agent is cold, Claude Code compacts a large context by itself after 55 minutes. Your next input counts from the start. Applies to the agents of this machine."
+    "maxPingsHint": "How often Agent-Orc types the tiny request into a resting agent with keep warm on before it lets it go cold; each shortly before its cache expires or its model is unloaded. With Claude each request keeps the cache for another hour and reads the whole context from the cache for it, which counts toward the usage limits; with a local model it keeps the model loaded for another ttl. Once a Claude agent is cold, Claude Code compacts a large context by itself after 55 minutes. Your next input counts from the start. Applies to the agents on every machine."
   },
   "consumption": {
     "title": "Usage",

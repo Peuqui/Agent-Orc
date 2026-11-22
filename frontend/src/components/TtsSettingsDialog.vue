@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { api, type TtsCatalogRow, type TtsChoices, type TtsEntry, type TtsTuning, type TtsUnit } from '../api'
-import { useHosts } from '../composables/useHosts'
+import { useServiceMachineName } from '../composables/useHostContext'
 import { moveInList, useReorder } from '../composables/useReorder'
 import { useToast } from '../composables/useToast'
 import BaseDialog from './BaseDialog.vue'
@@ -19,10 +19,8 @@ import ToggleSwitch from './ToggleSwitch.vue'
 const emit = defineEmits<{ close: [] }>()
 const toast = useToast()
 const { t, locale } = useI18n()
-// This machine's own name (the engines of the service's own machine run here).
-const { state: hostsState, loadHosts } = useHosts()
-const own = computed(() => hostsState.value?.self ?? t('ttsSettings.thisMachine'))
-loadHosts().catch(toast.error)
+// The name of the service's own machine (its engines without a host run there).
+const own = useServiceMachineName()
 
 const UNITS: TtsUnit[] = ['sentence', 'paragraph', 'whole']
 const choices = ref<TtsChoices>({ entries: [], voices: {}, tuning: {}, paragraph_pause_ms: 0, prefer_loaded: false, auto: false })
@@ -74,7 +72,7 @@ function label(entry: TtsEntry): string {
 }
 
 /** Where the engine runs: in the cloud, on another machine, or on this one (named, so that two entries of an engine can be told apart). */
-function where(entry: TtsEntry): string {
+function where(entry: TtsEntry): string | null {
   if (catalogRow(entry)?.cloud) return t('ttsSettings.cloud')
   return entry.host ?? own.value
 }

@@ -281,7 +281,7 @@
   },
   "settings": {
     "title": "Einstellungen",
-    "baseDir": "Startverzeichnis dieses Rechners",
+    "baseDir": "Startverzeichnis von {machine}",
     "baseDirHint": "Hier beginnen Dateien und neue Agenten; nur Ordner im Home-Verzeichnis.",
     "baseDirSaved": "Startverzeichnis geändert.",
     "scrollLines": "Scrollen: Zeilen pro Schritt",
@@ -302,7 +302,7 @@
     "dictationEngine": "Diktat erkennt",
     "dictationEngine_stt-suite": "STT-Suite",
     "dictationEngine_browser": "Browser",
-    "dictationEngineHint": "STT-Suite: lokal, auf GPU oder CPU dieses Rechners. Browser: die Spracherkennung des Browsers, ohne lokale Rechenzeit; das Audio geht dafür an den Hersteller des Browsers (Chrome: Google, Edge: Microsoft, Safari: Apple). Beide hören zu, bis du das Mikrofon wieder drückst. Gilt für dieses Gerät.",
+    "dictationEngineHint": "STT-Suite: die Spracherkennung von {machine}, auf GPU oder CPU (je nach Einstellung der STT-Suite auch auf einem anderen Rechner). Browser: die Spracherkennung des Browsers, ohne lokale Rechenzeit; das Audio geht dafür an den Hersteller des Browsers (Chrome: Google, Edge: Microsoft, Safari: Apple). Beide hören zu, bis du das Mikrofon wieder drückst. Gilt für dieses Gerät.",
     "dictationEngineMissing": "Dieser Browser hat keine eigene Spracherkennung (etwa Firefox), hier geht nur die STT-Suite.",
     "dictationService": "Diktat-Dienst",
     "dictationServiceLine": "GPU {gpu} · CPU {cpu}",
@@ -453,7 +453,7 @@
       {
         "title": "Verbrauch",
         "items": [
-          "Tokens aus allen Claude-Gesprächen auf diesem Rechner, pro Tag, Projekt und Modell, für 7, 14 oder 30 Tage – auch aus dem Terminal, VS Code und von Hilfsagenten. Große Zahlen stehen in der Sprache der Oberfläche (Tsd., Mio., Mrd., Bio., Brd. beziehungsweise k, M, B, T, Q)."
+          "Tokens aus allen Claude-Gesprächen auf allen Rechnern, pro Tag, Projekt und Modell, für 7, 14 oder 30 Tage – auch aus dem Terminal, VS Code und von Hilfsagenten. Große Zahlen stehen in der Sprache der Oberfläche (Tsd., Mio., Mrd., Bio., Brd. beziehungsweise k, M, B, T, Q)."
         ]
       },
       {
@@ -495,7 +495,6 @@
     "speed": "Tempo",
     "pitch": "Tonhöhe",
     "serviceValue": "Vorgabe der Suite",
-    "thisMachine": "dieser Rechner",
     "preferLoaded": "Bereits geladene lokale Engine bevorzugen",
     "preferLoadedHint": "Läuft schon eine lokale GPU-Engine, die oben an ist, spricht sie zuerst, statt dass eine zweite geladen wird. Cloud- und CPU-Engines sind nicht gemeint.",
     "pause": "Pause zwischen Absätzen (ms)",
@@ -579,7 +578,7 @@
     "alwaysDirectories": "Ordner {what}",
     "where": {
       "session": "bis die Sitzung endet",
-      "localSettings": "in diesem Projekt (nur auf diesem Rechner)",
+      "localSettings": "in diesem Projekt (nur auf {machine})",
       "projectSettings": "in diesem Projekt (für alle, die es nutzen)",
       "userSettings": "in allen Projekten"
     }
@@ -638,7 +637,7 @@
     "onHint": "Warmhalten ist an (diese Ruhepause bisher {count} von höchstens {max} Bitten). Klicken schaltet aus.",
     "offHint": "Warmhalten ist aus. Klicken schaltet ein.",
     "maxPings": "Warmhalten: Bitten hintereinander",
-    "maxPingsHint": "So oft tippt Agent-Orc einem ruhenden Agenten mit eingeschaltetem Warmhalten die kleine Bitte ein, bevor er ihn kalt werden lässt; jede kurz bevor sein Zwischenspeicher abläuft bzw. sein Modell entladen wird. Bei Claude hält jede Bitte den Zwischenspeicher eine weitere Stunde und liest dafür den ganzen Kontext aus dem Cache, das zählt auf die Nutzungsgrenzen; bei einem lokalen Modell hält sie es für eine weitere ttl geladen. Ist ein Claude-Agent kalt, komprimiert Claude Code einen großen Kontext nach 55 Minuten selbst. Deine nächste Eingabe zählt von vorn. Gilt für die Agenten dieses Rechners."
+    "maxPingsHint": "So oft tippt Agent-Orc einem ruhenden Agenten mit eingeschaltetem Warmhalten die kleine Bitte ein, bevor er ihn kalt werden lässt; jede kurz bevor sein Zwischenspeicher abläuft bzw. sein Modell entladen wird. Bei Claude hält jede Bitte den Zwischenspeicher eine weitere Stunde und liest dafür den ganzen Kontext aus dem Cache, das zählt auf die Nutzungsgrenzen; bei einem lokalen Modell hält sie es für eine weitere ttl geladen. Ist ein Claude-Agent kalt, komprimiert Claude Code einen großen Kontext nach 55 Minuten selbst. Deine nächste Eingabe zählt von vorn. Gilt für die Agenten auf allen Rechnern."
   },
   "consumption": {
     "title": "Verbrauch",
