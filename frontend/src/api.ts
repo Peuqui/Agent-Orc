@@ -666,6 +666,10 @@ function createApi(host?: string | null) {
     /** A person hands the cards to the requested hold of `owner` at the GPU-Orc of the backend. */
     grantGpuOrcHold: (backend: string, owner: string) =>
       request<GpuHold>('POST', 'gpu-orc/holds/grant', { body: { backend, owner }, fromRoot: true }),
+    /** A person ends the hold of `owner` (requested or active) at the GPU-Orc of the backend; a hold
+     * that another owner took meanwhile is refused, never ended. */
+    endGpuOrcHold: (backend: string, owner: string) =>
+      request<void>('POST', 'gpu-orc/holds/end', { body: { backend, owner }, fromRoot: true }),
     /** Sends the machine its Wake-on-LAN packet (to the target of the config); it does not wait for the machine. */
     wakeHost: (host: string) => request<void>('POST', `hosts/${encodeURIComponent(host)}/wake`, { fromRoot: true }),
     /** What the machine's own config lets this one do to it (put it to sleep, switch it off). */

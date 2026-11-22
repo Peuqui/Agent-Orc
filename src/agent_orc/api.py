@@ -167,7 +167,7 @@ from agent_orc.history import (
     delete_claude_conversation,
     list_all_claude_conversations,
 )
-from agent_orc.holds import grant_hold, hold_json, holds_of_backends
+from agent_orc.holds import end_hold, grant_hold, hold_json, holds_of_backends
 from agent_orc.hosts import (
     HostLink,
     HostState,
@@ -495,7 +495,9 @@ class CatalogRequest(BaseModel):
     backends: dict[str, CatalogBackend]
 
 
-class GrantHoldRequest(BaseModel):
+class HoldRequest(BaseModel):
+    """A hold as the page shows it: the backend that names its GPU-Orc, and its owner."""
+
     backend: str
     owner: str
 
@@ -2193,9 +2195,18 @@ def create_app(
         return [entry.as_json() for entry in holds_of_backends(config, fetch_json)]
 
     @app.post("/api/gpu-orc/holds/grant", dependencies=authenticated)
-    def grant_gpu_orc_hold(body: GrantHoldRequest) -> dict[str, Any]:
+    def grant_gpu_orc_hold(body: HoldRequest) -> dict[str, Any]:
         """A person hands the cards to a requested hold; answers with the hold as it is now."""
         return hold_json(grant_hold(config, body.backend, body.owner, fetch_json))
+
+    @app.post("/api/gpu-orc/holds/end", status_code=204, dependencies=authenticated)
+    def end_gpu_orc_hold(body: HoldRequest) -> None:
+        """A person ends a hold, requested or active. It goes to GPU-Orc in the owner's name, so
+        GPU-Orc records no person: it is logged here."""
+        end_hold(config, body.backend, body.owner, fetch_json)
+        logger.warning(
+            "The page ended the GPU-Orc hold of %r (backend %s)", body.owner, body.backend
+        )
 
     @app.get("/api/approvals/events", dependencies=authenticated)
     async def approval_events() -> StreamingResponse:

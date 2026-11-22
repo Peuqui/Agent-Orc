@@ -541,6 +541,9 @@
       "granted": "Already handed over."
     },
     "later": "Later",
+    "end": "End hold",
+    "endNow": "Yes, end it",
+    "endConfirm": "The hold of {owner} on the cards of {machine} ends. Running work of {owner} is not stopped, but it can be disturbed as soon as somebody else takes the cards.",
     "chip": "{owner}: {state} Tap to expand.",
     "short": {
       "requested": "requested",

@@ -568,8 +568,12 @@ handed the cards yet), otherwise as a pill in the page's header that a tap opens
 button "Hand over the cards": it tells GPU-Orc that a person lets the owner have them
 (`POST /api/gpu-orc/holds/grant` with `backend` and `owner`; GPU-Orc's answer, such as no hold or the
 hold of another owner, is shown as the error). The name GPU-Orc is told as the one who handed them
-over is `gpu_orc_grant_by` in the config (default `agent-orc`; the login knows no user name). "Later" folds the banner into the
-pill in this browser only.
+over is `gpu_orc_grant_by` in the config (default `agent-orc`; the login knows no user name). "End hold"
+ends a hold, requested or active, after a second press in the banner (`POST /api/gpu-orc/holds/end`
+with `backend` and `owner`). It goes to GPU-Orc in the owner's name and without force, so a hold that
+another owner took meanwhile is refused instead of ended; GPU-Orc then records no person, so
+Agent-Orc logs the end itself. Ending a hold stops no process: the owner's running work goes on, but
+others may take the cards. "Later" folds the banner into the pill in this browser only.
 
 So that a click on "Hand over the cards" does not break off an answer that is running, Agent-Orc
 tells every GPU-Orc of its backends while a running session on one of them works (`POST /work`; one

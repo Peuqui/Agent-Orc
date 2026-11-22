@@ -541,6 +541,9 @@
       "granted": "Schon überlassen."
     },
     "later": "Später",
+    "end": "Hold beenden",
+    "endNow": "Ja, beenden",
+    "endConfirm": "Der Hold von {owner} auf den Karten von {machine} endet. Laufende Arbeit von {owner} bricht das nicht ab, sie kann aber gestört werden, sobald jemand anderes die Karten belegt.",
     "chip": "{owner}: {state} Tippen zum Aufklappen.",
     "short": {
       "requested": "angefordert",

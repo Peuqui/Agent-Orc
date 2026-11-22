@@ -1,9 +1,11 @@
-"""The holds of GPU-Orc as the page shows them, and the person's hand-over of the cards.
+"""The holds of GPU-Orc as the page shows them, the person's hand-over of the cards, and the
+person ending a hold.
 
 A hold is somebody keeping the graphics cards of a machine (a measurement, a training). GPU-Orc
 makes a requested hold effective by itself once no main model is loaded; while one is, only a
-person's grant lets it go on (GPU-Orc's POST /hold/grant). The page asks for the holds of every
-GPU-Orc the backends name and sends the grant back here; the protocol is gpu_orc_client.py.
+person's grant lets it go on (GPU-Orc's POST /hold/grant). A person can also end a hold, requested
+or active (GPU-Orc's DELETE /hold). The page asks for the holds of every GPU-Orc the backends name
+and sends grants and ends back here; the protocol is gpu_orc_client.py.
 """
 
 from dataclasses import dataclass
@@ -79,10 +81,9 @@ def holds_of_backends(config: Config, fetch: Fetch) -> list[GpuOrcHolds]:
     return entries
 
 
-def grant_hold(config: Config, backend_name: str, owner: str, fetch: Fetch) -> Hold:
-    """The person grants the requested hold of `owner` at the GPU-Orc of the backend. Raises
-    BackendError (the backend names no GPU-Orc or its server does not answer) or GpuOrcError (no
-    hold, a hold of another owner, GPU-Orc not reachable, token file unreadable)."""
+def _gpu_orc_of_backend(config: Config, backend_name: str, fetch: Fetch) -> GpuOrc:
+    """The client of the GPU-Orc the backend names. Raises BackendError (the backend names no
+    GPU-Orc or its server does not answer) or GpuOrcError (the token file is unreadable)."""
     backend = backend_named(config, backend_name)
     if backend.gpu_orc is None:
         raise BackendError(f"{backend.label} names no GPU-Orc (gpu_orc)")
@@ -90,4 +91,21 @@ def grant_hold(config: Config, backend_name: str, owner: str, fetch: Fetch) -> H
         orc, _ = gpu_orc_of(backend, fetch)
     except OSError as error:
         raise GpuOrcError(f"GPU-Orc token of {backend.label} unreadable: {error}") from error
+    return orc
+
+
+def grant_hold(config: Config, backend_name: str, owner: str, fetch: Fetch) -> Hold:
+    """The person grants the requested hold of `owner` at the GPU-Orc of the backend. Raises
+    BackendError (the backend names no GPU-Orc or its server does not answer) or GpuOrcError (no
+    hold, a hold of another owner, GPU-Orc not reachable, token file unreadable)."""
+    orc = _gpu_orc_of_backend(config, backend_name, fetch)
     return orc.grant_hold(owner, config.gpu_orc_grant_by)
+
+
+def end_hold(config: Config, backend_name: str, owner: str, fetch: Fetch) -> None:
+    """The person ends the hold of `owner` (requested or active) at the GPU-Orc of the backend.
+    Sent in the owner's name and without force: GPU-Orc lets go of that hold only, so a hold that
+    another owner took meanwhile is refused (409) instead of ended by mistake; a hold that is gone
+    already is nothing to end. Raises BackendError or GpuOrcError like grant_hold."""
+    orc = _gpu_orc_of_backend(config, backend_name, fetch)
+    orc.release_hold(owner)
