@@ -2,7 +2,7 @@
 # Update (or first install) Agent-Orc on another machine, from this repository: builds the web
 # app and a wheel here, ships it over SSH and installs it there, so that machine needs neither
 # the source nor Node. The ssh arguments are passed on as they are:
-#     deploy/deploy.sh -p 2222 mp@10.0.0.2
+#     deploy/deploy.sh -p 2222 mp@aragon
 # A new machine then needs `ssh -t <it> agent-orc setup` once, and another deploy to start it.
 set -euo pipefail
 
