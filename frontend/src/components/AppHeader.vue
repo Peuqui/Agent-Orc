@@ -37,13 +37,14 @@ async function logout(): Promise<void> {
         <div class="hidden flex-1 justify-center @5xl:flex">
           <SectionNav class="flex" label-class="hidden @6xl:inline" />
         </div>
-        <!-- The hold pills beside the buttons; where the row is short of room they wrap below them
-             (wrap-reverse puts the first line, the pills', at the bottom), and the buttons wrap among
-             themselves, so nothing covers the logo or leaves the screen. -->
-        <div class="flex min-w-0 flex-wrap-reverse items-center justify-end gap-x-2 gap-y-1">
+        <!-- The hold pills beside the buttons; short of room the pills shrink to their dot (GpuHoldChips),
+             and only where not even the dot fits do they wrap. The buttons never shrink (a fraction of a
+             pixel would already wrap one): only wider than the whole room they wrap among themselves,
+             so nothing covers the logo or leaves the screen. -->
+        <div class="flex min-w-0 flex-wrap items-center justify-end gap-x-2 gap-y-1">
           <GpuHoldChips />
           <!-- Compact buttons, so the logo keeps its room on narrow screens. -->
-          <div class="flex min-w-0 flex-wrap items-center justify-end [&_.btn-icon]:size-8">
+          <div class="flex max-w-full shrink-0 flex-wrap items-center justify-end [&_.btn-icon]:size-8">
             <HostSwitcher />
             <SelectMenu
               class="mr-1"

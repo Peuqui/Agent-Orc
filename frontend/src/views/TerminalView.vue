@@ -11,7 +11,7 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { api, terminalUrl, type Modifier, type TerminalSettings } from '../api'
 import AppIcon from '../components/AppIcon.vue'
-import GpuHoldChips from '../components/GpuHoldChips.vue'
+import HeaderTitle from '../components/HeaderTitle.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
 import CacheAge from '../components/CacheAge.vue'
 import KeepWarmToggle from '../components/KeepWarmToggle.vue'
@@ -514,8 +514,7 @@ onBeforeUnmount(() => {
       <!-- Next to the context: how warm its prompt cache is (also in a workspace column without name). -->
       <CacheAge v-if="session?.running" :session="session" compact class="ml-2" />
       <KeepWarmToggle v-if="session?.running" :session="session" compact class="ml-1" />
-      <h1 class="ml-2 min-w-0 flex-1 truncate font-semibold text-highlight-300">{{ ownTab ? name : '' }}</h1>
-      <GpuHoldChips />
+      <HeaderTitle class="ml-2" title-class="text-highlight-300">{{ ownTab ? name : '' }}</HeaderTitle>
       <!-- The agent's own terminal, or only what it answered (each agent keeps its own choice on this device). -->
       <div
         v-if="session && !session.terminal"

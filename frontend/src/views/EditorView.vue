@@ -11,7 +11,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ApiError, api, pageViewUrl, rawFileUrl } from '../api'
 import AppIcon from '../components/AppIcon.vue'
-import GpuHoldChips from '../components/GpuHoldChips.vue'
+import HeaderTitle from '../components/HeaderTitle.vue'
 import BaseDialog from '../components/BaseDialog.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
 import PdfPages from '../components/PdfPages.vue'
@@ -210,10 +210,7 @@ onBeforeUnmount(() => view?.destroy())
       >
         <AppIcon name="up" class="-rotate-90" />
       </button>
-      <h1 class="min-w-0 flex-1 truncate font-semibold">
-        {{ name }}<span v-if="dirty" class="text-accent-400"> ●</span>
-      </h1>
-      <GpuHoldChips />
+      <HeaderTitle>{{ name }}<span v-if="dirty" class="text-accent-400"> ●</span></HeaderTitle>
       <button
         v-if="hasPage"
         class="btn-secondary btn-small"
