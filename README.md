@@ -581,8 +581,8 @@ start); after a restart of Agent-Orc a request still pending is typed once more.
 react, "Release now" lets go of the hold for it (`POST /api/gpu-orc/holds/release` with `backend` and `owner`,
 answer 204). That goes to GPU-Orc in the owner's name and without force, so a hold that another owner took
 meanwhile is refused instead of ended; GPU-Orc then records no person, so Agent-Orc logs the release itself.
-Releasing stops no process: the owner's running work goes on, but others may take the cards. "Later" folds the
-banner into the pill in this browser only.
+Releasing stops no process: the owner's running work goes on, but others may take the cards. × (or a press
+beside the banner, or Escape) folds the banner into the pill in this browser only; it sends nothing.
 
 So that a click on "Hand over the cards" does not break off an answer that is running, Agent-Orc
 tells every GPU-Orc of its backends while a running session on one of them works (`POST /work`; one

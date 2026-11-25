@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { reactive } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { api } from '../api'
+import { useDismiss } from '../composables/useDismiss'
 import { useGpuHolds } from '../composables/useGpuHolds'
 import { useToast } from '../composables/useToast'
 import { type GpuHold, holdView } from '../gpuHolds'
@@ -13,8 +14,9 @@ import { type GpuHold, holdView } from '../gpuHolds'
 // cannot be pressed is grayed out with the reason beside it; both changes ask once more in the
 // banner itself, saying what follows (a dialog would open beneath the banner). The banner opens by
 // itself only while a hand-over can be decided; any other hold shows as a small chip in the page's
-// header (GpuHoldChips) right away. "Later" folds the banner to that chip in this browser; a tap on
-// it opens the banner again, a new hold shows by its state again.
+// header (GpuHoldChips) right away. × folds the banner to that chip in this browser, and so does a
+// press beside it or Escape (like a menu; it sends nothing, a confirmation begun is dropped); a tap
+// on the chip opens the banner again, a new hold shows by its state again.
 const toast = useToast()
 const { held, refresh, folded, fold } = useGpuHolds()
 
@@ -22,6 +24,16 @@ const { held, refresh, folded, fold } = useGpuHolds()
 const busy = reactive<Record<string, boolean>>({})
 // The change of a hold that was pressed once and waits for the confirmation.
 const confirming = reactive<Record<string, 'end' | 'release' | undefined>>({})
+
+const root = ref<HTMLElement>()
+const open = computed(() => held.value.filter(({ address, hold }) => !folded(address, hold)))
+function foldOpen(): void {
+  for (const { address, hold } of open.value) {
+    confirming[address] = undefined
+    fold(address, hold, true)
+  }
+}
+useDismiss(root, () => open.value.length > 0, foldOpen)
 
 async function change(address: string, call: () => Promise<unknown>): Promise<void> {
   busy[address] = true
@@ -56,14 +68,27 @@ function confirmKey(address: string, hold: GpuHold): string {
 </script>
 
 <template>
-  <template v-for="{ address, entry, hold } in held" :key="address">
+  <!-- Only while a banner is open, so that the surrounding stack stays empty otherwise. -->
+  <div v-if="open.length" ref="root" class="contents">
     <div
-      v-if="!folded(address, hold)"
+      v-for="{ address, entry, hold } in open"
+      :key="address"
       class="pointer-events-auto flex w-full max-w-xl flex-col gap-2 rounded-lg border border-highlight-500 bg-page px-3 py-2 text-sm shadow-xl"
     >
-      <span class="font-semibold text-highlight-200">
-        {{ $t('gpuHold.title', { owner: hold.owner, machine: entry.label }) }}
-      </span>
+      <div class="flex items-start gap-2">
+        <span class="flex-1 font-semibold text-highlight-200">
+          {{ $t('gpuHold.title', { owner: hold.owner, machine: entry.label }) }}
+        </span>
+        <button
+          type="button"
+          class="btn-icon -mt-1 -mr-2 size-8 shrink-0"
+          :aria-label="$t('common.close')"
+          :title="$t('common.close')"
+          @click="((confirming[address] = undefined), fold(address, hold, true))"
+        >
+          ×
+        </button>
+      </div>
       <span class="text-highlight-200">{{ $t(holdView(hold).stateKey, { by: holdView(hold).by, owner: hold.owner }) }}</span>
       <span class="text-main">{{ $t('gpuHold.reason', { reason: hold.reason }) }}</span>
       <div class="flex flex-wrap items-center gap-2">
@@ -76,9 +101,6 @@ function confirmKey(address: string, hold: GpuHold): string {
           {{ $t('gpuHold.grant') }}
         </button>
         <span v-if="holdView(hold).blockedKey" class="text-xs text-soft">{{ $t(holdView(hold).blockedKey!) }}</span>
-        <button type="button" class="btn-secondary btn-small ml-auto" @click="fold(address, hold, true)">
-          {{ $t('gpuHold.later') }}
-        </button>
       </div>
       <div v-if="!confirming[address]" class="flex flex-wrap items-center gap-2">
         <button
@@ -115,5 +137,5 @@ function confirmKey(address: string, hold: GpuHold): string {
         </button>
       </div>
     </div>
-  </template>
+  </div>
 </template>
