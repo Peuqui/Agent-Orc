@@ -474,79 +474,84 @@ function deleteThis(): void {
         <!-- A room of its own (its container measures it, so it has no width by content): when the
              row is short of it, the panel and the buttons wrap as a whole instead of overlapping. -->
         <QuotaPanel v-if="!phone" class="min-w-36 flex-1 sm:px-3" />
-        <div class="ml-auto flex shrink-0 items-center gap-1">
+        <!-- The hold pills beside the buttons; where the row is short of room they wrap below them
+             (wrap-reverse puts the first line, the pills', at the bottom), and the buttons wrap among
+             themselves, so nothing covers the name or leaves the screen. -->
+        <div class="ml-auto flex min-w-0 flex-wrap-reverse items-center justify-end gap-1">
           <GpuHoldChips />
-          <AddColumnMenu :candidates="candidates" @open="open" />
-          <ColumnCountControl
-            v-if="!phone"
-            :visible="widths.visible.value"
-            :resized="widths.resized.value"
-            @change="widths.changeVisible"
-            @reset="widths.resetWidths"
-          />
-          <button
-            v-if="speech.available.value"
-            class="btn-icon relative"
-            :class="speechAutoRead ? '!text-highlight-300 ring-1 ring-highlight-500' : ''"
-            :aria-pressed="speechAutoRead"
-            :aria-label="$t('answers.autoRead')"
-            :title="$t('answers.autoRead')"
-            @click="speechAutoRead = !speechAutoRead"
-          >
-            <!-- The speaker with an "A": reads by itself (the speaker beside it reads what is new now). -->
-            <SpeakerIcon />
-            <span
-              class="absolute right-0.5 bottom-0.5 rounded px-[3px] text-[9px] leading-tight font-bold"
-              :class="speechAutoRead ? 'bg-highlight-500 text-on-highlight' : 'bg-raised-strong text-main'"
-              aria-hidden="true"
-            >A</span>
-          </button>
-          <!-- The one reading of the tab (speechHost.ts): pause and stop for every column. On a phone one column
-               is in view and its own "new" button reads the same as the one here. -->
-          <template v-if="speech.playing.value !== null">
-            <button class="btn-icon" :aria-label="$t('answers.pause')" :title="$t('answers.pause')" @click="speech.togglePause">
-              <AppIcon :name="speech.paused.value ? 'play' : 'pause'" />
+          <div class="flex min-w-0 flex-wrap items-center justify-end gap-1">
+            <AddColumnMenu :candidates="candidates" @open="open" />
+            <ColumnCountControl
+              v-if="!phone"
+              :visible="widths.visible.value"
+              :resized="widths.resized.value"
+              @change="widths.changeVisible"
+              @reset="widths.resetWidths"
+            />
+            <button
+              v-if="speech.available.value"
+              class="btn-icon relative"
+              :class="speechAutoRead ? '!text-highlight-300 ring-1 ring-highlight-500' : ''"
+              :aria-pressed="speechAutoRead"
+              :aria-label="$t('answers.autoRead')"
+              :title="$t('answers.autoRead')"
+              @click="speechAutoRead = !speechAutoRead"
+            >
+              <!-- The speaker with an "A": reads by itself (the speaker beside it reads what is new now). -->
+              <SpeakerIcon />
+              <span
+                class="absolute right-0.5 bottom-0.5 rounded px-[3px] text-[9px] leading-tight font-bold"
+                :class="speechAutoRead ? 'bg-highlight-500 text-on-highlight' : 'bg-raised-strong text-main'"
+                aria-hidden="true"
+              >A</span>
             </button>
-            <button class="btn-icon text-accent-400" :aria-label="$t('answers.stop')" :title="$t('answers.stop')" @click="speech.stop">
-              <AppIcon name="stop" />
-            </button>
-          </template>
-          <button
-            v-else-if="speech.available.value && !phone"
-            class="btn-icon"
-            :aria-label="$t('answers.readNewColumns')"
-            :title="$t('answers.readNewColumns')"
-            @click="readNewAnswers"
-          >
-            <SpeakerIcon />
-          </button>
-          <button
-            class="btn-icon"
-            :aria-label="$t('workspace.fullscreen')"
-            :title="$t('workspace.fullscreen')"
-            @click="fullscreen = true"
-          >
-            <AppIcon name="expand" />
-          </button>
-          <!-- Where the room is short (a phone): what is needed rarely sits behind this button. -->
-          <DropdownMenu v-if="!tabsInHeader" v-model:open="moreOpen" right panel-class="flex w-64 flex-col p-1">
-            <template #trigger="{ toggle }">
-              <button class="btn-icon" :aria-label="$t('workspace.more')" :title="$t('workspace.more')" @click="toggle">
-                <AppIcon name="more" />
+            <!-- The one reading of the tab (speechHost.ts): pause and stop for every column. On a phone one column
+                 is in view and its own "new" button reads the same as the one here. -->
+            <template v-if="speech.playing.value !== null">
+              <button class="btn-icon" :aria-label="$t('answers.pause')" :title="$t('answers.pause')" @click="speech.togglePause">
+                <AppIcon :name="speech.paused.value ? 'play' : 'pause'" />
+              </button>
+              <button class="btn-icon text-accent-400" :aria-label="$t('answers.stop')" :title="$t('answers.stop')" @click="speech.stop">
+                <AppIcon name="stop" />
               </button>
             </template>
             <button
-              class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-soft hover:bg-raised"
-              @click="((moreOpen = false), (helpOpen = true))"
+              v-else-if="speech.available.value && !phone"
+              class="btn-icon"
+              :aria-label="$t('answers.readNewColumns')"
+              :title="$t('answers.readNewColumns')"
+              @click="readNewAnswers"
             >
-              <AppIcon name="lightbulb" class="text-highlight-300" />{{ $t('help.button') }}
+              <SpeakerIcon />
             </button>
-          </DropdownMenu>
-          <!-- Which machine's workspaces: the same menu as in every other page's header. -->
-          <HostSwitcher />
-          <!-- The device's settings, the same menu as in every other page's header. -->
-          <SettingsMenu />
-          <HelpButton v-model:open="helpOpen" :bare="!tabsInHeader" />
+            <button
+              class="btn-icon"
+              :aria-label="$t('workspace.fullscreen')"
+              :title="$t('workspace.fullscreen')"
+              @click="fullscreen = true"
+            >
+              <AppIcon name="expand" />
+            </button>
+            <!-- Where the room is short (a phone): what is needed rarely sits behind this button. -->
+            <DropdownMenu v-if="!tabsInHeader" v-model:open="moreOpen" right panel-class="flex w-64 flex-col p-1">
+              <template #trigger="{ toggle }">
+                <button class="btn-icon" :aria-label="$t('workspace.more')" :title="$t('workspace.more')" @click="toggle">
+                  <AppIcon name="more" />
+                </button>
+              </template>
+              <button
+                class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-soft hover:bg-raised"
+                @click="((moreOpen = false), (helpOpen = true))"
+              >
+                <AppIcon name="lightbulb" class="text-highlight-300" />{{ $t('help.button') }}
+              </button>
+            </DropdownMenu>
+            <!-- Which machine's workspaces: the same menu as in every other page's header. -->
+            <HostSwitcher />
+            <!-- The device's settings, the same menu as in every other page's header. -->
+            <SettingsMenu />
+            <HelpButton v-model:open="helpOpen" :bare="!tabsInHeader" />
+          </div>
         </div>
       </header>
       <!-- The way back from fullscreen, small in the corner above the columns. -->
