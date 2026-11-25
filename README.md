@@ -562,7 +562,8 @@ otherwise, with its messages unread). See docs/PLAN-2026-11-14-kartentor.md.
 
 While a GPU-Orc of a backend holds the cards (a hold requested or effective), the owner, the state and
 the reason show at the top of every page: as a banner while a decision is open (requested, nobody
-handed the cards yet), otherwise as a pill in the page's header that a tap opens into the banner
+handed the cards yet), otherwise as a pill in the page's header (red while requested, amber once
+handed over or effective; short of room it shrinks to a round patch of that colour) that a tap opens into the banner
 (`GET /api/gpu-orc/holds`, one entry per GPU-Orc however many backends name it). A requested hold that nobody handed the cards yet has the
 button "Hand over the cards": it tells GPU-Orc that a person lets the owner have them
 (`POST /api/gpu-orc/holds/grant` with `backend` and `owner`; GPU-Orc's answer, such as no hold or the

@@ -33,7 +33,7 @@ export interface HoldView {
   /** Key of the short state word in the folded chip. */
   shortKey: string
   /** A decision is still open (requested, nobody handed over): the banner opens by itself and the
-   * folded chip's dot pulses. Otherwise the hold shows as the chip until a tap opens it. */
+   * folded chip is red. Otherwise the hold shows as the chip until a tap opens it. */
   decisionOpen: boolean
   /** Somebody asked the owner of the active hold to end it: asking again does nothing, and letting
    * go at once is for an owner that does not react to that request. */

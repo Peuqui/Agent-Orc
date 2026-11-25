@@ -441,11 +441,11 @@ function deleteThis(): void {
         <!-- A room of its own (its container measures it, so it has no width by content): when the
              row is short of it, the panel and the buttons wrap as a whole instead of overlapping. -->
         <QuotaPanel v-if="!phone" class="min-w-36 flex-1 sm:px-3" />
-        <!-- With the workspaces as tabs, the hold pills sit beside the buttons, shrinking to their dot short
-             of room (GpuHoldChips); otherwise beside the name (WorkspaceSwitcher). Only where not even the
-             dot fits do they wrap. The buttons never shrink (a fraction of a pixel would already wrap
-             one): only wider than the whole room they wrap among themselves, so nothing covers the name
-             or leaves the screen. -->
+        <!-- With the workspaces as tabs, the hold pills sit beside the buttons, shrinking to a
+             small round patch short of room (GpuHoldChips); otherwise beside the name
+             (WorkspaceSwitcher). Only where not even that fits do they wrap. The buttons never
+             shrink (a fraction of a pixel would already wrap one): only wider than the whole room
+             they wrap among themselves, so nothing covers the name or leaves the screen. -->
         <div class="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-1">
           <GpuHoldChips v-if="tabsInHeader" />
           <div class="flex max-w-full shrink-0 flex-wrap items-center justify-end gap-1">

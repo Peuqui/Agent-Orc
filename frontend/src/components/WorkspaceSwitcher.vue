@@ -31,8 +31,8 @@ const choosing = ref(false)
 <template>
   <template v-if="!tabsInHeader">
     <!-- The hold pills beside the name, which keeps its room first (WithHoldChips): at least the arrow's
-         button (min-w-8) and the pills' dot beside it. -->
-    <WithHoldChips min-class="min-w-8 has-[[data-hold-chip]]:min-w-16">
+         button (min-w-8) and the pill's smallest size beside it (with the gap). -->
+    <WithHoldChips min-class="min-w-8 has-[[data-hold-chip]]:min-w-15">
       <!-- The name is the button of a menu with all that concerns workspaces: renaming (the field),
            the others, a new one, deleting. -->
       <DropdownMenu v-model:open="choosing" class="min-w-8" panel-class="flex w-64 flex-col gap-1 p-2">
