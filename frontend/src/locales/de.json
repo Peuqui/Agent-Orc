@@ -271,10 +271,7 @@
     "movesFrom": "aus „{name}“",
     "switchHere": "In diesem Tab hierher wechseln (Mittelklick: neuer Tab)",
     "openElsewhere": "In einem anderen Tab offen – springt dorthin",
-    "others": "Andere Arbeitsflächen",
-    "fullscreen": "Vollbild: nur Terminal und Eingabe",
-    "leaveFullscreen": "Vollbild verlassen",
-    "more": "Mehr"
+    "others": "Andere Arbeitsflächen"
   },
   "markdown": {
     "copyCode": "Code kopieren"
@@ -344,7 +341,7 @@
     "remove": "Anhang entfernen"
   },
   "help": {
-    "button": "Hilfe: So funktioniert Agent-Orc",
+    "button": "Hilfe",
     "title": "So funktioniert Agent-Orc",
     "close": "Schließen",
     "contents": "Inhalt",
@@ -354,7 +351,7 @@
         "title": "Kopfzeile und Seiten",
         "items": [
           "Die Seiten Agenten, Arbeitsfläche, Notizen, Dateien und Verbrauch stehen ab 1024 px Breite als Reiter in der Kopfzeile, darunter (Handy, Tablet hochkant) in der Leiste unten. Die Arbeitsfläche und die Agentenseite haben keine untere Leiste, damit das Terminal den Platz bekommt; dort öffnet das Kachel-Symbol oben links alle Seiten.",
-          "**Rechts oben**: Sprachwahl (DE/EN, gilt für dieses Gerät), diese Hilfe (Glühbirne), die Einstellungen (☰) und Abmelden.",
+          "**Rechts oben**: die Einstellungen (☰, dort auch die Sprache DE/EN für dieses Gerät und als letzter Eintrag diese Hilfe) und Abmelden.",
           "Zahlen bei Tokens stehen in der Sprache der Oberfläche: Deutsch Tsd., Mio., Mrd., Bio. und Brd., Englisch k, M, B, T und Q."
         ]
       },
@@ -398,7 +395,6 @@
           "Der Trenner zwischen zwei Spalten verschiebt ihre Grenze: Ziehen (am Touch-Bildschirm genügt Berühren und Schieben, kein langes Drücken), und was die eine Spalte gewinnt, verliert die andere, die Breite aller zusammen bleibt. Doppelklick auf den Trenner macht diese zwei Spalten wieder gleich breit; der Knopf mit den zwei Pfeilen neben „− n +“ (erscheint, sobald eine Breite verändert ist) setzt alle zurück. Die Breiten sind nur auf diesem Gerät gespeichert, da Bildschirme verschieden sind.",
           "Am Handy zeigt die Arbeitsfläche eine Spalte auf einmal; seitlich im Terminal wischen holt die nächste (nach links) oder vorige (nach rechts), senkrecht wischen scrollt.",
           "**Kachel-Symbol oben links**: alle Seiten (Agenten, Dateien, Verbrauch …) – die Arbeitsfläche hat keine Leiste unten, damit das Terminal den Platz bekommt.",
-          "**Vollbild** (Symbol mit vier Ecken): nur noch Terminal und Eingabefeld, wo möglich auch ohne Browserleisten; der kleine Knopf oben rechts holt alles zurück.",
           "Am Handy steht der Kopf in einer Zeile; die anderen Arbeitsflächen liegen hinter dem Pfeil neben dem Namen, und die Terminalleiste nennt die Spalte und schließt sie mit ×."
         ]
       },

@@ -13,7 +13,6 @@ import { unreadTexts } from '../answers'
 import {
   APPROVAL_SELECTOR,
   COLUMN_CLOSE_EVENT,
-  COLUMN_FULLSCREEN_EVENT,
   COLUMN_SWIPE_EVENT,
   focusApproval,
   MESSAGE_FIELD_SELECTOR,
@@ -24,8 +23,6 @@ import GpuHoldChips from '../components/GpuHoldChips.vue'
 import SpeakerIcon from '../components/SpeakerIcon.vue'
 import ColumnCountControl from '../components/ColumnCountControl.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
-import DropdownMenu from '../components/DropdownMenu.vue'
-import HelpButton from '../components/HelpButton.vue'
 import HostSwitcher from '../components/HostSwitcher.vue'
 import SectionNav from '../components/SectionNav.vue'
 import QuotaPanel from '../components/QuotaPanel.vue'
@@ -91,9 +88,6 @@ const agentsInView = computed(() => {
 // The columns are of the page's machine.
 watch(agentsInView, (ids) => setShownAgents(currentHost, [...ids]), { immediate: true })
 onBeforeUnmount(() => setShownAgents(currentHost, []))
-// The menu of the rarely used buttons and the help dialog it opens (where the room is short).
-const moreOpen = ref(false)
-const helpOpen = ref(false)
 // The workspaces as tabs in the header: on computers and wherever one row has room for them.
 const tabsInHeader = ref(!PHONE_WIDTH.matches || TABS_WIDTH.matches)
 const followTabsWidth = (): void => {
@@ -106,32 +100,8 @@ onBeforeUnmount(() => {
   TABS_WIDTH.removeEventListener('change', followTabsWidth)
 })
 
-// Only terminal and input field: no header, tabs, terminal bar or extra keys (the columns hear
-// it as an event); where the browser offers it, its own fullscreen too.
-const fullscreen = ref(false)
-
-function tellColumns(frame: HTMLIFrameElement | undefined): void {
-  frame?.contentWindow?.dispatchEvent(
-    new CustomEvent(COLUMN_FULLSCREEN_EVENT, { detail: fullscreen.value }),
-  )
-}
-
-watch(fullscreen, async (on) => {
-  frames.value.forEach(tellColumns)
-  if (!document.fullscreenEnabled) return
-  // Leaving the browser's fullscreen by its own means (Esc, back gesture) ends ours as well.
-  if (on && !document.fullscreenElement) await document.documentElement.requestFullscreen()
-  if (!on && document.fullscreenElement) await document.exitFullscreen()
-})
-
-const followBrowserFullscreen = (): void => {
-  if (!document.fullscreenElement) fullscreen.value = false
-}
-document.addEventListener('fullscreenchange', followBrowserFullscreen)
-onBeforeUnmount(() => document.removeEventListener('fullscreenchange', followBrowserFullscreen))
-
 // Phones have no room for a tab above each column: the terminal bar names it (and closes it).
-const showTabs = computed(() => !phone.value && !fullscreen.value)
+const showTabs = computed(() => !phone.value)
 
 const speech = useSpeech()
 // The latest requests of each column looked at for what is new.
@@ -344,8 +314,6 @@ function onFrameLoad(id: string): void {
     if (neighbour !== undefined) void activate(neighbour)
   })
   frameWindow?.addEventListener(COLUMN_CLOSE_EVENT, () => store.removeTab(id))
-  // A column loaded later (or reloaded) learns the current state.
-  tellColumns(frameOf(id))
 }
 
 // Turning the device changes how many columns fit; the active one (the red one) stays in view,
@@ -448,7 +416,6 @@ function deleteThis(): void {
       />
       <!-- Compact buttons below md, so name, workspaces and usage fit on a phone. -->
       <header
-        v-if="!fullscreen"
         class="controls-zoom flex flex-wrap items-center gap-1 border-b border-line-subtle px-1 py-1 max-md:[&_.btn-icon]:size-8"
       >
         <!-- No bottom bar in full screen: home is the agents page, the other pages are one tap on. -->
@@ -474,12 +441,13 @@ function deleteThis(): void {
         <!-- A room of its own (its container measures it, so it has no width by content): when the
              row is short of it, the panel and the buttons wrap as a whole instead of overlapping. -->
         <QuotaPanel v-if="!phone" class="min-w-36 flex-1 sm:px-3" />
-        <!-- The hold pills beside the buttons; short of room the pills shrink to their dot (GpuHoldChips),
-             and only where not even the dot fits do they wrap. The buttons never shrink (a fraction of a
-             pixel would already wrap one): only wider than the whole room they wrap among themselves,
-             so nothing covers the name or leaves the screen. -->
+        <!-- With the workspaces as tabs, the hold pills sit beside the buttons, shrinking to their dot short
+             of room (GpuHoldChips); otherwise beside the name (WorkspaceSwitcher). Only where not even the
+             dot fits do they wrap. The buttons never shrink (a fraction of a pixel would already wrap
+             one): only wider than the whole room they wrap among themselves, so nothing covers the name
+             or leaves the screen. -->
         <div class="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-1">
-          <GpuHoldChips />
+          <GpuHoldChips v-if="tabsInHeader" />
           <div class="flex max-w-full shrink-0 flex-wrap items-center justify-end gap-1">
             <AddColumnMenu :candidates="candidates" @open="open" />
             <ColumnCountControl
@@ -525,46 +493,13 @@ function deleteThis(): void {
             >
               <SpeakerIcon />
             </button>
-            <button
-              class="btn-icon"
-              :aria-label="$t('workspace.fullscreen')"
-              :title="$t('workspace.fullscreen')"
-              @click="fullscreen = true"
-            >
-              <AppIcon name="expand" />
-            </button>
-            <!-- Where the room is short (a phone): what is needed rarely sits behind this button. -->
-            <DropdownMenu v-if="!tabsInHeader" v-model:open="moreOpen" right panel-class="flex w-64 flex-col p-1">
-              <template #trigger="{ toggle }">
-                <button class="btn-icon" :aria-label="$t('workspace.more')" :title="$t('workspace.more')" @click="toggle">
-                  <AppIcon name="more" />
-                </button>
-              </template>
-              <button
-                class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-soft hover:bg-raised"
-                @click="((moreOpen = false), (helpOpen = true))"
-              >
-                <AppIcon name="lightbulb" class="text-highlight-300" />{{ $t('help.button') }}
-              </button>
-            </DropdownMenu>
             <!-- Which machine's workspaces: the same menu as in every other page's header. -->
             <HostSwitcher />
             <!-- The device's settings, the same menu as in every other page's header. -->
             <SettingsMenu />
-            <HelpButton v-model:open="helpOpen" :bare="!tabsInHeader" />
           </div>
         </div>
       </header>
-      <!-- The way back from fullscreen, small in the corner above the columns. -->
-      <button
-        v-if="fullscreen"
-        class="fixed top-1 right-1 z-40 flex size-8 items-center justify-center rounded-md border border-line-strong bg-page/80 text-soft"
-        :aria-label="$t('workspace.leaveFullscreen')"
-        :title="$t('workspace.leaveFullscreen')"
-        @click="fullscreen = false"
-      >
-        <AppIcon name="shrink" class="size-4" />
-      </button>
 
       <p v-if="ready && workspace.tabs.length === 0" class="p-6 text-center text-dim">{{ $t('workspace.empty') }}</p>
 

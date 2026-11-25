@@ -54,5 +54,3 @@ export function listenForMenuKey(page: Window, onMenu: () => void): () => void {
 export const COLUMN_SWIPE_EVENT = 'agent-orc-column-swipe'
 /** × in the terminal bar on phones, where the column has no tab of its own. */
 export const COLUMN_CLOSE_EVENT = 'agent-orc-column-close'
-/** From the workspace: show only terminal and input field; detail: on or off. */
-export const COLUMN_FULLSCREEN_EVENT = 'agent-orc-column-fullscreen'

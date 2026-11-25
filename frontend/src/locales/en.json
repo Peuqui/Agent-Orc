@@ -271,10 +271,7 @@
     "movesFrom": "from “{name}”",
     "switchHere": "Switch to it in this tab (middle click: new tab)",
     "openElsewhere": "Open in another tab – jumps there",
-    "others": "Other workspaces",
-    "fullscreen": "Fullscreen: terminal and input only",
-    "leaveFullscreen": "Leave fullscreen",
-    "more": "More"
+    "others": "Other workspaces"
   },
   "markdown": {
     "copyCode": "Copy code"
@@ -344,7 +341,7 @@
     "remove": "Remove attachment"
   },
   "help": {
-    "button": "Help: how Agent-Orc works",
+    "button": "Help",
     "title": "How Agent-Orc works",
     "close": "Close",
     "contents": "Contents",
@@ -354,7 +351,7 @@
         "title": "Header and pages",
         "items": [
           "The pages Agents, Workspace, Notes, Files and Usage are tabs in the header from 1024 px width; below that (phone, tablet upright) they are in the bar at the bottom. The workspace and an agent's page have no bottom bar, so the terminal gets the room; there the tile icon at the top left opens all pages.",
-          "**Top right**: language (DE/EN, for this device), this help (light bulb), the settings (☰) and log out.",
+          "**Top right**: the settings (☰, with the language DE/EN for this device and, as the last entry, this help) and log out.",
           "Token figures are written in the language of the interface: English k, M, B, T and Q; German Tsd., Mio., Mrd., Bio. and Brd."
         ]
       },
@@ -398,7 +395,6 @@
           "The divider between two columns moves their boundary: drag it (a touch is enough, no long press) and what one column gains the other loses, so the width of all columns together stays. A double click on the divider makes these two columns equal again; the button with the two arrows next to “− n +” (it appears once a width was changed) resets all. The widths are kept on this device only, as screens differ.",
           "On a phone the workspace shows one column at a time; a sideways swipe in the terminal brings the next (to the left) or previous one (to the right), up and down scrolls.",
           "**Tile icon at the top left**: all pages (agents, files, consumption …) – the workspace has no bar at the bottom, so the terminal gets the room.",
-          "**Fullscreen** (four-corner icon): terminal and input field only, where possible without the browser bars too; the small button at the top right brings everything back.",
           "On a phone the header is one row; the other workspaces sit behind the arrow next to the name, and the terminal bar names the column and closes it with ×."
         ]
       },

@@ -4,11 +4,10 @@ import { useI18n } from 'vue-i18n'
 import messages from '../locales/de.json'
 import AppIcon from './AppIcon.vue'
 
-// Usage hints in one place, opened from a light bulb (as in AIfred). Every language has the
+// Usage hints in one place, under the light bulb (as in AIfred). Every language has the
 // same sections and hints; the German file gives their number, the current language the text.
 const { t } = useI18n()
-// `bare`: no button of its own, something else opens the dialog (v-model:open).
-defineProps<{ bare?: boolean }>()
+// Opened from the settings menu (v-model:open), the last entry there.
 const open = defineModel<boolean>('open', { default: false })
 
 // A hint may begin with its term in **double asterisks**; the term is set apart in amber.
@@ -43,15 +42,6 @@ const sections = computed(() =>
 </script>
 
 <template>
-  <button
-    v-if="!bare"
-    class="btn-icon text-highlight-300 hover:text-highlight-200"
-    :title="$t('help.button')"
-    :aria-label="$t('help.button')"
-    @click="open = true"
-  >
-    <AppIcon name="lightbulb" />
-  </button>
   <!-- In <body>: the blurred header would otherwise be the frame of the fixed dialog. -->
   <Teleport v-if="open" to="body">
     <div

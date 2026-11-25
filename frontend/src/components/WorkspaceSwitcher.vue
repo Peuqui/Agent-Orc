@@ -5,12 +5,14 @@ import { jumpToWorkspace, WORKSPACE_DROP, workspaceRoute } from '../composables/
 import AppIcon from './AppIcon.vue'
 import DropdownMenu from './DropdownMenu.vue'
 import WorkspaceNameField from './WorkspaceNameField.vue'
+import WithHoldChips from './WithHoldChips.vue'
 
-// The workspaces in the header. Phones: the name, and the others in a list behind it, so
-// everything fits in one row. Computers and upright tablets: all workspaces as tabs in a fixed
-// order, the one shown is the name field; one click on another goes to the tab that shows it,
-// otherwise here, a middle click opens a new tab. Narrow windows: in a second row, swipeable.
-// Several elements of the header's row (no box of its own), so they wrap with it.
+// The workspaces in the header. Phones: the name with the hold pills beside it, and the others in
+// a list behind it, so everything fits in one row. Computers and upright tablets: all workspaces as
+// tabs in a fixed order, the one shown is the name field; one click on another goes to the tab that
+// shows it, otherwise here, a middle click opens a new tab. Narrow windows: in a second row,
+// swipeable. The tabs are several elements of the header's row (no box of their own), so they wrap
+// with it.
 defineProps<{
   name: string | null
   order: (string | null)[]
@@ -28,54 +30,58 @@ const choosing = ref(false)
 
 <template>
   <template v-if="!tabsInHeader">
-    <!-- The name is the button of a menu with all that concerns workspaces: renaming (the field),
-         the others, a new one, deleting. -->
-    <DropdownMenu v-model:open="choosing" class="min-w-0 flex-1" panel-class="flex w-64 flex-col gap-1 p-2">
-      <template #trigger="{ toggle }">
+    <!-- The hold pills beside the name, which keeps its room first (WithHoldChips): at least the arrow's
+         button (min-w-8) and the pills' dot beside it. -->
+    <WithHoldChips min-class="min-w-8 has-[[data-hold-chip]]:min-w-16">
+      <!-- The name is the button of a menu with all that concerns workspaces: renaming (the field),
+           the others, a new one, deleting. -->
+      <DropdownMenu v-model:open="choosing" class="min-w-8" panel-class="flex w-64 flex-col gap-1 p-2">
+        <template #trigger="{ toggle }">
+          <button
+            class="flex w-full min-w-0 items-center gap-1 rounded-md px-2 py-1 text-left hover:bg-panel"
+            :class="name === null ? 'text-dim' : 'font-semibold text-highlight-300'"
+            :aria-label="$t('workspace.others')"
+            :title="$t('workspace.others')"
+            @click="toggle"
+          >
+            <span class="min-w-0 truncate">{{ name ?? $t('workspace.unnamed') }}</span>
+            <AppIcon name="chevron" class="size-4" />
+          </button>
+        </template>
+        <WorkspaceNameField
+          v-model="nameInput"
+          class="w-full"
+          input-class="rounded-md border border-line-strong px-2 py-1 text-sm text-bright placeholder:text-muted focus:bg-panel"
+          :placeholder="$t('workspace.unnamed')"
+          :hint="$t('workspace.nameHint')"
+          :deletable="false"
+          @rename="emit('rename')"
+        />
+        <template v-for="other in order" :key="other ?? ''">
+          <button
+            v-if="other !== name"
+            class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-soft hover:bg-raised"
+            @click="((choosing = false), jumpToWorkspace(router, other))"
+          >
+            <AppIcon name="workspace" />{{ other ?? $t('workspace.unnamed') }}
+          </button>
+        </template>
         <button
-          class="flex w-full min-w-0 items-center gap-1 rounded-md px-2 py-1 text-left hover:bg-panel"
-          :class="name === null ? 'text-dim' : 'font-semibold text-highlight-300'"
-          :aria-label="$t('workspace.others')"
-          :title="$t('workspace.others')"
-          @click="toggle"
+          v-if="!order.includes(null)"
+          class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-dim hover:bg-raised"
+          @click="((choosing = false), jumpToWorkspace(router, null))"
         >
-          <span class="min-w-0 truncate">{{ name ?? $t('workspace.unnamed') }}</span>
-          <AppIcon name="chevron" class="size-4" />
+          <AppIcon name="plus" />{{ $t('workspace.new') }}
         </button>
-      </template>
-      <WorkspaceNameField
-        v-model="nameInput"
-        class="w-full"
-        input-class="rounded-md border border-line-strong px-2 py-1 text-sm text-bright placeholder:text-muted focus:bg-panel"
-        :placeholder="$t('workspace.unnamed')"
-        :hint="$t('workspace.nameHint')"
-        :deletable="false"
-        @rename="emit('rename')"
-      />
-      <template v-for="other in order" :key="other ?? ''">
         <button
-          v-if="other !== name"
-          class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-soft hover:bg-raised"
-          @click="((choosing = false), jumpToWorkspace(router, other))"
+          v-if="name !== null"
+          class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-accent-400 hover:bg-raised"
+          @click="((choosing = false), emit('delete'))"
         >
-          <AppIcon name="workspace" />{{ other ?? $t('workspace.unnamed') }}
+          <AppIcon name="trash" />{{ $t('workspace.delete') }}
         </button>
-      </template>
-      <button
-        v-if="!order.includes(null)"
-        class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-dim hover:bg-raised"
-        @click="((choosing = false), jumpToWorkspace(router, null))"
-      >
-        <AppIcon name="plus" />{{ $t('workspace.new') }}
-      </button>
-      <button
-        v-if="name !== null"
-        class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-accent-400 hover:bg-raised"
-        @click="((choosing = false), emit('delete'))"
-      >
-        <AppIcon name="trash" />{{ $t('workspace.delete') }}
-      </button>
-    </DropdownMenu>
+      </DropdownMenu>
+    </WithHoldChips>
   </template>
   <template v-else>
     <!-- Narrow windows (not phones, which keep one row): the workspaces move to a second row,

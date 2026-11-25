@@ -84,12 +84,10 @@ that run Agent-Orc can be shown in the same app, through an SSH tunnel ([Several
   workspaces.
 - On a phone one column at a time: a sideways swipe in the terminal brings the next. The header
   is made for the narrow screen: the workspace's name is a button with a menu behind it (rename
-  it, go to another workspace, start a new one, delete it), then “+” to add an agent, the two
-  speaker buttons (read aloud what is new; read aloud by itself), full screen, and the machine
-  as a short button (cut at whole letters to the width of “Mini”; its menu holds the full
-  names). What is needed rarely sits behind ⋮ (the help), the settings behind ☰. A full screen
-  shows terminal and input field only, the extra keys fold away, and a terminal's actions sit
-  behind ⋮.
+  it, go to another workspace, start a new one, delete it), then “+” to add an agent, the
+  speaker that reads aloud by itself, and the machine as a short button (cut at whole letters to
+  the width of “Mini”; its menu holds the full names); the settings, the language and the help
+  sit behind ☰. The extra keys fold away, and a terminal's actions sit behind ⋮.
 
 <p align="center">
   <img src="docs/screenshots/workspace-en.png" alt="Workspace with an agent and its terminal side by side" width="860">
@@ -216,7 +214,8 @@ that run Agent-Orc can be shown in the same app, through an SSH tunnel ([Several
   reading aloud (engine, speed and pitch as decimal fields, the agent's name, maximum length) are
   saved on the server and are the same on every device, a change reaches all open ones; the terminal
   font, the two font sizes, line spacing, scroll speed and the browser voice stay with the device.
-  A help dialog (light bulb) explains the app.
+  The language (DE/EN, for this device) is a row in it, and its last entry, the help (light bulb),
+  explains the app.
 - Menus and choices look the same everywhere: a list that opens at the button which asked for it,
   on a phone as on a computer (not the system's picker). It opens above or below, wherever the
   room is (the header and the bottom bar of the app count), and scrolls when neither side has

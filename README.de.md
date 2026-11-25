@@ -93,11 +93,10 @@ einen SSH-Tunnel ([Mehrere Rechner](#mehrere-rechner)).
 - Am Handy eine Spalte auf einmal: seitlich im Terminal wischen holt die nächste. Die Kopfzeile
   ist für den schmalen Bildschirm gebaut: Der Name der Arbeitsfläche ist ein Knopf mit einem Menü
   dahinter (umbenennen, zu einer anderen Fläche wechseln, eine neue beginnen, löschen), dann „+“
-  zum Hinzufügen eines Agenten, die zwei Lautsprecher (Neues vorlesen; automatisch vorlesen),
-  Vollbild und der Rechner als kurzer Knopf (an ganzen Buchstaben auf die Breite von „Mini“
-  gekürzt; im Menü stehen die vollen Namen). Was man selten braucht, liegt hinter ⋮ (die Hilfe),
-  die Einstellungen hinter ☰. Ein Vollbild zeigt nur Terminal und Eingabefeld, die Sondertasten
-  lassen sich einklappen, und die Aktionen eines Terminals liegen hinter ⋮.
+  zum Hinzufügen eines Agenten, der Lautsprecher, der von selbst vorliest, und der Rechner als
+  kurzer Knopf (an ganzen Buchstaben auf die Breite von „Mini“ gekürzt; im Menü stehen die vollen
+  Namen); Einstellungen, Sprache und Hilfe liegen hinter ☰. Die Sondertasten lassen sich
+  einklappen, und die Aktionen eines Terminals liegen hinter ⋮.
 
 <p align="center">
   <img src="docs/screenshots/workspace-de.png" alt="Arbeitsfläche mit einem Agenten und seinem Terminal nebeneinander" width="860">
@@ -229,7 +228,8 @@ einen SSH-Tunnel ([Mehrere Rechner](#mehrere-rechner)).
   Vorlesen (Engine, Tempo und Tonhöhe als Dezimalfelder, Name des Agenten, Höchstlänge) liegen auf dem Server
   und sind auf jedem Gerät gleich, eine Änderung kommt auf allen offenen an; Terminal-Schrift, die zwei
   Schriftgrößen, Zeilenabstand, Scrollgeschwindigkeit und die Browser-Stimme bleiben am Gerät.
-  Eine Hilfe (Glühbirne) erklärt die App.
+  Die Sprache (DE/EN, für dieses Gerät) ist eine Zeile darin, und ihr letzter Eintrag, die Hilfe
+  (Glühbirne), erklärt die App.
 - Menüs und Auswahlen sehen überall gleich aus: eine Liste, die an dem Knopf aufgeht, der sie
   verlangt hat, am Handy wie am Rechner (nicht die Auswahl des Systems). Sie öffnet nach oben oder
   unten, wo Platz ist (Kopfzeile und Navigationsleiste der App zählen mit), und scrollt, wenn
