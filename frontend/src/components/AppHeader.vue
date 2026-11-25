@@ -21,12 +21,17 @@ async function logout(): Promise<void> {
     <!-- What shows depends on the room in the controls' size (the container: the whole width, the
          same as the bottom bar's, so that exactly one of them has the sections), not on the screen. -->
     <div class="controls-zoom @container">
-      <div class="page-width flex items-center justify-between gap-4 py-2">
+      <!-- Where not even the logo's icon (and a pill's smallest size) fits beside the buttons (large
+           controls on a narrow phone), the buttons wrap to a line of their own. -->
+      <div class="page-width flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-2">
         <!-- The buttons take the room they need, the logo the rest, and the hold pills what the logo leaves
              (WithHoldChips). The logo is one line as high as the icon, so the name, where it does not fit
              beside the icon, wraps into a second line that is cut off. Wide, logo and pills take their own
              width and the sections the rest. -->
-        <WithHoldChips class="@5xl:flex-none">
+        <WithHoldChips
+          class="@5xl:flex-none"
+          min-class="min-w-11 sm:min-w-12 has-[[data-hold-chip]]:min-w-18 sm:has-[[data-hold-chip]]:min-w-19"
+        >
           <AppLogo class="h-11 min-w-11 flex-wrap content-start overflow-hidden sm:h-12 sm:min-w-12" />
         </WithHoldChips>
         <!-- Wide: sections as header tabs instead of the bottom bar; their names where there is room. -->
@@ -36,7 +41,7 @@ async function logout(): Promise<void> {
         <!-- Compact buttons, so the logo keeps its room on narrow screens. They never shrink (a fraction of
              a pixel would already wrap one): only wider than the whole row they wrap among themselves, so
              nothing leaves the screen. -->
-        <div class="flex max-w-full shrink-0 flex-wrap items-center justify-end [&_.btn-icon]:size-8">
+        <div class="ml-auto flex max-w-full shrink-0 flex-wrap items-center justify-end [&_.btn-icon]:size-8">
           <HostSwitcher />
           <SettingsMenu />
           <button class="btn-icon" :title="$t('app.logout')" :aria-label="$t('app.logout')" @click="logout">
