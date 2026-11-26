@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive } from 'vue'
 import { api } from '../api'
+import { useBannerRoot } from '../composables/useBannerRoot'
 import { useDismiss } from '../composables/useDismiss'
 import { useGpuHolds } from '../composables/useGpuHolds'
 import { useToast } from '../composables/useToast'
@@ -14,9 +15,10 @@ import { type GpuHold, holdView } from '../gpuHolds'
 // cannot be pressed is grayed out with the reason beside it; both changes ask once more in the
 // banner itself, saying what follows (a dialog would open beneath the banner). The banner opens by
 // itself only while a hand-over can be decided; any other hold shows as a small chip in the page's
-// header (GpuHoldChips) right away. × folds the banner to that chip in this browser, and so does a
-// press beside it or Escape (like a menu; it sends nothing, a confirmation begun is dropped); a tap
-// on the chip opens the banner again, a new hold shows by its state again.
+// header (BannerChips) right away. × folds the banner to that chip in this browser, and so does a
+// press beside the banner (its other cards count as the banner) or Escape (like a menu; it sends
+// nothing, a confirmation begun is dropped); a tap on the chip opens the banner again, a new hold
+// shows by its state again.
 const toast = useToast()
 const { held, refresh, folded, fold } = useGpuHolds()
 
@@ -25,7 +27,7 @@ const busy = reactive<Record<string, boolean>>({})
 // The change of a hold that was pressed once and waits for the confirmation.
 const confirming = reactive<Record<string, 'end' | 'release' | undefined>>({})
 
-const root = ref<HTMLElement>()
+const root = useBannerRoot()
 const open = computed(() => held.value.filter(({ address, hold }) => !folded(address, hold)))
 function foldOpen(): void {
   for (const { address, hold } of open.value) {
@@ -69,7 +71,7 @@ function confirmKey(address: string, hold: GpuHold): string {
 
 <template>
   <!-- Only while a banner is open, so that the surrounding stack stays empty otherwise. -->
-  <div v-if="open.length" ref="root" class="contents">
+  <div v-if="open.length" class="contents">
     <div
       v-for="{ address, entry, hold } in open"
       :key="address"

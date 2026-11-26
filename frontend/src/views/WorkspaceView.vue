@@ -19,7 +19,7 @@ import {
 } from '../columns'
 import AddColumnMenu from '../components/AddColumnMenu.vue'
 import AppIcon from '../components/AppIcon.vue'
-import GpuHoldChips from '../components/GpuHoldChips.vue'
+import BannerChips from '../components/BannerChips.vue'
 import SpeakerIcon from '../components/SpeakerIcon.vue'
 import ColumnCountControl from '../components/ColumnCountControl.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
@@ -441,13 +441,13 @@ function deleteThis(): void {
         <!-- A room of its own (its container measures it, so it has no width by content): when the
              row is short of it, the panel and the buttons wrap as a whole instead of overlapping. -->
         <QuotaPanel v-if="!phone" class="min-w-36 flex-1 sm:px-3" />
-        <!-- With the workspaces as tabs, the hold pills sit beside the buttons, shrinking to a
-             small round patch short of room (GpuHoldChips); otherwise beside the name
+        <!-- With the workspaces as tabs, the banner's pills sit beside the buttons, shrinking to a
+             small round patch short of room (BannerChips); otherwise beside the name
              (WorkspaceSwitcher). Only where not even that fits do they wrap. The buttons never
              shrink (a fraction of a pixel would already wrap one): only wider than the whole room
              they wrap among themselves, so nothing covers the name or leaves the screen. -->
         <div class="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-1">
-          <GpuHoldChips v-if="tabsInHeader" />
+          <BannerChips v-if="tabsInHeader" />
           <div class="flex max-w-full shrink-0 flex-wrap items-center justify-end gap-1">
             <AddColumnMenu :candidates="candidates" @open="open" />
             <ColumnCountControl

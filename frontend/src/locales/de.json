@@ -554,6 +554,8 @@
     }
   },
   "approval": {
+    "chip": "{agent} wartet auf deine Freigabe. Tippen zum Aufklappen.",
+    "chipShort": "fragt",
     "asks": "Möchte {tool} ausführen",
     "goTo": "Zum Agenten",
     "openAgent": "Zum Agenten wechseln",

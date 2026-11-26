@@ -5,9 +5,9 @@ import { jumpToWorkspace, WORKSPACE_DROP, workspaceRoute } from '../composables/
 import AppIcon from './AppIcon.vue'
 import DropdownMenu from './DropdownMenu.vue'
 import WorkspaceNameField from './WorkspaceNameField.vue'
-import WithHoldChips from './WithHoldChips.vue'
+import WithBannerChips from './WithBannerChips.vue'
 
-// The workspaces in the header. Phones: the name with the hold pills beside it, and the others in
+// The workspaces in the header. Phones: the name with the banner's pills beside it, and the others in
 // a list behind it, so everything fits in one row. Computers and upright tablets: all workspaces as
 // tabs in a fixed order, the one shown is the name field; one click on another goes to the tab that
 // shows it, otherwise here, a middle click opens a new tab. Narrow windows: in a second row,
@@ -30,9 +30,9 @@ const choosing = ref(false)
 
 <template>
   <template v-if="!tabsInHeader">
-    <!-- The hold pills beside the name, which keeps its room first (WithHoldChips): at least the arrow's
+    <!-- The banner's pills beside the name, which keeps its room first (WithBannerChips): at least the arrow's
          button (min-w-8) and the pill's smallest size beside it (with the gap). -->
-    <WithHoldChips min-class="min-w-8 has-[[data-hold-chip]]:min-w-15">
+    <WithBannerChips min-class="min-w-8 has-[[data-banner-chip]]:min-w-15">
       <!-- The name is the button of a menu with all that concerns workspaces: renaming (the field),
            the others, a new one, deleting. -->
       <DropdownMenu v-model:open="choosing" class="min-w-8" panel-class="flex w-64 flex-col gap-1 p-2">
@@ -81,7 +81,7 @@ const choosing = ref(false)
           <AppIcon name="trash" />{{ $t('workspace.delete') }}
         </button>
       </DropdownMenu>
-    </WithHoldChips>
+    </WithBannerChips>
   </template>
   <template v-else>
     <!-- Narrow windows (not phones, which keep one row): the workspaces move to a second row,

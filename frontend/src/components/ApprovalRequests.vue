@@ -11,11 +11,11 @@ import { useApi, useMachineName } from '../composables/useHostContext'
 import { useToast } from '../composables/useToast'
 
 // named: shows whose request it is, with a button that goes to that agent (`open`) to see what it
-// is about before deciding, for places away from it. hostName: another machine's agent, which
-// says whose it is.
+// is about before deciding, for places away from it, and × to fold it to a pill (`fold`, the
+// banner's). hostName: another machine's agent, which says whose it is.
 const props = defineProps<{ session: AgentSession; named?: boolean; hostName?: string | null }>()
 // leave: Escape on the request, to go back to typing without deciding.
-const emit = defineEmits<{ open: []; leave: [] }>()
+const emit = defineEmits<{ open: []; leave: []; fold: [] }>()
 
 const { refresh } = useSessions()
 const toast = useToast()
@@ -85,9 +85,20 @@ async function answer(approval: Approval, decision: ApprovalAnswer): Promise<voi
       v-bind="{ [APPROVAL_ATTRIBUTE]: '' }"
       @keydown.esc="emit('leave')"
     >
-      <span v-if="named" class="font-semibold text-highlight-200">
-        {{ sessionName(session) }}<span v-if="hostName" class="font-normal"> · {{ hostName }}</span>
-      </span>
+      <div v-if="named" class="flex items-start gap-2">
+        <span class="flex-1 font-semibold text-highlight-200">
+          {{ sessionName(session) }}<span v-if="hostName" class="font-normal"> · {{ hostName }}</span>
+        </span>
+        <button
+          type="button"
+          class="btn-icon -mt-1 -mr-2 size-8 shrink-0"
+          :aria-label="$t('common.close')"
+          :title="$t('common.close')"
+          @click="emit('fold')"
+        >
+          ×
+        </button>
+      </div>
       <template v-if="approval.plan !== null">
         <span class="text-highlight-200">{{ $t('approval.plan') }}</span>
         <div class="markdown note max-h-72 overflow-y-auto rounded bg-sunken/60 px-2 py-1 select-text" v-html="renderMarkdown(approval.plan, null)" />

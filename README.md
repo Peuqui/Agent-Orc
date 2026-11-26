@@ -52,7 +52,10 @@ that run Agent-Orc can be shown in the same app, through an SSH tunnel ([Several
   terminal). Denying works as in the terminal: with a hint what Claude should do instead, or
   without one, which stops Claude as Esc does. A plan is shown in full, with “Approve” per
   permission mode of the agent, or “Keep planning” with what should change. The first answer
-  counts, on the card or in the terminal.
+  counts, on the card or in the terminal. Away from the agent, the request shows in a banner at
+  the top of every page; × (or a press beside the banner, or Escape) folds it into a red pill in
+  the header that a tap opens again. Folding sends nothing, the agent keeps waiting; its next
+  request shows open again.
 - Backends: `agent-orc backend` runs Claude Code on local models (e.g. vLLM or llama-swap) or
   with other providers (e.g. Qwen on Alibaba's DashScope). The start dialog then offers the
   models and their reasoning levels, with a note per model (such as how long it is free to

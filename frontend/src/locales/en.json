@@ -554,6 +554,8 @@
     }
   },
   "approval": {
+    "chip": "{agent} waits for your approval. Tap to expand.",
+    "chipShort": "asks",
     "asks": "Wants to run {tool}",
     "goTo": "To the agent",
     "openAgent": "Go to the agent",

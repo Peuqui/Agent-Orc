@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { ApiError, api, type ExistingPath, type FileChange } from '../api'
 import { existingPaths } from '../existingPaths'
 import AppIcon from '../components/AppIcon.vue'
-import WithHoldChips from '../components/WithHoldChips.vue'
+import WithBannerChips from '../components/WithBannerChips.vue'
 import { openExistingPath } from '../composables/useFileLinks'
 import { useSessions } from '../composables/useSessions'
 import { useToast } from '../composables/useToast'
@@ -92,9 +92,9 @@ function lineClass(line: string): string {
       <button class="btn-icon" :aria-label="$t('terminal.back')" @click="router.back()">
         <AppIcon name="up" class="-rotate-90" />
       </button>
-      <WithHoldChips>
+      <WithBannerChips>
         <h1 class="min-w-0 truncate font-semibold">{{ $t('changes.title', { name: folder }) }}</h1>
-      </WithHoldChips>
+      </WithBannerChips>
       <button class="btn-icon" :aria-label="$t('changes.refresh')" :title="$t('changes.refresh')" @click="load">
         <AppIcon name="resume" />
       </button>
