@@ -129,9 +129,10 @@ def test_a_local_backend_adds_its_entry_and_a_profile_to_a_valid_config() -> Non
     assert config.backends is not None
     # Every model llama-swap lists is offered, its levels come from its chat template.
     assert config.backends["local"].models is None
-    assert config.backends["local"].llama_swap_config == Path(
-        "~/.config/llama-swap/config.yaml"
-    ).expanduser()
+    assert (
+        config.backends["local"].llama_swap_config
+        == Path("~/.config/llama-swap/config.yaml").expanduser()
+    )
     assert config.backends["local"].base_urls == ["http://127.0.0.1:11435"]
     profile = config.agents["claude-local"]
     assert profile.start is not None and profile.start[:4] == [

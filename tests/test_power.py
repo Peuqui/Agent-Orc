@@ -19,10 +19,14 @@ WSL_RELEASE = "6.6.87.2-microsoft-standard-WSL2"
 
 
 def test_linux_uses_systemctl_with_fixed_commands() -> None:
-    assert commands_for(LINUX_RELEASE, "") == LINUX_COMMANDS == {
-        "suspend": ["systemctl", "--no-ask-password", "suspend"],
-        "poweroff": ["systemctl", "--no-ask-password", "poweroff"],
-    }
+    assert (
+        commands_for(LINUX_RELEASE, "")
+        == LINUX_COMMANDS
+        == {
+            "suspend": ["systemctl", "--no-ask-password", "suspend"],
+            "poweroff": ["systemctl", "--no-ask-password", "poweroff"],
+        }
+    )
 
 
 def test_wsl_switches_windows_and_not_its_own_linux(tmp_path: Path) -> None:

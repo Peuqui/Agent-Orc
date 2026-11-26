@@ -14,7 +14,7 @@ def test_the_magic_packet_is_six_ff_and_the_mac_sixteen_times() -> None:
 
 
 def host_with_wake(wake: str) -> str:
-    return hosts_section(f'  Aragon:\n    ssh: [[x]]\n    socket: /s\n    wake: {wake}\n')
+    return hosts_section(f"  Aragon:\n    ssh: [[x]]\n    socket: /s\n    wake: {wake}\n")
 
 
 def test_the_wake_setting_is_read_with_port_nine_by_default() -> None:

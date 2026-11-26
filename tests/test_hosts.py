@@ -285,9 +285,7 @@ def test_a_machine_is_in_the_state_its_agent_orc_and_its_port_say(
         assert asyncio.run(link.state()) == state
 
 
-def stale_link(
-    monkeypatch: pytest.MonkeyPatch, connection: str, up_for: float | None
-) -> HostLink:
+def stale_link(monkeypatch: pytest.MonkeyPatch, connection: str, up_for: float | None) -> HostLink:
     """A link whose Agent-Orc is silent and whose port says `connection`; its tunnel has been up
     for `up_for` seconds (None: no tunnel running)."""
     link = HostLink("Aragon", Path("/nonexistent/host.sock"), HostConfig(ssh=[["x"]], socket="x"))
