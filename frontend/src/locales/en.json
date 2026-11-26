@@ -151,6 +151,7 @@
     "inUse": "in use"
   },
   "terminal": {
+    "queued": "⏳ Waiting since {since}: “{text}”. The agent takes it after the running step. | ⏳ {count} messages waiting since {since}. The agent takes them after the running step.",
     "back": "Back",
     "placeholder": "Message …",
     "send": "Send",

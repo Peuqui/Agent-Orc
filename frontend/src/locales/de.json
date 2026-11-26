@@ -151,6 +151,7 @@
     "inUse": "in Benutzung"
   },
   "terminal": {
+    "queued": "⏳ Wartet seit {since}: „{text}“. Der Agent übernimmt das nach dem laufenden Schritt. | ⏳ {count} Nachrichten warten seit {since}. Der Agent übernimmt sie nach dem laufenden Schritt.",
     "back": "Zurück",
     "placeholder": "Nachricht …",
     "send": "Senden",

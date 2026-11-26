@@ -263,6 +263,8 @@ export interface AgentSession {
   answers_seen: string
   /** Changes with every entry the agent writes to its conversation (null: none yet). */
   transcript_version: string | null
+  /** Typed while the agent works and not yet taken (Claude hands it over after the running step). */
+  queued: Interjection[]
   /** The folder's name, with the suffix of a further agent. */
   name: string
   /** The levels its slider offers: the profile's, or those of the chosen model. */

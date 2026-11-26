@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { api } from '../api'
 import { MESSAGE_FIELD_ATTRIBUTE } from '../columns'
 import { useDictation } from '../composables/useDictation'
@@ -14,7 +15,7 @@ import { useToast } from '../composables/useToast'
 import { TOUCH_FIRST } from '../device'
 import { isSendKey } from '../sendKey'
 import AppIcon from './AppIcon.vue'
-import { baseName } from '../format'
+import { baseName, formatMoment } from '../format'
 import AttachMenu from './AttachMenu.vue'
 import DictationCancel from './DictationCancel.vue'
 import DictationMic from './DictationMic.vue'
@@ -31,9 +32,13 @@ const FIELD_MAX_HEIGHT_PERCENT = 20
 
 const toast = useToast()
 const { sessions } = useSessions()
+const { locale } = useI18n()
 // A yes or no each: the sessions come anew every few seconds, and a new object would draw anew.
 const busy = computed(() => sessions.value.find((session) => session.id === props.sessionId)?.busy === true)
 const subagentsWorking = computed(() => sessions.value.find((session) => session.id === props.sessionId)?.subagents === true)
+// Sent while the agent works: Claude queues it until the running step ends, which may take minutes;
+// said here, as the field is empty at once and the message would seem lost (sent twice, 26.11.).
+const queued = computed(() => sessions.value.find((session) => session.id === props.sessionId)?.queued ?? [])
 const text = draftOf(props.sessionId)
 const field = ref<HTMLTextAreaElement>()
 
@@ -257,6 +262,9 @@ function onKeydown(event: KeyboardEvent): void {
     {{ $t('attach.drop') }}
   </div>
   <div class="border-t border-line-subtle">
+  <p v-if="queued.length" class="line-clamp-2 px-2 pt-1 text-xs break-words text-highlight-200" :style="zoomStyle">
+    {{ $t('terminal.queued', { count: queued.length, since: formatMoment(new Date(queued[0].time), locale), text: queued[0].text }, queued.length) }}
+  </p>
   <div v-if="attachments.length" class="flex flex-wrap gap-2 px-2 pt-2">
     <div v-for="(attachment, index) in attachments" :key="attachment.path" class="relative" :title="attachment.name">
       <img

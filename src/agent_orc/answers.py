@@ -25,6 +25,16 @@ PASTE_MARK = re.compile(r"</?pasted_content\b[^>]*>")
 INTERRUPT_MARK = "[Request interrupted by user"
 
 
+# What Claude Code queues by itself while the agent works: a background task or a subagent that
+# ended. Not typed by the user (seen 26.11.2026: no other kind in any transcript).
+NOTIFICATION_MARKS = ("<task-notification", "<agent-message")
+
+
+def _typed_by_user(queued: dict[str, Any]) -> bool:
+    content = str(queued.get("content") or "")
+    return bool(content) and not content.startswith(NOTIFICATION_MARKS)
+
+
 def _typed_text(text: str) -> str:
     """What the user wrote, without the marks Claude Code puts around pasted text."""
     return PASTE_MARK.sub("", text).strip()
@@ -137,7 +147,7 @@ def read_turns(transcript: Path, limit: int) -> list[Turn]:
             turns[-1].texts.append(text)
     if turns:
         for entry in waiting:
-            if entry.get("content"):
+            if _typed_by_user(entry):
                 time = entry["timestamp"]
                 turns[-1].interjections.append(
                     Interjection(
@@ -145,6 +155,12 @@ def read_turns(transcript: Path, limit: int) -> list[Turn]:
                     )
                 )
     return turns
+
+
+def waiting_messages(transcript: Path) -> list[Interjection]:
+    """What the user typed while the agent works and the agent has not taken yet, oldest first:
+    Claude hands it over only once the running step ends, which may take minutes."""
+    return [i for turn in read_turns(transcript, 1) for i in turn.interjections if i.pending]
 
 
 def _queue_operation(entry: dict[str, Any], waiting: list[dict[str, Any]]) -> None:

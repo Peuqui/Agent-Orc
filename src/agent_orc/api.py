@@ -45,7 +45,7 @@ from starlette.types import Scope
 
 from agent_orc import announce as announcing
 from agent_orc import files, keepwarm, peers, speech_service
-from agent_orc.answers import Turn, read_image, read_turns
+from agent_orc.answers import Interjection, Turn, read_image, read_turns, waiting_messages
 from agent_orc.approvals import (
     PLAN_MODE,
     ApprovalNotFoundError,
@@ -1216,6 +1216,10 @@ def create_app(
             return None
         return CacheState(last_request=answered, window_seconds=ttl, kind="model")
 
+    def queued_messages(session: AgentSession) -> list[Interjection]:
+        transcript = session_transcript(session)
+        return [] if transcript is None else waiting_messages(transcript)
+
     def agent_cache(session: AgentSession) -> CacheState | None:
         transcript = session_transcript(session)
         if transcript is None:
@@ -2282,6 +2286,8 @@ def create_app(
             # The newest answer looked at, on any device ("" none yet).
             "answers_seen": seen.get(session.id, ""),
             "transcript_version": transcript_version(session),
+            # Typed while the agent works and not yet taken: the page says so at the input field.
+            "queued": [asdict(message) for message in queued_messages(session)],
             # Waiting for the user's answer; normally at most one, as Claude asks one at a time.
             "approvals": [
                 approval_entry(r, session.profile) for r in requests if r.session == session.id

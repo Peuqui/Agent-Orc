@@ -5,7 +5,13 @@ from typing import Any
 
 import pytest
 
-from agent_orc.answers import interrupted_at, read_image, read_turns, request_queued
+from agent_orc.answers import (
+    interrupted_at,
+    read_image,
+    read_turns,
+    request_queued,
+    waiting_messages,
+)
 
 
 def entry(kind: str, uuid: str, content: Any, **extra: Any) -> dict[str, Any]:
@@ -256,3 +262,28 @@ def test_a_stop_by_the_user_is_found_at_the_end_of_the_conversation(tmp_path: Pa
     asked_again = [*stopped, entry("user", "u6", "Neue Frage")]
     assert interrupted_at(write(tmp_path / "a.jsonl", asked_again)) is None
     assert interrupted_at(write(tmp_path / "t.jsonl", TRANSCRIPT)) is None
+
+
+def test_what_claude_queues_by_itself_is_not_shown_as_typed(tmp_path: Path) -> None:
+    # 26.11.: a task or subagent that ended showed as a waiting message of the user.
+    entries = [
+        entry("user", "u1", "Frage"),
+        queue("enqueue", "q2", "<task-notification>\n<task-id>b1</task-id>"),
+        queue("enqueue", "q3", '<agent-message from="a1">fertig</agent-message>'),
+        queue("enqueue", "q4", "Noch nicht angekommen"),
+    ]
+    turns = read_turns(write(tmp_path / "t.jsonl", entries), limit=10)
+    shown = [(i.text, i.pending) for i in turns[0].interjections]
+    assert shown == [("Noch nicht angekommen", True)]
+
+
+def test_waiting_messages_are_the_typed_ones_not_yet_taken(tmp_path: Path) -> None:
+    entries = [
+        entry("user", "u1", "Frage"),
+        queue("enqueue", "q2", "Schon übergeben"),
+        queue("remove", "q3", "Schon übergeben"),
+        delivered("d4", "Schon übergeben"),
+        queue("enqueue", "q5", "Wartet noch"),
+    ]
+    waiting = waiting_messages(write(tmp_path / "w.jsonl", entries))
+    assert [(m.text, m.pending) for m in waiting] == [("Wartet noch", True)]
