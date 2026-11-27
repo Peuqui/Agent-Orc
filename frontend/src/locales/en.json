@@ -183,6 +183,10 @@
     "stopScripts": "Scripts off",
     "notText": "This file is not a text file (or too large for the editor)."
   },
+  "connection": {
+    "lost": "No connection to {machine}. Agent-Orc keeps trying …",
+    "lostUnnamed": "No connection to the server. Agent-Orc keeps trying …"
+  },
   "errors": {
     "NetworkError": "Server not reachable.",
     "OutsideScopeError": "This location is outside the allowed area.",

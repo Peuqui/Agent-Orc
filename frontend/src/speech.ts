@@ -3,7 +3,7 @@
 // see announce.py) and a TTS-Suite service (see speech_service.py) join when Agent-Orc's config has
 // them.
 import { ref } from 'vue'
-import { ApiError, api, SPEECH_SERVICE_ERROR_PREFIX } from './api'
+import { ApiError, api, readServed, SPEECH_SERVICE_ERROR_PREFIX } from './api'
 import { FrameReader } from './audioFrames'
 import { i18n } from './i18n'
 import { ReplayCache } from './replayCache'
@@ -233,7 +233,7 @@ function ttsSuite(label: string): SpeechEngine {
       const reader = (response.body as ReadableStream<Uint8Array>).getReader()
       const frames = new FrameReader()
       for (;;) {
-        const { done, value } = await reader.read()
+        const { done, value } = await readServed(reader.read(), controller.signal)
         if (done) break
         for (const { header, body } of frames.push(value)) {
           if (header.kind === 'error') throw frameError(response.status, body)

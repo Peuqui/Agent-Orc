@@ -1,4 +1,4 @@
-import { rootAddress } from './api'
+import { fetchServed, readServed, rootAddress } from './api'
 
 // The tones around the microphone: a higher "ping" when listening starts, a lower "pong" when it stops, and the
 // puck's "break" when a dictation is cancelled.
@@ -59,10 +59,10 @@ function heardSeconds(buffer: AudioBuffer): number {
 function recording(signal: Signal): Promise<Recording> {
   let found = decoded.get(signal)
   if (found === undefined) {
-    found = fetch(new URL(RECORDINGS[signal], rootAddress()))
+    found = fetchServed(new URL(RECORDINGS[signal], rootAddress()))
       .then((response) => {
         if (!response.ok) throw new Error(`${RECORDINGS[signal]}: ${response.status}`)
-        return response.arrayBuffer()
+        return readServed(response.arrayBuffer())
       })
       .then((data) => new OfflineAudioContext(1, 1, DECODE_SAMPLE_RATE).decodeAudioData(data))
       .then((buffer) => ({ buffer, heardSeconds: heardSeconds(buffer) }))

@@ -558,6 +558,37 @@ interface SendOptions {
   signal?: AbortSignal
 }
 
+/** No HTTP answer at all (server down, network gone) or one that broke off on the way: this machine's
+ * app not reached, shown as the lasting notice (serverReachable) instead of a message per request. A
+ * request the caller gave up says nothing about the server. */
+function unreached(error: unknown, signal: AbortSignal | null | undefined): ApiError {
+  if (!signal?.aborted) serverReachable.value = false
+  return new ApiError(0, NETWORK_ERROR, String(error), null)
+}
+
+/** fetch for whatever this machine's app serves (the API, recordings, files): a request that got no
+ * answer rejects as the app not reached (27.11.: three direct fetches showed "TypeError: Failed to
+ * fetch" as a message each while the phone's connection hung). */
+export async function fetchServed(url: URL | string, init: RequestInit = {}): Promise<Response> {
+  try {
+    return await fetch(url, init)
+  } catch (error) {
+    throw unreached(error, init.signal)
+  }
+}
+
+/** A body read from an answer of the app (`response.json()`, `.arrayBuffer()`, a stream's `read()`):
+ * one that breaks off on the way (a TypeError; malformed JSON is a SyntaxError) is the app not
+ * reached too. */
+export async function readServed<T>(body: Promise<T>, signal?: AbortSignal | null): Promise<T> {
+  try {
+    return await body
+  } catch (error) {
+    if (error instanceof TypeError) throw unreached(error, signal)
+    throw error
+  }
+}
+
 /** The answer of the app to the request, once it is a success; an error answer is an ApiError. The
  * body is not read yet. Of `options`: body is sent as JSON, upload (e.g. recorded audio) as it is;
  * `host` asks that machine's app (null: this machine's own, the Zentrale), `fromRoot` this machine's own;
@@ -579,15 +610,7 @@ async function fetchApi(method: string, path: string, options: SendOptions = {})
     headers = { 'Content-Type': 'application/json' }
     body = JSON.stringify(options.body)
   }
-  let response: Response
-  try {
-    response = await fetch(url, { method, credentials: 'same-origin', headers, body, signal: options.signal })
-  } catch (error) {
-    // fetch only rejects when no HTTP response arrived at all (server down, network gone), or when
-    // the caller gave the request up, which says nothing about the server.
-    if (!options.signal?.aborted) serverReachable.value = false
-    throw new ApiError(0, NETWORK_ERROR, String(error), null)
-  }
+  const response = await fetchServed(url, { method, credentials: 'same-origin', headers, body, signal: options.signal })
   // What is not JSON did not come from the app: the reverse proxy without a backend (a restart,
   // a deploy) is the app not reached either.
   const isJson = response.headers.get('Content-Type')?.includes('application/json') ?? false
@@ -612,7 +635,7 @@ async function fetchApi(method: string, path: string, options: SendOptions = {})
       if (proxyWithoutApp) throw new ApiError(0, NETWORK_ERROR, String(response.status), null)
       throw new ApiError(response.status, `http${response.status}`, `${response.status} ${response.statusText}`, null)
     }
-    const data = await response.json()
+    const data = await readServed(response.json(), options.signal)
     // Agent-Orc errors carry {error, detail}; FastAPI's own errors only {detail}.
     const code: string = data.error ?? `http${response.status}`
     const detail = typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail)
@@ -624,7 +647,7 @@ async function fetchApi(method: string, path: string, options: SendOptions = {})
 
 async function send<T>(method: string, path: string, options: SendOptions = {}): Promise<T> {
   const response = await fetchApi(method, path, options)
-  return response.status === NO_CONTENT ? (undefined as T) : ((await response.json()) as T)
+  return response.status === NO_CONTENT ? (undefined as T) : ((await readServed(response.json(), options.signal)) as T)
 }
 
 function checkBuild(response: Response): void {

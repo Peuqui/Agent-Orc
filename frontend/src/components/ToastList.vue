@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { serverReachable } from '../api'
+import { useServiceMachineName } from '../composables/useHostContext'
 import { useToast } from '../composables/useToast'
 
 const { toasts, dismiss } = useToast()
+// serverReachable is about this machine's own app, the one that serves the page's requests.
+const machine = useServiceMachineName()
 </script>
 
 <template>
@@ -11,7 +14,7 @@ const { toasts, dismiss } = useToast()
       v-if="!serverReachable"
       class="w-full max-w-md rounded-lg border border-accent-700 bg-accent-900 px-4 py-3 text-sm text-accent-300 shadow-lg"
     >
-      {{ $t('errors.NetworkError') }}
+      {{ machine ? $t('connection.lost', { machine }) : $t('connection.lostUnnamed') }}
     </p>
     <button
       v-for="toast in toasts"
